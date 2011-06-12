@@ -2070,6 +2070,200 @@ static const struct frame_unwind i386_stack_tramp_frame_unwind =
 };
 
 
+/* PLT stubs.  */
+
+struct i386_insn i386_plt0_stub_insns[] =
+{
+  /* `pushl imm32' */
+  { 6, { 0xff, 0x35 }, { 0xff, 0xff } },
+
+  /* `jmp *disp32' */
+  { 6, { 0xff, 0x25 }, { 0xff, 0xff } },
+
+  {0}
+};
+
+struct i386_insn i386_plt_stub_insns[] =
+{
+  /* `jmp *disp32' */
+  { 6, { 0xff, 0x25 }, { 0xff, 0xff } },
+
+  /* `pushl imm32' */
+  { 5, { 0x68 }, { 0xff } },
+
+  /* `jmp rel32' */
+  { 5, { 0xe9 }, { 0xff } },
+
+  {0}
+};
+
+struct i386_insn i386_pic_plt0_stub_insns[] =
+{
+  /* `pushl imm32' */
+  { 6, { 0xff, 0xb3, 4, 0, 0, 0 }, { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff } },
+
+  /* `jmp *imm32' */
+  { 6, { 0xff, 0xa3, 8, 0, 0, 0 }, { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff } },
+
+  {0}
+};
+
+struct i386_insn i386_pic_plt_stub_insns[] =
+{
+  /* `jmp *disp32(%ebx)' */
+  { 6, { 0xff, 0xa3 }, { 0xff, 0xff } },
+
+  /* `pushl imm32' */
+  { 5, { 0x68 }, { 0xff } },
+
+  /* `jmp rel32' */
+  { 5, { 0xe9 }, { 0xff } },
+
+  {0}
+};
+
+static struct i386_frame_cache *
+i386_plt_stub_frame_cache (struct frame_info *this_frame, void **this_cache)
+{
+  struct i386_frame_cache *cache;
+  struct i386_insn *insn;
+  LONGEST sp_offset = -4;
+  CORE_ADDR pc, sp;
+  int i;
+
+  if (*this_cache)
+    return *this_cache;
+
+  cache = i386_alloc_frame_cache ();
+  *this_cache = cache;
+
+  pc = get_frame_pc (this_frame);
+  if (i386_match_insn_block (pc, i386_plt_stub_insns))
+    {
+      insn = i386_match_insn (pc, i386_plt_stub_insns);
+
+      for (i = 0; i < ARRAY_SIZE(i386_plt_stub_insns); i++)
+       {
+         if (insn == &i386_plt_stub_insns[i])
+           break;
+
+         pc -= i386_plt_stub_insns[i].len;
+       }
+
+      if (insn == &i386_plt_stub_insns[2])
+       cache->sp_offset = 0;
+    }
+  else if (i386_match_insn_block (pc, i386_plt0_stub_insns))
+    {
+      insn = i386_match_insn (pc, i386_plt0_stub_insns);
+
+      for (i = 0; i < ARRAY_SIZE(i386_plt0_stub_insns); i++)
+       {
+         if (insn == &i386_plt0_stub_insns[i])
+           break;
+
+         pc -= i386_plt0_stub_insns[i].len;
+       }
+
+      if (insn == &i386_plt0_stub_insns[0])
+       cache->sp_offset = 0;
+      else
+       cache->sp_offset = 4;
+    }
+  else if (i386_match_insn_block (pc, i386_pic_plt_stub_insns))
+    {
+      insn = i386_match_insn (pc, i386_pic_plt_stub_insns);
+
+      for (i = 0; i < ARRAY_SIZE(i386_pic_plt_stub_insns); i++)
+       {
+         if (insn == &i386_pic_plt_stub_insns[i])
+           break;
+
+         pc -= i386_pic_plt_stub_insns[i].len;
+       }
+
+      if (insn == &i386_pic_plt_stub_insns[2])
+       cache->sp_offset = 0;
+    }
+  else if (i386_match_insn_block (pc, i386_pic_plt0_stub_insns))
+    {
+      insn = i386_match_insn (pc, i386_pic_plt0_stub_insns);
+
+      for (i = 0; i < ARRAY_SIZE(i386_pic_plt0_stub_insns); i++)
+       {
+         if (insn == &i386_pic_plt0_stub_insns[i])
+           break;
+
+         pc -= i386_pic_plt0_stub_insns[i].len;
+       }
+
+      if (insn == &i386_pic_plt0_stub_insns[0])
+       cache->sp_offset = 0;
+      else
+       cache->sp_offset = 4;
+    }
+
+  cache->pc = pc;
+
+  sp = get_frame_register_unsigned (this_frame, I386_ESP_REGNUM);
+  cache->base = sp + cache->sp_offset;
+  cache->saved_sp = cache->base + 8;
+  cache->saved_regs[I386_EIP_REGNUM] = cache->base + 4;
+
+  cache->base_p = 1;
+  return cache;
+}
+
+static void
+i386_plt_stub_frame_this_id (struct frame_info *this_frame, void **this_cache,
+                            struct frame_id *this_id)
+{
+  struct i386_frame_cache *cache =
+    i386_plt_stub_frame_cache (this_frame, this_cache);
+
+  /* See the end of i386_push_dummy_call.  */
+  (*this_id) = frame_id_build (cache->base + 8, cache->pc);
+}
+
+static struct value *
+i386_plt_stub_frame_prev_register (struct frame_info *this_frame,
+                                  void **this_cache, int regnum)
+{
+  /* Make sure we've initialized the cache.  */
+  i386_plt_stub_frame_cache (this_frame, this_cache);
+
+  return i386_frame_prev_register (this_frame, this_cache, regnum);
+}
+
+static int
+i386_plt_stub_frame_sniffer (const struct frame_unwind *self,
+                            struct frame_info *this_frame, void **this_cache)
+{
+  CORE_ADDR pc = get_frame_pc (this_frame);
+
+  if (!in_plt_section(pc, NULL))
+    return 0;
+
+  if (!i386_match_insn_block (pc, i386_plt_stub_insns)
+      && !i386_match_insn_block (pc, i386_plt0_stub_insns)
+      && !i386_match_insn_block (pc, i386_pic_plt_stub_insns)
+      && !i386_match_insn_block (pc, i386_pic_plt0_stub_insns))
+    return 0;
+
+  return 1;
+}
+
+static const struct frame_unwind i386_plt_stub_frame_unwind =
+{
+  NORMAL_FRAME,
+  default_frame_unwind_stop_reason,
+  i386_plt_stub_frame_this_id,
+  i386_plt_stub_frame_prev_register,
+  NULL,
+  i386_plt_stub_frame_sniffer
+};
+
+
 /* Signal trampolines.  */
 
 static struct i386_frame_cache *
@@ -3305,6 +3499,8 @@ i386_elf_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
 {
   /* We typically use stabs-in-ELF with the SVR4 register numbering.  */
   set_gdbarch_stab_reg_to_regnum (gdbarch, i386_svr4_reg_to_regnum);
+
+  frame_unwind_append_unwinder (gdbarch, &i386_plt_stub_frame_unwind);
 }
 
 /* System V Release 4 (SVR4).  */
