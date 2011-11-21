@@ -4879,6 +4879,8 @@ print_one_breakpoint_location (struct breakpoint *b,
       /* FIXME should make an annotation for this.  */
       if (ep_is_catchpoint (b))
 	ui_out_text (uiout, "\tcatchpoint");
+      else if (is_tracepoint (b))
+	ui_out_text (uiout, "\ttracepoint");
       else
 	ui_out_text (uiout, "\tbreakpoint");
       ui_out_text (uiout, " already hit ");
@@ -4903,6 +4905,18 @@ print_one_breakpoint_location (struct breakpoint *b,
       ui_out_text (uiout, " hits\n");
     }
 
+  if (!part_of_multiple && is_tracepoint (b))
+    {
+      struct tracepoint *tp = (struct tracepoint *) b;
+
+      if (tp->traceframe_usage)
+	{
+	  ui_out_text (uiout, "\ttrace buffer usage ");
+	  ui_out_field_int (uiout, "traceframe-usage", tp->traceframe_usage);
+	  ui_out_text (uiout, " bytes\n");
+	}
+    }
+  
   l = b->commands ? b->commands->commands : NULL;
   if (!part_of_multiple && l)
     {
@@ -6680,14 +6694,16 @@ init_catchpoint (struct breakpoint *b,
 }
 
 void
-install_breakpoint (int internal, struct breakpoint *b)
+install_breakpoint (int internal, struct breakpoint *b, int update_gll)
 {
   add_to_breakpoint_chain (b);
   set_breakpoint_number (internal, b);
   if (!internal)
     mention (b);
   observer_notify_breakpoint_created (b);
-  update_global_location_list (1);
+
+  if (update_gll)
+    update_global_location_list (1);
 }
 
 static void
@@ -6701,7 +6717,7 @@ create_fork_vfork_event_catchpoint (struct gdbarch *gdbarch,
 
   c->forked_inferior_pid = null_ptid;
 
-  install_breakpoint (0, &c->base);
+  install_breakpoint (0, &c->base, 1);
 }
 
 /* Exec catchpoints.  */
@@ -6822,7 +6838,7 @@ create_syscall_event_catchpoint (int tempflag, VEC(int) *filter,
   init_catchpoint (&c->base, gdbarch, tempflag, NULL, ops);
   c->syscalls_to_be_caught = filter;
 
-  install_breakpoint (0, &c->base);
+  install_breakpoint (0, &c->base, 1);
 }
 
 static int
@@ -7331,7 +7347,7 @@ create_breakpoint_sal (struct gdbarch *gdbarch,
 		       enabled, internal, display_canonical);
   discard_cleanups (old_chain);
 
-  install_breakpoint (internal, b);
+  install_breakpoint (internal, b, 0);
 }
 
 /* Remove element at INDEX_TO_REMOVE from SAL, shifting other
@@ -7834,8 +7850,8 @@ create_breakpoint (struct gdbarch *gdbarch,
           /* If pending breakpoint support is auto query and the user
 	     selects no, then simply return the error code.  */
 	  if (pending_break_support == AUTO_BOOLEAN_AUTO
-	      && !nquery (_("Make breakpoint pending on "
-			    "future shared library load? ")))
+	      && !nquery (_("Make %s pending on future shared library load? "),
+			  bptype_string (type_wanted)))
 	    return 0;
 
 	  /* At this point, either the user was queried about setting
@@ -7892,7 +7908,7 @@ create_breakpoint (struct gdbarch *gdbarch,
     breakpoint_sals_to_pc (&sals);
 
   /* Fast tracepoints may have additional restrictions on location.  */
-  if (type_wanted == bp_fast_tracepoint)
+  if (!pending && type_wanted == bp_fast_tracepoint)
     check_fast_tracepoint_sals (gdbarch, &sals);
 
   /* Verify that condition can be parsed, before setting any
@@ -7961,7 +7977,7 @@ create_breakpoint (struct gdbarch *gdbarch,
 		 corresponds to this one  */
 	      tp->static_trace_marker_id_idx = i;
 
-	      install_breakpoint (internal, &tp->base);
+	      install_breakpoint (internal, &tp->base, 0);
 
 	      do_cleanups (old_chain);
 	    }
@@ -7979,9 +7995,18 @@ create_breakpoint (struct gdbarch *gdbarch,
 
       make_cleanup (xfree, copy_arg);
 
-      b = set_raw_breakpoint_without_location (gdbarch, type_wanted, ops);
-      set_breakpoint_number (internal, b);
-      b->thread = -1;
+      if (is_tracepoint_type (type_wanted))
+	{
+	  struct tracepoint *t;
+
+	  t = XCNEW (struct tracepoint);
+	  b = &t->base;
+	}
+      else
+	b = XNEW (struct breakpoint);
+
+      init_raw_breakpoint_without_location (b, gdbarch, type_wanted, ops);
+
       b->addr_string = canonical.canonical[0];
       b->cond_string = NULL;
       b->ignore_count = ignore_count;
@@ -7989,18 +8014,13 @@ create_breakpoint (struct gdbarch *gdbarch,
       b->condition_not_parsed = 1;
       b->enable_state = enabled ? bp_enabled : bp_disabled;
       b->pspace = current_program_space;
-      b->py_bp_object = NULL;
 
       if (enabled && b->pspace->executing_startup
 	  && (b->type == bp_breakpoint
 	      || b->type == bp_hardware_breakpoint))
 	b->enable_state = bp_startup_disabled;
 
-      if (!internal)
-        /* Do not mention breakpoints with a negative number, 
-	   but do notify observers.  */
-	mention (b);
-      observer_notify_breakpoint_created (b);
+      install_breakpoint (internal, b, 0);
     }
   
   if (sals.nelts > 1)
@@ -9397,7 +9417,7 @@ watch_command_1 (char *arg, int accessflag, int from_tty,
       throw_exception (e);
     }
 
-  install_breakpoint (internal, b);
+  install_breakpoint (internal, b, 1);
 }
 
 /* Return count of debug registers needed to watch the given expression.
@@ -9795,7 +9815,7 @@ catch_exec_command_1 (char *arg, int from_tty,
 		   &catch_exec_breakpoint_ops);
   c->exec_pathname = NULL;
 
-  install_breakpoint (0, &c->base);
+  install_breakpoint (0, &c->base, 1);
 }
 
 static enum print_stop_action
@@ -12897,6 +12917,10 @@ create_tracepoint_from_upload (struct uploaded_tp *utp)
     warning (_("Uploaded tracepoint %d actions "
 	       "have no source form, ignoring them"),
 	     utp->number);
+
+  /* Copy any status information that might be available.  */
+  tp->base.hit_count = utp->hit_count;
+  tp->traceframe_usage = utp->traceframe_usage;
 
   return tp;
 }
