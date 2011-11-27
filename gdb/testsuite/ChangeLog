@@ -1,3 +1,37 @@
+2011-11-25  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	PR testsuite/12649
+	* gdb.reverse/i386-sse-reverse.exp (continue to end of sse_test #2):
+	Wrap send_gdb into a new gdb_test.
+
+	Code cleanup.
+	* gdb.reverse/i386-sse-reverse.exp (continue to end of sse4_test):
+	Convert send_gdb and gdb_expect to gdb_test_multiple.
+
+2011-11-25  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	* gdb.base/jit-so.exp (one_jit_test): Add testcase name to log message.
+
+2011-11-23  Keith Seitz  <keiths@redhat.com>
+
+	* lib/mi-support.exp (varobj_tree): New namespace and procs.
+	(mi_varobj_tree_test_children_callback): New proc.
+	(mi_walk_varobj_tree): New proc.
+
+2011-11-22  Tom Tromey  <tromey@redhat.com>
+
+	* lib/mi-support.exp (mi_run_cmd_full): Rename from mi_run_cmd.
+	Add "use_mi_command" argument.
+	(mi_run_cmd, mi_run_with_cli): New procs.
+	* gdb.mi/solib-lib.c: New file.
+	* gdb.mi/solib-main.c: New file.
+	* gdb.mi/mi-solib.exp: New file.
+
+2011-11-21  Doug Evans  <dje@google.com>
+
+	* gdb.cp/nextoverthrow.exp: Skip test if debug info for
+	_Unwind_DebugHook is missing.
+
 2011-11-20  Stan Shebs  <stan@codesourcery.com>
 
 	* gdb.trace/tstatus.exp: New.

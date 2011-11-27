@@ -1,3 +1,106 @@
+2011-11-25  Uros Bizjak  <ubizjak@gmail.com>
+
+	* alpha-tdep.c (br_opcode): New.
+	(ldl_l_opcode, ldq_l_opcode, stl_c_opcode, stq_c_opcode): Ditto.
+	(alpha_deal_with_atomic_sequence): New function.
+	(alpha_gdbarch_init): Handle single stepping of atomic sequences
+	with alpha_deal_with_atomic_sequence.
+
+2011-11-24  Tristan Gingold  <gingold@adacore.com>
+
+	* machoread.c (oso_el): Remove num_Sections, symbols, offsets
+	fields.  Add oso_sym, end_sym and nbr_syms.
+	(macho_register_oso): Change interface.
+	(macho_symtab_add_minsym): New function.
+	(macho_symtab_read): Rewritten.
+	(get_archive_prefix_len): Remove trailing blanks.
+	(oso_el_compare_name): Add comment.
+	(struct macho_sym_hash_entry): New structure.
+	(macho_relocate_common_syms): Remove.
+	(macho_sym_hash_newfunc): New function.
+	(macho_resolve_oso_sym_with_minsym): Likewise.
+	(macho_add_oso_symfile): Rewritten.
+	(macho_symfile_read_all_oso): Remove trailing blanks.
+	Adjust code to free oso vector.
+	(macho_symfile_read): Likewise.
+	Move code to initialize minimal symbol
+
+2011-11-24  Maciej W. Rozycki  <macro@codesourcery.com>
+
+	* mips-tdep.c (extended_offset): Fix formatting.
+
+2011-11-23  Doug Evans  <dje@google.com>
+
+	* dwarf2read.c (dw2_lookup_symtab): Add comment.
+	(dw2_expand_symtabs_with_filename): Ditto.
+	(dw2_expand_symtabs_matching): Ditto.
+	(dw2_map_symbol_filenames): Ditto.
+
+2011-11-23  Andrey Smirnov  <andrew.smirnov@gmail.com>
+
+	* ada-lang.c (assign_aggregate): Minor reformatting.
+
+2011-11-23  Andrey Smirnov  <andrew.smirnov@gmail.com>
+
+	* ada-lang.c (assign_aggregate): Remove declaration of local
+	variable `i' which is shadowing another variable with the same
+	name declared in the outer scope.
+
+2011-11-23  Joel Brobecker  <brobecker@adacore.com>
+
+	* ada-lang.c (get_base_type): Renames base_type.  Adjust all
+	calls throughout this file.
+
+2011-11-23  Joel Brobecker  <brobecker@adacore.com>
+
+	* gdb-dlfcn.c (gdb_dlopen): Add missing coma in call to
+	FormatMessage.
+
+2011-11-22  Tom Tromey  <tromey@redhat.com>
+
+	PR mi/8444:
+	* mi/mi-common.h (EXEC_ASYNC_SOLIB_EVENT, EXEC_ASYNC_FORK)
+	(EXEC_ASYNC_VFORK, EXEC_ASYNC_SYSCALL_ENTRY)
+	(EXEC_ASYNC_SYSCALL_RETURN, EXEC_ASYNC_EXEC): New constants.
+	* mi/mi-common.c (async_reason_string_lookup): Add new reasons.
+	* breakpoint.c (print_it_catch_fork, print_it_catch_vfork)
+	(print_it_catch_syscall, print_it_catch_exec)
+	(internal_bkpt_print_it): Use ui_out.  Emit stop reason.
+	(bpstat_print): Add 'kind' argument.  Handle
+	TARGET_WAITKIND_LOADED.
+	* infrun.c (normal_stop): Update for bpstat_print change.  Don't
+	handle TARGET_WAITKIND_LOADED here.
+	* breakpoint.h (bpstat_print): Update.
+
+2011-11-22  Tom Tromey  <tromey@redhat.com>
+
+	* mi/mi-interp.c (mi_on_normal_stop): Call bpstat_print.
+
+2011-11-22  Tom Tromey  <tromey@redhat.com>
+
+	* mi/mi-common.c (_initialize_gdb_mi_common): Remove.
+	Use static_assert to check the size of
+	async_reason_string_lookup.
+	* common/gdb_assert.h (static_assert): New macro.
+
+2011-11-22  Alan Modra  <amodra@gmail.com>
+
+	* rs6000-tdep.c (ppc_deal_with_atomic_sequence): Correct branch
+	destination calculation.  Don't expect >> to sign extend.  Don't
+	add a break if branch lands inside the sequence anywhere.
+
+2011-11-21  Keith Seitz  <keiths@redhat.com>
+
+	* gdb.mi/mi-var-display.exp: Remove XFAIL for c_variable-7.51,
+	-var-evaluate-expression of an enumeration and fix expected result.
+	* gdb.mi/mi2-varvdisplay.exp: Likewise.
+
+2011-11-21  Kwok Cheung Yeung  <kcy@codesourcery.com>
+
+	* osdata.c (info_osdata_command): Rename nprocs to nrows.  Handle
+	the case where osdata->items is empty.  Rename column names to a
+	canonical form to avoid problems with unusual column names.
+
 2011-11-21  Yao Qi  <yao@codesourcery.com>
 
 	* MAINTAINERS (Write After Approval): Keep list in alphabetical order.
