@@ -1132,6 +1132,9 @@ find_command_name_length (const char *text)
   if (*p == '!')
     return 1;
 
+  if (*p == '[')
+    return 1; /* The temporary focus command.  */
+
   while (isalnum (*p) || *p == '-' || *p == '_'
 	 /* Characters used by TUI specific commands.  */
 	 || *p == '+' || *p == '<' || *p == '>' || *p == '$'

@@ -45,6 +45,8 @@ struct terminal_info;
 
 #include "progspace.h"
 
+DEF_VEC_I(int);
+
 struct infcall_suspend_state;
 struct infcall_control_state;
 
