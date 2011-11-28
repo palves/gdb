@@ -23,6 +23,7 @@
 #include "defs.h"
 #include "top.h"
 #include "inferior.h"
+#include "itset.h"
 #include "target.h"
 #include "terminal.h"		/* for job_control */
 #include "event-loop.h"
@@ -36,6 +37,7 @@
 #include "observer.h"
 #include "continuations.h"
 #include "gdbcmd.h"		/* for dont_repeat() */
+#include "gdb_obstack.h"
 
 /* readline include files.  */
 #include "readline/readline.h"
@@ -215,6 +217,38 @@ change_line_handler (void)
     }
 }
 
+static char *
+expand_gdb_prompt (char *prompt)
+{
+  struct obstack obstack;
+  char *p;
+
+  obstack_init (&obstack);
+
+  p = prompt;
+  while (*p)
+    {
+      if (CONST_STRNEQ (p, "%ITSET%"))
+	{
+	  obstack_grow_str (&obstack, "[");
+	  if (itset_name (current_itset) != NULL)
+	    obstack_grow_str (&obstack, itset_name (current_itset));
+	  else
+	    obstack_grow_str (&obstack, itset_spec (current_itset));
+	  obstack_grow_str (&obstack, "]");
+	  p += sizeof ("%ITSET%") - 1;
+	  continue;
+	}
+
+      obstack_1grow (&obstack, *p);
+      p++;
+    }
+
+  obstack_1grow (&obstack, '\0');
+
+  return xstrdup (obstack_finish (&obstack));
+}
+
 /* Displays the prompt.  If the argument NEW_PROMPT is NULL, the
    prompt that is displayed is the current top level prompt.
    Otherwise, it displays whatever NEW_PROMPT is as a local/secondary
@@ -276,8 +310,12 @@ display_gdb_prompt (char *new_prompt)
 	}
       else
 	{
+	  char *top;
+
 	  /* Display the top level prompt.  */
-	  actual_gdb_prompt = top_level_prompt ();
+	  top = top_level_prompt ();
+	  actual_gdb_prompt = expand_gdb_prompt (top);
+	  xfree (top);
 	}
     }
   else
