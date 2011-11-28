@@ -411,4 +411,6 @@ extern struct thread_info* inferior_thread (void);
 
 extern void update_thread_list (void);
 
+extern struct inferior *get_thread_inferior (struct thread_info *thr);
+
 #endif /* GDBTHREAD_H */
