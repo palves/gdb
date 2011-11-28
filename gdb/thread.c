@@ -46,6 +46,7 @@
 #include "gdb_regex.h"
 #include "cli/cli-utils.h"
 #include "continuations.h"
+#include "itset.h"
 
 /* Definition of struct thread_info exported to gdbthread.h.  */
 
@@ -1199,8 +1200,8 @@ thread_apply_all_command (char *cmd, int from_tty)
      execute_command.  */
   saved_cmd = xstrdup (cmd);
   make_cleanup (xfree, saved_cmd);
-  for (tp = thread_list; tp; tp = tp->next)
-    if (thread_alive (tp))
+  ALL_THREADS (tp)
+    if (itset_contains_thread (current_itset, tp) && thread_alive (tp))
       {
 	switch_to_thread (tp->ptid);
 
