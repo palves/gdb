@@ -4259,11 +4259,11 @@ maintenance_print_target_stack (char *cmd, int from_tty)
 }
 
 /* Controls if async mode is permitted.  */
-int target_async_permitted = 0;
+int target_async_permitted = 1;
 
 /* The set command writes to this variable.  If the inferior is
    executing, linux_nat_async_permitted is *not* updated.  */
-static int target_async_permitted_1 = 0;
+static int target_async_permitted_1 = 1;
 
 static void
 set_maintenance_target_async_permitted (char *args, int from_tty,
