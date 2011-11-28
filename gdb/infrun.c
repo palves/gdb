@@ -4011,6 +4011,7 @@ handle_inferior_event (struct execution_control_state *ecs)
       current_inferior ()->exit_code = (LONGEST) ecs->ws.value.integer;
 
       gdb_flush (gdb_stdout);
+      ecs->event_thread = NULL;
       target_mourn_inferior ();
       singlestep_breakpoints_inserted_p = 0;
       cancel_single_step_breakpoints ();
@@ -4033,6 +4034,7 @@ handle_inferior_event (struct execution_control_state *ecs)
          target_kill() was called here, which hints that fatal signals aren't
          really fatal on some systems.  If that's true, then some changes
          may be needed.  */
+      ecs->event_thread = NULL;
       target_mourn_inferior ();
 
       print_signal_exited_reason (ecs->ws.value.sig);
