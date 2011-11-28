@@ -32,6 +32,7 @@ struct get_number_or_range_state;
 struct thread_info;
 struct bpstats;
 struct bp_location;
+struct itset;
 
 /* This is the maximum number of bytes a breakpoint instruction can
    take.  Feel free to increase it.  It's just used in a few places to
@@ -609,6 +610,15 @@ struct breakpoint
        or 0 if don't care.  */
     int task;
 
+    /* I/T set controlling where this breakpoint will stop.  */
+    struct itset *trigger_set;
+
+    /* The set that should be suspended once the breakpoint has
+       triggered.  If empty, defaults to consulting the "non-stop"
+       setting: if that is on, just the triggering thread should stop;
+       otherwise, all threads in the TRIGGER_SET set stop.  */
+    struct itset *stop_set;
+
     /* Count of the number of times this breakpoint was taken, dumped
        with the info, but not used for anything else.  Useful for
        seeing how many times you hit a break prior to the program
@@ -860,6 +870,9 @@ enum print_stop_action
 
 /* Tell what to do about this bpstat.  */
 struct bpstat_what bpstat_what (bpstat);
+
+/* Tell us what we should suspend.  */
+extern struct itset *bpstat_stop_set (bpstat);
 
 /* Find the bpstat associated with a breakpoint.  NULL otherwise.  */
 bpstat bpstat_find_breakpoint (bpstat, struct breakpoint *);

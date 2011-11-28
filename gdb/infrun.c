@@ -26,6 +26,7 @@
 #include "symtab.h"
 #include "frame.h"
 #include "inferior.h"
+#include "itset.h"
 #include "exceptions.h"
 #include "breakpoint.h"
 #include "gdb_wait.h"
@@ -2527,6 +2528,8 @@ struct execution_control_state
   char *stop_func_name;
   int new_thread_event;
   int wait_some_more;
+
+  struct itset *stop_set;
 };
 
 static void handle_inferior_event (struct execution_control_state *ecs);
@@ -2900,7 +2903,7 @@ prepare_for_detach (void)
   discard_cleanups (old_chain_1);
 }
 
-static void stop_all_threads (void);
+static void stop_all_threads (struct itset *stop_set);
 static int adjust_pc_after_break (struct thread_info *thread,
 				  struct target_waitstatus *ws);
 
@@ -3002,7 +3005,7 @@ wait_for_inferior (void)
 
       if (!non_stop && target_is_non_stop_p () && !stop_only_if_needed)
 	{
-	  stop_all_threads ();
+	  stop_all_threads (NULL);
 
 	  if (ecs->ws.kind != TARGET_WAITKIND_NO_RESUMED
 	      && ecs->ws.kind != TARGET_WAITKIND_EXITED
@@ -3173,7 +3176,7 @@ fetch_inferior_event (void *client_data)
   if (!non_stop && target_is_non_stop_p () && !stop_only_if_needed
       && ecs->ws.kind != TARGET_WAITKIND_IGNORE)
     {
-      stop_all_threads ();
+      stop_all_threads (NULL);
       /* select event thread */
       /* cancel breakpoints */
     }
@@ -3580,8 +3583,25 @@ wait_one (ptid_t wait_ptid, struct target_waitstatus *ws)
   return event_ptid;
 }
 
+#define itset_spec_empty(SET) \
+  ((SET) == NULL || itset_spec (SET)[0] == '\0')
+
+static int
+stop_set_match (struct itset *stop_set, struct thread_info *t)
+{
+  int inf_id;
+
+  if (itset_spec_empty (stop_set))
+    return !non_stop;
+
+  if (itset_contains_thread (stop_set, t))
+    return 1;
+
+  return 0;
+}
+
 static void
-stop_all_threads (void)
+stop_all_threads (struct itset *stop_set)
 {
   /* We may need multiple passes to discover all threads.  */
   int pass;
@@ -3611,6 +3631,7 @@ stop_all_threads (void)
 	  /* Go through all threads looking for threads that we need
 	     to tell the target to stop.  */
 	  ALL_LIVE_THREADS (t)
+	    if (stop_set_match (stop_set, t))
 	    {
 	      if (t->executing)
 		{
@@ -3655,6 +3676,11 @@ stop_all_threads (void)
 	    pass = -1;
 
 	  event_ptid = wait_one (minus_one_ptid, &ws);
+
+	  /* FIXME: if EVENT_PTID isn't in the trigger or stop sets,
+	     we'll need to re-resume or handle the event
+	     afterwards.  */
+
 	  if (ws.kind == TARGET_WAITKIND_NO_RESUMED)
 	    /* All resumed threads exited.  */
 	    ;
@@ -5129,7 +5155,11 @@ process_event_stop_test:
 	/* We are about to nuke the step_resume_breakpointt via the
 	   cleanup chain, so no need to worry about it here.  */
 
+	ecs->stop_set
+	  = bpstat_stop_set (ecs->event_thread->control.stop_bpstat);
 	stop_stepping (ecs);
+	itset_free (ecs->stop_set);
+	ecs->stop_set = NULL;
 	return;
 
       case BPSTAT_WHAT_STOP_SILENT:
@@ -5140,7 +5170,11 @@ process_event_stop_test:
 	/* We are about to nuke the step_resume_breakpoin via the
 	   cleanup chain, so no need to worry about it here.  */
 
+	ecs->stop_set
+	  = bpstat_stop_set (ecs->event_thread->control.stop_bpstat);
 	stop_stepping (ecs);
+	itset_free (ecs->stop_set);
+	ecs->stop_set = NULL;
 	return;
 
       case BPSTAT_WHAT_HP_STEP_RESUME:
@@ -6157,13 +6191,12 @@ stop_stepping (struct execution_control_state *ecs)
   /* Let callers know we don't want to wait for the inferior anymore.  */
   ecs->wait_some_more = 0;
 
-  if (!non_stop
-      && target_is_non_stop_p ()
+  if (target_is_non_stop_p ()
       && stop_only_if_needed)
     {
       struct thread_info *t;
 
-      stop_all_threads ();
+      stop_all_threads (ecs->stop_set);
 
       cancel_breakpoints ();
 
@@ -6171,7 +6204,8 @@ stop_stepping (struct execution_control_state *ecs)
 	 are now stopped until a new resume action is sent
 	 over.  */
       ALL_LIVE_THREADS (t)
-	t->control.resumed = 0;
+	if (stop_set_match (ecs->stop_set, t))
+	  t->control.resumed = 0;
     }
 }
 
@@ -6230,7 +6264,7 @@ keep_going (struct execution_control_state *ecs)
 	      /* Since we can't do a displaced step, we have to remove
 		 the breakpoint while we step it.  To keep things
 		 simple, we remove them all.  */
-	      stop_all_threads ();
+	      stop_all_threads (NULL);
 
 	      cancel_breakpoints ();
 	      /* In all-stop, from the core's perspective, all threads

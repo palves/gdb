@@ -34,6 +34,7 @@
 #include "value.h"
 #include "command.h"
 #include "inferior.h"
+#include "itset.h"
 #include "gdbthread.h"
 #include "target.h"
 #include "language.h"
@@ -3035,6 +3036,21 @@ hardware_watchpoint_inserted_in_range (struct address_space *aspace,
   return 0;
 }
 
+/* Test whether this stopping thread is in the I/T set for this
+   breakpoint.  */
+
+static int
+bpstat_check_trigger_set (const struct breakpoint *b, struct thread_info *thread)
+{
+  if (b->trigger_set == NULL)
+    return 1;
+
+  if (itset_contains_thread (b->trigger_set, thread))
+    return 1;
+
+  return 0;
+}
+
 /* breakpoint_thread_match (PC, PTID) returns true if the breakpoint at
    PC is valid for process/thread PTID.  */
 
@@ -3044,7 +3060,7 @@ breakpoint_thread_match (struct address_space *aspace, CORE_ADDR pc,
 {
   struct bp_location *bl, **blp_tmp;
   /* The thread and task IDs associated to PTID, computed lazily.  */
-  int thread = -1;
+  struct thread_info *thread = NULL;
   int task = 0;
   
   ALL_BP_LOCATIONS (bl, blp_tmp)
@@ -3066,9 +3082,9 @@ breakpoint_thread_match (struct address_space *aspace, CORE_ADDR pc,
 	  /* This is a thread-specific breakpoint.  Check that ptid
 	     matches that thread.  If thread hasn't been computed yet,
 	     it is now time to do so.  */
-	  if (thread == -1)
-	    thread = pid_to_thread_id (ptid);
-	  if (bl->owner->thread != thread)
+	  if (thread == NULL)
+	    thread = find_thread_ptid (ptid);
+	  if (bl->owner->thread != thread->num)
 	    continue;
 	}
 
@@ -3082,6 +3098,16 @@ breakpoint_thread_match (struct address_space *aspace, CORE_ADDR pc,
 	  if (bl->owner->task != task)
 	    continue;
         }
+
+      if (bl->owner->trigger_set != NULL)
+	{
+	  /* A breakpoint with a trigger itset.  Check that ptid
+	     matches that set.  */
+	  if (thread == NULL)
+	    thread = find_thread_ptid (ptid);
+	  if (!bpstat_check_trigger_set (bl->owner, thread))
+	    continue;
+	}
 
       if (overlay_debugging 
 	  && section_is_overlay (bl->section)
@@ -3974,7 +4000,7 @@ bpstat_check_watchpoint (bpstat bs)
 static void
 bpstat_check_breakpoint_conditions (bpstat bs, ptid_t ptid)
 {
-  int thread_id = pid_to_thread_id (ptid);
+  struct thread_info *thread = find_thread_ptid (ptid);
   const struct bp_location *bl;
   struct breakpoint *b;
 
@@ -4076,7 +4102,12 @@ bpstat_check_breakpoint_conditions (bpstat bs, ptid_t ptid)
 	{
 	  bs->stop = 0;
 	}
-      else if (b->thread != -1 && b->thread != thread_id)
+      else if (b->thread != -1 && b->thread != thread->num)
+	{
+	  bs->stop = 0;
+	}
+      else if (b->trigger_set != NULL
+	       && !bpstat_check_trigger_set (b, thread))
 	{
 	  bs->stop = 0;
 	}
@@ -4504,6 +4535,33 @@ bpstat_what (bpstat bs_head)
   return retval;
 }
 
+/* Tell us what we should suspend.  */
+
+struct itset *
+bpstat_stop_set (bpstat bs_head)
+{
+  bpstat bs;
+
+  for (bs = bs_head; bs != NULL; bs = bs->next)
+    {
+      if (bs->breakpoint_at == NULL)
+	{
+	  /* I suspect this can happen if it was a momentary
+	     breakpoint which has since been deleted.  */
+	  continue;
+	}
+
+      if (!bs->stop)
+	continue;
+
+      /* XXX: Should be the union of the sets of all breakpoints that
+	 caused a stop?  */
+      return itset_reference (bs->breakpoint_at->stop_set);
+    }
+
+  return NULL;
+}
+
 /* Nonzero if we should step constantly (e.g. watchpoints on machines
    without hardware support).  This isn't related to a specific bpstat,
    just to things like whether watchpoints are set.  */
@@ -4903,7 +4961,27 @@ print_one_breakpoint_location (struct breakpoint *b,
       ui_out_field_int (uiout, "thread", b->thread);
       ui_out_text (uiout, "\n");
     }
-  
+
+  if (!part_of_multiple && b->trigger_set != NULL)
+    {
+      ui_out_text (uiout, "\tstop only in trigger-set: [");
+      if (itset_name (b->trigger_set) != NULL)
+	ui_out_field_string (uiout, "trigger-set", itset_name (b->trigger_set));
+      else
+	ui_out_field_string (uiout, "trigger-set", itset_spec (b->trigger_set));
+      ui_out_text (uiout, "]\n");
+    }
+
+  if (!part_of_multiple && b->stop_set != NULL)
+    {
+      ui_out_text (uiout, "\tsuspend all in stop-set: [");
+      if (itset_name (b->stop_set) != NULL)
+	ui_out_field_string (uiout, "stop-set", itset_name (b->stop_set));
+      else
+	ui_out_field_string (uiout, "stop-set", itset_spec (b->stop_set));
+      ui_out_text (uiout, "]\n");
+    }
+
   if (!part_of_multiple && b->hit_count)
     {
       /* FIXME should make an annotation for this.  */
@@ -5731,6 +5809,7 @@ init_raw_breakpoint_without_location (struct breakpoint *b,
   b->language = current_language->la_language;
   b->input_radix = input_radix;
   b->thread = -1;
+  b->trigger_set = NULL;
   b->enable_state = bp_enabled;
   b->next = 0;
   b->silent = 0;
@@ -7274,6 +7353,7 @@ init_breakpoint_sal (struct breakpoint *b, struct gdbarch *gdbarch,
 		     struct symtabs_and_lines sals, char *addr_string,
 		     char *cond_string,
 		     enum bptype type, enum bpdisp disposition,
+		     struct itset *trigger_set, struct itset *stop_set,
 		     int thread, int task, int ignore_count,
 		     const struct breakpoint_ops *ops, int from_tty,
 		     int enabled, int internal, int display_canonical)
@@ -7314,6 +7394,8 @@ init_breakpoint_sal (struct breakpoint *b, struct gdbarch *gdbarch,
 	  init_raw_breakpoint (b, gdbarch, sal, type, ops);
 	  b->thread = thread;
 	  b->task = task;
+	  b->trigger_set = trigger_set;
+	  b->stop_set = stop_set;
   
 	  b->cond_string = cond_string;
 	  b->ignore_count = ignore_count;
@@ -7399,6 +7481,7 @@ create_breakpoint_sal (struct gdbarch *gdbarch,
 		       struct symtabs_and_lines sals, char *addr_string,
 		       char *cond_string,
 		       enum bptype type, enum bpdisp disposition,
+		       struct itset *trigger_set, struct itset *stop_set,
 		       int thread, int task, int ignore_count,
 		       const struct breakpoint_ops *ops, int from_tty,
 		       int enabled, int internal, int display_canonical)
@@ -7422,6 +7505,7 @@ create_breakpoint_sal (struct gdbarch *gdbarch,
 		       sals, addr_string,
 		       cond_string,
 		       type, disposition,
+		       trigger_set, stop_set,
 		       thread, task, ignore_count,
 		       ops, from_tty,
 		       enabled, internal, display_canonical);
@@ -7583,6 +7667,7 @@ create_breakpoints_sal (struct gdbarch *gdbarch,
 			struct linespec_result *canonical,
 			char *cond_string,
 			enum bptype type, enum bpdisp disposition,
+			struct itset *trigger_set, struct itset *stop_set,
 			int thread, int task, int ignore_count,
 			const struct breakpoint_ops *ops, int from_tty,
 			int enabled, int internal)
@@ -7596,6 +7681,7 @@ create_breakpoints_sal (struct gdbarch *gdbarch,
 
       create_breakpoint_sal (gdbarch, expanded, canonical->canonical[i],
 			     cond_string, type, disposition,
+			     trigger_set, stop_set,
 			     thread, task, ignore_count, ops,
 			     from_tty, enabled, internal,
 			     canonical->special_display);
@@ -7619,7 +7705,8 @@ parse_breakpoint_sals (char **address,
 
   /* If no arg given, or if first arg is 'if ', use the default
      breakpoint.  */
-  if ((*address) == NULL
+  if (*address == NULL
+      || **address == '\0'
       || (strncmp ((*address), "if", 2) == 0 && isspace ((*address)[2])))
     {
       /* The last displayed codepoint, if it's valid, is our default breakpoint
@@ -7884,6 +7971,9 @@ create_breakpoint (struct gdbarch *gdbarch,
   int pending = 0;
   int task = 0;
   int prev_bkpt_count = breakpoint_count;
+  char *p;
+  struct itset *trigger_set = itset_reference (current_itset);
+  struct itset *stop_set = itset_reference (trigger_set);
 
   gdb_assert (ops != NULL);
 
@@ -7902,6 +7992,30 @@ create_breakpoint (struct gdbarch *gdbarch,
       for (i = 0; i < sals.nelts; i++)
 	canonical.canonical[i] = xstrdup (copy_arg);
       goto done;
+    }
+
+  if (arg != NULL)
+    {
+      while (*arg)
+	{
+	  arg = skip_spaces (arg);
+	  p = skip_to_space (arg);
+
+	  if (strncmp (arg, "-stop", p - arg) == 0)
+	    {
+	      p = skip_spaces (p);
+	      itset_free (stop_set);
+	      stop_set = itset_create (&p);
+	      arg = p;
+	    }
+	  else if (strcmp (arg, "--") == 0)
+	    {
+	      arg += 2;
+	      break;
+	    }
+	  else
+	    break;
+	}
     }
 
   TRY_CATCH (e, RETURN_MASK_ALL)
@@ -8046,7 +8160,7 @@ create_breakpoint (struct gdbarch *gdbarch,
 				   canonical.canonical[i],
 				   cond_string, type_wanted,
 				   tempflag ? disp_del : disp_donttouch,
-				   thread, task, ignore_count, ops,
+				   NULL, NULL, thread, task, ignore_count, ops,
 				   from_tty, enabled, internal,
 				   canonical.special_display);
 	      /* Given that its possible to have multiple markers with
@@ -8066,6 +8180,7 @@ create_breakpoint (struct gdbarch *gdbarch,
 	create_breakpoints_sal (gdbarch, sals, &canonical, cond_string,
 				type_wanted,
 				tempflag ? disp_del : disp_donttouch,
+				trigger_set, stop_set,
 				thread, task, ignore_count, ops, from_tty,
 				enabled, internal);
     }
@@ -10941,6 +11056,8 @@ base_breakpoint_dtor (struct breakpoint *self)
   xfree (self->addr_string);
   xfree (self->addr_string_range_end);
   xfree (self->source_file);
+  itset_free (self->trigger_set);
+  itset_free (self->stop_set);
 }
 
 static struct bp_location *
