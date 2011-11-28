@@ -379,7 +379,7 @@ int
 breakpoints_always_inserted_mode (void)
 {
   return ((always_inserted_mode == always_inserted_on
-	   || (always_inserted_mode == always_inserted_auto && non_stop))
+	   || (always_inserted_mode == always_inserted_auto && target_is_non_stop_p ()))
 	  && !RECORD_IS_USED);
 }
 
@@ -10681,7 +10681,7 @@ update_global_location_list (int should_insert)
 
       if (!found_object)
 	{
-	  if (removed && non_stop
+	  if (removed && target_is_non_stop_p ()
 	      && breakpoint_address_is_meaningful (old_loc->owner)
 	      && !is_hardware_watchpoint (old_loc->owner))
 	    {

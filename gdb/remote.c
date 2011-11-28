@@ -3254,6 +3254,8 @@ remote_start_remote (int from_tty, struct target_ops *target, int extended_p)
 
   if (!non_stop)
     {
+      struct thread_info *tp;
+
       if (rs->buf[0] == 'W' || rs->buf[0] == 'X')
 	{
 	  if (!extended_p)
@@ -3288,7 +3290,8 @@ remote_start_remote (int from_tty, struct target_ops *target, int extended_p)
       remote_add_inferior (ptid_get_pid (inferior_ptid), -1);
 
       /* Always add the main thread.  */
-      add_thread_silent (inferior_ptid);
+      tp = add_thread_silent (inferior_ptid);
+      tp->control.resumed = 1;
 
       /* init_wait_for_inferior should be called before get_offsets in order
 	 to manage `inserted' flag in bp loc in a correct state.
@@ -4299,11 +4302,14 @@ extended_remote_attach_1 (struct target_ops *target, char *args, int from_tty)
     }
   else
     {
+      struct thread_info *tp;
+
       /* Now, if we have thread information, update inferior_ptid.  */
       inferior_ptid = remote_current_thread (inferior_ptid);
 
       /* Add the main thread to the thread list.  */
-      add_thread_silent (inferior_ptid);
+      tp = add_thread_silent (inferior_ptid);
+      tp->control.resumed = 1;
     }
 
   /* Next, if the target can specify a description, read it.  We do

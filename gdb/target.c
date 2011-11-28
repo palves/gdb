@@ -659,6 +659,8 @@ update_current_target (void)
       INHERIT (to_can_async_p, t);
       INHERIT (to_is_async_p, t);
       INHERIT (to_async, t);
+      /* Do not inherit to_supports_non_stop.  */
+      INHERIT (to_is_non_stop_p, t);
       INHERIT (to_find_memory_regions, t);
       INHERIT (to_make_corefile_notes, t);
       INHERIT (to_get_bookmark, t);
@@ -927,6 +929,7 @@ update_current_target (void)
 	    (struct traceframe_info * (*) (void))
 	    tcomplain);
   de_fault (to_execution_direction, default_execution_direction);
+  de_fault (to_is_non_stop_p, return_zero);
 
 #undef de_fault
 

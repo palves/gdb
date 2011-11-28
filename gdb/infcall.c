@@ -389,10 +389,20 @@ run_inferior_call (struct thread_info *call_thread, CORE_ADDR real_pc)
   volatile struct gdb_exception e;
   int saved_in_infcall = call_thread->control.in_infcall;
   ptid_t call_thread_ptid = call_thread->ptid;
+  int state = call_thread->state;
 
   call_thread->control.in_infcall = 1;
 
+  /* Fudge the thread's state so clear_proceed_status doesn't ignore
+     it.  We may be running an infcall with a THREAD_RUNNING but
+     !executing thread, e.g., when evaluating a breakpoint's
+     condition.  */
+  state = call_thread->state;
+  call_thread->state = THREAD_STOPPED;
+
   clear_proceed_status ();
+
+  call_thread->state = state;
 
   disable_watchpoints_before_interactive_call_start ();
 
