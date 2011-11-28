@@ -67,6 +67,8 @@ const char *itset_spec (const struct itset *itset);
 
 int itset_is_empty (const struct itset *itset);
 
+struct itset *itset_create_empty (void);
+
 /* Acquire a new reference to an I/T set.  Returns the I/T set, for
    convenience.  */
 

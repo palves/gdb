@@ -1492,6 +1492,14 @@ itset_create_stopped (void)
   return itset_create (&spec);
 }
 
+struct itset *
+itset_create_empty (void)
+{
+  char *spec = "[]";
+
+  return itset_create (&spec);
+}
+
 /* Return 1 if SET contains INF, 0 otherwise.  */
 
 int

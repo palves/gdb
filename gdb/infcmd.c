@@ -57,6 +57,102 @@
 #include "tracepoint.h"
 #include "inf-loop.h"
 #include "continuations.h"
+#include "itset.h"
+#include "cli/cli-utils.h"
+
+
+struct itset *
+current_thread_set (void)
+{
+  struct itset *set;
+  struct inferior *inf;
+  struct thread_info *tp;
+  char *b;
+
+  inf = current_inferior ();
+  tp = inferior_thread ();
+
+  b = alloca (256);
+  sprintf (b, "[%d.%d]", inf->num, tp->num);
+  return itset_create (&b);
+}
+
+void do_target_resume (ptid_t ptid, int step, enum target_signal signo);
+
+typedef void (*aec_callback_func) (struct thread_info *thr, void *data);
+
+int follow_fork (int should_resume);
+
+void
+apply_execution_command (struct itset *apply_itset,
+			 struct itset *run_free_itset,
+			 aec_callback_func callback, void *callback_data)
+{
+  if (target_is_non_stop_p ())
+    {
+      struct thread_info *t;
+      int followed_fork = 0;
+
+      /* See if there are threads we'd run free that are stopped at
+	 forks.  If so, follow the fork, and refuse to apply the
+	 execution command further.  */
+      ALL_THREADS (t)
+        {
+	  if (t->state == THREAD_STOPPED
+	      && itset_contains_thread (run_free_itset, t)
+	      && !itset_contains_thread (apply_itset, t))
+	    {
+	      if (t->suspend.waitstatus.kind == TARGET_WAITKIND_FORKED
+		  || t->suspend.waitstatus.kind == TARGET_WAITKIND_VFORKED)
+		{
+		  switch_to_thread (t->ptid);
+		  follow_fork (0);
+		  followed_fork = 1;
+		}
+	    }
+	}
+
+      if (followed_fork)
+	{
+	  normal_stop ();
+	  if (target_can_async_p ())
+	    inferior_event_handler (INF_EXEC_COMPLETE, NULL);
+	  return;
+	}
+
+      ALL_THREADS (t)
+        {
+	  if (t->state == THREAD_STOPPED
+	      && itset_contains_thread (apply_itset, t))
+	    {
+	      switch_to_thread (t->ptid);
+	      (*callback) (t, callback_data);
+	    }
+	  else if (t->state == THREAD_STOPPED
+		   && itset_contains_thread (run_free_itset, t))
+	    {
+	      /* If T has reported an event before (rather than having
+		 been forced-suspended by GDB, then have it step over
+		 any breakpoint its stopped at.  Otherwise, resume it
+		 as is, and let it hit any breakpoint it may be
+		 stopped at (or report it's already pending event), so
+		 the event is reported.  */
+	      if (t->reported_event)
+		{
+		  switch_to_thread (t->ptid);
+		  clear_proceed_status_thread (t);
+		  proceed ((CORE_ADDR) -1, TARGET_SIGNAL_DEFAULT, 0);
+		}
+	      else
+		do_target_resume (t->ptid, 0, TARGET_SIGNAL_0);
+	    }
+	}
+    }
+  else
+    {
+      (*callback) (inferior_thread (), callback_data);
+    }
+}
 
 /* Functions exported for general use, in inferior.h: */
 
@@ -79,7 +175,7 @@ static void nofp_registers_info (char *, int);
 static void print_return_value (struct type *func_type,
 				struct type *value_type);
 
-static void until_next_command (int);
+static void until_next_command (char *, int);
 
 static void until_command (char *, int);
 
@@ -596,7 +692,7 @@ run_command_1 (char *args, int from_tty, int tbreak_at_main)
      events --- the frontend shouldn't see them as stopped.  In
      all-stop, always finish the state of all threads, as we may be
      resuming more than just the new process.  */
-  if (non_stop)
+  if (target_is_non_stop_p ())
     ptid = pid_to_ptid (ptid_get_pid (inferior_ptid));
   else
     ptid = minus_one_ptid;
@@ -656,11 +752,11 @@ proceed_thread_callback (struct thread_info *thread, void *arg)
      much.  If/when GDB gains a way to tell the target `hold this
      thread stopped until I say otherwise', then we can optimize
      this.  */
-  if (!is_stopped (thread->ptid))
+  if (thread->state != THREAD_STOPPED)
     return 0;
 
   switch_to_thread (thread->ptid);
-  clear_proceed_status ();
+  clear_proceed_status_thread (thread);
   proceed ((CORE_ADDR) -1, TARGET_SIGNAL_DEFAULT, 0);
   return 0;
 }
@@ -713,22 +809,181 @@ continue_1 (int all_threads)
     }
 }
 
+static void
+itset_free_p (void *arg)
+{
+  struct itset **itset_p = arg;
+
+  if (*itset_p)
+    itset_free (*itset_p);
+}
+
+struct itset *
+default_run_free_itset (struct itset *apply_itset, int step)
+{
+  if (non_stop)
+    {
+      /* In non-stop mode, threads are always handled
+	 individually.  */
+      return itset_create_empty ();
+    }
+  else if (scheduler_mode == schedlock_on
+	   || (scheduler_mode == schedlock_step && step))
+    {
+      /* User-settable 'scheduler' mode requires solo thread
+	 resume.  */
+      return itset_create_empty ();
+    }
+  else if (!sched_multi)
+    {
+      struct inferior *inf;
+      char *set_spec;
+      char *p;
+      int first = 1;
+      struct itset *set;
+
+      /* Resume only threads of the current inferior process.  */
+      set_spec = xstrdup ("[");
+      ALL_INFERIORS (inf)
+	if (itset_contains_inferior (apply_itset, inf))
+	  {
+	    char buf[128];
+
+	    if (first)
+	      {
+		first = 0;
+		sprintf (buf, "%d.*", inf->num);
+	      }
+	    else
+	      sprintf (buf, ",%d.*", inf->num);
+
+	    set_spec = reconcat (set_spec, set_spec, buf, (char *) NULL);
+	  }
+      set_spec = reconcat (set_spec, set_spec, "]", (char *) NULL);
+
+      p = set_spec;
+      set = itset_create (&p);
+      xfree (set_spec);
+      return set;
+    }
+  else
+    {
+      /* By default, resume all threads in the current set.  */
+      return itset_reference (current_itset);
+    }
+}
+
+char *
+parse_execution_args (char *args, int step,
+		      struct itset **apply_itset,
+		      struct itset **run_free_itset)
+{
+  if (args != NULL)
+    {
+      while (*args)
+	{
+	  char *p;
+
+	  args = skip_spaces (args);
+	  p = skip_to_space (args);
+
+	  if (strncmp (args, "-a", p - args) == 0)
+	    {
+	      if (*apply_itset)
+		itset_free (*apply_itset);
+	      *apply_itset = itset_reference (current_itset);
+	      args = p;
+	    }
+	  else if (strncmp (args, "-c", p - args) == 0)
+	    {
+	      if (*run_free_itset)
+		itset_free (*run_free_itset);
+	      *run_free_itset = itset_reference (current_itset);
+	      args = p;
+	    }
+	  else if (strncmp (args, "-l", p - args) == 0)
+	    {
+	      if (*run_free_itset)
+		itset_free (*run_free_itset);
+	      *run_free_itset = itset_create_empty ();
+	      args = p;
+	    }
+	  else if (strcmp (args, "--") == 0)
+	    {
+	      args += 2;
+	      break;
+	    }
+	  else
+	    break;
+	}
+
+      args = skip_spaces (args);
+
+      if (*args == '[')
+	{
+	  if (*apply_itset)
+	    itset_free (*apply_itset);
+	  *apply_itset = itset_create (&args);
+	  args = skip_spaces (args);
+	}
+    }
+
+  if (*apply_itset == NULL)
+    *apply_itset = current_thread_set ();
+
+  if (*run_free_itset == NULL)
+    *run_free_itset = default_run_free_itset (*apply_itset, step);
+
+  if (args && *args == '\0')
+    return NULL;
+  else
+    return args;
+}
+
+static void
+continue_aec_callback (struct thread_info *thread, void *data)
+{
+  proceed_thread_callback (thread, NULL);
+}
+
 /* continue [-a] [proceed-count] [&]  */
 void
 continue_command (char *args, int from_tty)
 {
   int async_exec = 0;
   int all_threads = 0;
+  int ignore_count = 0;
+  int ignore_count_p = 0;
+  struct itset *apply_itset = NULL;
+  struct itset *run_free_itset = NULL;
+  struct cleanup *old_chain;
   ERROR_NO_INFERIOR;
 
   /* Find out whether we must run in the background.  */
   if (args != NULL)
     async_exec = strip_bg_char (&args);
 
+  old_chain = make_cleanup (itset_free_p, &apply_itset);
+  make_cleanup (itset_free_p, &run_free_itset);
+
+  args = parse_execution_args (args, 0, &apply_itset, &run_free_itset);
+  if (args)
+    {
+      args = skip_spaces (args);
+      if (*args != '\0')
+	{
+	  ignore_count = parse_and_eval_long (args);
+	  ignore_count_p = 1;
+	}
+    }
+
   /* If we must run in the background, but the target can't do it,
      error out.  */
   if (async_exec && !target_can_async_p ())
     error (_("Asynchronous execution not supported on this target."));
+
+  if (itset_is_empty (apply_itset))
+    error (_("Set of threads to continue is empty."));
 
   /* If we are not asked to run in the bg, then prepare to run in the
      foreground, synchronously.  */
@@ -738,17 +993,6 @@ continue_command (char *args, int from_tty)
       async_disable_stdin ();
     }
 
-  if (args != NULL)
-    {
-      if (strncmp (args, "-a", sizeof ("-a") - 1) == 0)
-	{
-	  all_threads = 1;
-	  args += sizeof ("-a") - 1;
-	  if (*args == '\0')
-	    args = NULL;
-	}
-    }
-
   if (!non_stop && all_threads)
     error (_("`-a' is meaningless in all-stop mode."));
 
@@ -756,9 +1000,9 @@ continue_command (char *args, int from_tty)
     error (_("Can't resume all threads and specify "
 	     "proceed count simultaneously."));
 
-  /* If we have an argument left, set proceed count of breakpoint we
-     stopped at.  */
-  if (args != NULL)
+  /* Set proceed count of breakpoint we stopped at, if the user
+     requested it.  */
+  if (ignore_count_p)
     {
       bpstat bs = NULL;
       int num, stat;
@@ -781,9 +1025,7 @@ continue_command (char *args, int from_tty)
       while ((stat = bpstat_num (&bs, &num)) != 0)
 	if (stat > 0)
 	  {
-	    set_ignore_count (num,
-			      parse_and_eval_long (args) - 1,
-			      from_tty);
+	    set_ignore_count (num, ignore_count - 1, from_tty);
 	    /* set_ignore_count prints a message ending with a period.
 	       So print two spaces before "Continuing.".  */
 	    if (from_tty)
@@ -801,7 +1043,10 @@ continue_command (char *args, int from_tty)
   if (from_tty)
     printf_filtered (_("Continuing.\n"));
 
-  continue_1 (all_threads);
+  apply_execution_command (apply_itset, run_free_itset,
+			   continue_aec_callback, NULL);
+
+  do_cleanups (old_chain);
 }
 
 /* Record the starting point of a "step" or "next" command.  */
@@ -852,36 +1097,106 @@ delete_longjmp_breakpoint_cleanup (void *arg)
   delete_longjmp_breakpoint (thread);
 }
 
+struct step_1_args
+{
+  int count;
+  int skip_subroutines;
+  int single_inst;
+  int thread;
+};
+
+static void step_1_1 (int skip_subroutines, int single_inst, int count);
+
 static void
-step_1 (int skip_subroutines, int single_inst, char *count_string)
+step_1_aec_callback (struct thread_info *thread, void *data)
+{
+  struct step_1_args *args = data;
+
+  switch_to_thread (thread->ptid);
+  step_1_1 (args->skip_subroutines, args->single_inst, args->count);
+}
+
+void
+ensure_runnable (struct thread_info *thr)
+{
+  if (thr->state == THREAD_EXITED)
+    error (_("Thread %d (%s) has exited."),
+	   thr->num, target_pid_to_str (thr->ptid));
+  else if (thr->state == THREAD_EXITED)
+    error (_("Thread %d (%s) is running."),
+	   thr->num, target_pid_to_str (thr->ptid));
+}
+
+static void
+step_1 (int skip_subroutines, int single_inst, char *args)
 {
   int count = 1;
-  struct cleanup *cleanups = make_cleanup (null_cleanup, NULL);
   int async_exec = 0;
-  int thread = -1;
+  struct cleanup *old_chain;
+  struct itset *apply_itset = NULL;
+  struct itset *run_free_itset = NULL;
+  struct step_1_args step_args;
+  struct thread_info *thr;
+  int thr_count = 0;
 
   ERROR_NO_INFERIOR;
   ensure_not_tfind_mode ();
-  ensure_valid_thread ();
-  ensure_not_running ();
 
-  if (count_string)
-    async_exec = strip_bg_char (&count_string);
+  if (args)
+    async_exec = strip_bg_char (&args);
+
+  old_chain = make_cleanup (itset_free_p, &apply_itset);
+  make_cleanup (itset_free_p, &run_free_itset);
+
+  args = parse_execution_args (args, 1, &apply_itset, &run_free_itset);
+  if (args)
+    {
+      args = skip_spaces (args);
+      if (*args != '\0')
+	count = parse_and_eval_long (args);
+    }
 
   /* If we get a request for running in the bg but the target
      doesn't support it, error out.  */
   if (async_exec && !target_can_async_p ())
     error (_("Asynchronous execution not supported on this target."));
 
+  ALL_THREADS (thr)
+    if (itset_contains_thread (apply_itset, thr))
+      {
+	++thr_count;
+
+	ensure_runnable (thr);
+      }
+
+  if (thr_count == 0)
+    error (_("Set of threads to step is empty."));
+
   /* If we don't get a request of running in the bg, then we need
      to simulate synchronous (fg) execution.  */
+  /* FIXME: should only do this is actually about to resume.  */
   if (!async_exec && target_can_async_p ())
     {
       /* Simulate synchronous execution.  */
       async_disable_stdin ();
     }
 
-  count = count_string ? parse_and_eval_long (count_string) : 1;
+  step_args.skip_subroutines = skip_subroutines;
+  step_args.single_inst = single_inst;
+  step_args.count = count;
+  step_args.thread = -1;
+
+  apply_execution_command (apply_itset, run_free_itset,
+			   step_1_aec_callback, &step_args);
+
+  do_cleanups (old_chain);
+}
+
+static void
+step_1_1 (int skip_subroutines, int single_inst, int count)
+{
+  int thread = -1;
+  struct cleanup *cleanups = make_cleanup (null_cleanup, NULL);
 
   if (!single_inst || skip_subroutines)		/* Leave si command alone.  */
     {
@@ -935,14 +1250,6 @@ step_1 (int skip_subroutines, int single_inst, char *count_string)
     }
 }
 
-struct step_1_continuation_args
-{
-  int count;
-  int skip_subroutines;
-  int single_inst;
-  int thread;
-};
-
 /* Called after we are done with one step operation, to check whether
    we need to step again, before we print the prompt and return control
    to the user.  If count is > 1, we will need to do one more call to
@@ -951,7 +1258,7 @@ struct step_1_continuation_args
 static void
 step_1_continuation (void *args, int err)
 {
-  struct step_1_continuation_args *a = args;
+  struct step_1_args *a = args;
 
   if (target_has_execution)
     {
@@ -1072,7 +1379,7 @@ step_once (int skip_subroutines, int single_inst, int count, int thread)
 	 further stepping.  */
       if (target_can_async_p ())
 	{
-	  struct step_1_continuation_args *args;
+	  struct step_1_args *args;
 
 	  args = xmalloc (sizeof (*args));
 	  args->skip_subroutines = skip_subroutines;
@@ -1086,23 +1393,53 @@ step_once (int skip_subroutines, int single_inst, int count, int thread)
 }
 
 
+
+struct jump_cmd_data
+{
+  CORE_ADDR addr;
+};
+
+struct jump_aec_callback_data
+{
+  int from_tty;
+};
+
+static void
+jump_aec_callback (struct thread_info *thread, void *data)
+{
+  struct jump_aec_callback_data *arg = data;
+  struct jump_map_entry *jme;
+  int ix;
+  struct gdbarch *gdbarch = get_current_arch ();
+  int from_tty = arg->from_tty;
+  struct jump_cmd_data *cmd_data = thread->cmd_data;
+  CORE_ADDR addr = cmd_data->addr;
+
+  if (from_tty)
+    printf_filtered (_("Continuing %d (%s) at %s.\n"),
+		     thread->num, target_pid_to_str (thread->ptid),
+		     paddress (gdbarch, addr));
+
+  clear_proceed_status ();
+  proceed (addr, TARGET_SIGNAL_0, 0);
+  return;
+}
+
 /* Continue program at specified address.  */
 
 static void
 jump_command (char *arg, int from_tty)
 {
-  struct gdbarch *gdbarch = get_current_arch ();
-  CORE_ADDR addr;
-  struct symtabs_and_lines sals;
-  struct symtab_and_line sal;
-  struct symbol *fn;
-  struct symbol *sfn;
   int async_exec = 0;
+  struct itset *apply_itset = NULL;
+  struct itset *run_free_itset = NULL;
+  struct cleanup *old_chain;
+  struct thread_info *thr;
+  int thr_count = 0;
+  struct jump_aec_callback_data cb_data;
 
   ERROR_NO_INFERIOR;
   ensure_not_tfind_mode ();
-  ensure_valid_thread ();
-  ensure_not_running ();
 
   /* Find out whether we must run in the background.  */
   if (arg != NULL)
@@ -1113,59 +1450,71 @@ jump_command (char *arg, int from_tty)
   if (async_exec && !target_can_async_p ())
     error (_("Asynchronous execution not supported on this target."));
 
+  old_chain = make_cleanup (itset_free_p, &apply_itset);
+  make_cleanup (itset_free_p, &run_free_itset);
+
+  arg = parse_execution_args (arg, 0, &apply_itset, &run_free_itset);
   if (!arg)
     error_no_arg (_("starting address"));
 
-  sals = decode_line_spec_1 (arg, 1);
-  if (sals.nelts != 1)
-    {
-      error (_("Unreasonable jump request"));
-    }
+  ALL_THREADS (thr)
+    if (itset_contains_thread (apply_itset, thr))
+      {
+	struct symtabs_and_lines sals;
+	struct symtab_and_line sal;
+	struct symbol *fn;
+	struct symbol *sfn;
+	struct jump_cmd_data *cmd_data;
 
-  sal = sals.sals[0];
-  xfree (sals.sals);
+	++thr_count;
 
-  if (sal.symtab == 0 && sal.pc == 0)
-    error (_("No source file has been specified."));
+	ensure_runnable (thr);
 
-  resolve_sal_pc (&sal);	/* May error out.  */
+	if (!ptid_equal (inferior_ptid, thr->ptid))
+	  switch_to_thread (thr->ptid);
 
-  /* See if we are trying to jump to another function.  */
-  fn = get_frame_function (get_current_frame ());
-  sfn = find_pc_function (sal.pc);
-  if (fn != NULL && sfn != fn)
-    {
-      if (!query (_("Line %d is not in `%s'.  Jump anyway? "), sal.line,
-		  SYMBOL_PRINT_NAME (fn)))
-	{
-	  error (_("Not confirmed."));
-	  /* NOTREACHED */
-	}
-    }
+	sals = decode_line_spec_1 (arg, 1);
+	if (sals.nelts != 1)
+	  error (_("Unreasonable jump request for thread %s"),
+		 target_pid_to_str (thr->ptid));
 
-  if (sfn != NULL)
-    {
-      fixup_symbol_section (sfn, 0);
-      if (section_is_overlay (SYMBOL_OBJ_SECTION (sfn)) &&
-	  !section_is_mapped (SYMBOL_OBJ_SECTION (sfn)))
-	{
-	  if (!query (_("WARNING!!!  Destination is in "
-			"unmapped overlay!  Jump anyway? ")))
-	    {
+	sal = sals.sals[0];
+	xfree (sals.sals);
+
+	if (sal.symtab == 0 && sal.pc == 0)
+	  error (_("No source file has been specified."));
+
+	resolve_sal_pc (&sal);	/* May error out.  */
+
+	/* See if we are trying to jump to another function.  */
+	fn = get_frame_function (get_current_frame ());
+	sfn = find_pc_function (sal.pc);
+	if (fn != NULL && sfn != fn)
+	  {
+	    if (!query (_("Line %d is not in `%s'.  Jump anyway? "), sal.line,
+			SYMBOL_PRINT_NAME (fn)))
 	      error (_("Not confirmed."));
-	      /* NOTREACHED */
-	    }
-	}
-    }
+	  }
 
-  addr = sal.pc;
+	if (sfn != NULL)
+	  {
+	    fixup_symbol_section (sfn, 0);
+	    if (section_is_overlay (SYMBOL_OBJ_SECTION (sfn)) &&
+		!section_is_mapped (SYMBOL_OBJ_SECTION (sfn)))
+	      {
+		if (!query (_("WARNING!!!  Destination is in "
+			      "unmapped overlay!  Jump anyway? ")))
+		  error (_("Not confirmed."));
+	      }
+	  }
 
-  if (from_tty)
-    {
-      printf_filtered (_("Continuing at "));
-      fputs_filtered (paddress (gdbarch, addr), gdb_stdout);
-      printf_filtered (".\n");
-    }
+	cmd_data = XNEW (struct jump_cmd_data);
+	cmd_data->addr = sal.pc;
+	thr->cmd_data = cmd_data;
+      }
+
+  if (thr_count == 0)
+    error (_("Set of threads to jump is empty."));
 
   /* If we are not asked to run in the bg, then prepare to run in the
      foreground, synchronously.  */
@@ -1175,8 +1524,11 @@ jump_command (char *arg, int from_tty)
       async_disable_stdin ();
     }
 
-  clear_proceed_status ();
-  proceed (addr, TARGET_SIGNAL_0, 0);
+  cb_data.from_tty = from_tty;
+  apply_execution_command (apply_itset, run_free_itset,
+			   jump_aec_callback, &cb_data);
+
+  do_cleanups (old_chain);
 }
 
 
@@ -1196,26 +1548,42 @@ go_command (char *line_no, int from_tty)
 
 /* Continue program giving it specified signal.  */
 
+struct signal_aec_callback_data
+{
+  enum target_signal oursig;
+};
+
+static void signal_aec_callback (struct thread_info *thread, void *data);
+
 static void
-signal_command (char *signum_exp, int from_tty)
+signal_command (char *arg, int from_tty)
 {
   enum target_signal oursig;
   int async_exec = 0;
+  struct itset *apply_itset = NULL;
+  struct itset *run_free_itset = NULL;
+  struct cleanup *old_chain;
+  struct signal_aec_callback_data cb_data;
+  struct thread_info *thr;
+  int thr_count = 0;
 
   dont_repeat ();		/* Too dangerous.  */
   ERROR_NO_INFERIOR;
   ensure_not_tfind_mode ();
-  ensure_valid_thread ();
-  ensure_not_running ();
 
   /* Find out whether we must run in the background.  */
-  if (signum_exp != NULL)
-    async_exec = strip_bg_char (&signum_exp);
+  if (arg != NULL)
+    async_exec = strip_bg_char (&arg);
 
   /* If we must run in the background, but the target can't do it,
      error out.  */
   if (async_exec && !target_can_async_p ())
     error (_("Asynchronous execution not supported on this target."));
+
+  old_chain = make_cleanup (itset_free_p, &apply_itset);
+  make_cleanup (itset_free_p, &run_free_itset);
+
+  arg = parse_execution_args (arg, 0, &apply_itset, &run_free_itset);
 
   /* If we are not asked to run in the bg, then prepare to run in the
      foreground, synchronously.  */
@@ -1225,18 +1593,29 @@ signal_command (char *signum_exp, int from_tty)
       async_disable_stdin ();
     }
 
-  if (!signum_exp)
+  if (!arg)
     error_no_arg (_("signal number"));
+
+  ALL_THREADS (thr)
+    if (itset_contains_thread (apply_itset, thr))
+      {
+	++thr_count;
+
+	ensure_runnable (thr);
+      }
+
+  if (thr_count == 0)
+    error (_("Set of threads to signal is empty."));
 
   /* It would be even slicker to make signal names be valid expressions,
      (the type could be "enum $signal" or some such), then the user could
      assign them to convenience variables.  */
-  oursig = target_signal_from_name (signum_exp);
+  oursig = target_signal_from_name (arg);
 
   if (oursig == TARGET_SIGNAL_UNKNOWN)
     {
       /* No, try numeric.  */
-      int num = parse_and_eval_long (signum_exp);
+      int num = parse_and_eval_long (arg);
 
       if (num == 0)
 	oursig = TARGET_SIGNAL_0;
@@ -1253,8 +1632,20 @@ signal_command (char *signum_exp, int from_tty)
 			 target_signal_to_name (oursig));
     }
 
-  clear_proceed_status ();
-  proceed ((CORE_ADDR) -1, oursig, 0);
+  cb_data.oursig = oursig;
+  apply_execution_command (apply_itset, run_free_itset,
+			   signal_aec_callback, &cb_data);
+
+  do_cleanups (old_chain);
+}
+
+static void
+signal_aec_callback (struct thread_info *thread, void *data)
+{
+  struct signal_aec_callback_data *d = data;
+
+  clear_proceed_status_thread (thread);
+  proceed ((CORE_ADDR) -1, d->oursig, 0);
 }
 
 /* Continuation args to be passed to the "until" command
@@ -1283,51 +1674,91 @@ until_next_continuation (void *arg, int err)
    we set.  This may involve changes to wait_for_inferior and the
    proceed status code.  */
 
+static void until_next_aec_callback (struct thread_info *thread, void *data);
+
 static void
-until_next_command (int from_tty)
+until_next_command (char *arg, int from_tty)
 {
-  struct frame_info *frame;
-  CORE_ADDR pc;
-  struct symbol *func;
-  struct symtab_and_line sal;
-  struct thread_info *tp = inferior_thread ();
+  struct itset *apply_itset = NULL;
+  struct itset *run_free_itset = NULL;
+  struct cleanup *old_chain;
+  struct thread_info *thr;
+  int thr_count = 0;
+
+  old_chain = make_cleanup (itset_free_p, &apply_itset);
+  make_cleanup (itset_free_p, &run_free_itset);
+
+  arg = parse_execution_args (arg, 0, &apply_itset, &run_free_itset);
+
+  ALL_THREADS (thr)
+    if (itset_contains_thread (apply_itset, thr))
+      {
+	struct frame_info *frame;
+	CORE_ADDR pc;
+	struct symbol *func;
+	struct symtab_and_line sal;
+
+	++thr_count;
+
+	ensure_runnable (thr);
+
+	if (!ptid_equal (inferior_ptid, thr->ptid))
+	  switch_to_thread (thr->ptid);
+
+	clear_proceed_status_thread (thr);
+	set_step_frame ();
+
+	frame = get_current_frame ();
+
+	/* Step until either exited from this function or greater than
+	   the current line (if in symbolic section) or pc (if
+	   not).  */
+
+	pc = get_frame_pc (frame);
+	func = find_pc_function (pc);
+
+	if (!func)
+	  {
+	    struct minimal_symbol *msymbol = lookup_minimal_symbol_by_pc (pc);
+
+	    if (msymbol == NULL)
+	      error (_("Execution is not within a known function."));
+
+	    thr->control.step_range_start = SYMBOL_VALUE_ADDRESS (msymbol);
+	    thr->control.step_range_end = pc;
+	  }
+	else
+	  {
+	    sal = find_pc_line (pc, 0);
+
+	    thr->control.step_range_start = BLOCK_START (SYMBOL_BLOCK_VALUE (func));
+	    thr->control.step_range_end = sal.end;
+	  }
+
+	thr->control.step_over_calls = STEP_OVER_ALL;
+
+	thr->step_multi = 0;		/* Only one call to proceed */
+      }
+
+  if (thr_count == 0)
+    error (_("Set of threads to until is empty."));
+
+  apply_execution_command (apply_itset, run_free_itset,
+			   until_next_aec_callback, NULL);
+
+  do_cleanups (old_chain);
+}
+
+
+
+static void
+until_next_aec_callback (struct thread_info *tp, void *data)
+{
   int thread = tp->num;
   struct cleanup *old_chain;
-
-  clear_proceed_status ();
-  set_step_frame ();
+  struct frame_info *frame;
 
   frame = get_current_frame ();
-
-  /* Step until either exited from this function or greater
-     than the current line (if in symbolic section) or pc (if
-     not).  */
-
-  pc = get_frame_pc (frame);
-  func = find_pc_function (pc);
-
-  if (!func)
-    {
-      struct minimal_symbol *msymbol = lookup_minimal_symbol_by_pc (pc);
-
-      if (msymbol == NULL)
-	error (_("Execution is not within a known function."));
-
-      tp->control.step_range_start = SYMBOL_VALUE_ADDRESS (msymbol);
-      tp->control.step_range_end = pc;
-    }
-  else
-    {
-      sal = find_pc_line (pc, 0);
-
-      tp->control.step_range_start = BLOCK_START (SYMBOL_BLOCK_VALUE (func));
-      tp->control.step_range_end = sal.end;
-    }
-
-  tp->control.step_over_calls = STEP_OVER_ALL;
-
-  tp->step_multi = 0;		/* Only one call to proceed */
-
   set_longjmp_breakpoint (tp, get_frame_id (frame));
   old_chain = make_cleanup (delete_longjmp_breakpoint_cleanup, &thread);
 
@@ -1354,8 +1785,6 @@ until_command (char *arg, int from_tty)
 
   ERROR_NO_INFERIOR;
   ensure_not_tfind_mode ();
-  ensure_valid_thread ();
-  ensure_not_running ();
 
   /* Find out whether we must run in the background.  */
   if (arg != NULL)
@@ -1377,7 +1806,7 @@ until_command (char *arg, int from_tty)
   if (arg)
     until_break_command (arg, from_tty, 0);
   else
-    until_next_command (from_tty);
+    until_next_command (arg, from_tty);
 }
 
 static void
@@ -1387,8 +1816,6 @@ advance_command (char *arg, int from_tty)
 
   ERROR_NO_INFERIOR;
   ensure_not_tfind_mode ();
-  ensure_valid_thread ();
-  ensure_not_running ();
 
   if (arg == NULL)
     error_no_arg (_("a location"));
@@ -1648,21 +2075,34 @@ finish_forward (struct symbol *function, struct frame_info *frame)
     do_all_continuations (0);
 }
 
+struct finish_cmd_data
+{
+  struct frame_id selected_frame_id;
+};
+
+struct finish_aec_callback_data
+{
+  int from_tty;
+};
+
+static void finish_aec_callback (struct thread_info *thread, void *data);
+
 /* "finish": Set a temporary breakpoint at the place the selected
    frame will return to, then continue.  */
 
 static void
 finish_command (char *arg, int from_tty)
 {
-  struct frame_info *frame;
-  struct symbol *function;
-
+  struct itset *apply_itset = NULL;
+  struct itset *run_free_itset = NULL;
+  struct cleanup *old_chain;
+  struct thread_info *thr;
+  int thr_count = 0;
+  struct finish_aec_callback_data cb_data;
   int async_exec = 0;
 
   ERROR_NO_INFERIOR;
   ensure_not_tfind_mode ();
-  ensure_valid_thread ();
-  ensure_not_running ();
 
   /* Find out whether we must run in the background.  */
   if (arg != NULL)
@@ -1672,6 +2112,11 @@ finish_command (char *arg, int from_tty)
      error out.  */
   if (async_exec && !target_can_async_p ())
     error (_("Asynchronous execution not supported on this target."));
+
+  old_chain = make_cleanup (itset_free_p, &apply_itset);
+  make_cleanup (itset_free_p, &run_free_itset);
+
+  arg = parse_execution_args (arg, 0, &apply_itset, &run_free_itset);
 
   /* If we are not asked to run in the bg, then prepare to run in the
      foreground, synchronously.  */
@@ -1684,29 +2129,73 @@ finish_command (char *arg, int from_tty)
   if (arg)
     error (_("The \"finish\" command does not take any arguments."));
 
-  frame = get_prev_frame (get_selected_frame (_("No selected frame.")));
-  if (frame == 0)
-    error (_("\"finish\" not meaningful in the outermost frame."));
+  ALL_THREADS (thr)
+    if (itset_contains_thread (apply_itset, thr))
+      {
+	struct frame_info *frame;
+	struct frame_info *prev;
+	struct finish_cmd_data *cmd_data;
+
+	++thr_count;
+
+	ensure_runnable (thr);
+
+	if (!ptid_equal (inferior_ptid, thr->ptid))
+	  switch_to_thread (thr->ptid);
+
+	frame = get_selected_frame (_("No selected frame."));
+	prev = get_prev_frame (frame);
+	if (prev == NULL)
+	  error (_("\"finish\" not meaningful in the outermost frame."));
+
+	cmd_data = XNEW (struct finish_cmd_data);
+	cmd_data->selected_frame_id = get_frame_id (frame);
+	thr->cmd_data = cmd_data;
+      }
+
+  if (thr_count == 0)
+    error (_("Set of threads to finish is empty."));
+
+  cb_data.from_tty = from_tty;
+  apply_execution_command (apply_itset, run_free_itset,
+			   finish_aec_callback, &cb_data);
+
+  do_cleanups (old_chain);
+}
+
+static void
+finish_aec_callback (struct thread_info *tp, void *data)
+{
+  struct finish_aec_callback_data *d = data;
+  int from_tty = d->from_tty;
+  struct finish_cmd_data *cmd_data = tp->cmd_data;
+  int ix;
+  struct frame_info *frame, *prev;
+  struct symbol *function;
 
   clear_proceed_status ();
+
+  frame = frame_find_by_id (cmd_data->selected_frame_id);
+  gdb_assert (frame != NULL);
+  select_frame (frame);
+  prev = get_prev_frame (frame);
+  gdb_assert (prev != NULL);
 
   /* Finishing from an inline frame is completely different.  We don't
      try to show the "return value" - no way to locate it.  So we do
      not need a completion.  */
-  if (get_frame_type (get_selected_frame (_("No selected frame.")))
-      == INLINE_FRAME)
+  if (get_frame_type (frame) == INLINE_FRAME)
     {
       /* Claim we are stepping in the calling frame.  An empty step
 	 range means that we will stop once we aren't in a function
 	 called by that frame.  We don't use the magic "1" value for
 	 step_range_end, because then infrun will think this is nexti,
 	 and not step over the rest of this inlined function call.  */
-      struct thread_info *tp = inferior_thread ();
       struct symtab_and_line empty_sal;
 
       init_sal (&empty_sal);
-      set_step_info (frame, empty_sal);
-      tp->control.step_range_start = get_frame_pc (frame);
+      set_step_info (prev, empty_sal);
+      tp->control.step_range_start = get_frame_pc (prev);
       tp->control.step_range_end = tp->control.step_range_start;
       tp->control.step_over_calls = STEP_OVER_ALL;
 
@@ -1715,7 +2204,7 @@ finish_command (char *arg, int from_tty)
       if (from_tty)
 	{
 	  printf_filtered (_("Run till exit from "));
-	  print_stack_frame (get_selected_frame (NULL), 1, LOCATION);
+	  print_stack_frame (frame, 1, LOCATION);
 	}
 
       proceed ((CORE_ADDR) -1, TARGET_SIGNAL_DEFAULT, 1);
@@ -1724,7 +2213,7 @@ finish_command (char *arg, int from_tty)
 
   /* Find the function we will return from.  */
 
-  function = find_pc_function (get_frame_pc (get_selected_frame (NULL)));
+  function = find_pc_function (get_frame_pc (frame));
 
   /* Print info on the selected frame, including level number but not
      source.  */
@@ -1735,13 +2224,13 @@ finish_command (char *arg, int from_tty)
       else
 	printf_filtered (_("Run till exit from "));
 
-      print_stack_frame (get_selected_frame (NULL), 1, LOCATION);
+      print_stack_frame (frame, 1, LOCATION);
     }
 
   if (execution_direction == EXEC_REVERSE)
     finish_backward (function);
   else
-    finish_forward (function, frame);
+    finish_forward (function, prev);
 }
 
 
@@ -2693,10 +3182,31 @@ interrupt_target_1 (int all_threads)
   ptid_t ptid;
 
   if (all_threads)
-    ptid = minus_one_ptid;
+    {
+      if (target_is_non_stop_p ())
+	{
+	  struct thread_info *t;
+
+	  ALL_LIVE_THREADS (t)
+	    if (itset_contains_thread (current_itset, t))
+	      {
+		target_stop (t->ptid);
+		set_stop_requested (t->ptid, 1);
+	      }
+
+	  return;
+	}
+      else
+	{
+	  ptid = minus_one_ptid;
+	  target_stop (ptid);
+	}
+    }
   else
-    ptid = inferior_ptid;
-  target_stop (ptid);
+    {
+      ptid = inferior_ptid;
+      target_stop (ptid);
+    }
 
   /* Tag the thread as having been explicitly requested to stop, so
      other parts of gdb know not to resume this thread automatically,
@@ -2704,7 +3214,7 @@ interrupt_target_1 (int all_threads)
      non-stop mode, as when debugging a multi-threaded application in
      all-stop mode, we will only get one stop event --- it's undefined
      which thread will report the event.  */
-  if (non_stop)
+  if (target_is_non_stop_p ())
     set_stop_requested (ptid, 1);
 }
 
@@ -2726,9 +3236,6 @@ interrupt_target_command (char *args, int from_tty)
       if (args != NULL
 	  && strncmp (args, "-a", sizeof ("-a") - 1) == 0)
 	all_threads = 1;
-
-      if (!non_stop && all_threads)
-	error (_("-a is meaningless in all-stop mode."));
 
       interrupt_target_1 (all_threads);
     }
