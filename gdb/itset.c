@@ -439,6 +439,213 @@ create_range_itset (int inf_first, int inf_last, int thr_first, int thr_last)
 
 
 
+/* An I/T set element representing a range of cores.  */
+
+struct itset_elt_core_range
+{
+  struct itset_elt base;
+
+  /* The first and last cores in this range.  If CORE_FIRST is
+     WILDCARD, then CORE_LAST is unused.  */
+  int core_first, core_last;
+};
+
+/* Implementation of `contains_inferior' method.  */
+
+static int
+core_range_contains_thread (struct itset_elt *base, struct thread_info *thr)
+{
+  struct itset_elt_core_range *core_range = (struct itset_elt_core_range *) base;
+  int core;
+
+  if (core_range->core_first == WILDCARD)
+    return 1;
+
+  core = target_core_of_thread (thr->ptid);
+  if (core_range->core_first <= core && core <= core_range->core_last)
+    return 1;
+
+  return 0;
+}
+
+/* Implementation of `contains_inferior' method.  */
+
+static int
+core_range_contains_inferior (struct itset_elt *base, struct inferior *inf)
+{
+  struct itset_elt_core_range *core_range = (struct itset_elt_core_range *) base;
+  struct thread_info *thr;
+
+  /* True if we find a thread of this inferior that is running on our
+     core range.  */
+  ALL_THREADS(thr)
+    {
+      /* It's cheaper to check the core range first, because looking
+	 up the a thread's inferior is O(n).  */
+      if (core_range_contains_thread (base, thr))
+	{
+	  struct inferior *thr_inf;
+
+	  thr_inf = get_thread_inferior (thr);
+	  if (thr_inf == inf)
+	    return 1;
+	}
+    }
+
+  return 0;
+}
+
+/* Implementation of `is_empty' method.  */
+
+static int
+core_range_is_empty (struct itset_elt *base)
+{
+  struct itset_elt_core_range *core_range = (struct itset_elt_core_range *) base;
+  struct inferior *inf;
+  struct thread_info *thr;
+
+  ALL_THREADS(thr)
+    {
+      if (core_range_contains_thread (base, thr))
+	return 0;
+    }
+
+  return 1;
+}
+
+static const struct itset_elt_vtable core_range_vtable =
+{
+  NULL,
+  core_range_contains_inferior,
+  core_range_contains_thread,
+  core_range_is_empty
+};
+
+/* Create a new `core_range' I/T set element.  */
+
+static struct itset_elt *
+create_core_range_itset (int core_first, int core_last)
+{
+  struct itset_elt_core_range *elt;
+
+  elt = XNEW (struct itset_elt_core_range);
+  elt->base.vtable = &core_range_vtable;
+  elt->core_first = core_first;
+  elt->core_last = core_last;
+
+  return (struct itset_elt *) elt;
+}
+
+
+
+/* An I/T set element representing an intersection of sets.  */
+
+struct itset_elt_intersect
+{
+  struct itset_elt base;
+
+  /* The elements that will be intersected.  */
+  VEC (itset_elt_ptr) *elements;
+};
+
+/* Implementation of `destroy' method.  */
+
+static void
+intersect_destroy (struct itset_elt *base)
+{
+  struct itset_elt_intersect *set = (struct itset_elt_intersect *) base;
+
+  VEC_free (itset_elt_ptr, set->elements);
+}
+
+/* Implementation of `contains_inferior' method.  */
+
+static int
+intersect_contains_inferior (struct itset_elt *base, struct inferior *inf)
+{
+  struct itset_elt_intersect *intersect = (struct itset_elt_intersect *) base;
+  struct itset_elt *elt;
+  int ix;
+
+  gdb_assert (!VEC_empty (itset_elt_ptr, intersect->elements));
+
+  for (ix = 0; VEC_iterate (itset_elt_ptr, intersect->elements, ix, elt); ++ix)
+    {
+      if (!elt->vtable->contains_inferior (elt, inf))
+	return 0;
+    }
+
+  return 1;
+}
+
+/* Implementation of `contains_inferior' method.  */
+
+static int
+intersect_contains_thread (struct itset_elt *base, struct thread_info *thr)
+{
+  struct itset_elt_intersect *intersect = (struct itset_elt_intersect *) base;
+  struct itset_elt *elt;
+  int ix;
+
+  gdb_assert (!VEC_empty (itset_elt_ptr, intersect->elements));
+
+  for (ix = 0; VEC_iterate (itset_elt_ptr, intersect->elements, ix, elt); ++ix)
+    {
+      if (!elt->vtable->contains_thread (elt, thr))
+	return 0;
+    }
+
+  return 1;
+}
+
+/* Implementation of `is_empty' method.  */
+
+static int
+intersect_is_empty (struct itset_elt *base)
+{
+  struct itset_elt_intersect *intersect = (struct itset_elt_intersect *) base;
+  struct inferior *inf;
+  struct thread_info *thr;
+
+  ALL_INFERIORS(inf)
+    {
+      if (intersect_contains_inferior (base, inf))
+	return 0;
+    }
+
+  ALL_THREADS(thr)
+    {
+      if (intersect_contains_thread (base, thr))
+	return 0;
+    }
+
+  return 1;
+}
+
+static const struct itset_elt_vtable intersect_vtable =
+{
+  intersect_destroy,
+  intersect_contains_inferior,
+  intersect_contains_thread,
+  intersect_is_empty
+};
+
+/* Create a new `intersect' I/T set element.  */
+
+static struct itset_elt_intersect *
+create_intersect_itset (void)
+{
+  struct itset_elt_intersect *elt;
+
+  elt = XNEW (struct itset_elt_intersect);
+  elt->base.vtable = &intersect_vtable;
+  elt->elements = NULL;
+
+  return elt;
+}
+
+
+
 /* An I/T set element representing all inferiors.  */
 
 struct itset_elt_all
@@ -655,19 +862,38 @@ struct itset_elt_state
 /* Implementation of `contains_inferior' method.  */
 
 static int
-state_contains_inferior (struct itset_elt *base, struct inferior *inf)
-{
-  return 1;
-}
-
-/* Implementation of `contains_inferior' method.  */
-
-static int
 state_contains_thread (struct itset_elt *base, struct thread_info *thr)
 {
   struct itset_elt_state *state = (struct itset_elt_state *) base;
 
   return thr->state == state->state;
+}
+
+/* Implementation of `contains_inferior' method.  */
+
+static int
+state_contains_inferior (struct itset_elt *base, struct inferior *inf)
+{
+  struct itset_elt_state *state = (struct itset_elt_state *) base;
+  struct thread_info *thr;
+
+  /* True if we find a thread of this inferior that is in the state
+     we're interested in.  */
+  ALL_THREADS(thr)
+    {
+      /* It's cheaper to check the state first, because looking up the
+	 a thread's inferior is O(n).  */
+      if (state_contains_thread (base, thr))
+	{
+	  struct inferior *thr_inf;
+
+	  thr_inf = get_thread_inferior (thr);
+	  if (thr_inf == inf)
+	    return 1;
+	}
+    }
+
+  return 0;
 }
 
 /* Implementation of `is_empty' method.  */
@@ -991,6 +1217,46 @@ parse_range (char **textp)
   return elt;
 }
 
+
+/* Parse an I/T set range.  A range has the form F[:L][.T], where F is
+   the starting inferior, L is the ending inferior, and T is the
+   thread.  Updates RESULT with the new I/T set elements, and returns
+   an updated pointer into the spec.  Throws an exception on
+   error.  */
+
+struct itset_elt *
+parse_core_range (char **textp)
+{
+  int core_first, core_last;
+  char *text = *textp;
+
+  if (*text == '@')
+    ++text;
+
+  if (*text == '*')
+    {
+      core_first = WILDCARD;
+      core_last = WILDCARD;
+      ++text;
+    }
+  else
+    {
+      core_first = strtol (text, &text, 10);
+      if (*text == ':')
+	{
+	  ++text;
+	  if (!isdigit (*text))
+	    error (_("Expected digit in I/T set, at `%s'"), text);
+	  core_last = strtol (text, &text, 10);
+	}
+      else
+	core_last = core_first;
+    }
+
+  *textp = text;
+  return create_core_range_itset (core_first, core_last);
+}
+
 /* Parse a named I/T set.  Currently the only named sets which are
    recognized are `exec (NAME)', and `current'.  Updates RESULT with
    the new I/T set elements, and returns an updated pointer into the
@@ -1089,16 +1355,34 @@ make_cleanup_itset_free (struct itset *itset)
 static struct itset_elt *
 parse_one_element (char **spec)
 {
+  struct itset_elt *elt;
+
   *spec = skip_spaces (*spec);
 
   if (isdigit (**spec) || **spec == '*' || **spec == '.')
-    return parse_range (spec);
+    elt = parse_range (spec);
   else if (isalpha (**spec))
-    return parse_named (spec);
+    elt = parse_named (spec);
   else if (**spec == '~')
-    return parse_negated (spec);
+    elt = parse_negated (spec);
   else
     error (_("Invalid I/T syntax at `%s'"), *spec);
+
+  if (**spec == '@')
+    {
+      struct itset_elt_intersect *intersect;
+      struct itset_elt *core_range;
+
+      core_range = parse_core_range (spec);
+
+      intersect = create_intersect_itset ();
+      VEC_safe_push (itset_elt_ptr, intersect->elements, elt);
+      VEC_safe_push (itset_elt_ptr, intersect->elements, core_range);
+
+      return (struct itset_elt *) intersect;
+    }
+
+  return elt;
 }
 
 /* Parse an I/T set specification and return a new I/T set.  Throws an
