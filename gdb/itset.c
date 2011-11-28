@@ -1529,7 +1529,8 @@ itset_contains_thread (struct itset *set, struct thread_info *thr)
 struct itset *
 itset_reference (struct itset *itset)
 {
-  ++itset->refc;
+  if (itset)
+    ++itset->refc;
   return itset;
 }
 
