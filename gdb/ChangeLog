@@ -1,3 +1,142 @@
+2011-12-03  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	Fix compilation --without-expat.
+	* solib-svr4.c (svr4_free_so, svr4_free_library_list): Move them here
+	from ...
+	[HAVE_LIBEXPAT] (svr4_free_so, svr4_free_library_list): ... here.
+
+2011-12-02  Paul Pluzhnikov  <ppluzhnikov@google.com>
+	    Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	* Makefile.in (XMLFILES): Add library-list-svr4.dtd.
+	* features/library-list-svr4.dtd: New file.
+	* remote.c (PACKET_qXfer_libraries_svr4): New.
+	(remote_protocol_features): new entry for PACKET_qXfer_libraries_svr4.
+	(remote_xfer_partial): Handle TARGET_OBJECT_LIBRARIES_SVR4.
+	* solib-svr4.c (struct svr4_library_list): New.
+	[HAVE_LIBEXPAT]: Include xml-support.h.
+	[HAVE_LIBEXPAT] (svr4_library_list_start_library)
+	[HAVE_LIBEXPAT] (svr4_library_list_start_list, svr4_library_attributes)
+	[HAVE_LIBEXPAT] (svr4_library_list_children)
+	[HAVE_LIBEXPAT] (svr4_library_list_attributes)
+	[HAVE_LIBEXPAT] (svr4_library_list_elements, svr4_parse_libraries)
+	[HAVE_LIBEXPAT] (svr4_current_sos_via_xfer_libraries)
+	[!HAVE_LIBEXPAT] (svr4_current_sos_via_xfer_libraries): New.
+	(svr4_read_so_list): Extend the corruption message by addresses.
+	(svr4_current_sos): New variable library_list, call
+	svr4_current_sos_via_xfer_libraries.
+	* target.h (enum target_object): New TARGET_OBJECT_LIBRARIES_SVR4.
+
+2011-12-02  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	PR threads/13448
+	* dwarf2read.c (decode_locdesc): Handle DW_OP_const8u.
+	For DW_OP_GNU_push_tls_address increment the value, new comment for it.
+
+2011-12-02  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	PR breakpoints/13346
+	* dwarf2read.c (process_psymtab_comp_unit): Set
+	PSYMTABS_ADDRMAP_SUPPORTED.
+	* psympriv.h (struct partial_symtab): Comment textlow and texthigh
+	validity.  New field psymtabs_addrmap_supported.
+	* psymtab.c (find_pc_sect_psymtab_closer): New gdb_assert on
+	psymtabs_addrmap_supported.
+	(find_pc_sect_psymtab): Do not fallback to TEXTLOW and TEXTHIGH for
+	!PSYMTABS_ADDRMAP_SUPPORTED.
+	(dump_psymtab, maintenance_info_psymtabs): Print also
+	psymtabs_addrmap_supported.
+
+2011-12-01  Doug Evans  <dje@google.com>
+
+	* python/py-type.c (type_object_methods): Fix "array" doc string.
+
+2011-12-01  Andrew Burgess  <aburgess@broadcom.com>
+
+	* source.c (print_source_lines_base): Fix missing braces on else
+	clause leading to additional output.
+
+2011-11-30  Ulrich Weigand  <uweigand@de.ibm.com>
+
+	* s390-nat.c (SUBOFF): Remove.
+	(s390_native_supply, s390_native_collect): New functions.
+	(supply_gregset, supply_fpregset): Use s390_native_supply.
+	(fill_gregset, fill_fpregset): Use s390_native_collect.
+
+	* s390-tdep.c (s390_pseudo_register_reggroup_p): Update comment.
+	(s390_unwind_pseudo_register): New function.
+	(s390_prologue_frame_unwind_cache): Unwind PSW address and mask
+	registers instead of PC and CC.
+	(s390_backchain_frame_unwind_cache): Likewise.
+	(s390_sigtramp_frame_unwind_cache): Do not unwind PC, CC, or
+	full GPR pseudos.
+	(s390_trad_frame_prev_register): New function.
+	(s390_frame_prev_register): Use it.
+	(s390_sigtramp_frame_prev_register): Likewise.
+	(s390_dwarf2_prev_register): Use s390_unwind_pseudo_register.
+	(s390_dwarf2_frame_init_reg): Unwind PSW address and mask.  Use
+	special callback to unwind any pseudo.
+
+	* features/s390-core32.xml: Add pswm/pswa to save/restore group.
+	* features/s390-core64.xml: Likewise.
+	* features/s390x-core64.xml: Likewise.
+	* features/s390-linux32.c: Regenerate.
+	* features/s390-linux64.c: Likewise.
+	* features/s390x-linux64.c: Likewise.
+
+2011-11-30  Ulrich Weigand  <uweigand@de.ibm.com>
+
+	* s390-tdep.c (s390_gdbarch_init): Call set_gdbarch_get_siginfo_type.
+
+2011-11-30  Ulrich Weigand  <uweigand@de.ibm.com>
+
+	* s390-tdep.c (s390_displaced_step_fixup): Fix processing of LARL
+	instruction.  Add more diagnostic output.
+
+2011-11-29  Andrey Smirnov  <andrew.smirnov@gmail.com>
+
+	* MAINTAINERS (Write After Approval): Add myself to the list.
+
+2011-11-29  Sanjoy Das  <sdas@igalia.com>
+
+	* jit.c (add_objfile_entry, jit_reader_try_read_symtab)
+	(jit_bfd_try_read_symtab): Fix comments.
+
+2011-11-28  DJ Delorie  <dj@redhat.com>
+
+	* NEWS: Mention RL78 simulator.
+
+2011-11-28  Joel Brobecker  <brobecker@adacore.com>
+
+	* symfile.h (struct quick_symbol_functions): Fix the documentation
+	of field map_matching_symbols, as symbols are sorted using
+	strcmp_iw_ordered, not strcmp_iw.
+
+2011-11-28  Paul Hilfinger  <hilfinger@adacore.com>
+
+	* symfile.h (struct quick_symbol_functions): Update the
+	documentation for field map_matching_symbols.
+
+2011-11-28  Joel Brobecker  <brobecker@adacore.com>
+
+	* ada-lang.c (compare_names): Fix wrong return value in case
+	string1 starts with the same contents as string2, followed
+	by an underscore that do not start a symbol name suffix.
+
+2011-11-28  Phil Muldoon  <pmuldoon@redhat.com>
+
+	PR python/13369
+	PR python/13374
+
+	* python/python.c (gdbpy_decode_line): Do not acquire GIL.
+	* python/py-inferior.c (inferior_to_inferior_object): Ditto.
+	* python/py-value.c (valpy_nonzero): Use TRY_CATCH to catch GDB
+	exceptions.
+	* python/py-type.c (typy_strip_typedefs): Ditto.
+	(typy_legacy_template_argument): Ditto.
+	* python/py-inferior.c (inferior_to_inferior_object): Ditto.
+	* python/py-breakpoint.c (bppy_set_ignore_count): Ditto.
+
 2011-11-27  Joel Brobecker  <brobecker@acacore.com>
 
 	* remote.c (remote_get_tracepoint_status): Delete addrbuf

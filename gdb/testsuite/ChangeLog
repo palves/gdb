@@ -1,3 +1,82 @@
+2011-12-03  Doug Evans  <dje@google.com>
+
+	* lib/gdb.exp (gdb_run_cmd, gdb_start_cmd, run_to_main): Add comments.
+	(gdb_step_for_stub): Add comments.
+
+2011-12-02  Maciej W. Rozycki  <macro@codesourcery.com>
+
+	* lib/gdb.exp (gdb_expect): Pass all the exception conditions up
+	to the caller.
+	(gdb_test_multiple): Likewise.
+
+2011-12-02  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	Fix gdb.mi/mi-solib.exp without system debug info installed.
+	* lib/mi-support.exp (mi_expect_stop): Accept FILE also for `from'
+	expect attribute, return 0 for it.  Update comments.
+
+2011-12-02  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	* gdb.base/solib-corrupted.exp: Suppress test on is_remote target.
+	(corrupted list): Adjust the expectation.
+
+2011-12-02  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	PR threads/13448
+	* gdb.dwarf2/dw2-var-zero-addr.S: New file.
+	* gdb.dwarf2/dw2-var-zero-addr.exp: New file.
+	* gdb.threads/tls-var-main.c: New file.
+	* gdb.threads/tls-var.c: New file.
+	* gdb.threads/tls-var.exp: New file.
+
+2011-12-02  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	PR testsuite/12649
+	* gdb.trace/collection.exp (gdb_collect_return_test): Import gdb_prompt.
+	Protect gdb_test_multiple by final $gdb_prompt match.
+	* gdb.trace/tspeed.exp (gdb_fast_trace_speed_test): Likewise.
+	* gdb.trace/tstatus.exp (run_trace_experiment): Likewise.
+	(test_tracepoints): Likewise.
+
+2011-12-02  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	PR breakpoints/13346
+	* gdb.dwarf2/dw2-objfile-overlap-inner.S: New file.
+	* gdb.dwarf2/dw2-objfile-overlap-outer.S: New file.
+	* gdb.dwarf2/dw2-objfile-overlap.exp: New file.
+
+2011-12-01  Joel Brobecker  <brobecker@adacore.com>
+
+	* gdb.ada/homonym/pck.ads, gdb.ada/homonym/pck.adb: New files.
+	* gdb.ada/homonym/homonym.adb: For use of all types defined
+	locally inside both Get_Value subprograms.
+
+2011-12-01  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	Fix racy FAILs.
+	* gdb.base/foll-exec.exp (zap_session): Use gdb_test_no_output instead
+	of send_gdb.
+
+2011-11-30  Ulrich Weigand  <uweigand@de.ibm.com>
+
+	* gdb.base/testenv.exp: Skip on remote targets.  Unset global
+	environment variable after test completed.
+
+2011-11-30  Ulrich Weigand  <uweigand@de.ibm.com>
+
+	* gdb.base/solib-nodir.exp: Skip if remote target.
+	* gdb.base/gdb.fortran.exp: Use shlib= flag when linking main
+	application.  Call gdb_load_shlibs.
+	* gdb.mi/mi-solib.exp: Use mi_load_shlibs instead of gdb_load_shlibs.
+
+2011-11-29  Joel Brobecker  <brobecker@adacore.com>
+
+	* gdb.base/infoline.c, gdb.base/infoline.exp: New files.
+
+2011-11-28  Joel Brobecker  <brobecker@adacore.com>
+
+	* gdb.ada/fullname_bp: New testcase.
+
 2011-11-25  Jan Kratochvil  <jan.kratochvil@redhat.com>
 
 	PR testsuite/12649

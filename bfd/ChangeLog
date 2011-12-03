@@ -1,3 +1,36 @@
+2011-12-03  Alan Modra  <amodra@gmail.com>
+
+	PR ld/13468
+	* elflink.c (bfd_elf_final_link): Don't segfault when checking
+	for DT_TEXTREL and .dynamic does not exist.
+
+2011-12-03  Alan Modra  <amodra@gmail.com>
+
+	PR ld/13470
+	* elf32-ppc.c (ppc_elf_copy_indirect_symbol): Revert substantive
+	change in 2011-07-01 commit.  Comment.
+	* elf64-ppc.c (ppc64_elf_copy_indirect_symbol): Likewise.
+
+2011-12-01  Mikael Pettersson  <mikpe@it.uu.se>
+
+	* elf32-m68k.c (elf_m68k_check_relocs) <R_68K_8, R68K_16, R_68K_32>: For
+	non-SEC_ALLOC sections break before GOT and PLT accounting.
+
+2011-12-01  Hans-Peter Nilsson  <hp@axis.com>
+
+	* elf32-cris.c (cris_elf_check_relocs) <plt accounting for
+	R_CRIS_8, R_CRIS_16, and R_CRIS_32>: Move early break for
+	non-SEC_ALLOC sections before GOT and PLT accounting.
+
+2011-11-29  Andrew Pinski  <apinski@cavium.com>
+
+	* archures.c (bfd_mach_mips_octeonp): New macro.
+	* bfd-in2.h: Regenerate.
+	* bfd/cpu-mips.c (I_mipsocteonp): New enum value.
+	(arch_info_struct): Add bfd_mach_mips_octeonp.
+	* elfxx-mips.c (mips_set_isa_flags): Add bfd_mach_mips_octeonp.
+	(mips_mach_extensions): Add bfd_mach_mips_octeonp.
+
 2011-11-23  Tristan Gingold  <gingold@adacore.com>
 
 	* vms-lib.c (get_idxlen): Add comments.  Fix type in sizeof.
