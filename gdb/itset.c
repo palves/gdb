@@ -1521,7 +1521,7 @@ make_cleanup_itset_free (struct itset *itset)
 static struct itset_elt *parse_neg (char **spec);
 static struct itset_elt *parse_parens_set (char **spec);
 static struct itset_elt *parse_itset_one (char **spec);
-static struct itset_elt *parse_current_focus (char **spec);
+static struct itset_elt *parse_current_scope (char **spec);
 
 static int
 valid_spec_end (char *spec)
@@ -1554,7 +1554,7 @@ parse_elem (char **spec)
   if (elt != NULL)
     return elt;
 
-  elt = parse_current_focus (spec);
+  elt = parse_current_scope (spec);
   if (elt != NULL)
     return elt;
 
@@ -1581,7 +1581,7 @@ parse_neg (char **spec)
 }
 
 static struct itset_elt *
-parse_current_focus (char **spec)
+parse_current_scope (char **spec)
 {
   struct itset_elt_itset *itset_elt;
 
@@ -2026,7 +2026,7 @@ switch_to_itset (struct itset *itset)
   int inf_count;
 
   /* For now, set a current inferior from the first element of the
-     focus set.  */
+     scope set.  */
   inf = iterate_over_itset_inferiors (itset, first_inferior, NULL);
   if (inf == NULL)
     {
@@ -2073,7 +2073,7 @@ switch_to_itset (struct itset *itset)
 }
 
 static void
-itfocus_command (char *spec, int from_tty)
+scope_command (char *spec, int from_tty)
 {
   struct itset *itset;
   struct cleanup *old_chain;
@@ -2081,11 +2081,11 @@ itfocus_command (char *spec, int from_tty)
   if (spec == NULL)
     {
       if (current_itset)
-	printf_filtered (_("Focus is `%s' (current inferior is %d)"),
+	printf_filtered (_("Scope is `%s' (current inferior is %d)"),
 			 current_itset->spec,
 			 current_inferior ()->num);
       else
-	printf_filtered (_("No focus has been set. (current inferior is %d)"),
+	printf_filtered (_("No scope has been set. (current inferior is %d)"),
 			 current_inferior ()->num);
       printf_filtered ("\n");
       return;
@@ -2111,7 +2111,7 @@ itfocus_command (char *spec, int from_tty)
     }
 
   if (itset_is_empty (itset))
-    warning (_("focus set is empty"));
+    warning (_("scope set is empty"));
 
   discard_cleanups (old_chain);
 
@@ -2120,7 +2120,7 @@ itfocus_command (char *spec, int from_tty)
 
   switch_to_itset (itset);
 
-  /* Confirm the choice of focus.  */
+  /* Confirm the choice of scope.  */
   printf_filtered (_("Current inferior is %d.\n"), current_inferior ()->num);
 }
 
@@ -2518,7 +2518,7 @@ _initialize_itset (void)
 
   current_itset = itset_reference (curinf_itset);
 
-  add_com ("itfocus", no_class, itfocus_command, _("\
+  add_com ("scope", no_class, scope_command, _("\
 Change the set of current inferiors/threads."));
 
   add_com ("defset", no_class, defset_command, _("\

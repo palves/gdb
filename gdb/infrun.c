@@ -2075,7 +2075,7 @@ set_schedlock_func (char *args, int from_tty, struct cmd_list_element *c)
 }
 
 /* True if execution commands resume all threads of all processes in
-   the current focus by default; otherwise, resume only threads of the
+   the current scope by default; otherwise, resume only threads of the
    current inferior process.  */
 int sched_multi = 1;
 
