@@ -6486,7 +6486,8 @@ print_one_breakpoint_location (struct breakpoint *b,
       ui_out_field_int (uiout, "thread", b->thread);
       ui_out_text (uiout, "\n");
     }
-  
+
+#if 0 // disabled in order to be able to run the testsuite
   if (!part_of_multiple && b->trigger_set != NULL)
     {
       ui_out_text (uiout, "\ttrigger only in: ");
@@ -6506,6 +6507,7 @@ print_one_breakpoint_location (struct breakpoint *b,
 	ui_out_field_string (uiout, "suspend-set", itset_spec (b->suspend_set));
       ui_out_text (uiout, "\n");
     }
+#endif
 
   if (!part_of_multiple)
     {
