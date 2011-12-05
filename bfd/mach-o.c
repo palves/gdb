@@ -1294,6 +1294,7 @@ bfd_mach_o_write_contents (bfd *abfd)
 	case BFD_MACH_O_LC_LOAD_WEAK_DYLIB:
 	case BFD_MACH_O_LC_ID_DYLIB:
 	case BFD_MACH_O_LC_REEXPORT_DYLIB:
+        case BFD_MACH_O_LC_LOAD_UPWARD_DYLIB:
 	case BFD_MACH_O_LC_LOAD_DYLINKER:
 	case BFD_MACH_O_LC_ID_DYLINKER:
 	case BFD_MACH_O_LC_PREBOUND_DYLIB:
@@ -1900,10 +1901,12 @@ bfd_mach_o_read_symtab_symbol (bfd *abfd,
 	    }
 	  break;
 	case BFD_MACH_O_N_INDR:
-	  (*_bfd_error_handler) (_("bfd_mach_o_read_symtab_symbol: "
-				   "symbol \"%s\" is unsupported 'indirect' reference: setting to undefined"),
-				 s->symbol.name);
-	  s->symbol.section = bfd_und_section_ptr;
+	  /* FIXME: we don't follow the BFD convention as this indirect symbol
+	     won't be followed by the referenced one.  This looks harmless
+	     unless we start using the linker.	*/
+	  s->symbol.flags |= BSF_INDIRECT;
+	  s->symbol.section = bfd_ind_section_ptr;
+	  s->symbol.value = 0;
 	  break;
 	default:
 	  (*_bfd_error_handler) (_("bfd_mach_o_read_symtab_symbol: "
@@ -2100,6 +2103,7 @@ bfd_mach_o_read_dylib (bfd *abfd, bfd_mach_o_load_command *command)
     case BFD_MACH_O_LC_LOAD_WEAK_DYLIB:
     case BFD_MACH_O_LC_ID_DYLIB:
     case BFD_MACH_O_LC_REEXPORT_DYLIB:
+    case BFD_MACH_O_LC_LOAD_UPWARD_DYLIB:
       break;
     default:
       BFD_FAIL ();
@@ -2684,6 +2688,7 @@ bfd_mach_o_read_command (bfd *abfd, bfd_mach_o_load_command *command)
     case BFD_MACH_O_LC_ID_DYLIB:
     case BFD_MACH_O_LC_LOAD_WEAK_DYLIB:
     case BFD_MACH_O_LC_REEXPORT_DYLIB:
+    case BFD_MACH_O_LC_LOAD_UPWARD_DYLIB:
       if (bfd_mach_o_read_dylib (abfd, command) != 0)
 	return -1;
       break;
@@ -2734,8 +2739,8 @@ bfd_mach_o_read_command (bfd *abfd, bfd_mach_o_load_command *command)
 	return -1;
       break;
     default:
-      (*_bfd_error_handler) (_("unable to read unknown load command 0x%lx"),
-			     (unsigned long) command->type);
+      (*_bfd_error_handler)(_("%B: unable to read unknown load command 0x%lx"),
+         abfd, (unsigned long) command->type);
       break;
     }
 
@@ -3209,22 +3214,9 @@ bfd_mach_o_openr_next_archived_file (bfd *archive, bfd *prev)
 
   bfd_mach_o_convert_architecture (entry->cputype, entry->cpusubtype,
 				   &arch_type, &arch_subtype);
-  /* Create the member filename.
-     Use FILENAME:ARCH_NAME.  */
-  {
-    char *s = NULL;
-    const char *arch_name;
-    size_t arch_file_len = strlen (bfd_get_filename (archive));
 
-    arch_name = bfd_printable_arch_mach (arch_type, arch_subtype);
-    s = bfd_malloc (arch_file_len + 1 + strlen (arch_name) + 1);
-    if (s == NULL)
-      return NULL;
-    memcpy (s, bfd_get_filename (archive), arch_file_len);
-    s[arch_file_len] = ':';
-    strcpy (s + arch_file_len + 1, arch_name);
-    nbfd->filename = s;
-  }
+  /* Create the member filename. Use ARCH_NAME.  */
+  nbfd->filename = bfd_printable_arch_mach (arch_type, arch_subtype);
   nbfd->iostream = NULL;
   bfd_set_arch_mach (nbfd, arch_type, arch_subtype);
 
@@ -3277,7 +3269,7 @@ bfd_mach_o_fat_extract (bfd *abfd,
 
       res->origin = e->offset;
 
-      res->filename = strdup (abfd->filename);
+      res->filename = bfd_printable_arch_mach (cpu_type, cpu_subtype);
       res->iostream = NULL;
 
       if (bfd_check_format (res, format))
@@ -3964,6 +3956,7 @@ bfd_mach_o_bfd_print_private_bfd_data (bfd *abfd, void * ptr)
 	case BFD_MACH_O_LC_LOAD_DYLIB:
 	case BFD_MACH_O_LC_LOAD_WEAK_DYLIB:
 	case BFD_MACH_O_LC_REEXPORT_DYLIB:
+        case BFD_MACH_O_LC_LOAD_UPWARD_DYLIB:
 	case BFD_MACH_O_LC_ID_DYLIB:
 	  {
 	    bfd_mach_o_dylib_command *dylib = &cmd->command.dylib;

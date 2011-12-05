@@ -1,3 +1,30 @@
+2011-12-05  Pedro Alves  <pedro@codesourcery.com>
+
+	* breakpoint.c: Include record.h.
+	(breakpoints_always_inserted_mode): Return false when the record
+	target is in use.
+
+2011-12-05  Pedro Alves  <pedro@codesourcery.com>
+
+	* amd64-linux-nat.c (amd64_linux_dr_get): Remove FIXME comment.
+	Reinstate perror_with_name call on ptrace error.  Remove #if 0.
+	* i386-linux-nat.c (i386_linux_dr_get): Likewise.
+	* i386bsd-nat.c (i386bsd_dr_get_status): Likewise.
+
+2011-12-05  Andrey Smirnov  <andrew.smirnov@gmail.com>
+
+	* breakpoint.c (init_breakpoint_sal): Remove nested definitions of
+	`i'(-Wshadow).
+
+2011-12-05  Andrey Smirnov  <andrew.smirnov@gmail.com>
+
+	* bcache.c (bcache): Rename `bcache' to `cache'(-Wshadow).
+
+2011-12-05  Andrey Smirnov  <andrew.smirnov@gmail.com>
+
+	* amd64-tdep.c (amd64_push_dummy_call): Remove nested definition
+	of `tdep'(-Wshadow).
+
 2011-12-03  Jan Kratochvil  <jan.kratochvil@redhat.com>
 
 	Fix compilation --without-expat.
