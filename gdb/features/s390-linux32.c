@@ -71,5 +71,8 @@ initialize_tdesc_s390_linux32 (void)
   tdesc_create_reg (feature, "f14", 49, 1, "float", 64, "ieee_double");
   tdesc_create_reg (feature, "f15", 50, 1, "float", 64, "ieee_double");
 
+  feature = tdesc_create_feature (result, "org.gnu.gdb.s390.linux");
+  tdesc_create_reg (feature, "orig_r2", 51, 1, "system", 32, "uint32");
+
   tdesc_s390_linux32 = result;
 }

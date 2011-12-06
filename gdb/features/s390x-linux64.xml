@@ -13,4 +13,8 @@
   <xi:include href="s390x-core64.xml"/>
   <xi:include href="s390-acr.xml"/>
   <xi:include href="s390-fpr.xml"/>
+
+  <feature name="org.gnu.gdb.s390.linux">
+    <reg name="orig_r2" bitsize="64" type="uint64" group="system"/>
+  </feature>
 </target>
