@@ -989,18 +989,15 @@ mips_pc_is_mips16 (CORE_ADDR memaddr)
 {
   struct minimal_symbol *sym;
 
-  /* If bit 0 of the address is set, assume this is a MIPS16 address.  */
-  if (is_mips16_addr (memaddr))
-    return 1;
-
-  /* A flag indicating that this is a MIPS16 function is stored by elfread.c in
-     the high bit of the info field.  Use this to decide if the function is
-     MIPS16 or normal MIPS.  */
+  /* A flag indicating that this is a MIPS16 function is stored by
+     elfread.c in the high bit of the info field.  Use this to decide
+     if the function is MIPS16 or normal MIPS.  Otherwise if bit 0 of
+     the address is set, assume this is a MIPS16 address.  */
   sym = lookup_minimal_symbol_by_pc (memaddr);
   if (sym)
     return msymbol_is_special (sym);
   else
-    return 0;
+    return is_mips16_addr (memaddr);
 }
 
 /* MIPS believes that the PC has a sign extended value.  Perhaps the
@@ -1147,7 +1144,7 @@ mips32_next_pc (struct frame_info *frame, CORE_ADDR pc)
 	    get_frame_register_signed (frame,
 				       mips_regnum (get_frame_arch (frame))->
 						fp_control_status);
-	  int cond = ((fcrcs >> 24) & 0x0e) | ((fcrcs >> 23) & 0x01);
+	  int cond = ((fcrcs >> 24) & 0xfe) | ((fcrcs >> 23) & 0x01);
 
 	  if (((cond >> cnum) & 0x01) == tf)
 	    pc += mips32_relative_offset (inst) + 4;
@@ -1579,7 +1576,7 @@ mips16_next_pc (struct frame_info *frame, CORE_ADDR pc)
 static CORE_ADDR
 mips_next_pc (struct frame_info *frame, CORE_ADDR pc)
 {
-  if (is_mips16_addr (pc))
+  if (mips_pc_is_mips16 (pc))
     return mips16_next_pc (frame, pc);
   else
     return mips32_next_pc (frame, pc);
@@ -2249,7 +2246,8 @@ restart:
                    || high_word == 0x3408 /* ori $t0,$zero,n */
                   ))
        {
-          load_immediate_bytes += MIPS_INSN32_SIZE;     	/* FIXME!  */
+	 if (end_prologue_addr == 0)
+	   load_immediate_bytes += MIPS_INSN32_SIZE;		/* FIXME!  */
        }
       else
        {
@@ -2623,7 +2621,7 @@ deal_with_atomic_sequence (struct gdbarch *gdbarch,
 	    return 0; /* fallback to the standard single-step code.  */
 	  break;
 	case 1: /* REGIMM */
-	  is_branch = ((itype_rt (insn) & 0xc0) == 0); /* B{LT,GE}Z* */
+	  is_branch = ((itype_rt (insn) & 0xc) == 0); /* B{LT,GE}Z* */
 	  break;
 	case 2: /* J */
 	case 3: /* JAL */
