@@ -1,3 +1,163 @@
+2011-12-13  Joel Brobecker  <brobecker@adacore.com>
+
+	GDB 7.4 branch created (branch timestamp: 2011-12-13 13:00 UTC)
+	* version.in: Bump version to 7.4.50.20111213-cvs.
+
+2011-12-13  Joel Brobecker  <brobecker@adacore.com>
+
+	* NEWS: Create a new section for the next release branch.
+	Rename the section of the current branch, now that it has
+	been cut.
+
+2011-12-11  Joel Brobecker  <brobecker@adacore.com>
+
+	* ada-lang.c (ada_exception_support_info_sniffer): Improve
+	error message.
+
+2011-12-11  Joel Brobecker  <brobecker@adacore.com>
+
+	* ada-lang.c (struct ada_inferior_data) [exception_info]:
+	New field.
+	(exception_info): Delete.
+	(ada_exception_support_info_sniffer): Get exception_support_info
+	data from our per-inferior data.  Adjust code accordingly.
+	(ada_unhandled_exception_name_addr_from_raise): Likewise.
+	(ada_exception_name_addr_1, ada_exception_sym_name): Ditto.
+	(ada_executable_changed_observer): Delete.
+	(_initialize_ada_language): Remove call to
+	observer_attach_executable_changed.
+
+2011-12-11  Joel Brobecker  <brobecker@adacore.com>
+
+	* ada-lang.c (ada_has_this_exception_support): Raise an error
+	if we could find the Ada exception hook in the Ada runtime,
+	but no debugging info for that hook.
+
+2011-12-11  Joel Brobecker  <brobecker@adacore.com>
+
+	* ada-lang.c (ada_has_this_exception_support): New function,
+	extracted out of ada_exception_sal and ada_exception_sal.
+	(ada_exception_support_info_sniffer): Simplify by using
+	ada_has_this_exception_support.
+	(ada_exception_sal): Replace unnecessary checks by assertions.
+	Minor simplifications.
+
+2011-12-10  Andrey Smirnov  <andrew.smirnov@gmail.com>
+
+	* breakpoint.c (update_global_location_list): Remove nested
+	definition of `b'(-Wshadow).
+
+2011-12-10  Andrey Smirnov  <andrew.smirnov@gmail.com>
+
+	* breakpoint.c (insert_breakpoint_locations): Rename `error' to
+	`error_flag'(-Wshadow).
+
+2011-12-10  Andrey Smirnov  <andrew.smirnov@gmail.com>
+
+	* bfd-target.c (target_bfd_reopen): Rename `bfd' to
+	`abfd'(-Wshadow).
+
+2011-12-10  Andrey Smirnov  <andrew.smirnov@gmail.com>
+
+	* annotate.c (annotate_array_section_begin): Rename `index' to
+	`idx'(-Wshadow).
+
+2011-12-10  Andrey Smirnov  <andrew.smirnov@gmail.com>
+
+	* amd64-tdep.c (amd64_get_unused_input_int_reg): Rename `index' to
+	`idx'(-Wshadow).
+
+2011-12-10  Andrey Smirnov  <andrew.smirnov@gmail.com>
+
+	* amd64-linux-tdep.c (amd64_canonicalize_syscall): Rename
+	`syscall' to `syscall_number'(-Wshadow).
+
+2011-12-10  Andrey Smirnov  <andrew.smirnov@gmail.com>
+
+	* ada-lang.c (remove_extra_symbols): Rename `remove' to
+	`remove_p'(-Wshadow).
+
+2011-12-10  Andrey Smirnov  <andrew.smirnov@gmail.com>
+
+	* ada-exp.y (write_var_or_type): Rename nested `renaming' to
+	`ren_sym'(-Wshadow).
+
+2011-12-10  Doug Evans  <dje@google.com>
+
+	* dwarf2read.c (dwarf2_per_cu_data): Rename debug_type_section to
+	debug_types_section.  All uses updated.
+	(partial_read_comp_unit_head): Rename parameter is_debug_type_section
+	to is_debug_types_section.
+
+	* python/py-auto-load.c (source_section_scripts): Call xfree
+	instead of free.
+
+2011-12-10  Hui Zhu  <teawater@gmail.com>
+	    Yao Qi  <yao@codesourcery.com>
+
+	* tracepoint.c (start_tracing): Clear `inserted' flag.
+
+2011-12-10  Hui Zhu  <teawater@gmail.com>
+
+	* tracepoint.c (create_tsv_from_upload): Change sprintf to xstrprintf.
+
+2011-12-09  Andrey Smirnov  <andrew.smirnov@gmail.com>
+
+	* breakpoint.c (bp_loc_is_permanent): Rename `brk' to
+	`bpoint'(-Wshadow).
+
+2011-12-09  Andrey Smirnov  <andrew.smirnov@gmail.com>
+
+	* breakpoint.c (update_static_tracepoint): Rename nested `sal' and
+	`marker' variables to `sal2' and `tpmarker' respectively
+	(-Wshadow).
+
+2011-12-09  Andrew Pinski  <apinski@cavium.com>
+
+	* linespec.c (hash_address_entry): Use iterative_hash_object on each
+	field rather than the struct itself.
+
+2011-12-09  Tom Tromey  <tromey@redhat.com>
+
+	* breakpoint.c (compare_breakpoints): New function.
+	(clear_command): Remove duplicate breakpoints.  Properly clean
+	up.
+
+2011-12-08  Maciej W. Rozycki  <macro@mips.com>
+            Maciej W. Rozycki  <macro@codesourcery.com>
+
+	* mips-tdep.c (mips_skip_mips16_trampoline_code): Sign-extend
+	address chunks retrieved from decoded lui/addiu pairs.
+
+2011-12-08  Maciej W. Rozycki  <macro@codesourcery.com>
+
+	* mips-tdep.c (extended_offset): Correct calculation.
+	(unpack_mips16): Correct bitfield positions used for extraction
+	of the immediate argument; fix sign-extension of same.
+	(extended_mips16_next_pc): Correct B instruction's offset
+	calculation.  Correct register decoding of the BEQZ and BNEZ
+	as well as jump-register instructions.  Handle compact jumps.
+
+2011-12-08  Tom Tromey  <tromey@redhat.com>
+
+	* objfiles.h (struct objfile): Remove obsolete comment.
+	* objfiles.c (build_objfile_section_table): Remove obsolete
+	comment.
+
+2011-12-07  Stan Shebs  <stan@codesourcery.com>
+
+	* MAINTAINERS (Responsible Maintainers): Add Yao Qi as
+	maintainer of the tic6x target.
+
+2011-12-07  Ulrich Weigand  <ulrich.weigand@linaro.org>
+
+	* arm-tdep.h (arm_deal_with_atomic_sequence): Add prototype.
+	* arm-tdep.c (thumb_deal_with_atomic_sequence_raw): New function.
+	(arm_deal_with_atomic_sequence_raw): Likewise.
+	(arm_deal_with_atomic_sequence): Likewise.
+	(arm_software_single_step): Call it.
+	* arm-linux-tdep.c (arm_linux_software_single_step): Likewise.
+
 2011-12-07  Ulrich Weigand  <uweigand@de.ibm.com>
 
 	* s390-tdep.c: Replace "Linux" by "GNU/Linux" in comments

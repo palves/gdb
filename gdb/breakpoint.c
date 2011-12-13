@@ -1974,7 +1974,7 @@ insert_breakpoint_locations (void)
 {
   struct breakpoint *bpt;
   struct bp_location *bl, **blp_tmp;
-  int error = 0;
+  int error_flag = 0;
   int val = 0;
   int disabled_breaks = 0;
   int hw_breakpoint_error = 0;
@@ -2013,7 +2013,7 @@ insert_breakpoint_locations (void)
       val = insert_bp_location (bl, tmp_error_stream, &disabled_breaks,
 				    &hw_breakpoint_error);
       if (val)
-	error = val;
+	error_flag = val;
     }
 
   /* If we failed to insert all locations of a watchpoint, remove
@@ -2048,11 +2048,11 @@ insert_breakpoint_locations (void)
 	  fprintf_unfiltered (tmp_error_stream,
 			      "Could not insert hardware watchpoint %d.\n", 
 			      bpt->number);
-	  error = -1;
+	  error_flag = -1;
 	}
     }
 
-  if (error)
+  if (error_flag)
     {
       /* If a hardware breakpoint or watchpoint was inserted, add a
          message about possibly exhausted resources.  */
@@ -7204,7 +7204,7 @@ bp_loc_is_permanent (struct bp_location *loc)
 {
   int len;
   CORE_ADDR addr;
-  const gdb_byte *brk;
+  const gdb_byte *bpoint;
   gdb_byte *target_mem;
   struct cleanup *cleanup;
   int retval = 0;
@@ -7212,10 +7212,10 @@ bp_loc_is_permanent (struct bp_location *loc)
   gdb_assert (loc != NULL);
 
   addr = loc->address;
-  brk = gdbarch_breakpoint_from_pc (loc->gdbarch, &addr, &len);
+  bpoint = gdbarch_breakpoint_from_pc (loc->gdbarch, &addr, &len);
 
   /* Software breakpoints unsupported?  */
-  if (brk == NULL)
+  if (bpoint == NULL)
     return 0;
 
   target_mem = alloca (len);
@@ -7229,7 +7229,7 @@ bp_loc_is_permanent (struct bp_location *loc)
   make_show_memory_breakpoints_cleanup (0);
 
   if (target_read_memory (loc->address, target_mem, len) == 0
-      && memcmp (target_mem, brk, len) == 0)
+      && memcmp (target_mem, bpoint, len) == 0)
     retval = 1;
 
   do_cleanups (cleanup);
@@ -10028,18 +10028,41 @@ tcatch_command (char *arg, int from_tty)
   error (_("Catch requires an event name."));
 }
 
+/* A qsort comparison function that sorts breakpoints in order.  */
+
+static int
+compare_breakpoints (const void *a, const void *b)
+{
+  const breakpoint_p *ba = a;
+  uintptr_t ua = (uintptr_t) *ba;
+  const breakpoint_p *bb = b;
+  uintptr_t ub = (uintptr_t) *bb;
+
+  if ((*ba)->number < (*bb)->number)
+    return -1;
+  else if ((*ba)->number > (*bb)->number)
+    return 1;
+
+  /* Now sort by address, in case we see, e..g, two breakpoints with
+     the number 0.  */
+  if (ua < ub)
+    return -1;
+  return ub > ub ? 1 : 0;
+}
+
 /* Delete breakpoints by address or line.  */
 
 static void
 clear_command (char *arg, int from_tty)
 {
-  struct breakpoint *b;
+  struct breakpoint *b, *prev;
   VEC(breakpoint_p) *found = 0;
   int ix;
   int default_match;
   struct symtabs_and_lines sals;
   struct symtab_and_line sal;
   int i;
+  struct cleanup *cleanups = make_cleanup (null_cleanup, NULL);
 
   if (arg)
     {
@@ -10090,6 +10113,7 @@ clear_command (char *arg, int from_tty)
      breakpoint.  */
 
   found = NULL;
+  make_cleanup (VEC_cleanup (breakpoint_p), &found);
   for (i = 0; i < sals.nelts; i++)
     {
       /* If exact pc given, clear bpts at that pc.
@@ -10143,6 +10167,7 @@ clear_command (char *arg, int from_tty)
 	    VEC_safe_push(breakpoint_p, found, b);
 	}
     }
+
   /* Now go thru the 'found' chain and delete them.  */
   if (VEC_empty(breakpoint_p, found))
     {
@@ -10150,6 +10175,21 @@ clear_command (char *arg, int from_tty)
 	error (_("No breakpoint at %s."), arg);
       else
 	error (_("No breakpoint at this line."));
+    }
+
+  /* Remove duplicates from the vec.  */
+  qsort (VEC_address (breakpoint_p, found),
+	 VEC_length (breakpoint_p, found),
+	 sizeof (breakpoint_p),
+	 compare_breakpoints);
+  prev = VEC_index (breakpoint_p, found, 0);
+  for (ix = 1; VEC_iterate (breakpoint_p, found, ix, b); ++ix)
+    {
+      if (b == prev)
+	{
+	  VEC_ordered_remove (breakpoint_p, found, ix);
+	  --ix;
+	}
     }
 
   if (VEC_length(breakpoint_p, found) > 1)
@@ -10171,6 +10211,8 @@ clear_command (char *arg, int from_tty)
     }
   if (from_tty)
     putchar_unfiltered ('\n');
+
+  do_cleanups (cleanups);
 }
 
 /* Delete breakpoint in BS if they are `delete' breakpoints and
@@ -10592,8 +10634,8 @@ update_global_location_list (int should_insert)
     {
       /* ALL_BP_LOCATIONS bp_location has LOC->OWNER always
 	 non-NULL.  */
-      struct breakpoint *b = loc->owner;
       struct bp_location **loc_first_p;
+      b = loc->owner;
 
       if (!should_be_inserted (loc)
 	  || !breakpoint_address_is_meaningful (b)
@@ -11572,26 +11614,26 @@ update_static_tracepoint (struct breakpoint *b, struct symtab_and_line sal)
 
       if (!VEC_empty(static_tracepoint_marker_p, markers))
 	{
-	  struct symtab_and_line sal;
+	  struct symtab_and_line sal2;
 	  struct symbol *sym;
-	  struct static_tracepoint_marker *marker;
+	  struct static_tracepoint_marker *tpmarker;
 	  struct ui_out *uiout = current_uiout;
 
-	  marker = VEC_index (static_tracepoint_marker_p, markers, 0);
+	  tpmarker = VEC_index (static_tracepoint_marker_p, markers, 0);
 
 	  xfree (tp->static_trace_marker_id);
-	  tp->static_trace_marker_id = xstrdup (marker->str_id);
+	  tp->static_trace_marker_id = xstrdup (tpmarker->str_id);
 
 	  warning (_("marker for static tracepoint %d (%s) not "
 		     "found at previous line number"),
 		   b->number, tp->static_trace_marker_id);
 
-	  init_sal (&sal);
+	  init_sal (&sal2);
 
-	  sal.pc = marker->address;
+	  sal2.pc = tpmarker->address;
 
-	  sal = find_pc_line (marker->address, 0);
-	  sym = find_pc_sect_function (marker->address, NULL);
+	  sal2 = find_pc_line (tpmarker->address, 0);
+	  sym = find_pc_sect_function (tpmarker->address, NULL);
 	  ui_out_text (uiout, "Now in ");
 	  if (sym)
 	    {
@@ -11599,37 +11641,37 @@ update_static_tracepoint (struct breakpoint *b, struct symtab_and_line sal)
 				   SYMBOL_PRINT_NAME (sym));
 	      ui_out_text (uiout, " at ");
 	    }
-	  ui_out_field_string (uiout, "file", sal.symtab->filename);
+	  ui_out_field_string (uiout, "file", sal2.symtab->filename);
 	  ui_out_text (uiout, ":");
 
 	  if (ui_out_is_mi_like_p (uiout))
 	    {
-	      char *fullname = symtab_to_fullname (sal.symtab);
+	      char *fullname = symtab_to_fullname (sal2.symtab);
 
 	      if (fullname)
 		ui_out_field_string (uiout, "fullname", fullname);
 	    }
 
-	  ui_out_field_int (uiout, "line", sal.line);
+	  ui_out_field_int (uiout, "line", sal2.line);
 	  ui_out_text (uiout, "\n");
 
-	  b->loc->line_number = sal.line;
+	  b->loc->line_number = sal2.line;
 
 	  xfree (b->loc->source_file);
 	  if (sym)
-	    b->loc->source_file = xstrdup (sal.symtab->filename);
+	    b->loc->source_file = xstrdup (sal2.symtab->filename);
 	  else
 	    b->loc->source_file = NULL;
 
 	  xfree (b->addr_string);
 	  b->addr_string = xstrprintf ("%s:%d",
-				       sal.symtab->filename,
+				       sal2.symtab->filename,
 				       b->loc->line_number);
 
 	  /* Might be nice to check if function changed, and warn if
 	     so.  */
 
-	  release_static_tracepoint_marker (marker);
+	  release_static_tracepoint_marker (tpmarker);
 	}
     }
   return sal;
