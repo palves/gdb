@@ -519,6 +519,9 @@ typedef struct mach_o_data_struct
 
   /* A place to stash dwarf2 info for this bfd.  */
   void *dwarf2_find_line_info;
+
+  /* Cache of dynamic relocs. */
+  arelent *dyn_reloc_cache;
 }
 bfd_mach_o_data_struct;
 
@@ -555,6 +558,7 @@ bfd_boolean bfd_mach_o_bfd_copy_private_symbol_data (bfd *, asymbol *,
 bfd_boolean bfd_mach_o_bfd_copy_private_section_data (bfd *, asection *,
                                                       bfd *, asection *);
 bfd_boolean bfd_mach_o_bfd_copy_private_bfd_data (bfd *, bfd *);
+bfd_boolean bfd_mach_o_bfd_set_private_flags (bfd *, flagword);
 long bfd_mach_o_get_symtab_upper_bound (bfd *);
 long bfd_mach_o_canonicalize_symtab (bfd *, asymbol **);
 long bfd_mach_o_get_synthetic_symtab (bfd *, long, asymbol **, long, 
@@ -589,6 +593,7 @@ bfd_boolean bfd_mach_o_find_nearest_line (bfd *, asection *, asymbol **,
                                           bfd_vma, const char **,
                                           const char **, unsigned int *);
 bfd_boolean bfd_mach_o_close_and_cleanup (bfd *);
+bfd_boolean bfd_mach_o_free_cached_info (bfd *);
 
 unsigned int bfd_mach_o_section_get_nbr_indirect (bfd *, bfd_mach_o_section *);
 unsigned int bfd_mach_o_section_get_entry_size (bfd *, bfd_mach_o_section *);
