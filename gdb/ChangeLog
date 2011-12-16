@@ -1,3 +1,37 @@
+2011-12-16  Tom Tromey  <tromey@redhat.com>
+
+	* linespec.c (collect_symbols): Call maybe_add_address after
+	calling symbol_to_sal.
+	(minsym_found): Call maybe_add_address here.
+	(search_minsyms_for_name): Don't call maybe_add_address.
+
+2011-12-16  Tom Tromey  <tromey@redhat.com>
+
+	* linespec.c (struct collect_info) <objfile>: Remove field.
+	(decode_objc): Update.
+	(find_method): Update.
+	(decode_variable): Update.
+	(struct minsym_and_objfile): New.
+	(struct collect_minsyms): New.
+	(classify_mtype): New function.
+	(compare_msyms): Likewise.
+	(add_minsym): Likewise.
+	(check_minsym): Remove.
+	(search_minsyms_for_name): Sort minsyms and apply only those with
+	top priority.
+
+2011-12-16  Tom Tromey  <tromey@redhat.com>
+
+	* cli/cli-cmds.c (filter_sals): Filter out sals with NULL symtab.
+
+2011-12-16  Pedro Alves  <pedro@codesourcery.com>
+
+	* inf-loop.c: Include top.h.
+	(inferior_event_handler): Call check_frame_language.
+	* top.c (check_frame_language_change): New, factored out from ...
+	(execute_command): ... this.  Use check_frame_language_change.
+	* top.h (check_frame_language_change): Declare.
+
 2011-12-16  asmwarrior  <asmwarrior@gmail.com>	(obvious fix)
 
 	* windows-nat.c (cygwin_get_dr, cygwin_get_dr7): Add missing
