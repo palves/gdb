@@ -3202,6 +3202,7 @@ bfd_mach_o_mkobject_init (bfd *abfd)
   mdata->commands = NULL;
   mdata->nsects = 0;
   mdata->sections = NULL;
+  mdata->dyn_reloc_cache = NULL;
 
   return TRUE;
 }
@@ -3259,17 +3260,6 @@ bfd_mach_o_header_p (bfd *abfd,
     {
       if (header.cputype != cputype)
         goto wrong;
-    }
-  else
-    {
-      switch (header.cputype)
-        {
-        case BFD_MACH_O_CPU_TYPE_I386:
-          /* Handled by mach-o-i386 */
-          goto wrong;
-        default:
-          break;
-        }
     }
   if (filetype)
     {
@@ -3765,9 +3755,10 @@ bfd_mach_o_close_and_cleanup (bfd *abfd)
 {
   bfd_mach_o_data_struct *mdata = bfd_mach_o_get_data (abfd);
   if (bfd_get_format (abfd) == bfd_object && mdata != NULL)
-    _bfd_dwarf2_cleanup_debug_info (abfd, &mdata->dwarf2_find_line_info);
-
-  bfd_mach_o_free_cached_info (abfd);
+    {
+      _bfd_dwarf2_cleanup_debug_info (abfd, &mdata->dwarf2_find_line_info);
+      bfd_mach_o_free_cached_info (abfd);
+    }
 
   return _bfd_generic_close_and_cleanup (abfd);
 }
@@ -3800,6 +3791,7 @@ bfd_boolean bfd_mach_o_free_cached_info (bfd *abfd)
 #define TARGET_ARCHITECTURE	bfd_arch_unknown
 #define TARGET_BIG_ENDIAN 	1
 #define TARGET_ARCHIVE 		0
+#define TARGET_PRIORITY		1
 #include "mach-o-target.c"
 
 #undef TARGET_NAME
@@ -3807,12 +3799,14 @@ bfd_boolean bfd_mach_o_free_cached_info (bfd *abfd)
 #undef TARGET_ARCHITECTURE
 #undef TARGET_BIG_ENDIAN
 #undef TARGET_ARCHIVE
+#undef TARGET_PRIORITY
 
 #define TARGET_NAME 		mach_o_le_vec
 #define TARGET_STRING 		"mach-o-le"
 #define TARGET_ARCHITECTURE	bfd_arch_unknown
 #define TARGET_BIG_ENDIAN 	0
 #define TARGET_ARCHIVE 		0
+#define TARGET_PRIORITY		1
 
 #include "mach-o-target.c"
 
@@ -3821,6 +3815,7 @@ bfd_boolean bfd_mach_o_free_cached_info (bfd *abfd)
 #undef TARGET_ARCHITECTURE
 #undef TARGET_BIG_ENDIAN
 #undef TARGET_ARCHIVE
+#undef TARGET_PRIORITY
 
 /* Not yet handled: creating an archive.  */
 #define bfd_mach_o_mkarchive                      _bfd_noarchive_mkarchive
@@ -3842,6 +3837,7 @@ bfd_boolean bfd_mach_o_free_cached_info (bfd *abfd)
 #define TARGET_ARCHITECTURE	bfd_arch_unknown
 #define TARGET_BIG_ENDIAN 	1
 #define TARGET_ARCHIVE 		1
+#define TARGET_PRIORITY		0
 
 #include "mach-o-target.c"
 
@@ -3850,3 +3846,4 @@ bfd_boolean bfd_mach_o_free_cached_info (bfd *abfd)
 #undef TARGET_ARCHITECTURE
 #undef TARGET_BIG_ENDIAN
 #undef TARGET_ARCHIVE
+#undef TARGET_PRIORITY

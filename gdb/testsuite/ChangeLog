@@ -1,3 +1,22 @@
+2011-12-16  Doug Evans  <dje@google.com>
+
+	* lib/gdbserver-support.exp (gdb_target_cmd): Recognize stdio
+	gdbserver output.
+	(gdbserver_default_get_remote_address): New function.
+	(gdbserver_start): Call gdb,get_remote_address to compute argument
+	to "target remote" command.
+
+2011-12-16  Phil Muldoon  <pmuldoon@redhat.com>
+
+	* gdb.python/py-function.exp: Change "on" to "full" for
+	python print-stack.  Add set/show python print-stack
+	off|full|message tests.
+
+2011-12-15  Yao Qi  <yao@codesourcery.com>
+
+	* gdb.trace/strace.c: New
+	* gdb.trace/strace.exp: New.
+
 2011-12-14  Tom Tromey  <tromey@redhat.com>
 
 	* gdb.dwarf2/dw2-inline-param.exp: Log the objcopy command.
