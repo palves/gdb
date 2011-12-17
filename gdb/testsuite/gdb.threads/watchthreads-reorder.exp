@@ -92,11 +92,21 @@ foreach reorder {0 1} {
 	     "Hardware read watchpoint \[0-9\]+: thread\[12\]_rwatch\r\n\r\nValue = 0\r\n0x\[0-9a-f\]+ in thread\[12\]_func .*" \
 	     "continue b"
 
-    # While the debug output itself is not checked in this testcase one bug was
-    # found in the DEBUG_INFRUN code path.
+    # While the debug output itself is not checked in this testcase
+    # one bug was found in the DEBUG_INFRUN code path.  Note we can't
+    # assume there's no infrun debug output after the prompt.
     gdb_test "set debug infrun 1"
 
-    gdb_continue_to_breakpoint "break-at-exit" ".*break-at-exit.*"
+    set test "continue to breakpoint: break-at-exit"
+    gdb_test_multiple "continue" $test {
+	-re "Breakpoint .* (at|in) .*break-at-exit.*\r\n$gdb_prompt " {
+	    pass $test
+	}
+	-re "$gdb_prompt " {
+	    fail $test
+	}
+    }
+    gdb_test "set debug infrun 0"
 
     set pf_prefix $prefix_test
 }
