@@ -63,6 +63,7 @@
 #include "mi/mi-common.h"
 #include "arch-utils.h"
 #include "exceptions.h"
+#include "itset.h"
 
 /* Define whether or not the C operator '/' truncates towards zero for
    differently signed operands (truncation direction is undefined in C).
@@ -11752,7 +11753,9 @@ ada_decode_exception_location (char *args, char **addr_string,
 /* Create an Ada exception catchpoint.  */
 
 static void
-create_ada_exception_catchpoint (struct gdbarch *gdbarch,
+create_ada_exception_catchpoint (struct itset *trigger_set,
+				 struct itset *stop_set,
+				 struct gdbarch *gdbarch,
 				 struct symtab_and_line sal,
 				 char *addr_string,
 				 char *excep_string,
@@ -11763,7 +11766,8 @@ create_ada_exception_catchpoint (struct gdbarch *gdbarch,
   struct ada_catchpoint *c;
 
   c = XNEW (struct ada_catchpoint);
-  init_ada_exception_breakpoint (&c->base, gdbarch, sal, addr_string,
+  init_ada_exception_breakpoint (&c->base, trigger_set, stop_set,
+				 gdbarch, sal, addr_string,
 				 ops, tempflag, from_tty);
   c->excep_string = excep_string;
   create_excep_cond_exprs (c);
@@ -11771,6 +11775,10 @@ create_ada_exception_catchpoint (struct gdbarch *gdbarch,
 }
 
 /* Implement the "catch exception" command.  */
+
+void parse_breakpoint_args (char **args,
+			    struct itset **trigger_set,
+			    struct itset **stop_set);
 
 static void
 catch_ada_exception_command (char *arg, int from_tty,
@@ -11782,14 +11790,25 @@ catch_ada_exception_command (char *arg, int from_tty,
   char *addr_string = NULL;
   char *excep_string = NULL;
   const struct breakpoint_ops *ops = NULL;
+  struct itset *trigger_set;
+  struct itset *stop_set;
+  struct cleanup *old_chain;
 
   tempflag = get_cmd_context (command) == CATCH_TEMPORARY;
+
+  parse_breakpoint_args (&arg, &trigger_set, &stop_set);
+
+  old_chain = make_cleanup_itset_free (trigger_set);
+  make_cleanup_itset_free (stop_set);
 
   if (!arg)
     arg = "";
   sal = ada_decode_exception_location (arg, &addr_string, &excep_string, &ops);
-  create_ada_exception_catchpoint (gdbarch, sal, addr_string,
+  create_ada_exception_catchpoint (trigger_set, stop_set,
+				   gdbarch, sal, addr_string,
 				   excep_string, ops, tempflag, from_tty);
+
+  discard_cleanups (old_chain);
 }
 
 static struct symtab_and_line
@@ -11820,14 +11839,25 @@ catch_assert_command (char *arg, int from_tty,
   struct symtab_and_line sal;
   char *addr_string = NULL;
   const struct breakpoint_ops *ops = NULL;
+  struct itset *trigger_set;
+  struct itset *stop_set;
+  struct cleanup *old_chain;
 
   tempflag = get_cmd_context (command) == CATCH_TEMPORARY;
+
+  parse_breakpoint_args (&arg, &trigger_set, &stop_set);
+
+  old_chain = make_cleanup_itset_free (trigger_set);
+  make_cleanup_itset_free (stop_set);
 
   if (!arg)
     arg = "";
   sal = ada_decode_assert_location (arg, &addr_string, &ops);
-  create_ada_exception_catchpoint (gdbarch, sal, addr_string,
+  create_ada_exception_catchpoint (trigger_set, stop_set,
+				   gdbarch, sal, addr_string,
 				   NULL, ops, tempflag, from_tty);
+
+  discard_cleanups (old_chain);
 }
                                 /* Operators */
 /* Information about operators given special treatment in functions
