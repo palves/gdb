@@ -109,7 +109,7 @@ gdb_test "jump $out_line" \
     "n"
 
 gdb_test "jump $out_line" \
-    "Continuing at.*" \
+    "Continuing .* \(.*\) at.*" \
     "jump out of current function" \
     "Line $out_line is not in `main'.  Jump anyway.*y or n. $" \
     "y"
