@@ -38,6 +38,7 @@
 #include "ada-lang.h"
 #include "gdbthread.h"
 #include "exceptions.h"
+#include "itset.h"
 
 /* If we can't find a function's name from its address,
    we print this instead.  */
@@ -796,6 +797,12 @@ call_function_by_hand (struct value *function, int nargs, struct value **args)
        dummy_id to form the frame ID's stack address.  */
     bpt = set_momentary_breakpoint (gdbarch, sal, dummy_id, bp_call_dummy);
     bpt->disposition = disp_del;
+
+    bpt->trigger_set = itset_reference (current_itset);
+    if (non_stop)
+      bpt->stop_set = itset_create_empty ();
+    else
+      bpt->stop_set = itset_reference (bpt->trigger_set);
   }
 
   /* Create a breakpoint in std::terminate.
