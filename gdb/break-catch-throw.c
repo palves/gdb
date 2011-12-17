@@ -400,7 +400,9 @@ handle_gnu_v3_exceptions (int tempflag, char *except_rx, char *cond_string,
   cp = XCNEW (struct exception_catchpoint);
   make_cleanup (xfree, cp);
 
-  init_catchpoint (&cp->base, get_current_arch (), tempflag, cond_string,
+  init_catchpoint (&cp->base,
+		   /// XXX trigger and stop sets.
+		   NULL, NULL, get_current_arch (), tempflag, cond_string,
 		   &gnu_v3_exception_catchpoint_ops);
   /* We need to reset 'type' in order for code in breakpoint.c to do
      the right thing.  */

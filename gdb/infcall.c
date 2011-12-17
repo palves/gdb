@@ -36,6 +36,7 @@
 #include "gdbthread.h"
 #include "event-top.h"
 #include "observer.h"
+#include "itset.h"
 
 /* If we can't find a function's name from its address,
    we print this instead.  */
@@ -858,6 +859,13 @@ call_function_by_hand_dummy (struct value *function,
     frame = NULL;
 
     bpt->disposition = disp_del;
+
+    bpt->trigger_set = itset_reference (current_itset);
+    if (non_stop)
+      bpt->stop_set = itset_create_empty ();
+    else
+      bpt->stop_set = itset_reference (bpt->trigger_set);
+
     gdb_assert (bpt->related_breakpoint == bpt);
 
     longjmp_b = set_longjmp_breakpoint_for_call_dummy ();

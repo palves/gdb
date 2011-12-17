@@ -37,6 +37,7 @@ struct bpstats;
 struct bp_location;
 struct linespec_result;
 struct linespec_sals;
+struct itset;
 
 /* This is the maximum number of bytes a breakpoint instruction can
    take.  Feel free to increase it.  It's just used in a few places to
@@ -593,7 +594,10 @@ struct breakpoint_ops
   void (*create_breakpoints_sal) (struct gdbarch *,
 				  struct linespec_result *,
 				  char *, char *,
-				  enum bptype, enum bpdisp, int, int,
+				  enum bptype, enum bpdisp,
+				  struct itset *trigger_set,
+				  struct itset *stop_set,
+				  int, int,
 				  int, const struct breakpoint_ops *,
 				  int, int, int, unsigned);
 
@@ -742,6 +746,15 @@ struct breakpoint
     /* Ada task number for task-specific breakpoint, 
        or 0 if don't care.  */
     int task;
+
+    /* I/T set controlling where this breakpoint will stop.  */
+    struct itset *trigger_set;
+
+    /* The set that should be suspended once the breakpoint has
+       triggered.  If empty, defaults to consulting the "non-stop"
+       setting: if that is on, just the triggering thread should stop;
+       otherwise, all threads in the TRIGGER_SET set stop.  */
+    struct itset *stop_set;
 
     /* Count of the number of times this breakpoint was taken, dumped
        with the info, but not used for anything else.  Useful for
@@ -1002,6 +1015,9 @@ struct bpstat_what
 
 /* Tell what to do about this bpstat.  */
 struct bpstat_what bpstat_what (bpstat);
+
+/* Tell us what we should suspend.  */
+extern struct itset *bpstat_stop_set (bpstat);
 
 /* Find the bpstat associated with a breakpoint.  NULL otherwise.  */
 bpstat bpstat_find_breakpoint (bpstat, struct breakpoint *);
@@ -1264,6 +1280,8 @@ extern void
 
 extern void
   init_ada_exception_breakpoint (struct breakpoint *b,
+				 struct itset *trigger_set,
+				 struct itset *stop_set,
 				 struct gdbarch *gdbarch,
 				 struct symtab_and_line sal,
 				 char *addr_string,
@@ -1273,6 +1291,8 @@ extern void
 				 int from_tty);
 
 extern void init_catchpoint (struct breakpoint *b,
+			     struct itset *trigger_set,
+			     struct itset *stop_set,
 			     struct gdbarch *gdbarch, int tempflag,
 			     char *cond_string,
 			     const struct breakpoint_ops *ops);
@@ -1480,7 +1500,8 @@ extern int is_catchpoint (struct breakpoint *);
 
 /* Shared helper function (MI and CLI) for creating and installing
    a shared object event catchpoint.  */
-extern void add_solib_catchpoint (char *arg, int is_load, int is_temp,
+extern void add_solib_catchpoint (const char *arg,
+				  int is_load, int is_temp,
                                   int enabled);
 
 /* Enable breakpoints and delete when hit.  Called with ARG == NULL

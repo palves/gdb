@@ -24,6 +24,7 @@
 #include "symtab.h"
 #include "frame.h"
 #include "inferior.h"
+#include "itset.h"
 #include "breakpoint.h"
 #include "gdb_wait.h"
 #include "gdbcore.h"
@@ -1883,6 +1884,8 @@ struct execution_control_state
      needs to be single-stepped past the single-step breakpoint before
      we can switch back to the original stepping thread.  */
   int hit_singlestep_breakpoint;
+
+  struct itset *stop_set;
 };
 
 static void
@@ -3075,6 +3078,20 @@ static void keep_going (struct execution_control_state *ecs);
 static void process_event_stop_test (struct execution_control_state *ecs);
 static int switch_back_to_stepped_thread (struct execution_control_state *ecs);
 
+static void
+ecs_destroy (struct execution_control_state *ecs)
+{
+  itset_free (ecs->stop_set);
+}
+
+static void
+ecs_destroy_cleanup (void *arg)
+{
+  struct execution_control_state *ecs = arg;
+
+  ecs_destroy (ecs);
+}
+
 /* Callback for iterate over threads.  If the thread is stopped, but
    the user/frontend doesn't know about that yet, go through
    normal_stop, as if the thread had just stopped now.  ARG points at
@@ -3109,6 +3126,8 @@ infrun_thread_stop_requested_callback (struct thread_info *info, void *arg)
 	 heuristic.  Running threads may modify target memory, but we
 	 don't get any event.  */
       target_dcache_invalidate ();
+
+      make_cleanup (ecs_destroy_cleanup, ecs);
 
       /* Go through handle_inferior_event/normal_stop, so we always
 	 have consistent output as if the stop event had been
@@ -3517,12 +3536,15 @@ prepare_for_detach (void)
 
   while (!ptid_equal (displaced->step_ptid, null_ptid))
     {
+      struct cleanup *ecs_chain;
       struct cleanup *old_chain_2;
       struct execution_control_state ecss;
       struct execution_control_state *ecs;
 
       ecs = &ecss;
       memset (ecs, 0, sizeof (*ecs));
+
+      ecs_chain = make_cleanup (ecs_destroy_cleanup, ecs);
 
       overlay_cache_invalid = 1;
       /* Flush target cache before starting to handle each event.
@@ -3556,12 +3578,14 @@ prepare_for_detach (void)
 	  discard_cleanups (old_chain_1);
 	  error (_("Program exited while detaching"));
 	}
+
+      do_cleanups (ecs_chain);
     }
 
   discard_cleanups (old_chain_1);
 }
 
-static void stop_all_threads (void);
+static void stop_all_threads (struct itset *stop_set);
 static int adjust_pc_after_break (struct thread_info *thread,
 				  struct target_waitstatus *ws);
 
@@ -3665,11 +3689,16 @@ wait_for_inferior (void)
   while (1)
     {
       struct execution_control_state ecss;
-      struct execution_control_state *ecs = &ecss;
+      struct execution_control_state *ecs;
+      struct cleanup *ecs_chain;
       struct cleanup *old_chain;
       ptid_t waiton_ptid = minus_one_ptid;
+      int wait_some_more;
 
+      ecs = &ecss;
       memset (ecs, 0, sizeof (*ecs));
+
+      ecs_chain = make_cleanup (ecs_destroy_cleanup, ecs);
 
       overlay_cache_invalid = 1;
 
@@ -3756,6 +3785,8 @@ fetch_inferior_event (void *client_data)
 
   /* End up with readline processing input, if necessary.  */
   make_cleanup (reinstall_readline_callback_handler_cleanup, NULL);
+
+  make_cleanup (ecs_destroy_cleanup, ecs);
 
   /* We're handling a live event, so make sure we're doing live
      debugging.  If we're looking at traceframes while the target is
@@ -4188,6 +4219,18 @@ wait_one (ptid_t wait_ptid, struct target_waitstatus *ws)
   return event_ptid;
 }
 
+static int
+stop_set_match (struct itset *stop_set, struct thread_info *t)
+{
+  if (stop_set == NULL || itset_is_empty_set (stop_set))
+    return !non_stop;
+
+  if (itset_contains_thread (stop_set, t))
+    return 1;
+
+  return 0;
+}
+
 static void
 restore_current_thread (void *ptid_p)
 {
@@ -4197,7 +4240,7 @@ restore_current_thread (void *ptid_p)
 }
 
 static void
-stop_all_threads (void)
+stop_all_threads (struct itset *stop_set)
 {
   /* We may need multiple passes to discover all threads.  */
   int pass;
@@ -4232,6 +4275,7 @@ stop_all_threads (void)
 	  /* Go through all threads looking for threads that we need
 	     to tell the target to stop.  */
 	  ALL_NON_EXITED_THREADS (t)
+	    if (stop_set_match (stop_set, t))
 	    {
 	      if (t->executing)
 		{
@@ -4276,6 +4320,11 @@ stop_all_threads (void)
 	    pass = -1;
 
 	  event_ptid = wait_one (minus_one_ptid, &ws);
+
+	  /* FIXME: if EVENT_PTID isn't in the trigger or stop sets,
+	     we'll need to re-resume or handle the event
+	     afterwards.  */
+
 	  if (ws.kind == TARGET_WAITKIND_NO_RESUMED)
 	    /* All resumed threads exited.  */
 	    ;
@@ -5908,7 +5957,10 @@ process_event_stop_test (struct execution_control_state *ecs)
 	 resumed.  */
       ecs->event_thread->stepping_over_breakpoint = 1;
 
+      ecs->stop_set
+	= bpstat_stop_set (ecs->event_thread->control.stop_bpstat);
       stop_waiting (ecs);
+      itset_free (ecs->stop_set);
       return;
 
     case BPSTAT_WHAT_STOP_SILENT:
@@ -5920,7 +5972,11 @@ process_event_stop_test (struct execution_control_state *ecs)
 	 whether a/the breakpoint is there when the thread is next
 	 resumed.  */
       ecs->event_thread->stepping_over_breakpoint = 1;
+      ecs->stop_set
+	= bpstat_stop_set (ecs->event_thread->control.stop_bpstat);
       stop_waiting (ecs);
+      itset_free (ecs->stop_set);
+      ecs->stop_set = NULL;
       return;
 
     case BPSTAT_WHAT_HP_STEP_RESUME:
@@ -7176,25 +7232,34 @@ stop_waiting (struct execution_control_state *ecs)
       struct thread_info *t;
       struct inferior *inf;
 
-      stop_all_threads ();
+      if (ecs->stop_set == NULL)
+	{
+	  if (non_stop)
+	    ecs->stop_set = itset_create_empty ();
+	  else
+	    ecs->stop_set = itset_reference (current_itset);
+	}
+
+      stop_all_threads (ecs->stop_set);
 
       /* In all-stop, from the core's perspective, all threads
 	 are now stopped until a new resume action is sent
 	 over.  */
       ALL_NON_EXITED_THREADS (t)
-	{
-	  t->control.resumed = 0;
+	if (stop_set_match (ecs->stop_set, t))
+	  {
+	    t->control.resumed = 0;
 
-	  /* Dequeue threads until they're later resumed again.  The
-	     current step-over order won't make sense anymore
-	     then.  */
-	  if (t->step_over_next != NULL)
-	    {
-	      inferior_step_over_chain_remove (t);
-	      gdb_assert (t->step_over_next == NULL);
-	      gdb_assert (t->step_over_prev == NULL);
-	    }
-	}
+	    /* Dequeue threads until they're later resumed again.  The
+	       current step-over order won't make sense anymore
+	       then.  */
+	    if (t->step_over_next != NULL)
+	      {
+		inferior_step_over_chain_remove (t);
+		gdb_assert (t->step_over_next == NULL);
+		gdb_assert (t->step_over_prev == NULL);
+	      }
+	  }
 
       ALL_INFERIORS (inf)
         {
@@ -7406,7 +7471,7 @@ keep_going_pass (struct execution_control_state *ecs)
 	{
 	  struct thread_info *t;
 
-	  stop_all_threads ();
+	  stop_all_threads (NULL);
 
 	  /* In all-stop, from the core's perspective, all threads are
 	     now stopped until a new resume action is sent over.  XXX
