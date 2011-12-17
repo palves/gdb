@@ -2513,7 +2513,7 @@ _initialize_itset (void)
   make_internal_itset (stopped_itset, "stopped");
   make_internal_itset (curinf_itset, "curinf");
 
-  current_itset = itset_reference (all_itset);
+  current_itset = itset_reference (curinf_itset);
 
   add_com ("itfocus", no_class, itfocus_command, _("\
 Change the set of current inferiors/threads."));
