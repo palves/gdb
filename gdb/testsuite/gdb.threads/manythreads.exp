@@ -54,6 +54,22 @@ gdb_test_multiple "continue" "first continue" {
   }
 }
 
+
+# Note that in the tests below, we can't suffix the "Program received
+# signal SIGINT" regexes with $gdb_prompt, as doing so would mean that
+# e.g. with,
+#
+# Program received signal SIGINT, Interrupt.
+# [New Thread FOO]
+# [Switching to Thread BAR]
+# 0xdeadbeef in bar () from bar.so
+# (gdb)
+#
+# the [New ...] or [... exited] regexes would eat the "Program
+# received ..." bit.  [New FOO] and [FOO exited] may appear while GDB
+# is stopping threads.
+
+
 # Wait one second.  This is better than the TCL "after" command, because
 # we don't lose GDB's output while we do it.
 remote_expect host 1 { timeout { } }
@@ -62,6 +78,17 @@ remote_expect host 1 { timeout { } }
 send_gdb "\003"
 set message "stop threads 1"
 gdb_test_multiple "" "stop threads 1" {
+  -re "Program received signal SIGINT" {
+    # Eat the prompt.
+    gdb_expect {
+      -re "$gdb_prompt $" {
+	pass "$message"
+      }
+      timeout {
+	fail "$message (timeout)"
+      }
+    }
+  }
   -re "\\\[New \[^\]\]*\\\]\r\n" {
     exp_continue
   }
@@ -70,9 +97,6 @@ gdb_test_multiple "" "stop threads 1" {
   }
   -re "Thread \[^\n\]* executing\r\n" {
     exp_continue
-  }
-  -re "Program received signal SIGINT.*$gdb_prompt $" {
-    pass "$message"
   }
   timeout {
     fail "$message (timeout)"
@@ -116,6 +140,21 @@ gdb_test_multiple "continue" "second continue" {
 # to handle duplicate SIGINTs sent to multiple threads.
 set failed 0
 remote_expect host 1 {
+  -re "Program received signal SIGINT" {
+
+    # Eat the prompt.
+    gdb_expect {
+      -re "$gdb_prompt $" {
+      }
+    }
+
+    if { $failed == 0 } {
+      fail "check for duplicate SIGINT"
+    }
+    send_gdb "continue\n"
+    set failed 1
+    exp_continue
+  }
   -re "\\\[New \[^\]\]*\\\]\r\n" {
     exp_continue -continue_timer
   }
@@ -124,14 +163,6 @@ remote_expect host 1 {
   }
   -re "Thread \[^\n\]* executing\r\n" {
     exp_continue -continue_timer
-  }
-  -re "Program received signal SIGINT.*$gdb_prompt $" {
-    if { $failed == 0 } {
-      fail "check for duplicate SIGINT"
-    }
-    send_gdb "continue\n"
-    set failed 1
-    exp_continue
   }
   timeout {
     if { $failed == 0 } {
@@ -144,6 +175,18 @@ remote_expect host 1 {
 send_gdb "\003"
 set message "stop threads 2"
 gdb_test_multiple "" "stop threads 2" {
+  -re "Program received signal SIGINT" {
+
+    # Eat the prompt.
+    gdb_expect {
+      -re "$gdb_prompt $" {
+	pass "$message"
+      }
+      timeout {
+	fail "$message (timeout)"
+      }
+    }
+  }
   -re "\\\[New \[^\]\]*\\\]\r\n" {
     exp_continue
   }
@@ -152,9 +195,6 @@ gdb_test_multiple "" "stop threads 2" {
   }
   -re "Thread \[^\n\]* executing\r\n" {
     exp_continue
-  }
-  -re "Program received signal SIGINT.*$gdb_prompt $" {
-    pass "$message"
   }
   timeout {
     fail "$message (timeout)"
