@@ -1646,10 +1646,10 @@ set_schedlock_func (char *args, int from_tty, struct cmd_list_element *c)
     }
 }
 
-/* True if execution commands resume all threads of all processes by
-   default; otherwise, resume only threads of the current inferior
-   process.  */
-int sched_multi = 0;
+/* True if execution commands resume all threads of all processes in
+   the current focus by default; otherwise, resume only threads of the
+   current inferior process.  */
+int sched_multi = 1;
 
 /* Try to setup for software single stepping over the specified location.
    Return 1 if target_resume() should use hardware single step.
