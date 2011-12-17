@@ -107,7 +107,7 @@ static int hook_stop_stub (void *);
 
 static int restore_selected_frame (void *);
 
-static int follow_fork (void);
+int follow_fork (int);
 
 static int follow_fork_inferior (int follow_child, int detach_fork);
 
@@ -662,29 +662,14 @@ holding the child stopped.  Try \"set detach-on-fork\" or \
   return target_follow_fork (follow_child, detach_fork);
 }
 
-/* Tell the target to follow the fork we're stopped at.  Returns true
-   if the inferior should be resumed; false, if the target for some
-   reason decided it's best not to resume.  */
+/* Check if we last stopped at a fork event, but switched over to
+   another thread since.  If so, switch back to the event thread, and
+   return false.  Otherwise, return true.  */
 
 static int
-follow_fork (void)
+prepare_to_follow_fork (void)
 {
-  int follow_child = (follow_fork_mode_string == follow_fork_mode_child);
-  int should_resume = 1;
-  struct thread_info *tp;
-
-  /* Copy user stepping state to the new inferior thread.  FIXME: the
-     followed fork child thread should have a copy of most of the
-     parent thread structure's run control related fields, not just these.
-     Initialized to avoid "may be used uninitialized" warnings from gcc.  */
-  struct breakpoint *step_resume_breakpoint = NULL;
-  struct breakpoint *exception_resume_breakpoint = NULL;
-  CORE_ADDR step_range_start = 0;
-  CORE_ADDR step_range_end = 0;
-  struct frame_id step_frame_id = { 0 };
-  struct interp *command_interp = NULL;
-
-  if (!non_stop)
+  if (!target_is_non_stop_p ())
     {
       ptid_t wait_ptid;
       struct target_waitstatus wait_status;
@@ -708,9 +693,33 @@ follow_fork (void)
 	     afterwards refuse to resume, and inform the user what
 	     happened.  */
 	  switch_to_thread (wait_ptid);
-	  should_resume = 0;
+	  return 0;
 	}
     }
+
+  return 1;
+}
+
+/* Tell the target to follow the fork we're stopped at.  Returns true
+   if the inferior should be resumed; false, if the target for some
+   reason decided it's best not to resume.  */
+
+int
+follow_fork (int should_resume)
+{
+  int follow_child = (follow_fork_mode_string == follow_fork_mode_child);
+  struct thread_info *tp;
+
+  /* Copy user stepping state to the new inferior thread.  FIXME: the
+     followed fork child thread should have a copy of most of the
+     parent thread structure's run control related fields, not just these.
+     Initialized to avoid "may be used uninitialized" warnings from gcc.  */
+  struct breakpoint *step_resume_breakpoint = NULL;
+  struct breakpoint *exception_resume_breakpoint = NULL;
+  CORE_ADDR step_range_start = 0;
+  CORE_ADDR step_range_end = 0;
+  struct frame_id step_frame_id = { 0 };
+  struct interp *command_interp = NULL;
 
   tp = inferior_thread ();
 
@@ -1806,7 +1815,7 @@ displaced_step_restore (struct displaced_step_inferior_state *displaced,
 				  displaced->step_copy));
 }
 
-static void do_target_resume (ptid_t ptid, int step, enum gdb_signal signo);
+void do_target_resume (ptid_t ptid, int step, enum gdb_signal signo);
 
 static int
 displaced_step_fixup (ptid_t event_ptid, enum gdb_signal signal)
@@ -2035,16 +2044,16 @@ resume_cleanups (void *ignore)
   normal_stop ();
 }
 
-static const char schedlock_off[] = "off";
-static const char schedlock_on[] = "on";
-static const char schedlock_step[] = "step";
+const char schedlock_off[] = "off";
+const char schedlock_on[] = "on";
+const char schedlock_step[] = "step";
 static const char *const scheduler_enums[] = {
   schedlock_off,
   schedlock_on,
   schedlock_step,
   NULL
 };
-static const char *scheduler_mode = schedlock_off;
+const char *scheduler_mode = schedlock_off;
 static void
 show_scheduler_mode (struct ui_file *file, int from_tty,
 		     struct cmd_list_element *c, const char *value)
@@ -2096,9 +2105,9 @@ user_visible_resume_ptid (int step)
   ptid_t resume_ptid;
 
   /* Maybe resume a single thread after all.  */
-  if (non_stop)
+  if (target_is_non_stop_p ())
     {
-      /* With non-stop mode on, threads are always handled
+      /* In non-stop mode, threads are always handled
 	 individually.  */
       resume_ptid = inferior_ptid;
     }
@@ -2131,7 +2140,7 @@ user_visible_resume_ptid (int step)
 /* Wrapper for target_resume, that handles infrun-specific
    bookkeeping.  */
 
-static void
+void
 do_target_resume (ptid_t resume_ptid, int step, enum gdb_signal sig)
 {
   struct thread_info *tp = inferior_thread ();
@@ -2144,6 +2153,7 @@ do_target_resume (ptid_t resume_ptid, int step, enum gdb_signal sig)
   /* Avoid confusing the next resume, if the next stop/resume
      happens to apply to another thread.  */
   tp->suspend.stop_signal = GDB_SIGNAL_0;
+  tp->reported_event = 0;
 
   /* Advise target which signals may be handled silently.  If we have
      removed breakpoints because we are stepping over one (which can
@@ -2539,7 +2549,7 @@ resume (enum gdb_signal sig)
 /* Clear out all variables saying what to do when inferior is continued.
    First do this, then set the ones you want, then call `proceed'.  */
 
-static void
+void
 clear_proceed_status_thread (struct thread_info *tp)
 {
   /* Don't mess with threads that are executing or are waiting for
@@ -2632,7 +2642,7 @@ clear_proceed_status_thread (struct thread_info *tp)
 void
 clear_proceed_status (int step)
 {
-  if (!non_stop)
+  if (!target_is_non_stop_p ())
     {
       struct thread_info *tp;
       ptid_t resume_ptid;
@@ -2653,7 +2663,7 @@ clear_proceed_status (int step)
     {
       struct inferior *inferior;
 
-      if (non_stop)
+      if (target_is_non_stop_p ())
 	{
 	  /* If in non-stop mode, only delete the per-thread status of
 	     the current thread.  */
@@ -2745,7 +2755,7 @@ proceed (CORE_ADDR addr, enum gdb_signal siggnal)
   /* If we're stopped at a fork/vfork, follow the branch set by the
      "set follow-fork-mode" command; otherwise, we'll just proceed
      resuming the current thread.  */
-  if (!follow_fork ())
+  if (prepare_to_follow_fork () && !follow_fork (1))
     {
       /* The target for some reason decided not to resume.  */
       normal_stop ();
@@ -3832,7 +3842,7 @@ fetch_inferior_event (void *client_data)
   /* If an error happens while handling the event, propagate GDB's
      knowledge of the executing state to the frontend/user running
      state.  */
-  if (!non_stop)
+  if (!target_is_non_stop_p ())
     ts_old_chain = make_cleanup (finish_thread_state_cleanup, &minus_one_ptid);
   else
     ts_old_chain = make_cleanup (finish_thread_state_cleanup, &ecs->ptid);
@@ -4766,6 +4776,7 @@ Cannot fill $_exitsignal with the correct signal number.\n"));
 	}
 
       gdb_flush (gdb_stdout);
+      ecs->event_thread = NULL;
       target_mourn_inferior ();
       stop_print_frame = 0;
       stop_waiting (ecs);
@@ -4885,7 +4896,7 @@ Cannot fill $_exitsignal with the correct signal number.\n"));
 	  int follow_child
 	    = (follow_fork_mode_string == follow_fork_mode_child);
 
-	  should_resume = follow_fork ();
+	  should_resume = prepare_to_follow_fork() && follow_fork (1);
 
 	  parent = ecs->ptid;
 	  child = ecs->ws.value.related_pid;
@@ -7226,6 +7237,15 @@ stop_waiting (struct execution_control_state *ecs)
 
   /* Let callers know we don't want to wait for the inferior anymore.  */
   ecs->wait_some_more = 0;
+
+  if (ecs->event_thread != NULL)
+    {
+      /* Mark this thread as having reported its event to the
+	 frontend/user.  Later, when proceeding, if the thread is
+	 stopped at a breakpoint, we'll step over it in order to make
+	 progress.  */
+      ecs->event_thread->reported_event = 1;
+    }
 
   if (!non_stop && target_is_non_stop_p ())
     {
