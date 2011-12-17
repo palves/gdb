@@ -23,6 +23,7 @@
 #define GDBTHREAD_H
 
 struct symtab;
+struct itset;
 
 #include "breakpoint.h"
 #include "frame.h"
@@ -245,6 +246,9 @@ struct thread_info
 
   /* Data used by the execution command in effect.  */
   void *cmd_data;
+
+  struct itset *apply_set;
+  int waiting_for_apply_set_siblings;
 
   /* Private data used by the target vector implementation.  */
   struct private_thread_info *private;

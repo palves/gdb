@@ -9709,6 +9709,7 @@ char *parse_execution_args (char *args, int step,
 typedef void (*aec_callback_func) (struct thread_info *thr, void *data);
 void apply_execution_command (struct itset *apply_itset,
 			      struct itset *run_free_itset,
+			      int want_parallel,
 			      aec_callback_func callback, void *callback_data);
 
 void ensure_runnable (struct thread_info *thr);
@@ -9797,7 +9798,7 @@ until_break_command (char *arg, int from_tty, int anywhere)
     }
 
   cb_data.from_tty = from_tty;
-  apply_execution_command (apply_itset, run_free_itset,
+  apply_execution_command (apply_itset, run_free_itset, 1,
 			   until_break_aec_callback, NULL);
 
   do_cleanups (old_chain);
