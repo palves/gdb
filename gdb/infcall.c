@@ -416,7 +416,7 @@ run_inferior_call (struct thread_info *call_thread, CORE_ADDR real_pc)
 	    = default_run_free_itset (apply_itset, 0);
 
 	  apply_execution_command (apply_itset, current_itset,
-				   NULL, NULL);
+				   0, NULL, NULL);
 
 	  itset_free (apply_itset);
 	  itset_free (run_free_itset);

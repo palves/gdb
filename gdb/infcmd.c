@@ -88,6 +88,7 @@ void prepare_proceed (CORE_ADDR addr, enum gdb_signal siggnal);
 void
 apply_execution_command (struct itset *apply_itset,
 			 struct itset *run_free_itset,
+			 int want_parallel,
 			 aec_callback_func callback, void *callback_data)
 {
   struct thread_info *tp = inferior_thread ();
@@ -144,6 +145,9 @@ apply_execution_command (struct itset *apply_itset,
 	    {
 	      switch_to_thread (t->ptid);
 	      (*callback) (t, callback_data);
+	      gdb_assert (t->apply_set == NULL);
+	      if (want_parallel)
+		t->apply_set = itset_reference (apply_itset);
 	    }
 	}
     }
@@ -1112,7 +1116,7 @@ continue_command (char *args, int from_tty)
   if (from_tty)
     printf_filtered (_("Continuing.\n"));
 
-  apply_execution_command (apply_itset, run_free_itset,
+  apply_execution_command (apply_itset, run_free_itset, 0,
 			   continue_aec_callback, NULL);
 
   do_cleanups (old_chain);
@@ -1257,7 +1261,7 @@ step_1 (int skip_subroutines, int single_inst, char *args)
   step_args.count = count;
   step_args.thread = -1;
 
-  apply_execution_command (apply_itset, run_free_itset,
+  apply_execution_command (apply_itset, run_free_itset, 1,
 			   step_1_aec_callback, &step_args);
 
   do_cleanups (old_chain);
@@ -1604,7 +1608,7 @@ jump_command (char *arg, int from_tty)
       }
 
   cb_data.from_tty = from_tty;
-  apply_execution_command (apply_itset, run_free_itset,
+  apply_execution_command (apply_itset, run_free_itset, 1,
 			   jump_aec_callback, &cb_data);
 
   do_cleanups (old_chain);
@@ -1733,7 +1737,7 @@ signal_command (char *arg, int from_tty)
     }
 
   cb_data.oursig = oursig;
-  apply_execution_command (apply_itset, run_free_itset,
+  apply_execution_command (apply_itset, run_free_itset, 0,
 			   signal_aec_callback, &cb_data);
 
   do_cleanups (old_chain);
@@ -1890,7 +1894,7 @@ until_next_command (char *arg, int from_tty)
       else
 	error (_("The program is not being run."));
     }
-  apply_execution_command (apply_itset, run_free_itset,
+  apply_execution_command (apply_itset, run_free_itset, 1,
 			   until_next_aec_callback, NULL);
 
   do_cleanups (old_chain);
@@ -2327,7 +2331,7 @@ finish_command (char *arg, int from_tty)
     }
 
   cb_data.from_tty = from_tty;
-  apply_execution_command (apply_itset, run_free_itset,
+  apply_execution_command (apply_itset, run_free_itset, 1,
 			   finish_aec_callback, &cb_data);
 
   do_cleanups (old_chain);

@@ -11739,7 +11739,7 @@ until_break_command (char *arg, int from_tty, int anywhere)
     }
 
   cb_data.from_tty = from_tty;
-  apply_execution_command (apply_itset, run_free_itset,
+  apply_execution_command (apply_itset, run_free_itset, 1,
 			   until_break_aec_callback, NULL);
 
   do_cleanups (old_chain);

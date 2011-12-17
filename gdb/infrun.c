@@ -2688,6 +2688,10 @@ resume (enum gdb_signal sig)
 void
 clear_proceed_status_thread (struct thread_info *tp)
 {
+  itset_free (tp->apply_set);
+  tp->apply_set = NULL;
+  tp->waiting_for_apply_set_siblings = 0;
+
   if (debug_infrun)
     fprintf_unfiltered (gdb_stdlog,
 			"infrun: clear_proceed_status_thread (%s)\n",
@@ -4604,6 +4608,43 @@ stop_all_threads (struct itset *stop_set)
 
   if (debug_infrun)
     fprintf_unfiltered (gdb_stdlog, "infrun: stop_all_threads done\n");
+}
+
+static int
+all_in_apply_set_done_p (struct execution_control_state *ecs)
+{
+  if (ecs->event_thread->apply_set != NULL)
+    {
+      struct itset *set;
+      struct thread_info *thr;
+
+      if (debug_infrun)
+	fprintf_unfiltered (gdb_stdlog, "infrun: thread has an apply-set\n");
+
+      update_thread_list ();
+
+      ecs->event_thread->waiting_for_apply_set_siblings = 1;
+
+      ALL_THREADS (thr)
+	if (itset_contains_thread (ecs->event_thread->apply_set, thr))
+	  {
+	    if (!thr->waiting_for_apply_set_siblings)
+	      {
+		if (debug_infrun)
+		  fprintf_unfiltered (gdb_stdlog,
+				      "infrun: at least thread %s has not reached its goal yet\n",
+				      target_pid_to_str (thr->ptid));
+
+		prepare_to_wait (ecs);
+		return 0;
+	      }
+	  }
+
+      if (debug_infrun)
+	fprintf_unfiltered (gdb_stdlog, "infrun: all in apply-set are done\n");
+    }
+
+  return 1;
 }
 
 /* Given an execution control state that has been freshly filled in by
@@ -6680,7 +6721,8 @@ process_event_stop_test (struct execution_control_state *ecs)
          one instruction.  */
       if (debug_infrun)
 	 fprintf_unfiltered (gdb_stdlog, "infrun: stepi/nexti\n");
-      end_stepping_range (ecs);
+      if (all_in_apply_set_done_p (ecs))
+	end_stepping_range (ecs);
       return;
     }
 
@@ -6692,7 +6734,8 @@ process_event_stop_test (struct execution_control_state *ecs)
          or can this happen as a result of a return or longjmp?).  */
       if (debug_infrun)
 	 fprintf_unfiltered (gdb_stdlog, "infrun: no line number info\n");
-      end_stepping_range (ecs);
+      if (all_in_apply_set_done_p (ecs))
+	end_stepping_range (ecs);
       return;
     }
 
@@ -6723,7 +6766,8 @@ process_event_stop_test (struct execution_control_state *ecs)
 	      && call_sal.symtab == ecs->event_thread->current_symtab)
 	    step_into_inline_frame (ecs->ptid);
 
-	  end_stepping_range (ecs);
+	  if (all_in_apply_set_done_p (ecs))
+	    end_stepping_range (ecs);
 	  return;
 	}
       else
@@ -6734,7 +6778,7 @@ process_event_stop_test (struct execution_control_state *ecs)
 	  if (call_sal.line == ecs->event_thread->current_line
 	      && call_sal.symtab == ecs->event_thread->current_symtab)
 	    keep_going (ecs);
-	  else
+	  else if (all_in_apply_set_done_p (ecs))
 	    end_stepping_range (ecs);
 	  return;
 	}
@@ -6757,7 +6801,7 @@ process_event_stop_test (struct execution_control_state *ecs)
 
       if (ecs->event_thread->control.step_over_calls == STEP_OVER_ALL)
 	keep_going (ecs);
-      else
+      else if (all_in_apply_set_done_p (ecs))
 	end_stepping_range (ecs);
       return;
     }
@@ -6773,7 +6817,8 @@ process_event_stop_test (struct execution_control_state *ecs)
       if (debug_infrun)
 	 fprintf_unfiltered (gdb_stdlog,
 			     "infrun: stepped to a different line\n");
-      end_stepping_range (ecs);
+      if (all_in_apply_set_done_p (ecs))
+	end_stepping_range (ecs);
       return;
     }
 
