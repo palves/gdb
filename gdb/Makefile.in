@@ -867,7 +867,7 @@ SFILES = ada-exp.y ada-lang.c ada-typeprint.c ada-valprint.c ada-tasks.c \
 	user-regs.c \
 	valarith.c valops.c valprint.c value.c varobj.c common/vec.c \
 	xml-tdesc.c xml-support.c \
-	inferior.c gdb_usleep.c \
+	inferior.c itset.c gdb_usleep.c \
 	record.c record-full.c gcore.c \
 	jit.c \
 	xml-syscall.c \
@@ -1063,8 +1063,8 @@ COMMON_OBS = $(DEPFILES) $(CONFIG_OBS) $(YYOBJ) \
 	prologue-value.o memory-map.o memrange.o \
 	xml-support.o xml-syscall.o xml-utils.o \
 	target-descriptions.o target-memory.o xml-tdesc.o xml-builtin.o \
-	inferior.o osdata.o gdb_usleep.o record.o record-full.o gcore.o \
-	gdb_vecs.o jit.o progspace.o skip.o probe.o \
+	inferior.o itset.o osdata.o gdb_usleep.o record.o record-full.o \
+	gcore.o gdb_vecs.o jit.o progspace.o skip.o probe.o \
 	common-utils.o buffer.o ptid.o gdb-dlfcn.o common-agent.o \
 	format.o registry.o btrace.o record-btrace.o waitstatus.o \
 	print-utils.o rsp-low.o errors.o common-debug.o debug.o \
