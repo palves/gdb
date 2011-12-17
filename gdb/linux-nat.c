@@ -1660,13 +1660,13 @@ get_pending_status (struct lwp_info *lp, int *status)
     signo = TARGET_SIGNAL_0; /* a pending ptrace event, not a real signal.  */
   else if (lp->status)
     signo = target_signal_from_host (WSTOPSIG (lp->status));
-  else if (non_stop && !is_executing (lp->ptid))
+  else if (target_is_non_stop_p () && !is_executing (lp->ptid))
     {
       struct thread_info *tp = find_thread_ptid (lp->ptid);
 
       signo = tp->suspend.stop_signal;
     }
-  else if (!non_stop)
+  else if (!target_is_non_stop_p ())
     {
       struct target_waitstatus last;
       ptid_t last_ptid;
@@ -1818,7 +1818,7 @@ linux_nat_detach (struct target_ops *ops, char *args, int from_tty)
 	 available.  */
       linux_fork_detach (args, from_tty);
 
-      if (non_stop && target_can_async_p ())
+      if (target_is_non_stop_p ())
  	target_async (inferior_event_handler, 0);
     }
   else
@@ -2296,7 +2296,7 @@ linux_handle_extended_wait (struct lwp_info *lp, int status,
 		status = 0;
 	    }
 
-	  if (non_stop)
+	  if (target_is_non_stop_p ())
 	    {
 	      /* Add the new thread to GDB's lists as soon as possible
 		 so that:
@@ -2320,6 +2320,7 @@ linux_handle_extended_wait (struct lwp_info *lp, int status,
 		{
 		  set_running (new_lp->ptid, 1);
 		  set_executing (new_lp->ptid, 1);
+		  find_thread_ptid (new_lp->ptid)->control.resumed = 1;
 		  /* thread_db_attach_lwp -> lin_lwp_attach_lwp forced
 		     resume_stop.  */
 		  new_lp->last_resume_kind = resume_continue;
@@ -3693,7 +3694,7 @@ retry:
 			 core before this one is handled.  All-stop
 			 always cancels breakpoint hits in all
 			 threads.  */
-		      if (non_stop
+		      if (target_is_non_stop_p ()
 			  && linux_nat_lp_status_is_event (lp)
 			  && cancel_breakpoint (lp))
 			{
@@ -3852,7 +3853,7 @@ retry:
 	  goto retry;
 	}
 
-      if (!non_stop)
+      if (!target_is_non_stop_p ())
 	{
 	  /* Only do the below in all-stop, as we currently use SIGINT
 	     to implement target_stop (see linux_nat_stop) in
@@ -3880,7 +3881,7 @@ retry:
     fprintf_unfiltered (gdb_stdlog, "LLW: Candidate event %s in %s.\n",
 			status_to_str (status), target_pid_to_str (lp->ptid));
 
-  if (!non_stop)
+  if (!target_is_non_stop_p ())
     {
       /* Now stop all other LWP's ...  */
       iterate_over_lwps (minus_one_ptid, stop_callback, NULL);
@@ -4027,7 +4028,7 @@ linux_nat_wait (struct target_ops *ops,
      specific_process, for example, see linux_nat_wait_1), and
      meanwhile the event became uninteresting.  Don't bother resuming
      LWPs we're not going to wait for if they'd stop immediately.  */
-  if (non_stop)
+  if (target_is_non_stop_p ())
     iterate_over_lwps (minus_one_ptid, resume_stopped_resumed_lwps, &ptid);
 
   event_ptid = linux_nat_wait_1 (ops, ptid, ourstatus, target_options);
@@ -5486,6 +5487,12 @@ linux_nat_supports_non_stop (void)
   return 1;
 }
 
+static int
+linux_nat_is_non_stop_p (void)
+{
+  return 1;
+}
+
 /* True if we want to support multi-process.  To be removed when GDB
    supports multi-exec.  */
 
@@ -5708,7 +5715,7 @@ linux_nat_stop_lwp (struct lwp_info *lwp, void *data)
 static void
 linux_nat_stop (ptid_t ptid)
 {
-  if (non_stop)
+  if (target_is_non_stop_p ())
     iterate_over_lwps (ptid, linux_nat_stop_lwp, NULL);
   else
     linux_ops->to_stop (ptid);
@@ -5866,6 +5873,7 @@ linux_nat_add_target (struct target_ops *t)
   t->to_can_async_p = linux_nat_can_async_p;
   t->to_is_async_p = linux_nat_is_async_p;
   t->to_supports_non_stop = linux_nat_supports_non_stop;
+  t->to_is_non_stop_p = linux_nat_is_non_stop_p;
   t->to_async = linux_nat_async;
   t->to_terminal_inferior = linux_nat_terminal_inferior;
   t->to_terminal_ours = linux_nat_terminal_ours;
