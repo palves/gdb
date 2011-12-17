@@ -40,6 +40,7 @@
 #include "interps.h"
 #include "thread-fsm.h"
 #include "itset.h"
+#include "infcmd.h"
 
 /* If we can't find a function's name from its address,
    we print this instead.  */
@@ -596,6 +597,21 @@ run_inferior_call (struct call_thread_fsm *sm,
   TRY
     {
       proceed (real_pc, GDB_SIGNAL_0);
+
+      if (target_is_non_stop_p ())
+	{
+	  struct itset *apply_itset = itset_create_empty ();
+	  struct itset *run_free_itset
+	    = default_run_free_itset (apply_itset, 0);
+
+	  apply_execution_command (apply_itset, current_itset,
+				   NULL, NULL);
+
+	  itset_free (apply_itset);
+	  itset_free (run_free_itset);
+
+	  switch_to_thread (call_thread->ptid);
+	}
 
       /* Inferior function calls are always synchronous, even if the
 	 target supports asynchronous execution.  */
