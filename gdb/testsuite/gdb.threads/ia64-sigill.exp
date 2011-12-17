@@ -55,21 +55,35 @@ gdb_test_no_output {set $sigill_bpnum=$bpnum}
 
 gdb_breakpoint [gdb_get_line_number "break-at-exit"]
 
+# The ia64 SIGILL signal is only visible in the infrun debug output.
+# Note we can't assume there's no infrun output after the prompt from
+# here on.
 gdb_test_no_output "set debug infrun 1"
 
-# The ia64 SIGILL signal is visible only in the lin-lwp debug.
+set test "continue to thread_func"
+gdb_test_multiple "continue" $test {
+    -re "Breakpoint \[0-9\]+,( .* in)? thread_func .*$gdb_prompt " {
+	pass $test
+    }
+}
 
-gdb_test "continue" "Breakpoint \[0-9\]+,( .* in)? thread_func .*"
-
-gdb_test_no_output {delete $sigill_bpnum}
+set test {delete $sigill_bpnum}
+gdb_test_multiple "continue" $test {
+    -re "$gdb_prompt " {
+	pass $test
+    }
+}
 
 set test "continue for the pending signal"
 gdb_test_multiple "continue" $test {
-    -re "Breakpoint \[0-9\]+, .*break-at-exit.*\r\n$gdb_prompt $" {
+    -re "Breakpoint \[0-9\]+, .*break-at-exit.*\r\n$gdb_prompt " {
 	# Breakpoint has been skipped in the other thread.
 	pass $test
     }
-    -re "Program received signal .*\r\n$gdb_prompt $" {
+    -re "Program received signal .*\r\n$gdb_prompt " {
+	fail $test
+    }
+    -re "$gdb_prompt " {
 	fail $test
     }
 }
