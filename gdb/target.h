@@ -534,6 +534,7 @@ struct target_ops
     int (*to_is_async_p) (void);
     void (*to_async) (void (*) (enum inferior_event_type, void *), void *);
     int (*to_supports_non_stop) (void);
+    int (*to_is_non_stop_p) (void);
     /* find_memory_regions support method for gcore */
     int (*to_find_memory_regions) (find_memory_region_ftype func, void *data);
     /* make_corefile_notes support method for gcore */
@@ -1291,6 +1292,9 @@ extern int target_async_permitted;
 #define target_is_async_p() (current_target.to_is_async_p ())
 
 int target_supports_non_stop (void);
+
+/* Is the target in non-stop mode?  */
+#define target_is_non_stop_p() (current_target.to_is_non_stop_p ())
 
 /* Put the target in async mode with the specified callback function.  */
 #define target_async(CALLBACK,CONTEXT) \

@@ -38,6 +38,15 @@ enum thread_state
   THREAD_EXITED,
 };
 
+#define ALL_THREADS(T) \
+  for ((T) = thread_list; (T); (T) = (T)->next)
+
+#define ALL_LIVE_THREADS(T) \
+  for ((T) = thread_list; (T); (T) = (T)->next) \
+    if ((T)->state != THREAD_EXITED)
+
+extern struct thread_info *thread_list;
+
 /* Inferior thread specific part of `struct infcall_control_state'.
 
    Inferior process counterpart is `struct inferior_control_state'.  */
@@ -114,6 +123,14 @@ struct thread_control_state
   /* Chain containing status of breakpoint(s) the thread stopped
      at.  */
   bpstat stop_bpstat;
+
+  /* Non-zero if this thread will be/has been resumed.  Note that a
+     thread can be marked both as stopped and resumed at the same
+     time.  This happens if we try to resume a thread that has a wait
+     status pending.  We shouldn't let the thread run until that wait
+     status has been processed, but we should not report that wait
+     status if GDB didn't try to let the thread run.  */
+  int resumed;
 };
 
 /* Inferior thread specific part of `struct infcall_suspend_state'.
@@ -124,6 +141,11 @@ struct thread_suspend_state
 {
   /* Last signal that the inferior received (why it stopped).  */
   enum target_signal stop_signal;
+
+  /* The waitstatus for this thread's last event.  */
+  struct target_waitstatus waitstatus;
+  /* If true WAITSTATUS hasn't been handled yet.  */
+  int waitstatus_pending_p;
 };
 
 struct thread_info
