@@ -222,6 +222,7 @@ extern int follow_fork (int prepare_only);
 extern void
   apply_execution_command (struct itset *apply_itset,
 			   struct itset *run_free_itset,
+			   int want_parallel,
 			   aec_callback_func callback, void *callback_data);
 
 #endif /* INFRUN_H */
