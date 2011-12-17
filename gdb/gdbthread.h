@@ -188,6 +188,8 @@ struct thread_info
      call.  See `struct thread_suspend_state'.  */
   struct thread_suspend_state suspend;
 
+  int reported_event;
+
   int current_line;
   struct symtab *current_symtab;
 
@@ -240,6 +242,9 @@ struct thread_info
   /* The initiating frame of a nexting operation, used for deciding
      which exceptions to intercept.  */
   struct frame_id initiating_frame;
+
+  /* Data used by the execution command in effect.  */
+  void *cmd_data;
 
   /* Private data used by the target vector implementation.  */
   struct private_thread_info *private;

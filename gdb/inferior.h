@@ -103,6 +103,8 @@ extern int sync_execution;
 
 extern void clear_proceed_status (void);
 
+extern void clear_proceed_status_thread (struct thread_info *tp);
+
 extern void proceed (CORE_ADDR, enum target_signal, int);
 
 extern int sched_multi;
@@ -165,6 +167,11 @@ extern void reopen_exec_file (void);
 extern void resume (int, enum target_signal);
 
 extern ptid_t user_visible_resume_ptid (int step);
+
+extern const char schedlock_off[];
+extern const char schedlock_on[];
+extern const char schedlock_step[];
+extern const char *scheduler_mode;
 
 extern void insert_step_resume_breakpoint_at_sal (struct gdbarch *,
 						  struct symtab_and_line ,

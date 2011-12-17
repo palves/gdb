@@ -134,6 +134,8 @@ clear_thread_inferior_resources (struct thread_info *tp)
 static void
 free_thread (struct thread_info *tp)
 {
+  xfree (tp->cmd_data);
+
   if (tp->private)
     {
       if (tp->private_dtor)

@@ -640,6 +640,12 @@ mi_on_resume (ptid_t ptid)
       else
 	iterate_over_threads (mi_output_running_pid, &ptid);
     }
+  else if (thread_count () == 1)
+    {
+      /* Backwards compatibility.  If there's only one thread, output
+	 "all".  */
+      fprintf_unfiltered (raw_stdout, "*running,thread-id=\"all\"\n");
+    }
   else
     {
       struct thread_info *ti = find_thread_ptid (ptid);
