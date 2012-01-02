@@ -1,9 +1,6 @@
-/* Main function for TUI gdb.
+/* This testcase is part of GDB, the GNU debugger.
 
-   Copyright (C) 2002, 2004, 2007, 2008, 2009, 2010, 2011
-   Free Software Foundation, Inc.
-
-   This file is part of GDB.
+   Copyright 2011 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -18,20 +15,22 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#include "defs.h"
-#include "main.h"
-#include "gdb_string.h"
-#include "interps.h"
+extern int get_pck__foo__bar__minsym (void);
 
 int
-main (int argc, char **argv)
+pck__foo__bar__minsym__2 (void)
 {
-  struct captured_main_args args;
-
-  memset (&args, 0, sizeof args);
-  args.argc = argc;
-  args.argv = argv;
-  args.use_windows = 0;
-  args.interpreter_p = INTERP_TUI;
-  return gdb_main (&args);
+  return get_pck__foo__bar__minsym ();
 }
+
+int
+main (void)
+{
+  int val = pck__foo__bar__minsym__2 ();
+
+  if (val != 124) /* BREAK */
+    return 1;
+  return 0;
+}
+
+

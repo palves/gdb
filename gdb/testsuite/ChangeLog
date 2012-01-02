@@ -1,3 +1,127 @@
+2011-12-30  Edjunior Machado  <emachado@linux.vnet.ibm.com>
+
+	* gdb.python/py-finish-breakpoint.exp: Add `.' prefix for ppc64.
+	* gdb.python/py-finish-breakpoint2.exp: Skip testcase if python support
+	is not enabled.
+
+2011-12-27  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	* gdb.python/py-finish-breakpoint.c (test_exec_exit): Change the
+	parameter to self_exec, adjust the function.
+	(main): Check for argv[1] "exit".  Use argv[0] for test_exec_exit.
+	* gdb.python/py-finish-breakpoint.exp (set var self_exec = 0): New test.
+	(set var do_exit = 0): Remove test.
+	(newline at end of file): Add one.
+
+2011-12-27  Joel Brobecker  <brobecker@adacore.com>
+
+	* gdb.base/dmsym.c, gdb.base/dmsym_main.c, gdb.base/dmsym.exp:
+	New files.
+
+2011-12-26  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	Fix racy FAILs.
+	* gdb.threads/fork-thread-pending.c (barrier): New variable.
+	(thread_function, thread_forker): Call pthread_barrier_wait for it.
+	(main): Call pthread_barrier_init for it.
+
+2011-12-26  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	Fix double send_gdb leading to racy FAILs.
+	* gdb.base/break.exp (set silent break bp_location1): Replace
+	3x send_gdb and gdb_expect by gdb_test.
+	* gdb.base/fileio.exp: Replace 2x send_gdb by gdb_exit and sleep.
+	* gdb.base/foll-vfork.exp (vfork_and_exec_child_follow_to_main_bp)
+	(vfork_and_exec_child_follow_through_step): Use gdb_test_no_output
+	instead of send_gdb.  Twice.
+	* gdb.base/sepdebug.exp (set silent break bp_location1): Replace
+	3x send_gdb and gdb_expect by gdb_test.
+	* gdb.mi/mi-nsmoribund.exp: Replace 3x send_gdb by mi_gdb_test.
+
+2011-12-23  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	* gdb.linespec/linespec.exp: Compile using {c++}.
+
+2011-12-23  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	* gdb.cp/templates.exp (test_template_typedef): Import gdb_prompt.
+	(print destructor of template typedef): Extend it for gcc/51668 XFAIL.
+	(verify GCC PR debug/51668): New test.
+
+2011-12-23  Kevin Pouget  <kevin.pouget@st.com>
+
+	Introduce gdb.FinishBreakpoint in Python.
+	* Makefile.in (EXECUTABLES): Add py-finish-breakpoint and
+	py-finish-breakpoint2
+	(MISCALLANEOUS): Add py-events-shlib.so and py-events-shlib-nodebug.so
+	* gdb.python/py-breakpoint.exp (mult_line): Define and use variable
+	instead of line number.
+	* gdb.python/py-finish-breakpoint.c: New file.
+	* gdb.python/py-finish-breakpoint.exp: New file.
+	* gdb.python/py-finish-breakpoint.py: New file.
+	* gdb.python/py-finish-breakpoint2.cc: New file.
+	* gdb.python/py-finish-breakpoint2.exp: New file.
+	* gdb.python/py-finish-breakpoint2.py: New file.
+
+2011-12-23  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	Partial fix of compatibility with gcc-4.7.
+	* gdb.cp/templates.exp (ptype T5<int>, ptype t5i): Turn all PASS cases
+	into XFAIL "new without size_t".  Permit size_t for the KFAIL case.
+	Add comment to add a PASS case in the future.
+
+	Fix compatibility with gcc-4.7.
+	* gdb.python/py-frame-inline.c (f): Use inline for __always_inline__.
+
+2011-12-21  Ulrich Weigand  <ulrich.weigand@linaro.org>
+
+	PR tdep/12797
+	* gdb.base/callfuncs.exp: Remove KFAIL.
+
+2011-12-21  Joel Brobecker  <brobecker@adacore.com>
+
+	* gdb.ada/task_bp: New testcase.
+
+2011-12-19  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	* gdb.base/reread.exp: If srcfile2 fails to build retry it with
+	-DNO_SECTIONS.
+	* gdb.base/reread2.c <!NO_SECTIONS>: New sections block.
+
+2011-12-19  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	* gdb.cp/ptype-cv-cp.exp (ptype v_volatile_const_my_int): Make
+	PR gcc/45997 XFAIL conditional for gcc <= 4.5.
+	* gdb.python/py-type.exp (python print ttype.template_argument(2)):
+	Change PR gcc/41736 to the more specific PR gcc/46955.  Make it
+	conditional for gcc <= 4.5.
+
+2011-12-19  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	* gdb.cp/ptype-cv-cp.exp (ptype v_volatile_const_my_int): Replace KFAIL
+	by XFAIL.
+	* gdb.cp/static-method.exp (info addr A::func())
+	(list static-method.cc:xxx::(anonymous namespace)::A::func)
+	(list 'static-method.cc:xxx::(anonymous namespace)::A::func')
+	(list 'static-method.cc':'xxx::(anonymous namespace)::A::func')
+	(list static-method.cc:'xxx::(anonymous namespace)::A::func'): Likewise.
+	* gdb.cp/temargs.exp (test value of F in k2_m, test type of F in k3_m)
+	(test value of F in k3_m): Likewise.
+	* gdb.python/py-type.exp (python print ttype.template_argument(2)):
+	Likewise.
+
+2011-12-19  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	* gdb.threads/attach-stopped.exp (continue (*: attach2 continue))
+	(*: attach2 stop interrupt, *: attach2, exit leaves process sleeping):
+	Remove.
+	* gdb.threads/attachstop-mt.c: Remove.
+	* gdb.threads/attachstop-mt.exp: Remove.
+
+2011-12-17  Mark Kettenis  <kettenis@gnu.org>
+
+	* gdb.arch/amd64-i386-address.exp: Skip on *-*-openbsd*.
+
 2011-12-16  Doug Evans  <dje@google.com>
 
 	* boards/native-stdio-gdbserver.exp: New file.

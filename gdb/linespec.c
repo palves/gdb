@@ -1331,6 +1331,24 @@ locate_first_half (char **argptr, int *is_quote_enclosed)
   char *p, *p1;
   int has_comma;
 
+  /* Check if the linespec starts with an Ada operator (such as "+",
+     or ">", for instance).  */
+  p = *argptr;
+  if (p[0] == '"'
+      && current_language->la_language == language_ada)
+    {
+      const struct ada_opname_map *op;
+
+      for (op = ada_opname_table; op->encoded != NULL; op++)
+        if (strncmp (op->decoded, p, strlen (op->decoded)) == 0)
+	  break;
+      if (op->encoded != NULL)
+	{
+	  *is_quote_enclosed = 0;
+	  return p + strlen (op->decoded);
+	}
+    }
+
   /* Maybe we were called with a line range FILENAME:LINENUM,FILENAME:LINENUM
      and we must isolate the first half.  Outer layers will call again later
      for the second half.
@@ -2720,6 +2738,9 @@ struct collect_minsyms
   /* The funfirstline setting from the initial call.  */
   int funfirstline;
 
+  /* The list_mode setting from the initial call.  */
+  int list_mode;
+
   /* The resulting symbols.  */
   VEC (minsym_and_objfile_d) *msyms;
 };
@@ -2770,6 +2791,19 @@ add_minsym (struct minimal_symbol *minsym, void *d)
   struct collect_minsyms *info = d;
   minsym_and_objfile_d mo;
 
+  /* Exclude data symbols when looking for breakpoint locations.   */
+  if (!info->list_mode)
+    switch (minsym->type)
+      {
+	case mst_slot_got_plt:
+	case mst_data:
+	case mst_bss:
+	case mst_abs:
+	case mst_file_data:
+	case mst_file_bss:
+	return;
+      }
+
   mo.minsym = minsym;
   mo.objfile = info->objfile;
   VEC_safe_push (minsym_and_objfile_d, info->msyms, &mo);
@@ -2800,6 +2834,7 @@ search_minsyms_for_name (struct collect_info *info, const char *name,
 
     memset (&local, 0, sizeof (local));
     local.funfirstline = info->state->funfirstline;
+    local.list_mode = info->state->list_mode;
 
     cleanup = make_cleanup (VEC_cleanup (minsym_and_objfile_d),
 			    &local.msyms);

@@ -344,29 +344,6 @@ entry_point_address (void)
   return retval;
 }
 
-/* Create the terminating entry of OBJFILE's minimal symbol table.
-   If OBJFILE->msymbols is zero, allocate a single entry from
-   OBJFILE->objfile_obstack; otherwise, just initialize
-   OBJFILE->msymbols[OBJFILE->minimal_symbol_count].  */
-void
-terminate_minimal_symbol_table (struct objfile *objfile)
-{
-  if (! objfile->msymbols)
-    objfile->msymbols = ((struct minimal_symbol *)
-                         obstack_alloc (&objfile->objfile_obstack,
-                                        sizeof (objfile->msymbols[0])));
-
-  {
-    struct minimal_symbol *m
-      = &objfile->msymbols[objfile->minimal_symbol_count];
-
-    memset (m, 0, sizeof (*m));
-    /* Don't rely on these enumeration values being 0's.  */
-    MSYMBOL_TYPE (m) = mst_unknown;
-    SYMBOL_SET_LANGUAGE (m, language_unknown);
-  }
-}
-
 /* Iterator on PARENT and every separate debug objfile of PARENT.
    The usage pattern is:
      for (objfile = parent;
@@ -1117,7 +1094,7 @@ insert_section_p (const struct bfd *abfd,
 {
   const bfd_vma lma = bfd_section_lma (abfd, section);
 
-  if (lma != 0 && lma != bfd_section_vma (abfd, section)
+  if (overlay_debugging && lma != 0 && lma != bfd_section_vma (abfd, section)
       && (bfd_get_file_flags (abfd) & BFD_IN_MEMORY) == 0)
     /* This is an overlay section.  IN_MEMORY check is needed to avoid
        discarding sections from the "system supplied DSO" (aka vdso)
