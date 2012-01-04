@@ -1,3 +1,32 @@
+2012-01-04  Joel Brobecker  <brobecker@adacore.com>
+
+	Copyright year update in most files of the GDB Project.
+
+2012-01-04  Joel Brobecker  <brobecker@adacore.com>
+
+	* copyright.sh: Delete.
+	* copyright.py: Rewrite.
+
+2012-01-04  Joel Brobecker  <brobecker@adacore.com>
+
+	* gnulib/extra/update-copyright: New file, imported from gnulib.
+
+2012-01-04  Joel Brobecker  <brobecker@adacore.com>
+
+	* README (Copyright and License Notices): New section.
+
+2012-01-03  Tom Tromey  <tromey@redhat.com>
+
+	PR python/12533:
+	* python/py-value.c (valpy_dereference, valpy_get_address
+	valpy_get_dynamic_type, valpy_lazy_string, valpy_do_cast)
+	(valpy_getitem, valpy_call, valpy_binop, valpy_negative)
+	(valpy_absolute, valpy_richcompare): Free intermediate values.
+
+2011-01-03  Joel Brobecker  <brobecker@adacore.com>
+
+	* ada-lang.c: Reformat the copyright notice.
+
 2012-01-02  Jan Kratochvil  <jan.kratochvil@redhat.com>
 
 	* Makefile.in (ALL_TARGET_OBS): Remove solib-target.o.

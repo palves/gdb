@@ -1,3 +1,7 @@
+2012-01-03  Joel Brobecker  <brobecker@adacore.com>
+
+	* gdb.base/auxv.exp: Reformat the copyright notice.
+
 2012-01-03  Yao Qi  <yao@codesourcery.com>
 
 	* gdb.trace/strace.exp (strace_trace_on_same_addr): New.
@@ -26288,7 +26292,6 @@ Sun Feb 21 10:55:55 1993  Mike Werner  (mtw@poseidon.cygnus.com)
 ;; version-control: never
 ;; End:
 
-    Copyright 1993, 1994, 1995, 1996, 1997, 1998, 1999, 2000, 2001, 2002,
-    2003, 2004, 2005 Free Software Foundation, Inc.
+    Copyright 1993-2005, 2012 Free Software Foundation, Inc.
   Copying and distribution of this file, with or without modification,
   are permitted provided the copyright notice and this notice are preserved.

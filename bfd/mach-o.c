@@ -279,6 +279,8 @@ static const mach_o_segment_name_xlat segsec_names_xlat[] =
     { NULL, NULL }
   };
 
+static const char dsym_subdir[] = ".dSYM/Contents/Resources/DWARF";
+
 /* For both cases bfd-name => mach-o name and vice versa, the specific target
    is checked before the generic.  This allows a target (e.g. ppc for cstring)
    to override the generic definition with a more specific one.  */
@@ -649,6 +651,8 @@ bfd_mach_o_canonicalize_symtab (bfd *abfd, asymbol **alocation)
   return nsyms;
 }
 
+/* Create synthetic symbols for indirect symbols.  */
+
 long
 bfd_mach_o_get_synthetic_symtab (bfd *abfd,
                                  long symcount ATTRIBUTE_UNUSED,
@@ -668,19 +672,23 @@ bfd_mach_o_get_synthetic_symtab (bfd *abfd,
 
   *ret = NULL;
 
+  /* Stop now if no symbols or no indirect symbols.  */
   if (dysymtab == NULL || symtab == NULL || symtab->symbols == NULL)
     return 0;
 
   if (dysymtab->nindirectsyms == 0)
     return 0;
 
+  /* We need to allocate a bfd symbol for every indirect symbol and to
+     allocate the memory for its name.  */
   count = dysymtab->nindirectsyms;
   size = count * sizeof (asymbol) + 1;
 
   for (j = 0; j < count; j++)
     {
       unsigned int isym = dysymtab->indirect_syms[j];
-              
+
+      /* Some indirect symbols are anonymous.  */
       if (isym < symtab->nsyms && symtab->symbols[isym].symbol.name)
         size += strlen (symtab->symbols[isym].symbol.name) + sizeof ("$stub");
     }
@@ -705,6 +713,7 @@ bfd_mach_o_get_synthetic_symtab (bfd *abfd,
         case BFD_MACH_O_S_NON_LAZY_SYMBOL_POINTERS:
         case BFD_MACH_O_S_LAZY_SYMBOL_POINTERS:
         case BFD_MACH_O_S_SYMBOL_STUBS:
+          /* Only these sections have indirect symbols.  */
           first = sec->reserved1;
           last = first + bfd_mach_o_section_get_nbr_indirect (abfd, sec);
           addr = sec->addr;
@@ -812,7 +821,7 @@ bfd_mach_o_print_symbol (bfd *abfd,
 
 static void
 bfd_mach_o_convert_architecture (bfd_mach_o_cpu_type mtype,
-				 bfd_mach_o_cpu_subtype msubtype ATTRIBUTE_UNUSED,
+				 bfd_mach_o_cpu_subtype msubtype,
 				 enum bfd_architecture *type,
 				 unsigned long *subtype)
 {
@@ -820,8 +829,12 @@ bfd_mach_o_convert_architecture (bfd_mach_o_cpu_type mtype,
 
   switch (mtype)
     {
-    case BFD_MACH_O_CPU_TYPE_VAX: *type = bfd_arch_vax; break;
-    case BFD_MACH_O_CPU_TYPE_MC680x0: *type = bfd_arch_m68k; break;
+    case BFD_MACH_O_CPU_TYPE_VAX:
+      *type = bfd_arch_vax;
+      break;
+    case BFD_MACH_O_CPU_TYPE_MC680x0:
+      *type = bfd_arch_m68k;
+      break;
     case BFD_MACH_O_CPU_TYPE_I386:
       *type = bfd_arch_i386;
       *subtype = bfd_mach_i386_i386;
@@ -830,17 +843,52 @@ bfd_mach_o_convert_architecture (bfd_mach_o_cpu_type mtype,
       *type = bfd_arch_i386;
       *subtype = bfd_mach_x86_64;
       break;
-    case BFD_MACH_O_CPU_TYPE_MIPS: *type = bfd_arch_mips; break;
-    case BFD_MACH_O_CPU_TYPE_MC98000: *type = bfd_arch_m98k; break;
-    case BFD_MACH_O_CPU_TYPE_HPPA: *type = bfd_arch_hppa; break;
-    case BFD_MACH_O_CPU_TYPE_ARM: *type = bfd_arch_arm; break;
-    case BFD_MACH_O_CPU_TYPE_MC88000: *type = bfd_arch_m88k; break;
+    case BFD_MACH_O_CPU_TYPE_MIPS:
+      *type = bfd_arch_mips;
+      break;
+    case BFD_MACH_O_CPU_TYPE_MC98000:
+      *type = bfd_arch_m98k;
+      break;
+    case BFD_MACH_O_CPU_TYPE_HPPA:
+      *type = bfd_arch_hppa;
+      break;
+    case BFD_MACH_O_CPU_TYPE_ARM:
+      *type = bfd_arch_arm;
+      switch (msubtype)
+        {
+        case BFD_MACH_O_CPU_SUBTYPE_ARM_V4T:
+          *subtype = bfd_mach_arm_4T;
+          break;
+        case BFD_MACH_O_CPU_SUBTYPE_ARM_V6:
+          *subtype = bfd_mach_arm_4T;	/* Best fit ?  */
+          break;
+        case BFD_MACH_O_CPU_SUBTYPE_ARM_V5TEJ:
+          *subtype = bfd_mach_arm_5TE;
+          break;
+        case BFD_MACH_O_CPU_SUBTYPE_ARM_XSCALE:
+          *subtype = bfd_mach_arm_XScale;
+          break;
+        case BFD_MACH_O_CPU_SUBTYPE_ARM_V7:
+          *subtype = bfd_mach_arm_5TE;	/* Best fit ?  */
+          break;
+        case BFD_MACH_O_CPU_SUBTYPE_ARM_ALL:
+        default:
+          break;
+        }
+      break;
+    case BFD_MACH_O_CPU_TYPE_MC88000:
+      *type = bfd_arch_m88k;
+      break;
     case BFD_MACH_O_CPU_TYPE_SPARC:
       *type = bfd_arch_sparc;
       *subtype = bfd_mach_sparc;
       break;
-    case BFD_MACH_O_CPU_TYPE_I860: *type = bfd_arch_i860; break;
-    case BFD_MACH_O_CPU_TYPE_ALPHA: *type = bfd_arch_alpha; break;
+    case BFD_MACH_O_CPU_TYPE_I860:
+      *type = bfd_arch_i860;
+      break;
+    case BFD_MACH_O_CPU_TYPE_ALPHA:
+      *type = bfd_arch_alpha;
+      break;
     case BFD_MACH_O_CPU_TYPE_POWERPC:
       *type = bfd_arch_powerpc;
       *subtype = bfd_mach_ppc;
@@ -1625,19 +1673,25 @@ bfd_mach_o_write_dysymtab (bfd *abfd, bfd_mach_o_load_command *command)
 }
 
 static unsigned
-bfd_mach_o_primary_symbol_sort_key (unsigned type, unsigned ext)
+bfd_mach_o_primary_symbol_sort_key (unsigned type)
 {
-  /* TODO: Determine the correct ordering of stabs symbols.  */
-  /* We make indirect symbols a local/synthetic.  */
-  if (type == BFD_MACH_O_N_INDR)
+  unsigned mtyp = type & BFD_MACH_O_N_TYPE;
+
+  /* Just leave debug symbols where they are (pretend they are local, and
+     then they will just be sorted on position).  */
+  if (type & BFD_MACH_O_N_STAB)
+    return 0;
+
+  /* Sort indirects to last.  */
+  if (mtyp == BFD_MACH_O_N_INDR)
     return 3;
 
   /* Local (we should never see an undefined local AFAICT).  */
-  if (! ext)
+  if (! (type & (BFD_MACH_O_N_EXT | BFD_MACH_O_N_PEXT)))
     return 0;
 
   /* Common symbols look like undefined externs.  */
-  if (type == BFD_MACH_O_N_UNDF)
+  if (mtyp == BFD_MACH_O_N_UNDF)
     return 2;
 
   /* A defined symbol that's not indirect or extern.  */
@@ -1651,19 +1705,15 @@ bfd_mach_o_cf_symbols (const void *a, const void *b)
   bfd_mach_o_asymbol *sb = *(bfd_mach_o_asymbol **) b;
   unsigned int soa, sob;
 
-  soa = bfd_mach_o_primary_symbol_sort_key 
-  			(sa->n_type & BFD_MACH_O_N_TYPE,
-			 sa->n_type & (BFD_MACH_O_N_PEXT | BFD_MACH_O_N_EXT));
-  sob = bfd_mach_o_primary_symbol_sort_key
-  			(sb->n_type & BFD_MACH_O_N_TYPE,
-			 sb->n_type & (BFD_MACH_O_N_PEXT | BFD_MACH_O_N_EXT));
+  soa = bfd_mach_o_primary_symbol_sort_key (sa->n_type);
+  sob = bfd_mach_o_primary_symbol_sort_key (sb->n_type);
   if (soa < sob)
     return -1;
 
   if (soa > sob)
     return 1;
 
-  /* If it's local, just preserve the input order.  */
+  /* If it's local or stab, just preserve the input order.  */
   if (soa == 0)
     {
       if (sa->symbol.udata.i < sb->symbol.udata.i)
@@ -1782,14 +1832,16 @@ bfd_mach_o_mangle_symbols (bfd *abfd, bfd_mach_o_data_struct *mdata)
         }
 
       /* Put the section index in, where required.  */
-      if (s->symbol.section != bfd_abs_section_ptr
+      if ((s->symbol.section != bfd_abs_section_ptr
           && s->symbol.section != bfd_und_section_ptr
           && s->symbol.section != bfd_com_section_ptr)
-        s->n_sect = s->symbol.section->target_index;
+          || ((s->n_type & BFD_MACH_O_N_STAB) != 0
+               && s->symbol.name == NULL))
+	s->n_sect = s->symbol.section->target_index;
 
       /* Unless we're looking at an indirect sym, note the input ordering.
 	 We use this to keep local symbols ordered as per the input.  */
-      if (IS_MACHO_INDIRECT (s->n_type))
+      if (! IS_MACHO_INDIRECT (s->n_type))
 	s->symbol.udata.i = i;
     }
 
@@ -2993,6 +3045,32 @@ bfd_mach_o_read_prebound_dylib (bfd *abfd ATTRIBUTE_UNUSED,
 }
 
 static int
+bfd_mach_o_read_fvmlib (bfd *abfd, bfd_mach_o_load_command *command)
+{
+  bfd_mach_o_fvmlib_command *fvm = &command->command.fvmlib;
+  struct mach_o_fvmlib_command_external raw;
+  unsigned int nameoff;
+
+  if (bfd_seek (abfd, command->offset + BFD_MACH_O_LC_SIZE, SEEK_SET) != 0
+      || bfd_bread (&raw, sizeof (raw), abfd) != sizeof (raw))
+    return -1;
+
+  nameoff = bfd_h_get_32 (abfd, raw.name);
+  fvm->minor_version = bfd_h_get_32 (abfd, raw.minor_version);
+  fvm->header_addr = bfd_h_get_32 (abfd, raw.header_addr);
+
+  fvm->name_offset = command->offset + nameoff;
+  fvm->name_len = command->len - nameoff;
+  fvm->name_str = bfd_alloc (abfd, fvm->name_len);
+  if (fvm->name_str == NULL)
+    return -1;
+  if (bfd_seek (abfd, fvm->name_offset, SEEK_SET) != 0
+      || bfd_bread (fvm->name_str, fvm->name_len, abfd) != fvm->name_len)
+    return -1;
+  return 0;
+}
+
+static int
 bfd_mach_o_read_thread (bfd *abfd, bfd_mach_o_load_command *command)
 {
   bfd_mach_o_data_struct *mdata = bfd_mach_o_get_data (abfd);
@@ -3405,6 +3483,22 @@ bfd_mach_o_read_version_min (bfd *abfd, bfd_mach_o_load_command *command)
   return TRUE;
 }
 
+static bfd_boolean
+bfd_mach_o_read_encryption_info (bfd *abfd, bfd_mach_o_load_command *command)
+{
+  bfd_mach_o_encryption_info_command *cmd = &command->command.encryption_info;
+  struct mach_o_encryption_info_command_external raw;
+
+  if (bfd_seek (abfd, command->offset + BFD_MACH_O_LC_SIZE, SEEK_SET) != 0
+      || bfd_bread (&raw, sizeof (raw), abfd) != sizeof (raw))
+    return FALSE;
+
+  cmd->cryptoff = bfd_get_32 (abfd, raw.cryptoff);
+  cmd->cryptsize = bfd_get_32 (abfd, raw.cryptsize);
+  cmd->cryptid = bfd_get_32 (abfd, raw.cryptid);
+  return TRUE;
+}
+
 static int
 bfd_mach_o_read_segment (bfd *abfd,
                          bfd_mach_o_load_command *command,
@@ -3550,6 +3644,9 @@ bfd_mach_o_read_command (bfd *abfd, bfd_mach_o_load_command *command)
       break;
     case BFD_MACH_O_LC_LOADFVMLIB:
     case BFD_MACH_O_LC_IDFVMLIB:
+      if (bfd_mach_o_read_fvmlib (abfd, command) != 0)
+	return -1;
+      break;
     case BFD_MACH_O_LC_IDENT:
     case BFD_MACH_O_LC_FVMFILE:
     case BFD_MACH_O_LC_PREPAGE:
@@ -3581,6 +3678,10 @@ bfd_mach_o_read_command (bfd *abfd, bfd_mach_o_load_command *command)
       if (bfd_mach_o_read_linkedit (abfd, command) != 0)
 	return -1;
       break;
+    case BFD_MACH_O_LC_ENCRYPTION_INFO:
+      if (!bfd_mach_o_read_encryption_info (abfd, command))
+	return -1;
+      break;
     case BFD_MACH_O_LC_DYLD_INFO:
       if (bfd_mach_o_read_dyld_info (abfd, command) != 0)
 	return -1;
@@ -3591,7 +3692,7 @@ bfd_mach_o_read_command (bfd *abfd, bfd_mach_o_load_command *command)
 	return -1;
       break;
     default:
-      (*_bfd_error_handler)(_("%B: unable to read unknown load command 0x%lx"),
+      (*_bfd_error_handler)(_("%B: unknown load command 0x%lx"),
          abfd, (unsigned long) command->type);
       break;
     }
@@ -4365,6 +4466,120 @@ bfd_mach_o_core_file_failing_signal (bfd *abfd ATTRIBUTE_UNUSED)
   return 0;
 }
 
+static bfd_mach_o_uuid_command *
+bfd_mach_o_lookup_uuid_command (bfd *abfd)
+{
+  bfd_mach_o_load_command *uuid_cmd;
+  int ncmd = bfd_mach_o_lookup_command (abfd, BFD_MACH_O_LC_UUID, &uuid_cmd);
+  if (ncmd != 1)
+    return FALSE;
+  return &uuid_cmd->command.uuid;
+}
+
+/* Return true if ABFD is a dSYM file and its UUID matches UUID_CMD. */
+
+static bfd_boolean
+bfd_mach_o_dsym_for_uuid_p (bfd *abfd, const bfd_mach_o_uuid_command *uuid_cmd)
+{
+  bfd_mach_o_uuid_command *dsym_uuid_cmd;
+
+  BFD_ASSERT (abfd);
+  BFD_ASSERT (uuid_cmd);
+
+  if (!bfd_check_format (abfd, bfd_object))
+    return FALSE;
+
+  if (bfd_get_flavour (abfd) != bfd_target_mach_o_flavour
+      || bfd_mach_o_get_data (abfd) == NULL
+      || bfd_mach_o_get_data (abfd)->header.filetype != BFD_MACH_O_MH_DSYM)
+    return FALSE;
+
+  dsym_uuid_cmd = bfd_mach_o_lookup_uuid_command (abfd);
+  if (dsym_uuid_cmd == NULL)
+    return FALSE;
+
+  if (memcmp (uuid_cmd->uuid, dsym_uuid_cmd->uuid,
+              sizeof (uuid_cmd->uuid)) != 0)
+    return FALSE;
+
+  return TRUE;
+}
+
+/* Find a BFD in DSYM_FILENAME which matches ARCH and UUID_CMD.
+   The caller is responsible for closing the returned BFD object and
+   its my_archive if the returned BFD is in a fat dSYM. */
+
+static bfd *
+bfd_mach_o_find_dsym (const char *dsym_filename,
+                      const bfd_mach_o_uuid_command *uuid_cmd,
+                      const bfd_arch_info_type *arch)
+{
+  bfd *base_dsym_bfd, *dsym_bfd;
+
+  BFD_ASSERT (uuid_cmd);
+
+  base_dsym_bfd = bfd_openr (dsym_filename, NULL);
+  if (base_dsym_bfd == NULL)
+    return NULL;
+
+  dsym_bfd = bfd_mach_o_fat_extract (base_dsym_bfd, bfd_object, arch);
+  if (bfd_mach_o_dsym_for_uuid_p (dsym_bfd, uuid_cmd))
+    return dsym_bfd;
+
+  bfd_close (dsym_bfd);
+  if (base_dsym_bfd != dsym_bfd)
+    bfd_close (base_dsym_bfd);
+
+  return NULL;
+}
+
+/* Return a BFD created from a dSYM file for ABFD.
+   The caller is responsible for closing the returned BFD object, its
+   filename, and its my_archive if the returned BFD is in a fat dSYM. */
+
+static bfd *
+bfd_mach_o_follow_dsym (bfd *abfd)
+{
+  char *dsym_filename;
+  bfd_mach_o_uuid_command *uuid_cmd;
+  bfd *dsym_bfd, *base_bfd = abfd;
+  const char *base_basename;
+
+  if (abfd == NULL || bfd_get_flavour (abfd) != bfd_target_mach_o_flavour)
+    return NULL;
+
+  if (abfd->my_archive)
+    base_bfd = abfd->my_archive;
+  /* BFD may have been opened from a stream. */
+  if (base_bfd->filename == NULL)
+    {
+      bfd_set_error (bfd_error_invalid_operation);
+      return NULL;
+    }
+  base_basename = lbasename (base_bfd->filename);
+
+  uuid_cmd = bfd_mach_o_lookup_uuid_command (abfd);
+  if (uuid_cmd == NULL)
+    return NULL;
+
+  /* TODO: We assume the DWARF file has the same as the binary's.
+     It seems apple's GDB checks all files in the dSYM bundle directory.
+     http://opensource.apple.com/source/gdb/gdb-1708/src/gdb/macosx/macosx-tdep.c
+  */
+  dsym_filename = (char *)bfd_malloc (strlen (base_bfd->filename)
+                                       + strlen (dsym_subdir) + 1
+                                       + strlen (base_basename) + 1);
+  sprintf (dsym_filename, "%s%s/%s",
+           base_bfd->filename, dsym_subdir, base_basename);
+
+  dsym_bfd = bfd_mach_o_find_dsym (dsym_filename, uuid_cmd,
+                                   bfd_get_arch_info (abfd));
+  if (dsym_bfd == NULL)
+    free (dsym_filename);
+
+  return dsym_bfd;
+}
+
 bfd_boolean
 bfd_mach_o_find_nearest_line (bfd *abfd,
 			      asection *section,
@@ -4375,9 +4590,34 @@ bfd_mach_o_find_nearest_line (bfd *abfd,
 			      unsigned int *line_ptr)
 {
   bfd_mach_o_data_struct *mdata = bfd_mach_o_get_data (abfd);
-  /* TODO: Handle executables and dylibs by using dSYMs. */
-  if (mdata->header.filetype != BFD_MACH_O_MH_OBJECT)
+  if (mdata == NULL)
     return FALSE;
+  switch (mdata->header.filetype)
+    {
+    case BFD_MACH_O_MH_OBJECT:
+      break;
+    case BFD_MACH_O_MH_EXECUTE:
+    case BFD_MACH_O_MH_DYLIB:
+    case BFD_MACH_O_MH_BUNDLE:
+    case BFD_MACH_O_MH_KEXT_BUNDLE:
+      if (mdata->dwarf2_find_line_info == NULL)
+        {
+          mdata->dsym_bfd = bfd_mach_o_follow_dsym (abfd);
+          /* When we couldn't find dSYM for this binary, we look for
+             the debug information in the binary itself. In this way,
+             we won't try finding separated dSYM again because
+             mdata->dwarf2_find_line_info will be filled. */
+          if (! mdata->dsym_bfd)
+            break;
+          if (! _bfd_dwarf2_slurp_debug_info (abfd, mdata->dsym_bfd,
+                                              dwarf_debug_sections, symbols,
+                                              &mdata->dwarf2_find_line_info))
+            return FALSE;
+        }
+      break;
+    default:
+      return FALSE;
+    }
   if (_bfd_dwarf2_find_nearest_line (abfd, dwarf_debug_sections,
 				     section, symbols, offset,
 				     filename_ptr, functionname_ptr,
@@ -4395,6 +4635,18 @@ bfd_mach_o_close_and_cleanup (bfd *abfd)
     {
       _bfd_dwarf2_cleanup_debug_info (abfd, &mdata->dwarf2_find_line_info);
       bfd_mach_o_free_cached_info (abfd);
+      if (mdata->dsym_bfd != NULL)
+        {
+          bfd *fat_bfd = mdata->dsym_bfd->my_archive;
+          char *dsym_filename = (char *)(fat_bfd
+                                         ? fat_bfd->filename
+                                         : mdata->dsym_bfd->filename);
+          bfd_close (mdata->dsym_bfd);
+          mdata->dsym_bfd = NULL;
+          if (fat_bfd)
+            bfd_close (fat_bfd);
+          free (dsym_filename);
+        }
     }
 
   return _bfd_generic_close_and_cleanup (abfd);

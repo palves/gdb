@@ -1,3 +1,63 @@
+2012-01-04  Tristan Gingold  <gingold@adacore.com>
+
+	* mach-o.h (bfd_mach_o_fvmlib_command): New structure.
+	(bfd_mach_o_load_command): Add fvmlib field.
+
+	* mach-o.c (bfd_mach_o_read_fvmlib): New function.
+	(bfd_mach_o_read_command): Handle fvmlib.
+
+2012-01-04  Tristan Gingold  <gingold@adacore.com>
+
+	* mach-o.c (bfd_mach_o_convert_architecture): Reindent.
+	Decode msubtype for ARM.
+
+2012-01-04  Tristan Gingold  <gingold@adacore.com>
+
+	* mach-o.c (bfd_mach_o_get_synthetic_symtab): Add comments.
+
+2012-01-04  Tristan Gingold  <gingold@adacore.com>
+
+	* mach-o.h: Reindent header.
+	(bfd_mach_o_encryption_info_command): New structure.
+	(bfd_mach_o_load_command): Add encryption_info field.
+
+	* mach-o.c (bfd_mach_o_read_encryption_info): New function.
+	(bfd_mach_o_read_command): Handle BFD_MACH_O_LC_ENCRYPTION_INFO.
+	(bfd_mach_o_read_command): Adjust error message.
+
+2012-01-04  Shinichiro Hamaji  <shinichiro.hamaji@gmail.com>
+
+	* dwarf2.c (_bfd_dwarf2_slurp_debug_info): Factor out the part
+	which reads DWARF2 and stores in stash from find_line.
+	(find_line) Call _bfd_dwarf2_slurp_debug_info.
+	* libbfd-in.h (_bfd_dwarf2_slurp_debug_info): Add declaration.
+	* libbfd.h (_bfd_dwarf2_slurp_debug_info): Regenerate.
+	* mach-o.c (dsym_subdir): The name of subdir where debug
+	information may be stored.
+	(bfd_mach_o_lookup_uuid_command): New. Lookup a load command whose
+	type is UUID.
+	(bfd_mach_o_dsym_for_uuid_p): New. Check if the specified BFD is
+	corresponding to the executable.
+	(bfd_mach_o_find_dsym): New. Find a debug information BFD in the
+	specified binary file.
+	(bfd_mach_o_follow_dsym): New. Find a debug information BFD for
+	the original BFD.
+	(bfd_mach_o_find_nearest_line): Check dSYM files for Mach-O
+	executables, dylibs, and bundles.
+	(bfd_mach_o_close_and_cleanup): Clean up BFDs for the dSYM file.
+	* mach-o.h (dsym_bfd): The BFD of the dSYM file.
+
+2012-01-03  Iain Sandoe  <idsandoe@googlemail.com>
+
+	* mach-o.c (bfd_mach_o_mangle_symbols): Put in the section index
+	for stabd symbols.
+	(bfd_mach_o_primary_symbol_sort_key): Adjust for stabs.
+	(bfd_mach_o_cf_symbols): Likewise.
+
+2012-01-03  Iain Sandoe  <idsandoe@googlemail.com>
+
+	* mach-o.c (bfd_mach_o_mangle_symbols): Correct typo.
+
 2012-01-03  Iain Sandoe  <idsandoe@googlemail.com>
 
 	* mach-o.c (bfd_mach_o_write_symtab): Fill in the string table index

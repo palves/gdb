@@ -1,6 +1,7 @@
 /* Mach-O support for BFD.
    Copyright 1999, 2000, 2001, 2002, 2003, 2005, 2007, 2008, 2009, 2011,
-   2012 Free Software Foundation, Inc.
+   2012
+   Free Software Foundation, Inc.
 
    This file is part of BFD, the Binary File Descriptor library.
 
@@ -449,6 +450,16 @@ typedef struct bfd_mach_o_str_command
 }
 bfd_mach_o_str_command;
 
+typedef struct bfd_mach_o_fvmlib_command
+{
+  unsigned int name_offset;
+  unsigned int name_len;
+  char *name_str;
+  unsigned int minor_version;
+  unsigned int header_addr;
+}
+bfd_mach_o_fvmlib_command;
+
 typedef struct bfd_mach_o_dyld_info_command
 {
   /* File offset and size to rebase info.  */
@@ -482,6 +493,14 @@ typedef struct bfd_mach_o_version_min_command
 }
 bfd_mach_o_version_min_command;
 
+typedef struct bfd_mach_o_encryption_info_command
+{
+  unsigned int cryptoff;
+  unsigned int cryptsize;
+  unsigned int cryptid;
+}
+bfd_mach_o_encryption_info_command;
+
 typedef struct bfd_mach_o_load_command
 {
   bfd_mach_o_load_command_type type;
@@ -502,6 +521,8 @@ typedef struct bfd_mach_o_load_command
     bfd_mach_o_str_command str;
     bfd_mach_o_dyld_info_command dyld_info;
     bfd_mach_o_version_min_command version_min;
+    bfd_mach_o_encryption_info_command encryption_info;
+    bfd_mach_o_fvmlib_command fvmlib;
   }
   command;
 }
@@ -542,6 +563,9 @@ typedef struct mach_o_data_struct
 
   /* A place to stash dwarf2 info for this bfd.  */
   void *dwarf2_find_line_info;
+
+  /* BFD of .dSYM file. */
+  bfd *dsym_bfd;
 
   /* Cache of dynamic relocs. */
   arelent *dyn_reloc_cache;
