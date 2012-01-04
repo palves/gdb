@@ -63,7 +63,11 @@ trace_vdebug (const char *fmt, ...)
 
   va_start (ap, fmt);
   vsprintf (buf, fmt, ap);
+#ifdef IN_PROCESS_AGENT
+  fprintf (stderr, "ipa/tracepoint: %s\n", buf);
+#else
   fprintf (stderr, "gdbserver/tracepoint: %s\n", buf);
+#endif
   va_end (ap);
 }
 
@@ -2423,7 +2427,7 @@ cmd_qtdp (char *own_buf)
       trace_debug ("Defined %stracepoint %d at 0x%s, "
 		   "enabled %d step %ld pass %ld",
 		   tpoint->type == fast_tracepoint ? "fast "
-		   : "",
+		   : tpoint->type == static_tracepoint ? "static " : "",
 		   tpoint->number, paddress (tpoint->address), tpoint->enabled,
 		   tpoint->step_count, tpoint->pass_count);
     }

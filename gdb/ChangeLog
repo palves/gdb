@@ -1,3 +1,72 @@
+2012-01-04  Doug Evans  <dje@google.com>
+
+	* dwarf2read.c (dwarf2_read_abbrevs): Delete arg "abfd".
+	All callers updated.
+	(load_full_type_unit): Renamed from read_signatured_type_at_offset.
+	Replace all arguments with "per_cu".  All callers updated.
+
+	* dwarf2read.c (dwarf2_per_cu_data): Remove outdated comment.
+
+	* dwarf2read.c (init_one_comp_unit): Delete arg "objfile".
+	New arg "per_cu".  All callers updated.
+
+	Delete #if 0'd out code.
+	* language.c (binop_result_type): Delete.
+	(simple_type, ordered_type, same_type, integral_type): Delete.
+	(numeric_type, character_type, string_type, boolean_type): Delete.
+	(float_type, structured_type): Delete.
+	* language.h: Update.
+
+2012-01-04  Tom Tromey  <tromey@redhat.com>
+
+	* python/py-value.c (valpy_binop): Initialize 'res_val'.
+
+2012-01-04  Joel Brobecker  <brobecker@adacore.com>
+
+	* corefile.c (close_exec_file): Delete.
+	(reopen_exec_file): Remove commented out code that seems related
+	to close_exec_file, which is being deleted here.
+	* inferior.h (close_exec_file): Delete.
+	* fork-child.c (fork_inferior): Remove call to fork_inferior.
+
+2012-01-04  Joel Brobecker  <brobecker@adacore.com>
+
+	* ada-lang.c: #include "cli/cli-utils.h".
+	(get_selections): Use skip_spaces.
+	(ada_get_next_arg): Use skip_spaces and skip_to_space.
+	(catch_ada_exception_command_split): Use skip_spaces.
+	(ada_decode_assert_location): Likewise.
+
+2012-01-04  Joel Brobecker  <brobecker@adacore.com>
+
+	* linespec.c (decode_line_internal): Check for C++ or Java
+	compound constructs only if the current language is C, C++
+	or Java.
+
+2012-01-04  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	Revert:
+	2012-01-02  Jan Kratochvil  <jan.kratochvil@redhat.com>
+		    Joel Brobecker  <brobecker@adacore.com>
+	Fix regression for gdb.cp/gdb2495.exp with gcc-4.7.
+	* arch-utils.c (displaced_step_at_entry_point): Incrase BP_LEN skip to
+	3 times.
+	* infcall.c (call_function_by_hand) <AT_SYMBOL>: Move it upwards and
+	fall through into AT_ENTRY_POINT.
+	(call_function_by_hand) <AT_ENTRY_POINT>: New variable bp_len.  Adjust
+	DUMMY_ADDR with it.
+	* ppc-linux-tdep.c (ppc_linux_displaced_step_location): Increase
+	PPC_INSN_SIZE skip to 3 times.
+
+2012-01-04  Joel Brobecker  <brobecker@adacore.com>
+
+	* linespec.c (add_minsym): Preserve function descriptors.
+
+2012-01-04  Ulrich Weigand  <uweigand@de.ibm.com>
+
+	* breakpoint.c (all_locations_are_pending): Consider locations
+	in program spaces executing during startup pending as well.
+
 2012-01-04  Joel Brobecker  <brobecker@adacore.com>
 
 	Copyright year update in most files of the GDB Project.

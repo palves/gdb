@@ -433,9 +433,7 @@ struct dwarf2_cu
 
 /* Persistent data held for a compilation unit, even when not
    processing it.  We put a pointer to this structure in the
-   read_symtab_private field of the psymtab.  If we encounter
-   inter-compilation-unit references, we also maintain a sorted
-   list of all compilation units.  */
+   read_symtab_private field of the psymtab.  */
 
 struct dwarf2_per_cu_data
 {
@@ -926,7 +924,7 @@ static void dwarf2_psymtab_to_symtab (struct partial_symtab *);
 
 static void psymtab_to_symtab_1 (struct partial_symtab *);
 
-static void dwarf2_read_abbrevs (bfd *abfd, struct dwarf2_cu *cu);
+static void dwarf2_read_abbrevs (struct dwarf2_cu *cu);
 
 static void dwarf2_free_abbrev_table (void *);
 
@@ -1219,9 +1217,7 @@ static struct signatured_type *lookup_signatured_type_at_offset
      struct dwarf2_section_info *section,
      unsigned int offset);
 
-static void read_signatured_type_at_offset (struct objfile *objfile,
-					    struct dwarf2_section_info *sect,
-					    unsigned int offset);
+static void load_full_type_unit (struct dwarf2_per_cu_data *per_cu);
 
 static void read_signatured_type (struct signatured_type *type_sig);
 
@@ -1269,7 +1265,7 @@ static struct dwarf2_per_cu_data *dwarf2_find_comp_unit
   (unsigned int offset, struct objfile *objfile);
 
 static void init_one_comp_unit (struct dwarf2_cu *cu,
-				struct objfile *objfile);
+				struct dwarf2_per_cu_data *per_cu);
 
 static void prepare_one_comp_unit (struct dwarf2_cu *cu,
 				   struct die_info *comp_unit_die);
@@ -1822,9 +1818,7 @@ static void
 load_cu (struct dwarf2_per_cu_data *per_cu)
 {
   if (per_cu->debug_types_section)
-    read_signatured_type_at_offset (per_cu->objfile,
-				    per_cu->debug_types_section,
-				    per_cu->offset);
+    load_full_type_unit (per_cu);
   else
     load_full_comp_unit (per_cu);
 
@@ -2277,7 +2271,7 @@ dw2_get_file_names (struct objfile *objfile,
   if (this_cu->v.quick->no_file_data)
     return NULL;
 
-  init_one_comp_unit (&cu, objfile);
+  init_one_comp_unit (&cu, this_cu);
   cleanups = make_cleanup (free_stack_comp_unit, &cu);
 
   if (this_cu->debug_types_section)
@@ -2302,10 +2296,7 @@ dw2_get_file_names (struct objfile *objfile,
       return NULL;
     }
 
-  this_cu->cu = &cu;
-  cu.per_cu = this_cu;
-
-  dwarf2_read_abbrevs (abfd, &cu);
+  dwarf2_read_abbrevs (&cu);
   make_cleanup (dwarf2_free_abbrev_table, &cu);
 
   init_cu_die_reader (&reader_specs, &cu);
@@ -3408,7 +3399,20 @@ process_psymtab_comp_unit (struct dwarf2_per_cu_data *this_cu,
   struct die_reader_specs reader_specs;
   const char *filename;
 
-  init_one_comp_unit (&cu, objfile);
+  /* If this compilation unit was already read in, free the
+     cached copy in order to read it in again.	This is
+     necessary because we skipped some symbols when we first
+     read in the compilation unit (see load_partial_dies).
+     This problem could be avoided, but the benefit is
+     unclear.  */
+  if (this_cu->cu != NULL)
+    free_one_cached_comp_unit (this_cu->cu);
+
+  /* Note that this is a pointer to our stack frame, being
+     added to a global data structure.	It will be cleaned up
+     in free_stack_comp_unit when we finish with this
+     compilation unit.	*/
+  init_one_comp_unit (&cu, this_cu);
   back_to_inner = make_cleanup (free_stack_comp_unit, &cu);
 
   info_ptr = partial_read_comp_unit_head (&cu.header, info_ptr,
@@ -3428,24 +3432,8 @@ process_psymtab_comp_unit (struct dwarf2_per_cu_data *this_cu,
 
   cu.list_in_scope = &file_symbols;
 
-  /* If this compilation unit was already read in, free the
-     cached copy in order to read it in again.	This is
-     necessary because we skipped some symbols when we first
-     read in the compilation unit (see load_partial_dies).
-     This problem could be avoided, but the benefit is
-     unclear.  */
-  if (this_cu->cu != NULL)
-    free_one_cached_comp_unit (this_cu->cu);
-
-  /* Note that this is a pointer to our stack frame, being
-     added to a global data structure.	It will be cleaned up
-     in free_stack_comp_unit when we finish with this
-     compilation unit.	*/
-  this_cu->cu = &cu;
-  cu.per_cu = this_cu;
-
   /* Read the abbrevs for this compilation unit into a table.  */
-  dwarf2_read_abbrevs (abfd, &cu);
+  dwarf2_read_abbrevs (&cu);
   make_cleanup (dwarf2_free_abbrev_table, &cu);
 
   /* Read the compilation unit die.  */
@@ -3701,7 +3689,7 @@ load_partial_comp_unit (struct dwarf2_per_cu_data *this_cu)
   if (this_cu->cu == NULL)
     {
       cu = xmalloc (sizeof (*cu));
-      init_one_comp_unit (cu, objfile);
+      init_one_comp_unit (cu, this_cu);
 
       read_cu = 1;
 
@@ -3722,10 +3710,6 @@ load_partial_comp_unit (struct dwarf2_per_cu_data *this_cu)
 	  return;
 	}
 
-      /* Link this compilation unit into the compilation unit tree.  */
-      this_cu->cu = cu;
-      cu->per_cu = this_cu;
-
       /* Link this CU into read_in_chain.  */
       this_cu->cu->read_in_chain = dwarf2_per_objfile->read_in_chain;
       dwarf2_per_objfile->read_in_chain = this_cu;
@@ -3738,7 +3722,7 @@ load_partial_comp_unit (struct dwarf2_per_cu_data *this_cu)
 
   /* Read the abbrevs for this compilation unit into a table.  */
   gdb_assert (cu->dwarf2_abbrevs == NULL);
-  dwarf2_read_abbrevs (abfd, cu);
+  dwarf2_read_abbrevs (cu);
   free_abbrevs_cleanup = make_cleanup (dwarf2_free_abbrev_table, cu);
 
   /* Read the compilation unit die.  */
@@ -4718,7 +4702,7 @@ load_full_comp_unit (struct dwarf2_per_cu_data *per_cu)
   if (per_cu->cu == NULL)
     {
       cu = xmalloc (sizeof (*cu));
-      init_one_comp_unit (cu, objfile);
+      init_one_comp_unit (cu, per_cu);
 
       read_cu = 1;
 
@@ -4742,12 +4726,8 @@ load_full_comp_unit (struct dwarf2_per_cu_data *per_cu)
       cu->header.first_die_offset = info_ptr - beg_of_comp_unit;
 
       /* Read the abbrevs for this compilation unit.  */
-      dwarf2_read_abbrevs (abfd, cu);
+      dwarf2_read_abbrevs (cu);
       free_abbrevs_cleanup = make_cleanup (dwarf2_free_abbrev_table, cu);
-
-      /* Link this compilation unit into the compilation unit tree.  */
-      per_cu->cu = cu;
-      cu->per_cu = per_cu;
 
       /* Link this CU into read_in_chain.  */
       per_cu->cu->read_in_chain = dwarf2_per_objfile->read_in_chain;
@@ -9151,7 +9131,7 @@ read_comp_unit (gdb_byte *info_ptr, struct dwarf2_cu *cu)
 
   if (cu->dwarf2_abbrevs == NULL)
     {
-      dwarf2_read_abbrevs (cu->objfile->obfd, cu);
+      dwarf2_read_abbrevs (cu);
       back_to = make_cleanup (dwarf2_free_abbrev_table, cu);
       read_abbrevs = 1;
     }
@@ -9330,8 +9310,9 @@ read_full_die (const struct die_reader_specs *reader,
    the data found in the abbrev table.  */
 
 static void
-dwarf2_read_abbrevs (bfd *abfd, struct dwarf2_cu *cu)
+dwarf2_read_abbrevs (struct dwarf2_cu *cu)
 {
+  bfd *abfd = cu->objfile->obfd;
   struct comp_unit_head *cu_header = &cu->header;
   gdb_byte *abbrev_ptr;
   struct abbrev_info *cur_abbrev;
@@ -10020,7 +10001,7 @@ find_partial_die (unsigned int offset, struct dwarf2_cu *cu)
       back_to = make_cleanup (null_cleanup, 0);
       if (per_cu->cu->dwarf2_abbrevs == NULL)
 	{
-	  dwarf2_read_abbrevs (objfile->obfd, per_cu->cu);
+	  dwarf2_read_abbrevs (per_cu->cu);
 	  make_cleanup (dwarf2_free_abbrev_table, per_cu->cu);
 	}
       info_ptr = (dwarf2_per_objfile->info.buffer
@@ -14383,19 +14364,24 @@ lookup_signatured_type_at_offset (struct objfile *objfile,
   return type_sig;
 }
 
-/* Read in signatured type at OFFSET and build its CU and die(s).  */
+/* Load the DIEs associated with type unit PER_CU into memory.  */
 
 static void
-read_signatured_type_at_offset (struct objfile *objfile,
-				struct dwarf2_section_info *sect,
-				unsigned int offset)
+load_full_type_unit (struct dwarf2_per_cu_data *per_cu)
 {
+  struct objfile *objfile = per_cu->objfile;
+  struct dwarf2_section_info *sect = per_cu->debug_types_section;
+  unsigned int offset = per_cu->offset;
   struct signatured_type *type_sig;
 
   dwarf2_read_section (objfile, sect);
 
   /* We have the section offset, but we need the signature to do the
-     hash table lookup.	 */
+     hash table lookup.  */
+  /* FIXME: This is sorta unnecessary, read_signatured_type only uses
+     the signature to assert we found the right one.
+     Ok, but it's a lot of work.  We should simplify things so any needed
+     assert doesn't require all this clumsiness.  */
   type_sig = lookup_signatured_type_at_offset (objfile, sect, offset);
 
   gdb_assert (type_sig->per_cu.cu == NULL);
@@ -14424,10 +14410,7 @@ read_signatured_type (struct signatured_type *type_sig)
   gdb_assert (type_sig->per_cu.cu == NULL);
 
   cu = xmalloc (sizeof (*cu));
-  init_one_comp_unit (cu, objfile);
-
-  type_sig->per_cu.cu = cu;
-  cu->per_cu = &type_sig->per_cu;
+  init_one_comp_unit (cu, &type_sig->per_cu);
 
   /* If an error occurs while loading, release our storage.  */
   free_cu_cleanup = make_cleanup (free_heap_comp_unit, cu);
@@ -14445,7 +14428,7 @@ read_signatured_type (struct signatured_type *type_sig)
 			    hashtab_obstack_allocate,
 			    dummy_obstack_deallocate);
 
-  dwarf2_read_abbrevs (objfile->obfd, cu);
+  dwarf2_read_abbrevs (cu);
   back_to = make_cleanup (dwarf2_free_abbrev_table, cu);
 
   init_cu_die_reader (&reader_specs, cu);
@@ -15864,13 +15847,15 @@ dwarf2_find_comp_unit (unsigned int offset, struct objfile *objfile)
   return this_cu;
 }
 
-/* Initialize dwarf2_cu CU for OBJFILE in a pre-allocated space.  */
+/* Initialize dwarf2_cu CU, owned by PER_CU.  */
 
 static void
-init_one_comp_unit (struct dwarf2_cu *cu, struct objfile *objfile)
+init_one_comp_unit (struct dwarf2_cu *cu, struct dwarf2_per_cu_data *per_cu)
 {
   memset (cu, 0, sizeof (*cu));
-  cu->objfile = objfile;
+  per_cu->cu = cu;
+  cu->per_cu = per_cu;
+  cu->objfile = per_cu->objfile;
   obstack_init (&cu->comp_unit_obstack);
 }
 
@@ -15903,8 +15888,8 @@ free_heap_comp_unit (void *data)
 {
   struct dwarf2_cu *cu = data;
 
-  if (cu->per_cu != NULL)
-    cu->per_cu->cu = NULL;
+  gdb_assert (cu->per_cu != NULL);
+  cu->per_cu->cu = NULL;
   cu->per_cu = NULL;
 
   obstack_free (&cu->comp_unit_obstack, NULL);
@@ -15924,20 +15909,18 @@ free_stack_comp_unit (void *data)
 {
   struct dwarf2_cu *cu = data;
 
+  gdb_assert (cu->per_cu != NULL);
+  cu->per_cu->cu = NULL;
+  cu->per_cu = NULL;
+
   obstack_free (&cu->comp_unit_obstack, NULL);
   cu->partial_dies = NULL;
 
-  if (cu->per_cu != NULL)
-    {
-      /* This compilation unit is on the stack in our caller, so we
-	 should not xfree it.  Just unlink it.  */
-      cu->per_cu->cu = NULL;
-      cu->per_cu = NULL;
-
-      /* If we had a per-cu pointer, then we may have other compilation
-	 units loaded, so age them now.  */
-      age_cached_comp_units ();
-    }
+  /* The previous code only did this if per_cu != NULL.
+     But that would always succeed, so now we just unconditionally do
+     the aging.  This seems like the wrong place to do such aging,
+     but cleaning that up is left for later.  */
+  age_cached_comp_units ();
 }
 
 /* Free all cached compilation units.  */

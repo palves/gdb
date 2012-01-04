@@ -1,5 +1,27 @@
 2012-01-04  Tristan Gingold  <gingold@adacore.com>
 
+	* mach-o.c (bfd_mach_o_fat_stat_arch_elt): New function.
+	(bfd_mach_o_generic_stat_arch_elt): Adjust.
+
+2012-01-04  Tristan Gingold  <gingold@adacore.com>
+
+	* mach-o.c (bfd_mach_o_fat_member_init): New function.
+	(bfd_mach_o_openr_next_archived_file): Reindent.
+	Adjust to call bfd_mach_o_fat_member_init.
+	(bfd_mach_o_fat_extract): Adjust to call bfd_mach_o_fat_member_init.
+
+2012-01-04  Tristan Gingold  <gingold@adacore.com>
+
+	* mach-o-x86-64.c (bfd_mach_o_x86_64_swap_reloc_out): Handle
+	BFD_RELOC_32, BFD_RELOC_MACH_O_X86_64_PCREL32_1,
+	BFD_RELOC_MACH_O_X86_64_PCREL32_2,
+	BFD_RELOC_MACH_O_X86_64_PCREL32_4,
+	BFD_RELOC_MACH_O_X86_64_BRANCH32,
+	BFD_RELOC_MACH_O_X86_64_SUBTRACTOR32,
+	BFD_RELOC_MACH_O_X86_64_GOT.
+
+2012-01-04  Tristan Gingold  <gingold@adacore.com>
+
 	* mach-o.h (bfd_mach_o_fvmlib_command): New structure.
 	(bfd_mach_o_load_command): Add fvmlib field.
 
