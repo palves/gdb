@@ -1,3 +1,44 @@
+2012-01-06  Doug Evans  <dje@google.com>
+
+	* dwarf2read.c: Move FIXME from dwarf2_build_psymtabs_hard
+	to top of file.
+	(dwarf2_find_comp_unit): Delete.
+	(process_psymtab_comp_unit): Make result "void".
+	Delete args buffer, info_ptr, buffer_size, and replace with
+	"section".  All callers updated.
+	(dwarf2_build_psymtabs_hard): Simplify.
+
+2012-01-06  Sergio Durigan Junior  <sergiodj@redhat.com>
+	    Thiago Jung Bauermann  <bauerman@br.ibm.com>
+
+	* ada-lang.c (ada_exception_name_addr): Add `volatile' keyword
+	before `struct gdb_exception'.
+	* breakpoint.c (update_global_location_list_nothrow)
+	(update_breakpoint_locations, enable_breakpoint_disp): Likewise.
+	* cp-abi.c (value_rtti_type): Likewise.
+	* cp-support.c (cp_validate_operator): Likewise.
+	* infrun.c (insert_exception_resume_breakpoint)
+	(check_exception_resume, keep_going): Likewise.
+	* mi-interp.c (mi_breakpoint_created)
+	(mi_breakpoint_modified): Likewise.
+	* rs6000-aix-tdep.c (rs6000_convert_from_func_ptr_addr): Likewise.
+	* solib-ia64-hpux.c (ia64_hpux_at_dld_breakpoint_p)
+	(ia64_hpux_handle_dld_breakpoint_1): Likewise.
+
+2012-01-05  Doug Evans  <dje@google.com>
+
+	* dwarf2read.c (statement_prologue): Delete, unused.
+
+	* dwarf2read.c (dwarf2_per_cu_addr_size): Make result type an int.
+	* dwarf2loc.h (dwarf2_per_cu_addr_size): Update.
+
+	* dwarf2read.c (comp_unit_header): Delete, unused.
+
+2012-01-05  Ulrich Weigand  <uweigand@de.ibm.com>
+
+	* configure.tgt [s390*-*-*] (gdb_target_obs): Add corelow.o.
+	* config/s390/s390.mh (NATDEPFILES): Remove corelow.o.
+
 2012-01-05  Khoo Yit Phang  <khooyp@cs.umd.edu>
 
 	* infrun.c (normal_stop): Don't skip calling the normal_stop
