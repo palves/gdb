@@ -183,6 +183,7 @@ struct gdbarch
   gdbarch_push_dummy_call_ftype *push_dummy_call;
   int call_dummy_location;
   gdbarch_push_dummy_code_ftype *push_dummy_code;
+  gdbarch_extract_arguments_ftype *extract_arguments;
   gdbarch_print_registers_info_ftype *print_registers_info;
   gdbarch_print_float_info_ftype *print_float_info;
   gdbarch_print_vector_info_ftype *print_vector_info;
@@ -338,6 +339,7 @@ struct gdbarch startup_gdbarch =
   0,  /* push_dummy_call */
   0,  /* call_dummy_location */
   0,  /* push_dummy_code */
+  0,  /* extract_arguments */
   default_print_registers_info,  /* print_registers_info */
   0,  /* print_float_info */
   0,  /* print_vector_info */
@@ -626,6 +628,7 @@ verify_gdbarch (struct gdbarch *gdbarch)
   /* Skip verify of push_dummy_call, has predicate.  */
   /* Skip verify of call_dummy_location, invalid_p == 0 */
   /* Skip verify of push_dummy_code, has predicate.  */
+  /* Skip verify of extract_arguments, has predicate.  */
   /* Skip verify of print_registers_info, invalid_p == 0 */
   /* Skip verify of print_float_info, has predicate.  */
   /* Skip verify of print_vector_info, has predicate.  */
@@ -906,6 +909,12 @@ gdbarch_dump (struct gdbarch *gdbarch, struct ui_file *file)
   fprintf_unfiltered (file,
                       "gdbarch_dump: elf_make_msymbol_special = <%s>\n",
                       host_address_to_string (gdbarch->elf_make_msymbol_special));
+  fprintf_unfiltered (file,
+                      "gdbarch_dump: gdbarch_extract_arguments_p() = %d\n",
+                      gdbarch_extract_arguments_p (gdbarch));
+  fprintf_unfiltered (file,
+                      "gdbarch_dump: extract_arguments = <%s>\n",
+                      host_address_to_string (gdbarch->extract_arguments));
   fprintf_unfiltered (file,
                       "gdbarch_dump: fast_tracepoint_valid_at = <%s>\n",
                       host_address_to_string (gdbarch->fast_tracepoint_valid_at));
@@ -2151,6 +2160,30 @@ set_gdbarch_push_dummy_code (struct gdbarch *gdbarch,
                              gdbarch_push_dummy_code_ftype push_dummy_code)
 {
   gdbarch->push_dummy_code = push_dummy_code;
+}
+
+int
+gdbarch_extract_arguments_p (struct gdbarch *gdbarch)
+{
+  gdb_assert (gdbarch != NULL);
+  return gdbarch->extract_arguments != NULL;
+}
+
+void
+gdbarch_extract_arguments (struct gdbarch *gdbarch, struct frame_info *frame, int nargs, struct type **args_in, struct value **args_out, struct type *struct_return_in, struct value **struct_return_out)
+{
+  gdb_assert (gdbarch != NULL);
+  gdb_assert (gdbarch->extract_arguments != NULL);
+  if (gdbarch_debug >= 2)
+    fprintf_unfiltered (gdb_stdlog, "gdbarch_extract_arguments called\n");
+  gdbarch->extract_arguments (frame, nargs, args_in, args_out, struct_return_in, struct_return_out);
+}
+
+void
+set_gdbarch_extract_arguments (struct gdbarch *gdbarch,
+                               gdbarch_extract_arguments_ftype extract_arguments)
+{
+  gdbarch->extract_arguments = extract_arguments;
 }
 
 void

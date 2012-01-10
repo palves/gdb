@@ -477,6 +477,13 @@ M:CORE_ADDR:push_dummy_call:struct value *function, struct regcache *regcache, C
 v:int:call_dummy_location::::AT_ENTRY_POINT::0
 M:CORE_ADDR:push_dummy_code:CORE_ADDR sp, CORE_ADDR funaddr, struct value **args, int nargs, struct type *value_type, CORE_ADDR *real_pc, CORE_ADDR *bp_addr, struct regcache *regcache:sp, funaddr, args, nargs, value_type, real_pc, bp_addr, regcache
 
+# Given a method prototype defined by NARGS args, with each arg of
+# corresponding type in the ARGS_IN type array, build NARGS value
+# objects that extract each of the arguments from the frame.  If
+# STRUCT_RETURN_IN is not NULL, then STRUCT_RETURN_OUT is set to value
+# that extracts the hidden argument of type STRUCT_RETURN_IN
+F:void:extract_arguments:struct frame_info *frame, int nargs, struct type **args_in, struct value **args_out, struct type *struct_return_in, struct value **struct_return_out:frame, nargs, args_in, args_out, struct_return_in, struct_return_out
+
 m:void:print_registers_info:struct ui_file *file, struct frame_info *frame, int regnum, int all:file, frame, regnum, all::default_print_registers_info::0
 M:void:print_float_info:struct ui_file *file, struct frame_info *frame, const char *args:file, frame, args
 M:void:print_vector_info:struct ui_file *file, struct frame_info *frame, const char *args:file, frame, args

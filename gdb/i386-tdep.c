@@ -2415,6 +2415,54 @@ i386_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
   return sp + 8;
 }
 
+/* Implementation of gdbarch method extract_arguments.  */
+
+static void
+i386_extract_arguments (struct frame_info *frame,
+			int nargs, struct type **args_in,
+			struct value **args_out,
+			struct type *struct_return_in,
+			struct value **struct_return_out)
+{
+  int i;
+  CORE_ADDR sp = 0;
+  int args_space_used = 0;
+
+  /* Get the first arg's slot ( 8(%ebp) ), but unwind, rather than
+     assuming a regular frame with frame pointer.  */
+  sp = get_frame_register_unsigned (get_prev_frame (frame),
+				    I386_ESP_REGNUM);
+
+  if (struct_return_in)
+    {
+      *struct_return_out
+	= value_from_contents_and_address (struct_return_in, NULL, sp);
+
+      args_space_used += 4;
+    }
+
+  for (i = 0; i < nargs; i++)
+    {
+      int len = TYPE_LENGTH (args_in[i]);
+
+      if (i386_16_byte_align_p (args_in[i]))
+	args_space_used = align_up (args_space_used, 16);
+
+      args_out[i]
+	= value_from_contents_and_address (args_in[i], NULL,
+					   (sp + args_space_used));
+
+      /* The System V ABI says that:
+
+	 "An argument's size is increased, if necessary, to make it a
+	 multiple of [32-bit] words.  This may require tail padding,
+	 depending on the size of the argument."
+
+	 This makes sure the stack stays word-aligned.  */
+      args_space_used += align_up (len, 4);
+    }
+}
+
 /* These registers are used for returning integers (and on some
    targets also for returning `struct' and `union' values when their
    size and alignment match an integer type).  */
@@ -7366,6 +7414,8 @@ i386_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   /* Call dummy code.  */
   set_gdbarch_push_dummy_call (gdbarch, i386_push_dummy_call);
   set_gdbarch_frame_align (gdbarch, i386_frame_align);
+
+  set_gdbarch_extract_arguments (gdbarch, i386_extract_arguments);
 
   set_gdbarch_convert_register_p (gdbarch, i386_convert_register_p);
   set_gdbarch_register_to_value (gdbarch,  i386_register_to_value);

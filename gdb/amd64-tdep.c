@@ -904,6 +904,162 @@ amd64_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
 
   return sp + 16;
 }
+
+static void
+amd64_extract_arguments_1 (struct frame_info *frame, int nargs,
+			   struct type **args_in, struct value **args_out,
+			   int struct_return)
+{
+  struct gdbarch *gdbarch = get_frame_arch (frame);
+  struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
+  int *integer_regs = tdep->call_dummy_integer_regs;
+  int num_integer_regs = tdep->call_dummy_num_integer_regs;
+
+  static int sse_regnum[] =
+  {
+    /* %xmm0 ... %xmm7 */
+    AMD64_XMM0_REGNUM + 0, AMD64_XMM1_REGNUM,
+    AMD64_XMM0_REGNUM + 2, AMD64_XMM0_REGNUM + 3,
+    AMD64_XMM0_REGNUM + 4, AMD64_XMM0_REGNUM + 5,
+    AMD64_XMM0_REGNUM + 6, AMD64_XMM0_REGNUM + 7,
+  };
+  struct type **stack_args = alloca (nargs * sizeof (struct type *));
+  /* We ignore that some arguments that are passed by MEMORY are
+     mirrored in registers.  */
+  int num_stack_args = 0;
+  int element = 0;
+  int integer_reg = 0;
+  int sse_reg = 0;
+  int i;
+  CORE_ADDR sp;
+
+  gdb_assert (tdep->classify);
+
+  /* Reserve a register for the "hidden" argument.  */
+  if (struct_return)
+    integer_reg++;
+
+  for (i = 0; i < nargs; i++)
+    {
+      struct type *type = args_in[i];
+      int len = TYPE_LENGTH (type);
+      enum amd64_reg_class class[2];
+      int needed_integer_regs = 0;
+      int needed_sse_regs = 0;
+      int j;
+
+      /* Classify argument.  */
+      tdep->classify (type, class);
+
+      /* Calculate the number of integer and SSE registers needed for
+         this argument.  */
+      for (j = 0; j < 2; j++)
+	{
+	  if (class[j] == AMD64_INTEGER)
+	    needed_integer_regs++;
+	  else if (class[j] == AMD64_SSE)
+	    needed_sse_regs++;
+	}
+
+      /* Check whether the argument was passed in registers.  */
+      if (integer_reg + needed_integer_regs > num_integer_regs
+	  || sse_reg + needed_sse_regs > ARRAY_SIZE (sse_regnum)
+	  || (needed_integer_regs == 0 && needed_sse_regs == 0))
+	{
+	  /* The argument was passed on the stack.  */
+	  stack_args[num_stack_args] = args_in[i];
+          num_stack_args++;
+	}
+      else
+	{
+	  /* The argument was passed in registers.  We assume if more
+	     than one register was necessary, then N contiguous
+	     registers starting from REGNUM were used.  */
+
+	  struct value *reg_val;
+	  int regnum = -1;
+	  int offset = 0;
+
+	  switch (class[0])
+	    {
+	    case AMD64_INTEGER:
+	      regnum = integer_regs[integer_reg++];
+	      break;
+
+	    case AMD64_SSE:
+	      regnum = sse_regnum[sse_reg++];
+	      break;
+
+	    case AMD64_SSEUP:
+	      gdb_assert (sse_reg > 0);
+	      regnum = sse_regnum[sse_reg - 1];
+	      offset = 8;
+	      break;
+
+	    default:
+	      gdb_assert (!"Unexpected register class.");
+	    }
+
+	  gdb_assert (regnum != -1);
+
+	  reg_val = allocate_value_lazy (args_in[i]);
+	  VALUE_LVAL (reg_val) = lval_register;
+	  VALUE_REGNUM (reg_val) = regnum;
+	  VALUE_FRAME_ID (reg_val) = get_frame_id (frame);
+	  set_value_offset (reg_val, offset);
+
+	  args_out[i] = reg_val;
+	}
+    }
+
+  /* Get the first arg's slot, but unwind, rather than assuming a
+     regular frame with frame pointer.  */
+  sp = get_frame_register_unsigned (get_prev_frame (frame),
+				    AMD64_RSP_REGNUM);
+
+  /* Extract the stack arguments.  */
+  for (i = 0; i < num_stack_args; i++)
+    {
+      struct type *type = stack_args[i];
+      int len = TYPE_LENGTH (type);
+      CORE_ADDR arg_addr = sp + element * 8;
+
+      args_out[i] = value_from_contents_and_address (type, NULL, arg_addr);
+      element += ((len + 7) / 8);
+    }
+}
+
+/* Implementation of gdbarch method extract_arguments.  */
+
+static void
+amd64_extract_arguments (struct frame_info *frame,
+			 int nargs, struct type **args_in,
+			 struct value **args_out,
+			 struct type *struct_return_in,
+			 struct value **struct_return_out)
+{
+  /* Extract arguments.  */
+  amd64_extract_arguments_1 (frame, nargs, args_in, args_out,
+			     struct_return_in != NULL);
+
+  /* Extract "hidden" argument".  */
+  if (struct_return_in)
+    {
+      struct gdbarch *gdbarch = get_frame_arch (frame);
+      struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
+      CORE_ADDR struct_addr;
+      /* The "hidden" argument is passed throught the first argument
+         register.  */
+      const int arg_regnum = tdep->call_dummy_integer_regs[0];
+
+      struct_addr = get_frame_register_unsigned (frame, arg_regnum);
+      *struct_return_out
+	= value_from_contents_and_address (struct_return_in,
+					   NULL,
+					   struct_addr);
+    }
+}
+
 
 /* Displaced instruction handling.  */
 
@@ -2655,6 +2811,7 @@ amd64_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
     ARRAY_SIZE (amd64_dummy_call_integer_regs);
   tdep->call_dummy_integer_regs = amd64_dummy_call_integer_regs;
   tdep->classify = amd64_classify;
+  set_gdbarch_extract_arguments (gdbarch, amd64_extract_arguments);
 
   set_gdbarch_convert_register_p (gdbarch, i387_convert_register_p);
   set_gdbarch_register_to_value (gdbarch, i387_register_to_value);

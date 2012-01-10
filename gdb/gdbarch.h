@@ -356,6 +356,12 @@ typedef CORE_ADDR (gdbarch_push_dummy_code_ftype) (struct gdbarch *gdbarch, CORE
 extern CORE_ADDR gdbarch_push_dummy_code (struct gdbarch *gdbarch, CORE_ADDR sp, CORE_ADDR funaddr, struct value **args, int nargs, struct type *value_type, CORE_ADDR *real_pc, CORE_ADDR *bp_addr, struct regcache *regcache);
 extern void set_gdbarch_push_dummy_code (struct gdbarch *gdbarch, gdbarch_push_dummy_code_ftype *push_dummy_code);
 
+extern int gdbarch_extract_arguments_p (struct gdbarch *gdbarch);
+
+typedef void (gdbarch_extract_arguments_ftype) (struct frame_info *frame, int nargs, struct type **args_in, struct value **args_out, struct type *struct_return_in, struct value **struct_return_out);
+extern void gdbarch_extract_arguments (struct gdbarch *gdbarch, struct frame_info *frame, int nargs, struct type **args_in, struct value **args_out, struct type *struct_return_in, struct value **struct_return_out);
+extern void set_gdbarch_extract_arguments (struct gdbarch *gdbarch, gdbarch_extract_arguments_ftype *extract_arguments);
+
 typedef void (gdbarch_print_registers_info_ftype) (struct gdbarch *gdbarch, struct ui_file *file, struct frame_info *frame, int regnum, int all);
 extern void gdbarch_print_registers_info (struct gdbarch *gdbarch, struct ui_file *file, struct frame_info *frame, int regnum, int all);
 extern void set_gdbarch_print_registers_info (struct gdbarch *gdbarch, gdbarch_print_registers_info_ftype *print_registers_info);

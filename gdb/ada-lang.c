@@ -10857,7 +10857,63 @@ ada_find_printable_frame (struct frame_info *fi)
 static CORE_ADDR
 ada_unhandled_exception_name_addr (void)
 {
-  return parse_and_eval_address ("e.full_name");
+  struct frame_info *frame = get_current_frame ();
+  struct gdbarch *gdbarch = get_frame_arch (frame);
+
+  /* Try to extract the arguments even if debug info for libgnat isn't
+     present.  */
+  if (gdbarch_extract_arguments_p (gdbarch))
+    {
+      struct type **args_in = alloca (1 * sizeof (struct type *));
+      struct value **args_out = alloca (1 * sizeof (struct value *));
+      struct type *void_ptr_type
+	= lookup_pointer_type (builtin_type (gdbarch)->builtin_void);
+      CORE_ADDR e;
+      struct value *full_name_val;
+      CORE_ADDR full_name;
+
+      /* Argument is a pointer to a system.standard_library.exception_data
+	 object.  E.g.,
+
+	 <__gnat_debug_raise_exception> (e=0x7ffff7dcc2e0) at s-except.adb:46
+	 (gdb) p e
+	 $1 = (access system.standard_library.exception_data) 0x7ffff7dcc2e0
+	 (gdb) p *e
+	 $2 = (
+	   not_handled_by_others => false,
+	   lang => 65 'A',
+	   name_length => 17,
+	   full_name => (system.address) 0x7ffff7b624a0,
+	   htable_ptr => 0x7ffff7dcc320,
+	   import_code => 0,
+	   raise_hook => 0
+	 )
+
+	 We're interested in FULL_NAME, which is at offset 8 of E in
+	 all ABIs we care about.
+      */
+
+      /* Extract the sole function's argument.  This is a pointer to a
+	 system.standard_library.exception_data object.  */
+      args_in[0] = void_ptr_type;
+      gdbarch_extract_arguments (gdbarch, frame, 1, args_in, args_out,
+				 NULL, NULL);
+
+      /* Get the argument pointer.  */
+      e = value_as_address (args_out[0]);
+
+      /* The FULL_NAME pointer is at offset 8 of the object pointed by
+	 E.  */
+      full_name_val = value_at (void_ptr_type, e + 8);
+      full_name = value_as_address (full_name_val);
+      return full_name;
+    }
+  else
+    {
+      /* No support for extracting arguments.  Will need to rely on
+	 debug info being present.  */
+      return parse_and_eval_address ("e.full_name");
+    }
 }
 
 /* Same as ada_unhandled_exception_name_addr, except that this function
@@ -10915,8 +10971,7 @@ ada_exception_name_addr_1 (enum exception_catchpoint_kind ex,
   switch (ex)
     {
       case ex_catch_exception:
-        return (parse_and_eval_address ("e.full_name"));
-        break;
+	return ada_unhandled_exception_name_addr ();
 
       case ex_catch_exception_unhandled:
         return data->exception_info->unhandled_exception_name_addr ();
