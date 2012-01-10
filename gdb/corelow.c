@@ -46,8 +46,6 @@
 #include "filenames.h"
 #include "progspace.h"
 #include "objfiles.h"
-#include "wrapper.h"
-
 
 #ifndef O_LARGEFILE
 #define O_LARGEFILE 0
@@ -131,8 +129,7 @@ default_core_sniffer (struct core_fns *our_fns, bfd *abfd)
 }
 
 /* Walk through the list of core functions to find a set that can
-   handle the core file open on ABFD.  Default to the first one in the
-   list if nothing matches.  Returns pointer to set that is
+   handle the core file open on ABFD.  Returns pointer to set that is
    selected.  */
 
 static struct core_fns *
@@ -161,15 +158,9 @@ sniff_core_bfd (bfd *abfd)
 	       bfd_get_filename (abfd), matches);
     }
   else if (matches == 0)
-    {
-      warning (_("\"%s\": no core file handler "
-		 "recognizes format, using default"),
-	       bfd_get_filename (abfd));
-    }
-  if (yummy == NULL)
-    {
-      yummy = core_file_fns;
-    }
+    error (_("\"%s\": no core file handler recognizes format"),
+	   bfd_get_filename (abfd));
+
   return (yummy);
 }
 
@@ -213,15 +204,19 @@ core_close (int quitting)
       int pid = ptid_get_pid (inferior_ptid);
       inferior_ptid = null_ptid;    /* Avoid confusion from thread
 				       stuff.  */
-      exit_inferior_silent (pid);
+      if (pid != 0)
+	exit_inferior_silent (pid);
 
       /* Clear out solib state while the bfd is still open.  See
          comments in clear_solib in solib.c.  */
       clear_solib ();
 
-      xfree (core_data->sections);
-      xfree (core_data);
-      core_data = NULL;
+      if (core_data)
+	{
+	  xfree (core_data->sections);
+	  xfree (core_data);
+	  core_data = NULL;
+	}
       core_has_fake_pid = 0;
 
       name = bfd_get_filename (core_bfd);
@@ -290,6 +285,7 @@ core_open (char *filename, int from_tty)
   bfd *temp_bfd;
   int scratch_chan;
   int flags;
+  volatile struct gdb_exception except;
 
   target_preopen (from_tty);
   if (!filename)
@@ -428,7 +424,13 @@ core_open (char *filename, int from_tty)
      may be a thread_stratum target loaded on top of target core by
      now.  The layer above should claim threads found in the BFD
      sections.  */
-  gdb_target_find_new_threads ();
+  TRY_CATCH (except, RETURN_MASK_ERROR)
+    {
+      target_find_new_threads ();
+    }
+
+  if (except.reason < 0)
+    exception_print (gdb_stderr, except);
 
   p = bfd_core_file_failing_command (core_bfd);
   if (p)

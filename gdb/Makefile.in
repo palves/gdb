@@ -581,7 +581,6 @@ ALL_TARGET_OBS = \
 	remote-m32r-sdi.o remote-mips.o \
 	xcoffread.o \
 	symfile-mem.o \
-	corelow.o \
 	windows-tdep.o \
 	linux-record.o
 
@@ -692,7 +691,7 @@ SFILES = ada-exp.y ada-lang.c ada-typeprint.c ada-valprint.c ada-tasks.c \
 	block.c blockframe.c breakpoint.c buildsym.c \
 	c-exp.y c-lang.c c-typeprint.c c-valprint.c \
 	charset.c cli-out.c coffread.c coff-pe-read.c \
-	complaints.c completer.c continuations.c corefile.c \
+	complaints.c completer.c continuations.c corefile.c corelow.c \
 	cp-abi.c cp-support.c cp-namespace.c cp-valprint.c \
 	d-lang.c d-valprint.c \
 	cp-name-parser.y \
@@ -735,7 +734,6 @@ SFILES = ada-exp.y ada-lang.c ada-typeprint.c ada-valprint.c ada-tasks.c \
 	ui-out.c utils.c ui-file.h ui-file.c \
 	user-regs.c \
 	valarith.c valops.c valprint.c value.c varobj.c vec.c \
-	wrapper.c \
 	xml-tdesc.c xml-support.c \
 	inferior.c gdb_usleep.c \
 	record.c gcore.c \
@@ -803,7 +801,7 @@ coff-pe-read.h parser-defs.h gdb_ptrace.h mips-linux-tdep.h \
 m68k-tdep.h spu-tdep.h jv-lang.h environ.h solib-irix.h amd64-tdep.h \
 doublest.h regset.h hppa-tdep.h ppc-linux-tdep.h rs6000-tdep.h \
 common/gdb_locale.h common/gdb_dirent.h arch-utils.h trad-frame.h gnu-nat.h \
-language.h nbsd-tdep.h wrapper.h solib-svr4.h \
+language.h nbsd-tdep.h solib-svr4.h \
 macroexp.h ui-file.h regcache.h gdb_string.h tracepoint.h i386-tdep.h \
 inf-child.h p-lang.h event-top.h gdbtypes.h user-regs.h \
 regformats/regdef.h config/alpha/nm-osf3.h  config/i386/nm-i386gnu.h \
@@ -860,7 +858,7 @@ COMMON_OBS = $(DEPFILES) $(CONFIG_OBS) $(YYOBJ) \
 	auxv.o \
 	bfd-target.o \
 	blockframe.o breakpoint.o findvar.o regcache.o \
-	charset.o continuations.o disasm.o dummy-frame.o dfp.o \
+	charset.o continuations.o corelow.o disasm.o dummy-frame.o dfp.o \
 	source.o value.o eval.o valops.o valarith.o valprint.o printcmd.o \
 	block.o symtab.o psymtab.o symfile.o symmisc.o linespec.o dictionary.o \
 	infcall.o \
@@ -887,7 +885,7 @@ COMMON_OBS = $(DEPFILES) $(CONFIG_OBS) $(YYOBJ) \
 	ada-lang.o c-lang.o d-lang.o f-lang.o objc-lang.o \
 	ada-tasks.o \
 	ui-out.o cli-out.o \
-	varobj.o vec.o wrapper.o \
+	varobj.o vec.o \
 	jv-lang.o jv-valprint.o jv-typeprint.o \
 	m2-lang.o opencl-lang.o p-lang.o p-typeprint.o p-valprint.o \
 	sentinel-frame.o \
@@ -1439,7 +1437,7 @@ ALLDEPFILES = \
 	avr-tdep.c \
 	bfin-linux-tdep.c bfin-tdep.c \
 	bsd-uthread.c bsd-kvm.c \
-	core-regset.c corelow.c \
+	core-regset.c \
 	dcache.c dicos-tdep.c darwin-nat.c \
 	exec.c \
 	fbsd-nat.c \
