@@ -201,63 +201,13 @@ tui_add_to_source_windows (struct tui_source_win_info *win_info)
     source_windows.list[source_windows.count++] = (void *) win_info;
 }
 
-static void
-tui_source_win_clear_detail (struct tui_win_info *self_)
-{
-  struct tui_source_win_info *self
-    = (struct tui_source_win_info *) self_;
-
-  self->gdbarch = NULL;
-  self->start_line_or_addr.loa = LOA_ADDRESS;
-  self->start_line_or_addr.u.addr = 0;
-  self->horizontal_offset = 0;
-}
-
-static void
-tui_data_display_win_clear_detail (struct tui_win_info *self_)
-{
-  struct tui_data_display_win_info *self
-    = (struct tui_data_display_win_info *) self_;
-
-  self->data_content = (tui_win_content) NULL;
-  self->data_content_count = 0;
-  self->regs_content = (tui_win_content) NULL;
-  self->regs_content_count = 0;
-  self->regs_display_type = TUI_UNDEFINED_REGS;
-  self->regs_column_count = 1;
-  self->display_regs = FALSE;
-}
-
-static void
-tui_command_win_clear_detail (struct tui_win_info *self_)
-{
-  struct tui_command_win_info *self = (struct tui_command_win_info *) self_;
-
-  self->cur_line = self->curch = 0;
-}
 
 /* Clear the pertinant detail in the windows.  */
 void
 tui_clear_win_detail (struct tui_win_info *win_info)
 {
   if (win_info != NULL)
-    {
-      switch (win_info->generic.type)
-	{
-	case SRC_WIN:
-	case DISASSEM_WIN:
-	  tui_source_win_clear_detail (win_info);
-	  break;
-	case CMD_WIN:
-	  tui_command_win_clear_detail (win_info);
-	  break;
-	case DATA_WIN:
-	  tui_data_display_win_clear_detail (win_info);
-	  break;
-	default:
-	  break;
-	}
-    }
+    win_info->vtable->clear_detail (win_info);
 }
 
 
@@ -643,6 +593,18 @@ init_win_info (struct tui_win_info *win_info, const char *name)
 #include "tui/tui-winsource.h"
 
 static void
+tui_source_win_clear_detail (struct tui_win_info *self_)
+{
+  struct tui_source_win_info *self
+    = (struct tui_source_win_info *) self_;
+
+  self->gdbarch = NULL;
+  self->start_line_or_addr.loa = LOA_ADDRESS;
+  self->start_line_or_addr.u.addr = 0;
+  self->horizontal_offset = 0;
+}
+
+static void
 tui_vertical_source_or_disasm_scroll (struct tui_win_info *win_info,
 				      enum tui_scroll_direction direction,
 				      int num_to_scroll)
@@ -770,7 +732,7 @@ static void src_disasm_win_free_window (struct tui_win_info *win_info);
 
 static struct tui_win_info_ops src_win_vtable =
   {
-    tui_win_info_clear_detail,
+    tui_source_win_clear_detail,
     tui_source_win_refresh,
     tui_source_win_refresh_win,
     tui_source_win_make_invisible_and_set_new_heigth,
@@ -802,6 +764,21 @@ static void
 init_source_win_info (struct tui_source_win_info *win_info)
 {
   init_source_disasm_win_info_1 (win_info, SRC_NAME);
+}
+
+static void
+tui_data_display_win_clear_detail (struct tui_win_info *self_)
+{
+  struct tui_data_display_win_info *self
+    = (struct tui_data_display_win_info *) self_;
+
+  self->data_content = (tui_win_content) NULL;
+  self->data_content_count = 0;
+  self->regs_content = (tui_win_content) NULL;
+  self->regs_content_count = 0;
+  self->regs_display_type = TUI_UNDEFINED_REGS;
+  self->regs_column_count = 1;
+  self->display_regs = FALSE;
 }
 
 static void
@@ -845,7 +822,7 @@ static void data_win_free_window (struct tui_win_info *win_info);
 
 static struct tui_win_info_ops data_win_vtable =
   {
-    tui_win_info_clear_detail,
+    tui_data_display_win_clear_detail,
     tui_win_info_refresh,
     tui_data_win_refresh_win,
     tui_data_win_make_invisible_and_set_new_height,
@@ -880,6 +857,14 @@ init_data_display_win_info (struct tui_data_display_win_info *win_info)
 }
 
 static void
+tui_command_win_clear_detail (struct tui_win_info *self_)
+{
+  struct tui_command_win_info *self = (struct tui_command_win_info *) self_;
+
+  self->cur_line = self->curch = 0;
+}
+
+static void
 tui_cmd_win_make_invisible_and_set_new_height (struct tui_win_info *win_info,
 					       int height)
 {
@@ -911,7 +896,7 @@ tui_cmd_win_make_visible_with_new_height (struct tui_win_info *win_info)
 
 static struct tui_win_info_ops command_win_vtable =
   {
-    tui_win_info_clear_detail,
+    tui_command_win_clear_detail,
     tui_win_info_refresh,
     tui_win_info_refresh_win,
     tui_cmd_win_make_invisible_and_set_new_height,
