@@ -81,7 +81,7 @@ lookup_partial_symtab (struct objfile *objfile, const char *name,
 
   ALL_OBJFILE_PSYMTABS (objfile, pst)
   {
-    if (FILENAME_CMP (name, pst->filename) == 0)
+    if (source_filename_cmp (name, pst->filename) == 0)
       {
 	return (pst);
       }
@@ -92,7 +92,7 @@ lookup_partial_symtab (struct objfile *objfile, const char *name,
       {
 	psymtab_to_fullname (pst);
 	if (pst->fullname != NULL
-	    && FILENAME_CMP (full_path, pst->fullname) == 0)
+	    && source_filename_cmp (full_path, pst->fullname) == 0)
 	  {
 	    return pst;
 	  }
@@ -107,7 +107,7 @@ lookup_partial_symtab (struct objfile *objfile, const char *name,
             rp = gdb_realpath (pst->fullname);
             make_cleanup (xfree, rp);
           }
-	if (rp != NULL && FILENAME_CMP (real_path, rp) == 0)
+	if (rp != NULL && source_filename_cmp (real_path, rp) == 0)
 	  {
 	    return pst;
 	  }
@@ -119,7 +119,7 @@ lookup_partial_symtab (struct objfile *objfile, const char *name,
   if (lbasename (name) == name)
     ALL_OBJFILE_PSYMTABS (objfile, pst)
     {
-      if (FILENAME_CMP (lbasename (pst->filename), name) == 0)
+      if (source_filename_cmp (lbasename (pst->filename), name) == 0)
 	return (pst);
     }
 

@@ -68,4 +68,17 @@ extern void clear_current_source_symtab_and_line (void);
 
 /* Add a source path substitution rule.  */
 extern void add_substitute_path_rule (char *, char *);
+
+/* Return zero if the two file names S1 and S2 are equivalent.  If not
+   equivalent, the returned value is similar to what strcmp would
+   return.  In other words, it returns a negative value if S1 is less
+   than S2, or a positive value if S2 is greater than S2.
+
+   This function does not normalize file names.  As a result, this
+   function will treat filenames that are spelled differently as
+   different even in the case when the two filenames point to the same
+   underlying file.  However, it does handle the fact that if `set
+   source-filenames-matching-scheme' mode is set to `dos-based',
+   forward and backward slashes are equal.  */
+extern int source_filename_cmp (const char *s1, const char *s2);
 #endif

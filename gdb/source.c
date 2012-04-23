@@ -909,7 +909,7 @@ substitute_path_rule_matches (const struct substitute_path_rule *rule,
   strncpy (path_start, path, from_len);
   path_start[from_len] = '\0';
 
-  if (FILENAME_CMP (path_start, rule->from) != 0)
+  if (source_filename_cmp (path_start, rule->from) != 0)
     return 0;
 
   /* Make sure that the region in the path that matches the substitution
@@ -1751,7 +1751,7 @@ find_substitute_path_rule (const char *from)
 
   while (rule != NULL)
     {
-      if (FILENAME_CMP (rule->from, from) == 0)
+      if (source_filename_cmp (rule->from, from) == 0)
         return rule;
       rule = rule->next;
     }
@@ -1847,7 +1847,7 @@ show_substitute_path_command (char *args, int from_tty)
 
   while (rule != NULL)
     {
-      if (from == NULL || FILENAME_CMP (rule->from, from) == 0)
+      if (from == NULL || source_filename_cmp (rule->from, from) == 0)
         printf_filtered ("  `%s' -> `%s'.\n", rule->from, rule->to);
       rule = rule->next;
     }
@@ -1887,7 +1887,7 @@ unset_substitute_path_command (char *args, int from_tty)
     {
       struct substitute_path_rule *next = rule->next;
 
-      if (from == NULL || FILENAME_CMP (from, rule->from) == 0)
+      if (from == NULL || source_filename_cmp (from, rule->from) == 0)
         {
           delete_substitute_path_rule (rule);
           rule_found = 1;
@@ -1941,6 +1941,46 @@ set_substitute_path_command (char *args, int from_tty)
 
   add_substitute_path_rule (argv[0], argv[1]);
   forget_cached_source_info ();
+}
+
+/* Allow the user to configure the debugger behavior with respect to
+   source filename matching.  */
+
+static const char source_file_names_dos_based[] = "dos-based";
+static const char source_file_names_unix[] = "unix";
+static const char *source_file_names_modes[] =
+{
+  source_file_names_dos_based,
+  source_file_names_unix
+};
+
+/* Handle binaries compiled on DOS-based filesystems (e.g, Windows),
+   by default, even if GDB itself is not running on such a system.
+   Such binaries may contain debug info with source paths the native
+   path handling functions wouldn't understand (e.g., backslash as
+   directory separator, drive names, and case insensitivity).  The
+   risk of this going wrong is very minor in practice, so it's more
+   useful to leave this as default.  */
+static const char *source_file_names_mode = source_file_names_dos_based;
+
+static void
+show_source_filenames_matching_scheme_command (struct ui_file *file,
+					       int from_tty,
+					       struct cmd_list_element *c,
+					       const char *value)
+{
+  fprintf_filtered (file, _("\
+File name matching scheme for source paths is \"%s\".\n"),
+		    value);
+}
+
+int
+source_filename_cmp (const char *s1, const char *s2)
+{
+  if (source_file_names_mode == source_file_names_dos_based)
+    return dos_filename_cmp (s1, s2);
+  else
+    return unix_filename_cmp (s1, s2);
 }
 
 
@@ -2058,4 +2098,22 @@ Usage: show substitute-path [FROM]\n\
 Print the rule for substituting FROM in source file names. If FROM\n\
 is not specified, print all substitution rules."),
            &showlist);
+
+  add_setshow_enum_cmd ("source-filenames-matching-scheme",
+			class_support,
+			source_file_names_modes,
+			&source_file_names_mode, _("\
+Set file name matching scheme for source paths"), _("\
+Set file name matching scheme for source paths"),
+			_("\
+If `unix', source paths (e.g., program source paths included in debug \n\
+info) starting the forward slash (`/') character are considered \n\
+absolute, and the directory separator character is the forward slash \n\
+(`/').  If `dos-based' (which is the default), source paths starting with \n\
+a drive name (e.g., `c:'), are also considered absolute, the backslash \n\
+(`\\') is also considered a directory separator, and source filename \n\
+comparisons are not case sensitive."),
+			NULL, /* setfunc */
+			show_source_filenames_matching_scheme_command,
+			&setlist, &showlist);
 }

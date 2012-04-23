@@ -57,6 +57,7 @@
 #include "vec.h"
 #include "c-lang.h"
 #include "valprint.h"
+#include "source.h"
 
 #include <fcntl.h>
 #include "gdb_string.h"
@@ -2285,7 +2286,7 @@ dw2_lookup_symtab (struct objfile *objfile, const char *name,
 	{
 	  const char *this_name = file_data->file_names[j];
 
-	  if (FILENAME_CMP (name, this_name) == 0)
+	  if (source_filename_cmp (name, this_name) == 0)
 	    {
 	      *result = dw2_instantiate_symtab (objfile, per_cu);
 	      return 1;

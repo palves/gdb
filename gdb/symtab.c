@@ -37,7 +37,7 @@
 #include "inferior.h"
 #include "linespec.h"
 #include "source.h"
-#include "filenames.h"		/* for FILENAME_CMP */
+#include "filenames.h"
 #include "objc-lang.h"
 #include "d-lang.h"
 #include "ada-lang.h"
@@ -180,7 +180,7 @@ got_symtab:
 
   ALL_SYMTABS (objfile, s)
   {
-    if (FILENAME_CMP (name, s->filename) == 0)
+    if (source_filename_cmp (name, s->filename) == 0)
       {
 	return s;
       }
@@ -192,7 +192,7 @@ got_symtab:
       {
         const char *fp = symtab_to_fullname (s);
 
-        if (fp != NULL && FILENAME_CMP (full_path, fp) == 0)
+        if (fp != NULL && source_filename_cmp (full_path, fp) == 0)
           {
             return s;
           }
@@ -207,7 +207,7 @@ got_symtab:
             char *rp = gdb_realpath (fullname);
 
             make_cleanup (xfree, rp);
-            if (FILENAME_CMP (real_path, rp) == 0)
+            if (source_filename_cmp (real_path, rp) == 0)
               {
                 return s;
               }
@@ -220,7 +220,7 @@ got_symtab:
   if (lbasename (name) == name)
     ALL_SYMTABS (objfile, s)
     {
-      if (FILENAME_CMP (lbasename (s->filename), name) == 0)
+      if (source_filename_cmp (lbasename (s->filename), name) == 0)
 	return s;
     }
 
@@ -2201,11 +2201,11 @@ find_line_symtab (struct symtab *symtab, int line,
 	struct linetable *l;
 	int ind;
 
-	if (FILENAME_CMP (symtab->filename, s->filename) != 0)
+	if (source_filename_cmp (symtab->filename, s->filename) != 0)
 	  continue;
 	if (symtab->fullname != NULL
 	    && symtab_to_fullname (s) != NULL
-	    && FILENAME_CMP (symtab->fullname, s->fullname) != 0)
+	    && source_filename_cmp (symtab->fullname, s->fullname) != 0)
 	  continue;	
 	l = LINETABLE (s);
 	ind = find_line_common (l, line, &exact);
@@ -4513,14 +4513,14 @@ append_exact_match_to_sals (char *filename, char *fullname, int lineno,
   ALL_PSPACES (pspace)
     ALL_PSPACE_SYMTABS (pspace, objfile, symtab)
     {
-      if (FILENAME_CMP (filename, symtab->filename) == 0)
+      if (source_filename_cmp (filename, symtab->filename) == 0)
 	{
 	  struct linetable *l;
 	  int len;
 
 	  if (fullname != NULL
 	      && symtab_to_fullname (symtab) != NULL
-    	      && FILENAME_CMP (fullname, symtab->fullname) != 0)
+    	      && source_filename_cmp (fullname, symtab->fullname) != 0)
     	    continue;		  
 	  l = LINETABLE (symtab);
 	  if (!l)

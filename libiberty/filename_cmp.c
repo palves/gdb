@@ -48,11 +48,14 @@ and backward slashes are equal.
 */
 
 int
-filename_cmp (const char *s1, const char *s2)
+unix_filename_cmp (const char *s1, const char *s2)
 {
-#ifndef HAVE_DOS_BASED_FILE_SYSTEM
-  return strcmp(s1, s2);
-#else
+  return strcmp (s1, s2);
+}
+
+int
+dos_filename_cmp (const char *s1, const char *s2)
+{
   for (;;)
     {
       int c1 = TOLOWER (*s1);
@@ -73,6 +76,4 @@ filename_cmp (const char *s1, const char *s2)
       s1++;
       s2++;
     }
-#endif
 }
-

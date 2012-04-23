@@ -70,8 +70,14 @@ extern "C" {
   (IS_DIR_SEPARATOR_1 (dos_based, (f)[0])		 \
    || HAS_DRIVE_SPEC_1 (dos_based, f))
 
-extern int filename_cmp (const char *s1, const char *s2);
-#define FILENAME_CMP(s1, s2)	filename_cmp(s1, s2)
+extern int dos_filename_cmp (const char *s1, const char *s2);
+extern int unix_filename_cmp (const char *s1, const char *s2);
+
+#if (HAVE_DOS_BASED_FILE_SYSTEM)
+#  define FILENAME_CMP(s1, s2)	dos_filename_cmp (s1, s2)
+#else
+#  define FILENAME_CMP(s1, s2)	unix_filename_cmp (s1, s2)
+#endif
 
 #ifdef __cplusplus
 }

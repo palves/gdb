@@ -44,6 +44,7 @@
 #include "cp-support.h"
 #include "dictionary.h"
 #include "addrmap.h"
+#include "source.h"
 
 /* Ask buildsym.h to define the vars it normally declares `extern'.  */
 #define	EXTERN
@@ -544,7 +545,7 @@ start_subfile (const char *name, const char *dirname)
       else
 	subfile_name = subfile->name;
 
-      if (FILENAME_CMP (subfile_name, name) == 0)
+      if (source_filename_cmp (subfile_name, name) == 0)
 	{
 	  current_subfile = subfile;
 	  if (subfile_name != subfile->name)
