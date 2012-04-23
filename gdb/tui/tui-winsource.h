@@ -73,6 +73,16 @@ extern int tui_addr_is_displayed (CORE_ADDR,
 				  struct tui_winsource_win *,
 				  int);
 
+extern void tui_source_win_clear_detail (struct tui_win_info *);
+extern void tui_source_win_refresh (struct tui_win_info *);
+extern void tui_source_win_refresh_win (struct tui_win_info *);
+extern void tui_source_win_make_visible_with_new_heigth (struct tui_win_info *);
+extern void tui_source_win_make_invisible_and_set_new_heigth (struct tui_win_info *,
+							      int);
+extern void tui_winsource_del_window (struct tui_win_info *);
+extern void tui_winsource_free_window (struct tui_win_info *);
+
+void init_winsource_win (struct tui_winsource_win *win_info, const char *name);
 
 /* Constant definitions. */
 #define SCROLL_THRESHOLD 2	/* Threshold for lazy scroll.  */

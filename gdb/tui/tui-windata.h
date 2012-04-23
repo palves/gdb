@@ -37,5 +37,6 @@ extern void tui_display_data_from (int, int);
 extern void tui_vertical_data_scroll (struct tui_win_info *,
 				      enum tui_scroll_direction,
 				      int);
+void init_data_display_win_info (struct tui_data_display_win_info *);
 
 #endif

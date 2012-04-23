@@ -27,6 +27,7 @@
 #include "tui/tui-win.h"
 #include "tui/tui-io.h"
 #include "tui/tui-command.h"
+#include "tui/tui-wingeneral.h"
 
 #include "gdb_curses.h"
 #include "gdb_string.h"
@@ -132,4 +133,67 @@ tui_dispatch_ctrl_char (unsigned int ch)
 	}
       return c;
     }
+}
+
+static void
+tui_command_win_clear_detail (struct tui_win_info *self_)
+{
+  struct tui_command_win_info *self = (struct tui_command_win_info *) self_;
+
+  self->cur_line = self->curch = 0;
+}
+
+static void
+tui_command_win_make_invisible_and_set_new_height
+(struct tui_win_info *win_info,
+ int height)
+{
+  struct tui_gen_win_info *gen_win_info;
+
+  tui_make_invisible (&win_info->generic);
+  win_info->generic.height = height;
+  if (height > 1)
+    win_info->generic.viewport_height = height - 1;
+  else
+    win_info->generic.viewport_height = height;
+}
+
+static void
+tui_command_win_make_visible_with_new_height (struct tui_win_info *win_info)
+{
+  struct tui_command_win_info *cmd_win_info
+    = (struct tui_command_win_info *) win_info;
+
+  tui_make_visible (&win_info->generic);
+  tui_check_and_display_highlight_if_needed (win_info);
+
+  cmd_win_info->cur_line = 0;
+  cmd_win_info->curch = 0;
+  wmove (win_info->generic.handle,
+	 cmd_win_info->cur_line,
+	 cmd_win_info->curch);
+}
+
+static struct tui_win_info_ops command_win_vtable =
+  {
+    tui_command_win_clear_detail,
+    tui_win_info_refresh,
+    tui_win_info_refresh_win,
+    tui_command_win_make_invisible_and_set_new_height,
+    tui_command_win_make_visible_with_new_height,
+    tui_win_info_vertical_scroll,
+    tui_win_info_horizontal_scroll,
+    tui_win_info_del_window,
+    tui_win_info_free_window,
+  };
+
+void
+init_command_win_info (struct tui_command_win_info *win_info)
+{
+  init_win_info (&win_info->win_info, CMD_NAME);
+
+  win_info->cur_line = 0;
+  win_info->curch = 0;
+
+  win_info->win_info.vtable = &command_win_vtable;
 }

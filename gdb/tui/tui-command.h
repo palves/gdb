@@ -25,4 +25,6 @@
 
 extern unsigned int tui_dispatch_ctrl_char (unsigned int);
 
+extern void init_command_win_info (struct tui_command_win_info *);
+
 #endif

@@ -393,10 +393,10 @@ tui_get_low_disassembly_address (struct gdbarch *gdbarch,
 }
 
 /* Scroll the disassembly forward or backward vertically.  */
-void
-tui_vertical_disassem_scroll (struct tui_win_info *win_info,
-			      enum tui_scroll_direction scroll_direction,
-			      int num_to_scroll)
+static void
+tui_disasm_vertical_scroll (struct tui_win_info *win_info,
+			    enum tui_scroll_direction scroll_direction,
+			    int num_to_scroll)
 {
   if (win_info->generic.content != NULL)
     {
@@ -416,4 +416,24 @@ tui_vertical_disassem_scroll (struct tui_win_info *win_info,
       val.u.addr = tui_find_disassembly_address (gdbarch, pc, dir);
       tui_update_source_window_as_is (TUI_DISASM_WIN, gdbarch, NULL, val, FALSE);
     }
+}
+
+static struct tui_win_info_ops disasm_win_vtable =
+  {
+    tui_source_win_clear_detail,
+    tui_source_win_refresh,
+    tui_source_win_refresh_win,
+    tui_source_win_make_invisible_and_set_new_heigth,
+    tui_source_win_make_visible_with_new_heigth,
+    tui_disasm_vertical_scroll,
+    tui_horizontal_source_scroll,
+    tui_winsource_del_window,
+    tui_winsource_free_window,
+  };
+
+void
+init_disasm_win_info (struct tui_disasm_win *win)
+{
+  init_winsource_win (&win->winsource, SRC_NAME);
+  win->winsource.win_info.vtable = &disasm_win_vtable;
 }

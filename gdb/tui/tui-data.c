@@ -25,6 +25,10 @@
 #include "tui/tui.h"
 #include "tui/tui-data.h"
 #include "tui/tui-wingeneral.h"
+#include "tui/tui-source.h"
+#include "tui/tui-disasm.h"
+#include "tui/tui-windata.h"
+#include "tui/tui-command.h"
 
 #include "gdb_string.h"
 #include "gdb_curses.h"
@@ -492,31 +496,31 @@ tui_win_info_clear_detail (struct tui_win_info *win_info)
 {
 }
 
-static void
+void
 tui_win_info_vertical_scroll (struct tui_win_info *win_info,
 			      enum tui_scroll_direction direction, int i)
 {
 }
 
-static void
+void
 tui_win_info_horizontal_scroll (struct tui_win_info *win_info,
 				enum tui_scroll_direction direction, int i)
 {
 }
 
-static void
+void
 tui_win_info_refresh (struct tui_win_info *win_info)
 {
   touchwin (win_info->generic.handle);
   tui_refresh_win (&win_info->generic);
 }
 
-static void
+void
 tui_win_info_refresh_win (struct tui_win_info *win_info)
 {
 }
 
-static void
+void
 tui_win_info_del_window (struct tui_win_info *win_info)
 {
   if (win_info->generic.handle != (WINDOW *) NULL)
@@ -527,7 +531,7 @@ tui_win_info_del_window (struct tui_win_info *win_info)
     }
 }
 
-static void
+void
 tui_win_info_free_window (struct tui_win_info *win_info)
 {
   if (win_info->generic.handle != (WINDOW *) NULL)
@@ -540,7 +544,7 @@ tui_win_info_free_window (struct tui_win_info *win_info)
   xfree (win_info);
 }
 
-static void
+void
 tui_win_info_make_invisible_and_set_new_height (struct tui_win_info *win_info,
 						int height)
 {
@@ -575,7 +579,7 @@ static struct tui_win_info_ops tui_win_info_vtable =
     tui_win_info_free_window,
   };
 
-static void
+void
 init_win_info (struct tui_win_info *win_info, const char *name)
 {
   tui_init_generic_part (&win_info->generic);
@@ -585,339 +589,6 @@ init_win_info (struct tui_win_info *win_info, const char *name)
   win_info->name = name;
 
   win_info->vtable = &tui_win_info_vtable;
-}
-
-#include "tui/tui-source.h"
-#include "tui/tui-disasm.h"
-#include "tui/tui-windata.h"
-#include "tui/tui-winsource.h"
-
-static void
-tui_source_win_clear_detail (struct tui_win_info *self_)
-{
-  struct tui_winsource_win *self
-    = (struct tui_winsource_win *) self_;
-
-  self->gdbarch = NULL;
-  self->start_line_or_addr.loa = LOA_ADDRESS;
-  self->start_line_or_addr.u.addr = 0;
-  self->horizontal_offset = 0;
-}
-
-static void
-tui_source_win_refresh (struct tui_win_info *win_info)
-{
-  struct tui_winsource_win *src_win
-    = (struct tui_winsource_win *) win_info;
-  touchwin (src_win->execution_info->handle);
-  tui_refresh_win (src_win->execution_info);
-
-  tui_win_info_refresh (win_info);
-}
-
-static void
-tui_source_win_refresh_win (struct tui_win_info *win_info)
-{
-  struct tui_winsource_win *src_win = (struct tui_winsource_win *) win_info;
-
-  tui_show_source_content (src_win);
-  tui_check_and_display_highlight_if_needed (win_info);
-  tui_erase_exec_info_content (src_win);
-  tui_update_exec_info (src_win);
-}
-
-#include "symtab.h"
-#include "breakpoint.h"
-#include "frame.h"
-#include "cli/cli-cmds.h"
-#include "top.h"
-#include "source.h"
-#include "tui-stack.h"
-
-static void
-tui_source_win_make_invisible_and_set_new_heigth (struct tui_win_info *win_info,
-						  int height)
-{
-  struct tui_gen_win_info *gen_win_info;
-  struct tui_winsource_win *src_win_info;
-
-  tui_win_info_make_invisible_and_set_new_height (win_info, height);
-
-  src_win_info = (struct tui_winsource_win *) win_info;
-
-  /* Now deal with the auxillary windows associated with win_info.  */
-
-  gen_win_info = src_win_info->execution_info;
-  tui_make_invisible (gen_win_info);
-  gen_win_info->height = height;
-  gen_win_info->origin.y = win_info->generic.origin.y;
-  if (height > 1)
-    gen_win_info->viewport_height = height - 1;
-  else
-    gen_win_info->viewport_height = height;
-  gen_win_info->viewport_height--;
-
-  if (tui_source_win_has_locator (src_win_info))
-    {
-      gen_win_info = tui_locator_win_info_ptr ();
-      tui_make_invisible (gen_win_info);
-      gen_win_info->origin.y = win_info->generic.origin.y + height;
-    }
-}
-
-static void
-tui_source_win_make_visible_with_new_heigth (struct tui_win_info *win_info)
-{
-  struct tui_winsource_win *src_win_info;
-  struct symtab *s;
-
-  tui_make_visible (&win_info->generic);
-  tui_check_and_display_highlight_if_needed (win_info);
-
-  src_win_info = (struct tui_winsource_win *) win_info;
-  tui_free_win_content (src_win_info->execution_info);
-  tui_make_visible (src_win_info->execution_info);
-  if (win_info->generic.content != NULL)
-    {
-      struct gdbarch *gdbarch = src_win_info->gdbarch;
-      struct tui_line_or_address line_or_addr;
-      struct symtab_and_line cursal
-	= get_current_source_symtab_and_line ();
-
-      line_or_addr = src_win_info->start_line_or_addr;
-      tui_free_win_content (&win_info->generic);
-      tui_update_source_window (src_win_info, gdbarch,
-				cursal.symtab, line_or_addr, TRUE);
-    }
-  else if (deprecated_safe_get_selected_frame () != NULL)
-    {
-      struct tui_line_or_address line;
-      struct symtab_and_line cursal = get_current_source_symtab_and_line ();
-      struct frame_info *frame = deprecated_safe_get_selected_frame ();
-      struct gdbarch *gdbarch = get_frame_arch (frame);
-
-      s = find_pc_symtab (get_frame_pc (frame));
-      if (win_info->generic.type == SRC_WIN)
-	{
-	  line.loa = LOA_LINE;
-	  line.u.line_no = cursal.line;
-	}
-      else
-	{
-	  line.loa = LOA_ADDRESS;
-	  find_line_pc (s, cursal.line, &line.u.addr);
-	}
-      tui_update_source_window (src_win_info, gdbarch, s, line, TRUE);
-    }
-  if (tui_source_win_has_locator (src_win_info))
-    {
-      tui_make_visible (tui_locator_win_info_ptr ());
-      tui_show_locator_content ();
-    }
-}
-
-static void src_disasm_win_del_window (struct tui_win_info *win_info);
-static void src_disasm_win_free_window (struct tui_win_info *win_info);
-
-static struct tui_win_info_ops src_win_vtable =
-  {
-    tui_source_win_clear_detail,
-    tui_source_win_refresh,
-    tui_source_win_refresh_win,
-    tui_source_win_make_invisible_and_set_new_heigth,
-    tui_source_win_make_visible_with_new_heigth,
-    tui_vertical_source_scroll,
-    tui_horizontal_source_scroll,
-    src_disasm_win_del_window,
-    src_disasm_win_free_window,
-  };
-
-static struct tui_win_info_ops disasm_win_vtable =
-  {
-    tui_source_win_clear_detail,
-    tui_source_win_refresh,
-    tui_source_win_refresh_win,
-    tui_source_win_make_invisible_and_set_new_heigth,
-    tui_source_win_make_visible_with_new_heigth,
-    tui_vertical_disassem_scroll,
-    tui_horizontal_source_scroll,
-    src_disasm_win_del_window,
-    src_disasm_win_free_window,
-  };
-
-static void
-init_source_disasm_win_info_1 (struct tui_winsource_win *win_info,
-			       const char *name)
-{
-  init_win_info (&win_info->win_info, name);
-
-  win_info->execution_info = NULL;
-  win_info->has_locator = FALSE;
-  win_info->horizontal_offset = 0;
-  win_info->gdbarch = NULL;
-  win_info->start_line_or_addr.loa = LOA_ADDRESS;
-  win_info->start_line_or_addr.u.addr = 0;
-  win_info->filename = 0;
-}
-
-static void
-init_source_win_info (struct tui_source_win *win)
-{
-  init_source_disasm_win_info_1 (&win->winsource, SRC_NAME);
-  win->winsource.win_info.vtable = &src_win_vtable;
-}
-
-static void
-init_disasm_win_info (struct tui_disasm_win *win)
-{
-  init_source_disasm_win_info_1 (&win->winsource, SRC_NAME);
-  win->winsource.win_info.vtable = &disasm_win_vtable;
-}
-
-static void
-tui_data_display_win_clear_detail (struct tui_win_info *self_)
-{
-  struct tui_data_display_win_info *self
-    = (struct tui_data_display_win_info *) self_;
-
-  self->data_content = (tui_win_content) NULL;
-  self->data_content_count = 0;
-  self->regs_content = (tui_win_content) NULL;
-  self->regs_content_count = 0;
-  self->regs_display_type = TUI_UNDEFINED_REGS;
-  self->regs_column_count = 1;
-  self->display_regs = FALSE;
-}
-
-static void
-tui_data_win_refresh_win (struct tui_win_info *win_info)
-{
-  tui_refresh_data_win ();
-}
-
-static void
-tui_data_win_make_invisible_and_set_new_height (struct tui_win_info *win_info,
-						int height)
-{
-  struct tui_gen_win_info *gen_win_info;
-  int i;
-
-  tui_win_info_make_invisible_and_set_new_height (win_info, height);
-
-  /* Now deal with the auxillary windows associated with win_info.  */
-
-  /* Delete all data item windows.  */
-  for (i = 0; i < win_info->generic.content_size; i++)
-    {
-      gen_win_info = (struct tui_gen_win_info *) & ((struct tui_win_element *)
-						    win_info->generic.content[i])->which_element.data_window;
-      tui_delete_win (gen_win_info->handle);
-      gen_win_info->handle = (WINDOW *) NULL;
-    }
-}
-
-static void
-tui_data_win_make_visible_with_new_height (struct tui_win_info *win_info)
-{
-  tui_make_visible (&win_info->generic);
-  tui_check_and_display_highlight_if_needed (win_info);
-
-  tui_display_all_data ();
-}
-
-static void data_win_del_window (struct tui_win_info *win_info);
-static void data_win_free_window (struct tui_win_info *win_info);
-
-static struct tui_win_info_ops data_win_vtable =
-  {
-    tui_data_display_win_clear_detail,
-    tui_win_info_refresh,
-    tui_data_win_refresh_win,
-    tui_data_win_make_invisible_and_set_new_height,
-    tui_data_win_make_visible_with_new_height,
-    tui_vertical_data_scroll,
-    tui_win_info_horizontal_scroll,
-    data_win_del_window,
-    data_win_free_window,
-  };
-
-static void
-init_data_display_win_info (struct tui_data_display_win_info *win_info)
-{
-  init_win_info (&win_info->win_info, DATA_NAME);
-
-  win_info->data_content = (tui_win_content) NULL;
-  win_info->data_content_count = 0;
-  win_info->regs_content = (tui_win_content) NULL;
-  win_info->regs_content_count = 0;
-  win_info->regs_display_type = TUI_UNDEFINED_REGS;
-  win_info->regs_column_count = 1;
-  win_info->display_regs = FALSE;
-  win_info->current_group = 0;
-
-  win_info->win_info.vtable = &data_win_vtable;
-}
-
-static void
-tui_command_win_clear_detail (struct tui_win_info *self_)
-{
-  struct tui_command_win_info *self = (struct tui_command_win_info *) self_;
-
-  self->cur_line = self->curch = 0;
-}
-
-static void
-tui_cmd_win_make_invisible_and_set_new_height (struct tui_win_info *win_info,
-					       int height)
-{
-  struct tui_gen_win_info *gen_win_info;
-
-  tui_make_invisible (&win_info->generic);
-  win_info->generic.height = height;
-  if (height > 1)
-    win_info->generic.viewport_height = height - 1;
-  else
-    win_info->generic.viewport_height = height;
-}
-
-static void
-tui_cmd_win_make_visible_with_new_height (struct tui_win_info *win_info)
-{
-  struct tui_command_win_info *cmd_win_info
-    = (struct tui_command_win_info *) win_info;
-
-  tui_make_visible (&win_info->generic);
-  tui_check_and_display_highlight_if_needed (win_info);
-
-  cmd_win_info->cur_line = 0;
-  cmd_win_info->curch = 0;
-  wmove (win_info->generic.handle,
-	 cmd_win_info->cur_line,
-	 cmd_win_info->curch);
-}
-
-static struct tui_win_info_ops command_win_vtable =
-  {
-    tui_command_win_clear_detail,
-    tui_win_info_refresh,
-    tui_win_info_refresh_win,
-    tui_cmd_win_make_invisible_and_set_new_height,
-    tui_cmd_win_make_visible_with_new_height,
-    tui_win_info_vertical_scroll,
-    tui_win_info_horizontal_scroll,
-    tui_win_info_del_window,
-    tui_win_info_free_window,
-  };
-
-static void
-init_command_win_info (struct tui_command_win_info *win_info)
-{
-  init_win_info (&win_info->win_info, CMD_NAME);
-
-  win_info->cur_line = 0;
-  win_info->curch = 0;
-
-  win_info->win_info.vtable = &command_win_vtable;
 }
 
 struct tui_win_info *
@@ -1040,108 +711,6 @@ tui_add_content_elements (struct tui_gen_win_info *win_info,
 
   return index_start;
 }
-
-static void
-src_disasm_win_del_window (struct tui_win_info *win_info)
-{
-  struct tui_winsource_win *src_win = (struct tui_winsource_win *)win_info;
-  struct tui_gen_win_info *generic_win;
-
-  generic_win = tui_locator_win_info_ptr ();
-  if (generic_win != NULL)
-    {
-      tui_delete_win (generic_win->handle);
-      generic_win->handle = (WINDOW *) NULL;
-      generic_win->is_visible = FALSE;
-    }
-
-  xfree (src_win->filename);
-  src_win->filename = NULL;
-
-  generic_win = src_win->execution_info;
-  if (generic_win != NULL)
-    {
-      tui_delete_win (generic_win->handle);
-      generic_win->handle = (WINDOW *) NULL;
-      generic_win->is_visible = FALSE;
-    }
-
-  tui_win_info_del_window (win_info);
-}
-
-static void
-src_disasm_win_free_window (struct tui_win_info *win_info)
-{
-  struct tui_winsource_win *src_win
-    = (struct tui_winsource_win *) win_info;
-  struct tui_gen_win_info *generic_win;
-
-  generic_win = tui_locator_win_info_ptr ();
-  if (generic_win != (struct tui_gen_win_info *) NULL)
-    {
-      tui_delete_win (generic_win->handle);
-      generic_win->handle = (WINDOW *) NULL;
-    }
-  tui_free_win_content (generic_win);
-
-  xfree (src_win->filename);
-  src_win->filename = 0;
-
-  generic_win = src_win->execution_info;
-  if (generic_win != NULL)
-    {
-      tui_delete_win (generic_win->handle);
-      generic_win->handle = (WINDOW *) NULL;
-      tui_free_win_content (generic_win);
-    }
-
-  tui_win_info_free_window (win_info);
-}
-
-static void
-data_win_del_window (struct tui_win_info *win_info)
-{
-  struct tui_data_display_win_info *data_win
-    = (struct tui_data_display_win_info *) win_info;
-
-  if (win_info->generic.content != NULL)
-    {
-      tui_del_data_windows (data_win->regs_content,
-			    data_win->regs_content_count);
-      tui_del_data_windows (data_win->data_content,
-			    data_win->data_content_count);
-    }
-
-  tui_win_info_del_window (win_info);
-}
-
-static void
-data_win_free_window (struct tui_win_info *win_info)
-{
-  struct tui_data_display_win_info *data_win
-    = (struct tui_data_display_win_info *) win_info;
-
-  if (win_info->generic.content != NULL)
-    {
-      tui_free_data_content (data_win->regs_content,
-			     data_win->regs_content_count);
-      data_win->regs_content = NULL;
-      data_win->regs_content_count = 0;
-      tui_free_data_content (data_win->data_content,
-			     data_win->data_content_count);
-      data_win->data_content = NULL;
-      data_win->data_content_count = 0;
-      data_win->regs_display_type = TUI_UNDEFINED_REGS;
-      data_win->regs_column_count = 1;
-      data_win->display_regs = FALSE;
-
-      win_info->generic.content = NULL;
-      win_info->generic.content_size = 0;
-    }
-
-  tui_win_info_free_window (win_info);
-}
-
 
 /* Delete all curses windows associated with win_info, leaving
    everything else intact.  */

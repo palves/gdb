@@ -691,3 +691,190 @@ tui_addr_is_displayed (CORE_ADDR addr,
 
   return is_displayed;
 }
+
+void
+tui_source_win_clear_detail (struct tui_win_info *self_)
+{
+  struct tui_winsource_win *self
+    = (struct tui_winsource_win *) self_;
+
+  self->gdbarch = NULL;
+  self->start_line_or_addr.loa = LOA_ADDRESS;
+  self->start_line_or_addr.u.addr = 0;
+  self->horizontal_offset = 0;
+}
+
+void
+tui_source_win_refresh (struct tui_win_info *win_info)
+{
+  struct tui_winsource_win *src_win
+    = (struct tui_winsource_win *) win_info;
+  touchwin (src_win->execution_info->handle);
+  tui_refresh_win (src_win->execution_info);
+
+  tui_win_info_refresh (win_info);
+}
+
+void
+tui_source_win_refresh_win (struct tui_win_info *win_info)
+{
+  struct tui_winsource_win *src_win = (struct tui_winsource_win *) win_info;
+
+  tui_show_source_content (src_win);
+  tui_check_and_display_highlight_if_needed (win_info);
+  tui_erase_exec_info_content (src_win);
+  tui_update_exec_info (src_win);
+}
+
+void
+tui_source_win_make_invisible_and_set_new_heigth (struct tui_win_info *win_info,
+						  int height)
+{
+  struct tui_gen_win_info *gen_win_info;
+  struct tui_winsource_win *src_win_info;
+
+  tui_win_info_make_invisible_and_set_new_height (win_info, height);
+
+  src_win_info = (struct tui_winsource_win *) win_info;
+
+  /* Now deal with the auxillary windows associated with win_info.  */
+
+  gen_win_info = src_win_info->execution_info;
+  tui_make_invisible (gen_win_info);
+  gen_win_info->height = height;
+  gen_win_info->origin.y = win_info->generic.origin.y;
+  if (height > 1)
+    gen_win_info->viewport_height = height - 1;
+  else
+    gen_win_info->viewport_height = height;
+  gen_win_info->viewport_height--;
+
+  if (tui_source_win_has_locator (src_win_info))
+    {
+      gen_win_info = tui_locator_win_info_ptr ();
+      tui_make_invisible (gen_win_info);
+      gen_win_info->origin.y = win_info->generic.origin.y + height;
+    }
+}
+
+void
+tui_source_win_make_visible_with_new_heigth (struct tui_win_info *win_info)
+{
+  struct tui_winsource_win *src_win_info;
+  struct symtab *s;
+
+  tui_make_visible (&win_info->generic);
+  tui_check_and_display_highlight_if_needed (win_info);
+
+  src_win_info = (struct tui_winsource_win *) win_info;
+  tui_free_win_content (src_win_info->execution_info);
+  tui_make_visible (src_win_info->execution_info);
+  if (win_info->generic.content != NULL)
+    {
+      struct gdbarch *gdbarch = src_win_info->gdbarch;
+      struct tui_line_or_address line_or_addr;
+      struct symtab_and_line cursal
+	= get_current_source_symtab_and_line ();
+
+      line_or_addr = src_win_info->start_line_or_addr;
+      tui_free_win_content (&win_info->generic);
+      tui_update_source_window (src_win_info, gdbarch,
+				cursal.symtab, line_or_addr, TRUE);
+    }
+  else if (deprecated_safe_get_selected_frame () != NULL)
+    {
+      struct tui_line_or_address line;
+      struct symtab_and_line cursal = get_current_source_symtab_and_line ();
+      struct frame_info *frame = deprecated_safe_get_selected_frame ();
+      struct gdbarch *gdbarch = get_frame_arch (frame);
+
+      s = find_pc_symtab (get_frame_pc (frame));
+      if (win_info->generic.type == SRC_WIN)
+	{
+	  line.loa = LOA_LINE;
+	  line.u.line_no = cursal.line;
+	}
+      else
+	{
+	  line.loa = LOA_ADDRESS;
+	  find_line_pc (s, cursal.line, &line.u.addr);
+	}
+      tui_update_source_window (src_win_info, gdbarch, s, line, TRUE);
+    }
+  if (tui_source_win_has_locator (src_win_info))
+    {
+      tui_make_visible (tui_locator_win_info_ptr ());
+      tui_show_locator_content ();
+    }
+}
+
+void
+tui_winsource_del_window (struct tui_win_info *win_info)
+{
+  struct tui_winsource_win *src_win = (struct tui_winsource_win *)win_info;
+  struct tui_gen_win_info *generic_win;
+
+  generic_win = tui_locator_win_info_ptr ();
+  if (generic_win != NULL)
+    {
+      tui_delete_win (generic_win->handle);
+      generic_win->handle = (WINDOW *) NULL;
+      generic_win->is_visible = FALSE;
+    }
+
+  xfree (src_win->filename);
+  src_win->filename = NULL;
+
+  generic_win = src_win->execution_info;
+  if (generic_win != NULL)
+    {
+      tui_delete_win (generic_win->handle);
+      generic_win->handle = (WINDOW *) NULL;
+      generic_win->is_visible = FALSE;
+    }
+
+  tui_win_info_del_window (win_info);
+}
+
+void
+tui_winsource_free_window (struct tui_win_info *win_info)
+{
+  struct tui_winsource_win *src_win
+    = (struct tui_winsource_win *) win_info;
+  struct tui_gen_win_info *generic_win;
+
+  generic_win = tui_locator_win_info_ptr ();
+  if (generic_win != (struct tui_gen_win_info *) NULL)
+    {
+      tui_delete_win (generic_win->handle);
+      generic_win->handle = (WINDOW *) NULL;
+    }
+  tui_free_win_content (generic_win);
+
+  xfree (src_win->filename);
+  src_win->filename = 0;
+
+  generic_win = src_win->execution_info;
+  if (generic_win != NULL)
+    {
+      tui_delete_win (generic_win->handle);
+      generic_win->handle = (WINDOW *) NULL;
+      tui_free_win_content (generic_win);
+    }
+
+  tui_win_info_free_window (win_info);
+}
+
+void
+init_winsource_win (struct tui_winsource_win *win_info, const char *name)
+{
+  init_win_info (&win_info->win_info, name);
+
+  win_info->execution_info = NULL;
+  win_info->has_locator = FALSE;
+  win_info->horizontal_offset = 0;
+  win_info->gdbarch = NULL;
+  win_info->start_line_or_addr.loa = LOA_ADDRESS;
+  win_info->start_line_or_addr.u.addr = 0;
+  win_info->filename = 0;
+}

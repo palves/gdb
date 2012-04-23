@@ -43,4 +43,6 @@ extern void tui_vertical_source_scroll (struct tui_win_info *win_info,
 					enum tui_scroll_direction,
 					int);
 
+extern void init_source_win_info (struct tui_source_win *win);
+
 #endif

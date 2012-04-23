@@ -408,4 +408,18 @@ extern void tui_set_win_resized_to (int);
 extern struct tui_win_info *tui_next_win (struct tui_win_info *);
 extern struct tui_win_info *tui_prev_win (struct tui_win_info *);
 
+extern void tui_win_info_refresh (struct tui_win_info *);
+extern void tui_win_info_refresh_win (struct tui_win_info *);
+extern void tui_win_info_vertical_scroll (struct tui_win_info *,
+					  enum tui_scroll_direction, int);
+extern void tui_win_info_horizontal_scroll (struct tui_win_info *,
+					    enum tui_scroll_direction, int);
+extern void tui_win_info_del_window (struct tui_win_info *);
+extern void tui_win_info_free_window (struct tui_win_info *);
+
+extern void tui_win_info_make_invisible_and_set_new_height (struct tui_win_info *,
+						     int);
+
+extern void init_win_info (struct tui_win_info *win_info, const char *name);
+
 #endif /* TUI_DATA_H */
