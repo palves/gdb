@@ -90,7 +90,7 @@ tui_set_source_content (struct symtab *s,
 		{
 		  int offset, cur_line_no, cur_line, cur_len, threshold;
 		  struct tui_gen_win_info *locator = tui_locator_win_info_ptr ();
-                  struct tui_source_win_info *src = TUI_SRC_WIN;
+                  struct tui_winsource_win *src = TUI_SRC_WIN;
 
 		  xfree (TUI_SRC_WIN->win_info.generic.title);
                   TUI_SRC_WIN->win_info.generic.title = xstrdup (s->filename);
@@ -241,7 +241,7 @@ tui_set_source_content (struct symtab *s,
    source files cannot be accessed.  */
 
 void
-tui_set_source_content_nil (struct tui_source_win_info *src_win_info,
+tui_set_source_content_nil (struct tui_winsource_win *src_win_info,
 			    char *warning_string)
 {
   int line_width;

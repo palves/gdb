@@ -228,8 +228,8 @@ make_all_visible (int visible)
 	{
 	  if (tui_win_is_source_type ((tui_win_list[i])->generic.type))
 	    {
-	      struct tui_source_win_info *src_win
-		= (struct tui_source_win_info *) tui_win_list[i];
+	      struct tui_winsource_win *src_win
+		= (struct tui_winsource_win *) tui_win_list[i];
 	      make_visible (src_win->execution_info, visible);
 	    }
 	  make_visible (&tui_win_list[i]->generic, visible);

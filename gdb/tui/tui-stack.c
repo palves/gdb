@@ -325,7 +325,7 @@ tui_update_locator_filename (const char *filename)
 void
 tui_show_frame_info (struct frame_info *fi)
 {
-  struct tui_source_win_info *win_info;
+  struct tui_winsource_win *win_info;
   int i;
 
   if (fi)

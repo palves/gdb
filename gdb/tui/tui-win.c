@@ -686,7 +686,7 @@ tui_resize_all (void)
 	  make_visible_with_new_height (first_win);
 	  make_visible_with_new_height (&TUI_CMD_WIN->win_info);
 	  if (first_win->generic.content_size <= 0)
-	    tui_erase_source_content ((struct tui_source_win_info *) first_win,
+	    tui_erase_source_content ((struct tui_winsource_win *) first_win,
 				      EMPTY_SOURCE_PROMPT);
 	  break;
 	default:
@@ -749,10 +749,10 @@ tui_resize_all (void)
 	  make_visible_with_new_height (second_win);
 	  make_visible_with_new_height (&TUI_CMD_WIN->win_info);
 	  if (first_win->generic.content_size <= 0)
-	    tui_erase_source_content ((struct tui_source_win_info *) first_win,
+	    tui_erase_source_content ((struct tui_winsource_win *) first_win,
 				      EMPTY_SOURCE_PROMPT);
 	  if (second_win->generic.content_size <= 0)
-	    tui_erase_source_content ((struct tui_source_win_info *) second_win,
+	    tui_erase_source_content ((struct tui_winsource_win *) second_win,
 				      EMPTY_SOURCE_PROMPT);
 	  break;
 	}
@@ -1122,18 +1122,18 @@ tui_adjust_win_heights (struct tui_win_info *primary_win_info,
 	  if (cur_layout == SRC_COMMAND 
 	      || cur_layout == DISASSEM_COMMAND)
 	    {
-	      struct tui_source_win_info *src_win_info;
+	      struct tui_winsource_win *src_win_info;
 
 	      make_invisible_and_set_new_height (primary_win_info, new_height);
 	      if (primary_win_info->generic.type == CMD_WIN)
 		{
 		  win_info = (tui_source_windows ())->list[0];
-		  src_win_info = (struct tui_source_win_info *) win_info;
+		  src_win_info = (struct tui_winsource_win *) win_info;
 		}
 	      else
 		{
 		  win_info = tui_win_list[CMD_WIN];
-		  src_win_info = (struct tui_source_win_info *) primary_win_info;
+		  src_win_info = (struct tui_winsource_win *) primary_win_info;
 		}
 	      make_invisible_and_set_new_height (win_info,
 					     win_info->generic.height + diff);
@@ -1243,10 +1243,10 @@ tui_adjust_win_heights (struct tui_win_info *primary_win_info,
 	      make_visible_with_new_height (second_win);
 	      make_visible_with_new_height (first_win);
 	      if (first_win->generic.content_size <= 0)
-		tui_erase_source_content ((struct tui_source_win_info *) first_win,
+		tui_erase_source_content ((struct tui_winsource_win *) first_win,
 					  EMPTY_SOURCE_PROMPT);
 	      if (second_win->generic.content_size <= 0)
-		tui_erase_source_content ((struct tui_source_win_info *) second_win,
+		tui_erase_source_content ((struct tui_winsource_win *) second_win,
 					  EMPTY_SOURCE_PROMPT);
 	    }
 	}

@@ -28,7 +28,8 @@
 struct symtab;
 struct tui_win_info;
 
-extern void tui_set_source_content_nil (struct tui_source_win_info *,
+/* palves: should be moved to tui-winsource.h|c.  */
+extern void tui_set_source_content_nil (struct tui_winsource_win *,
 					char *);
 
 extern enum tui_status tui_set_source_content (struct symtab *, 

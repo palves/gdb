@@ -297,8 +297,7 @@ struct tui_win_info
   struct tui_win_info_ops *vtable;
 };
 
-/* This defines information about each logical window.  */
-struct tui_source_win_info
+struct tui_winsource_win
 {
   struct tui_win_info win_info;
 
@@ -310,6 +309,16 @@ struct tui_source_win_info
   char *filename;
   /* Architecture associated with code at this location.  */
   struct gdbarch *gdbarch;
+};
+
+struct tui_source_win
+{
+  struct tui_winsource_win winsource;
+};
+
+struct tui_disasm_win
+{
+  struct tui_winsource_win winsource;
 };
 
 /* This struct defines the specific information about a data display
@@ -340,7 +349,7 @@ struct tui_command_win_info
 
 extern int tui_win_is_source_type (enum tui_win_type win_type);
 extern int tui_win_is_auxillary (enum tui_win_type win_type);
-extern int tui_source_win_has_locator (struct tui_source_win_info *win_info);
+extern int tui_source_win_has_locator (struct tui_winsource_win *win_info);
 extern void tui_set_win_highlight (struct tui_win_info *win_info,
 				   int highlight);
 
@@ -348,8 +357,8 @@ extern void tui_set_win_highlight (struct tui_win_info *win_info,
 /* Global Data.  */
 extern struct tui_win_info *(tui_win_list[MAX_MAJOR_WINDOWS]);
 
-#define TUI_SRC_WIN     ((struct tui_source_win_info *) tui_win_list[SRC_WIN])
-#define TUI_DISASM_WIN	((struct tui_source_win_info *) tui_win_list[DISASSEM_WIN])
+#define TUI_SRC_WIN     ((struct tui_winsource_win *) tui_win_list[SRC_WIN])
+#define TUI_DISASM_WIN	((struct tui_winsource_win *) tui_win_list[DISASSEM_WIN])
 #define TUI_DATA_WIN    ((struct tui_data_display_win_info *) tui_win_list[DATA_WIN])
 #define TUI_CMD_WIN     ((struct tui_command_win_info *) tui_win_list[CMD_WIN])
 
@@ -387,7 +396,7 @@ extern struct tui_list *tui_source_windows (void);
 extern void tui_clear_source_windows (void);
 extern void tui_clear_source_windows_detail (void);
 extern void tui_clear_win_detail (struct tui_win_info *);
-extern void tui_add_to_source_windows (struct tui_source_win_info *);
+extern void tui_add_to_source_windows (struct tui_winsource_win *);
 extern int tui_default_tab_len (void);
 extern void tui_set_default_tab_len (int);
 extern struct tui_win_info *tui_win_with_focus (void);

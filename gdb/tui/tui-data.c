@@ -42,7 +42,7 @@ static enum tui_layout_type current_layout = UNDEFINED_LAYOUT;
 static int term_height, term_width;
 static struct tui_gen_win_info _locator;
 static struct tui_gen_win_info exec_info[2];
-static struct tui_source_win_info *src_win_list[2];
+static struct tui_winsource_win *src_win_list[2];
 static struct tui_list source_windows = {(void **) src_win_list, 0};
 static int default_tab_len = DEFAULT_TAB_LEN;
 static struct tui_win_info *win_with_focus = (struct tui_win_info *) NULL;
@@ -84,7 +84,7 @@ tui_win_is_auxillary (enum tui_win_type win_type)
 }
 
 int
-tui_source_win_has_locator (struct tui_source_win_info *win_info)
+tui_source_win_has_locator (struct tui_winsource_win *win_info)
 {
   return (win_info != NULL 
 	  && win_info->has_locator);
@@ -195,7 +195,7 @@ tui_clear_source_windows_detail (void)
    one source window (either source or disassembly), but both can be
    displayed at the same time.  */
 void
-tui_add_to_source_windows (struct tui_source_win_info *win_info)
+tui_add_to_source_windows (struct tui_winsource_win *win_info)
 {
   if (source_windows.count < 2)
     source_windows.list[source_windows.count++] = (void *) win_info;
@@ -595,8 +595,8 @@ init_win_info (struct tui_win_info *win_info, const char *name)
 static void
 tui_source_win_clear_detail (struct tui_win_info *self_)
 {
-  struct tui_source_win_info *self
-    = (struct tui_source_win_info *) self_;
+  struct tui_winsource_win *self
+    = (struct tui_winsource_win *) self_;
 
   self->gdbarch = NULL;
   self->start_line_or_addr.loa = LOA_ADDRESS;
@@ -609,17 +609,17 @@ tui_vertical_source_or_disasm_scroll (struct tui_win_info *win_info,
 				      enum tui_scroll_direction direction,
 				      int num_to_scroll)
 {
-  if (win_info == &TUI_SRC_WIN->win_info)
+  if (win_info == (void *) TUI_SRC_WIN)
     tui_vertical_source_scroll (win_info, direction, num_to_scroll);
-  else if (win_info == &TUI_DISASM_WIN->win_info)
+  else if (win_info == (void *) TUI_DISASM_WIN)
     tui_vertical_disassem_scroll (win_info, direction, num_to_scroll);
 }
 
 static void
 tui_source_win_refresh (struct tui_win_info *win_info)
 {
-  struct tui_source_win_info *src_win
-    = (struct tui_source_win_info *) win_info;
+  struct tui_winsource_win *src_win
+    = (struct tui_winsource_win *) win_info;
   touchwin (src_win->execution_info->handle);
   tui_refresh_win (src_win->execution_info);
 
@@ -629,7 +629,7 @@ tui_source_win_refresh (struct tui_win_info *win_info)
 static void
 tui_source_win_refresh_win (struct tui_win_info *win_info)
 {
-  struct tui_source_win_info *src_win = (struct tui_source_win_info *) win_info;
+  struct tui_winsource_win *src_win = (struct tui_winsource_win *) win_info;
 
   tui_show_source_content (src_win);
   tui_check_and_display_highlight_if_needed (win_info);
@@ -650,11 +650,11 @@ tui_source_win_make_invisible_and_set_new_heigth (struct tui_win_info *win_info,
 						  int height)
 {
   struct tui_gen_win_info *gen_win_info;
-  struct tui_source_win_info *src_win_info;
+  struct tui_winsource_win *src_win_info;
 
   tui_win_info_make_invisible_and_set_new_height (win_info, height);
 
-  src_win_info = (struct tui_source_win_info *) win_info;
+  src_win_info = (struct tui_winsource_win *) win_info;
 
   /* Now deal with the auxillary windows associated with win_info.  */
 
@@ -679,13 +679,13 @@ tui_source_win_make_invisible_and_set_new_heigth (struct tui_win_info *win_info,
 static void
 tui_source_win_make_visible_with_new_heigth (struct tui_win_info *win_info)
 {
-  struct tui_source_win_info *src_win_info;
+  struct tui_winsource_win *src_win_info;
   struct symtab *s;
 
   tui_make_visible (&win_info->generic);
   tui_check_and_display_highlight_if_needed (win_info);
 
-  src_win_info = (struct tui_source_win_info *) win_info;
+  src_win_info = (struct tui_winsource_win *) win_info;
   tui_free_win_content (src_win_info->execution_info);
   tui_make_visible (src_win_info->execution_info);
   if (win_info->generic.content != NULL)
@@ -744,7 +744,7 @@ static struct tui_win_info_ops src_win_vtable =
   };
 
 static void
-init_source_disasm_win_info_1 (struct tui_source_win_info *win_info,
+init_source_disasm_win_info_1 (struct tui_winsource_win *win_info,
 			       const char *name)
 {
   init_win_info (&win_info->win_info, name);
@@ -761,7 +761,7 @@ init_source_disasm_win_info_1 (struct tui_source_win_info *win_info,
 }
 
 static void
-init_source_win_info (struct tui_source_win_info *win_info)
+init_source_win_info (struct tui_winsource_win *win_info)
 {
   init_source_disasm_win_info_1 (win_info, SRC_NAME);
 }
@@ -834,7 +834,7 @@ static struct tui_win_info_ops data_win_vtable =
   };
 
 static void
-init_disasm_win_info (struct tui_source_win_info *win_info)
+init_disasm_win_info (struct tui_winsource_win *win_info)
 {
   init_source_disasm_win_info_1 (win_info, DISASSEM_NAME);
 }
@@ -925,15 +925,15 @@ tui_alloc_win_info (enum tui_win_type type)
     {
     case SRC_WIN:
       {
-	struct tui_source_win_info *win_info
-	  = XMALLOC (struct tui_source_win_info);
+	struct tui_winsource_win *win_info
+	  = XMALLOC (struct tui_winsource_win);
 	init_source_win_info (win_info);
 	return &win_info->win_info;
       }
     case DISASSEM_WIN:
       {
-      	struct tui_source_win_info *win_info
-	  = XMALLOC (struct tui_source_win_info);
+      	struct tui_winsource_win *win_info
+	  = XMALLOC (struct tui_winsource_win);
 	init_disasm_win_info (win_info);
 	return &win_info->win_info;
       }
@@ -1042,7 +1042,7 @@ tui_add_content_elements (struct tui_gen_win_info *win_info,
 static void
 src_disasm_win_del_window (struct tui_win_info *win_info)
 {
-  struct tui_source_win_info *src_win = (struct tui_source_win_info *)win_info;
+  struct tui_winsource_win *src_win = (struct tui_winsource_win *)win_info;
   struct tui_gen_win_info *generic_win;
 
   generic_win = tui_locator_win_info_ptr ();
@@ -1070,8 +1070,8 @@ src_disasm_win_del_window (struct tui_win_info *win_info)
 static void
 src_disasm_win_free_window (struct tui_win_info *win_info)
 {
-  struct tui_source_win_info *src_win
-    = (struct tui_source_win_info *) win_info;
+  struct tui_winsource_win *src_win
+    = (struct tui_winsource_win *) win_info;
   struct tui_gen_win_info *generic_win;
 
   generic_win = tui_locator_win_info_ptr ();
@@ -1166,8 +1166,8 @@ tui_free_all_source_wins_content (void)
 
       if (win_info != NULL)
 	{
-	  struct tui_source_win_info *src_win_info;
-	  src_win_info = (struct tui_source_win_info *) win_info;
+	  struct tui_winsource_win *src_win_info;
+	  src_win_info = (struct tui_winsource_win *) win_info;
 
 	  tui_free_win_content (&win_info->generic);
 	  tui_free_win_content (src_win_info->execution_info);
