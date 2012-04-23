@@ -28,6 +28,8 @@
 #include "source.h"
 #include "disasm.h"
 #include "gdb_string.h"
+#include "progspace.h"
+#include "objfiles.h"
 #include "tui/tui.h"
 #include "tui/tui-data.h"
 #include "tui/tui-win.h"
@@ -36,7 +38,6 @@
 #include "tui/tui-stack.h"
 #include "tui/tui-file.h"
 #include "tui/tui-disasm.h"
-#include "progspace.h"
 
 #include "gdb_curses.h"
 
@@ -336,7 +337,7 @@ tui_get_begin_asm_address (struct gdbarch **gdbarch_p, CORE_ADDR *addr_p)
   locator = tui_locator_win_info_ptr ();
   element = &((struct tui_win_element *) locator->content[0])->which_element.locator;
 
-  if (element->addr == 0)
+  if (element->addr == 0 && element->gdbarch == NULL)
     {
       struct minimal_symbol *main_symbol;
 
@@ -348,9 +349,18 @@ tui_get_begin_asm_address (struct gdbarch **gdbarch_p, CORE_ADDR *addr_p)
       if (main_symbol == 0)
         main_symbol = lookup_minimal_symbol ("_start", NULL, NULL);
       if (main_symbol)
-        addr = SYMBOL_VALUE_ADDRESS (main_symbol);
+	{
+	  struct obj_section *obj_section;
+
+	  obj_section = SYMBOL_OBJ_SECTION (main_symbol);
+	  addr = SYMBOL_VALUE_ADDRESS (main_symbol);
+	  gdbarch = get_objfile_arch (obj_section->objfile);
+	}
       else
-        addr = 0;
+	{
+	  addr = 0;
+	  gdbarch = NULL;
+	}
     }
   else				/* The target is executing.  */
     {
