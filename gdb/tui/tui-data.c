@@ -605,17 +605,6 @@ tui_source_win_clear_detail (struct tui_win_info *self_)
 }
 
 static void
-tui_vertical_source_or_disasm_scroll (struct tui_win_info *win_info,
-				      enum tui_scroll_direction direction,
-				      int num_to_scroll)
-{
-  if (win_info == (void *) TUI_SRC_WIN)
-    tui_vertical_source_scroll (win_info, direction, num_to_scroll);
-  else if (win_info == (void *) TUI_DISASM_WIN)
-    tui_vertical_disassem_scroll (win_info, direction, num_to_scroll);
-}
-
-static void
 tui_source_win_refresh (struct tui_win_info *win_info)
 {
   struct tui_winsource_win *src_win
@@ -737,7 +726,20 @@ static struct tui_win_info_ops src_win_vtable =
     tui_source_win_refresh_win,
     tui_source_win_make_invisible_and_set_new_heigth,
     tui_source_win_make_visible_with_new_heigth,
-    tui_vertical_source_or_disasm_scroll,
+    tui_vertical_source_scroll,
+    tui_horizontal_source_scroll,
+    src_disasm_win_del_window,
+    src_disasm_win_free_window,
+  };
+
+static struct tui_win_info_ops disasm_win_vtable =
+  {
+    tui_source_win_clear_detail,
+    tui_source_win_refresh,
+    tui_source_win_refresh_win,
+    tui_source_win_make_invisible_and_set_new_heigth,
+    tui_source_win_make_visible_with_new_heigth,
+    tui_vertical_disassem_scroll,
     tui_horizontal_source_scroll,
     src_disasm_win_del_window,
     src_disasm_win_free_window,
@@ -749,21 +751,27 @@ init_source_disasm_win_info_1 (struct tui_winsource_win *win_info,
 {
   init_win_info (&win_info->win_info, name);
 
-  win_info->execution_info = (struct tui_gen_win_info *) NULL;
+  win_info->execution_info = NULL;
   win_info->has_locator = FALSE;
   win_info->horizontal_offset = 0;
   win_info->gdbarch = NULL;
   win_info->start_line_or_addr.loa = LOA_ADDRESS;
   win_info->start_line_or_addr.u.addr = 0;
   win_info->filename = 0;
-
-  win_info->win_info.vtable = &src_win_vtable;
 }
 
 static void
-init_source_win_info (struct tui_winsource_win *win_info)
+init_source_win_info (struct tui_source_win *win)
 {
-  init_source_disasm_win_info_1 (win_info, SRC_NAME);
+  init_source_disasm_win_info_1 (&win->winsource, SRC_NAME);
+  win->winsource.win_info.vtable = &src_win_vtable;
+}
+
+static void
+init_disasm_win_info (struct tui_disasm_win *win)
+{
+  init_source_disasm_win_info_1 (&win->winsource, SRC_NAME);
+  win->winsource.win_info.vtable = &disasm_win_vtable;
 }
 
 static void
@@ -832,12 +840,6 @@ static struct tui_win_info_ops data_win_vtable =
     data_win_del_window,
     data_win_free_window,
   };
-
-static void
-init_disasm_win_info (struct tui_winsource_win *win_info)
-{
-  init_source_disasm_win_info_1 (win_info, DISASSEM_NAME);
-}
 
 static void
 init_data_display_win_info (struct tui_data_display_win_info *win_info)
@@ -925,17 +927,17 @@ tui_alloc_win_info (enum tui_win_type type)
     {
     case SRC_WIN:
       {
-	struct tui_winsource_win *win_info
-	  = XMALLOC (struct tui_winsource_win);
+	struct tui_source_win *win_info
+	  = XMALLOC (struct tui_source_win);
 	init_source_win_info (win_info);
-	return &win_info->win_info;
+	return &win_info->winsource.win_info;
       }
     case DISASSEM_WIN:
       {
-      	struct tui_winsource_win *win_info
-	  = XMALLOC (struct tui_winsource_win);
+      	struct tui_disasm_win *win_info
+	  = XMALLOC (struct tui_disasm_win);
 	init_disasm_win_info (win_info);
-	return &win_info->win_info;
+	return &win_info->winsource.win_info;
       }
     case DATA_WIN:
       {
