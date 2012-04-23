@@ -1176,6 +1176,9 @@ sol_find_new_threads_callback (const td_thrhandle_t *th, void *ignored)
   if (retval != TD_OK)
     return -1;
 
+  if (ti.ti_state == TD_THR_UNKNOWN || ti.ti_state == TD_THR_ZOMBIE)
+    return 0;			/* A zombie -- ignore.  */
+
   ptid = BUILD_THREAD (ti.ti_tid, PIDGET (inferior_ptid));
   if (!in_thread_list (ptid) || is_exited (ptid))
     add_thread (ptid);
