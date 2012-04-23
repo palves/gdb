@@ -2125,6 +2125,7 @@ struct i386_insn i386_pic_plt_stub_insns[] =
 static struct i386_frame_cache *
 i386_plt_stub_frame_cache (struct frame_info *this_frame, void **this_cache)
 {
+  volatile struct gdb_exception ex;
   struct i386_frame_cache *cache;
   struct i386_insn *insn;
   LONGEST sp_offset = -4;
@@ -2205,13 +2206,31 @@ i386_plt_stub_frame_cache (struct frame_info *this_frame, void **this_cache)
 
   cache->pc = pc;
 
-  sp = get_frame_register_unsigned (this_frame, I386_ESP_REGNUM);
-  cache->base = sp + cache->sp_offset;
-  cache->saved_sp = cache->base + 8;
-  cache->saved_regs[I386_EIP_REGNUM] = cache->base + 4;
+  TRY_CATCH (ex, RETURN_MASK_ERROR)
+    {
+      sp = get_frame_register_unsigned (this_frame, I386_ESP_REGNUM);
+      cache->base = sp + cache->sp_offset;
+      cache->saved_sp = cache->base + 8;
+      cache->saved_regs[I386_EIP_REGNUM] = cache->base + 4;
+      cache->base_p = 1;
+    }
+  if (ex.reason < 0 && ex.error != NOT_AVAILABLE_ERROR)
+    throw_exception (ex);
 
-  cache->base_p = 1;
   return cache;
+}
+
+static enum unwind_stop_reason
+i386_plt_stub_frame_unwind_stop_reason (struct frame_info *this_frame,
+					void **this_cache)
+{
+  struct i386_frame_cache *cache =
+    i386_plt_stub_frame_cache (this_frame, this_cache);
+
+  if (!cache->base_p)
+    return UNWIND_UNAVAILABLE;
+
+  return UNWIND_NO_REASON;
 }
 
 static void
@@ -2220,6 +2239,9 @@ i386_plt_stub_frame_this_id (struct frame_info *this_frame, void **this_cache,
 {
   struct i386_frame_cache *cache =
     i386_plt_stub_frame_cache (this_frame, this_cache);
+
+  if (!cache->base_p)
+    return;
 
   /* See the end of i386_push_dummy_call.  */
   (*this_id) = frame_id_build (cache->base + 8, cache->pc);
@@ -2256,7 +2278,7 @@ i386_plt_stub_frame_sniffer (const struct frame_unwind *self,
 static const struct frame_unwind i386_plt_stub_frame_unwind =
 {
   NORMAL_FRAME,
-  default_frame_unwind_stop_reason,
+  i386_plt_stub_frame_unwind_stop_reason,
   i386_plt_stub_frame_this_id,
   i386_plt_stub_frame_prev_register,
   NULL,
