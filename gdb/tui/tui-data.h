@@ -261,6 +261,16 @@ struct tui_win_info_ops
 
   void (*refresh_win) (struct tui_win_info *);
 
+  /* Function to make the target window (and auxiliary windows
+     associated with the target) invisible, and set the new height and
+     location.  */
+  void (*make_invisible_and_set_new_height) (struct tui_win_info *, int);
+
+  /* Function to make the window with new heights visible.  This means
+     re-creating the window's content since the window had to be
+     destroyed to be made invisible.  */
+  void (*make_visible_with_new_height) (struct tui_win_info *);
+
   void (*vertical_scroll) (struct tui_win_info *,
 			   enum tui_scroll_direction, int);
   void (*horizontal_scroll) (struct tui_win_info *,
