@@ -167,7 +167,7 @@ tui_puts (const char *string)
   char c;
   WINDOW *w;
 
-  w = TUI_CMD_WIN->generic.handle;
+  w = TUI_CMD_WIN->win_info.generic.handle;
   while ((c = *string++) != 0)
     {
       /* Catch annotation and discard them.  We need two \032 and
@@ -184,9 +184,8 @@ tui_puts (const char *string)
       else if (c == '\n')
         tui_skip_line = -1;
     }
-  getyx (w, TUI_CMD_WIN->detail.command_info.cur_line,
-         TUI_CMD_WIN->detail.command_info.curch);
-  TUI_CMD_WIN->detail.command_info.start_line = TUI_CMD_WIN->detail.command_info.cur_line;
+  getyx (w, TUI_CMD_WIN->cur_line, TUI_CMD_WIN->curch);
+  TUI_CMD_WIN->start_line = TUI_CMD_WIN->cur_line;
 
   /* We could defer the following.  */
   wrefresh (w);
@@ -222,8 +221,8 @@ tui_redisplay_readline (void)
   
   c_pos = -1;
   c_line = -1;
-  w = TUI_CMD_WIN->generic.handle;
-  start_line = TUI_CMD_WIN->detail.command_info.start_line;
+  w = TUI_CMD_WIN->win_info.generic.handle;
+  start_line = TUI_CMD_WIN->start_line;
   wmove (w, start_line, 0);
   prev_col = 0;
   height = 1;
@@ -256,8 +255,7 @@ tui_redisplay_readline (void)
 	}
       if (c == '\n')
         {
-          getyx (w, TUI_CMD_WIN->detail.command_info.start_line,
-                 TUI_CMD_WIN->detail.command_info.curch);
+          getyx (w, TUI_CMD_WIN->start_line, TUI_CMD_WIN->curch);
         }
       getyx (w, line, col);
       if (col < prev_col)
@@ -265,15 +263,14 @@ tui_redisplay_readline (void)
       prev_col = col;
     }
   wclrtobot (w);
-  getyx (w, TUI_CMD_WIN->detail.command_info.start_line,
-         TUI_CMD_WIN->detail.command_info.curch);
+  getyx (w, TUI_CMD_WIN->start_line, TUI_CMD_WIN->curch);
   if (c_line >= 0)
     {
       wmove (w, c_line, c_pos);
-      TUI_CMD_WIN->detail.command_info.cur_line = c_line;
-      TUI_CMD_WIN->detail.command_info.curch = c_pos;
+      TUI_CMD_WIN->cur_line = c_line;
+      TUI_CMD_WIN->curch = c_pos;
     }
-  TUI_CMD_WIN->detail.command_info.start_line -= height - 1;
+  TUI_CMD_WIN->start_line -= height - 1;
 
   wrefresh (w);
   fflush(stdout);
@@ -417,7 +414,7 @@ tui_rl_display_match_list (char **matches, int len, int max)
   char *temp;
 
   /* Screen dimension correspond to the TUI command window.  */
-  int screenwidth = TUI_CMD_WIN->generic.width;
+  int screenwidth = TUI_CMD_WIN->win_info.generic.width;
 
   /* If there are many items, then ask the user if she really wants to
      see them all.  */
@@ -589,10 +586,10 @@ tui_cont_sig (int sig)
       tui_refresh_all_win ();
 
       /* Update cursor position on the screen.  */
-      wmove (TUI_CMD_WIN->generic.handle,
-             TUI_CMD_WIN->detail.command_info.start_line,
-             TUI_CMD_WIN->detail.command_info.curch);
-      wrefresh (TUI_CMD_WIN->generic.handle);
+      wmove (TUI_CMD_WIN->win_info.generic.handle,
+             TUI_CMD_WIN->start_line,
+             TUI_CMD_WIN->curch);
+      wrefresh (TUI_CMD_WIN->win_info.generic.handle);
     }
   signal (sig, tui_cont_sig);
 }
@@ -653,7 +650,7 @@ tui_getc (FILE *fp)
   int ch;
   WINDOW *w;
 
-  w = TUI_CMD_WIN->generic.handle;
+  w = TUI_CMD_WIN->win_info.generic.handle;
 
 #ifdef TUI_USE_PIPE_FOR_READLINE
   /* Flush readline output.  */
@@ -674,7 +671,7 @@ tui_getc (FILE *fp)
          user we recognized the command.  */
       if (rl_end == 0)
         {
-          wmove (w, TUI_CMD_WIN->detail.command_info.cur_line, 0);
+          wmove (w, TUI_CMD_WIN->cur_line, 0);
 
           /* Clear the line.  This will blink the gdb prompt since
              it will be redrawn at the same line.  */
@@ -684,8 +681,7 @@ tui_getc (FILE *fp)
         }
       else
         {
-          wmove (w, TUI_CMD_WIN->detail.command_info.cur_line,
-                 TUI_CMD_WIN->detail.command_info.curch);
+          wmove (w, TUI_CMD_WIN->cur_line, TUI_CMD_WIN->curch);
           waddch (w, ch);
         }
     }
@@ -696,7 +692,7 @@ tui_getc (FILE *fp)
     }
   
   if (ch == '\n' || ch == '\r' || ch == '\f')
-    TUI_CMD_WIN->detail.command_info.curch = 0;
+    TUI_CMD_WIN->curch = 0;
   if (ch == KEY_BACKSPACE)
     return '\b';
   

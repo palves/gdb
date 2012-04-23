@@ -56,7 +56,7 @@ tui_dispatch_ctrl_char (unsigned int ch)
   /* If the command window has the logical focus, or no-one does
      assume it is the command window; in this case, pass the character
      on through and do nothing here.  */
-  if (win_info == NULL || win_info == TUI_CMD_WIN)
+  if (win_info == NULL || win_info == &TUI_CMD_WIN->win_info)
     return ch;
   else
     {
@@ -77,7 +77,7 @@ tui_dispatch_ctrl_char (unsigned int ch)
 	    {
 	      unsigned int page_ch = 0;
 	      unsigned int tmp_char;
-              WINDOW *w = TUI_CMD_WIN->generic.handle;
+              WINDOW *w = TUI_CMD_WIN->win_info.generic.handle;
 
 	      tmp_char = 0;
 	      while (!key_is_end_sequence (tmp_char))

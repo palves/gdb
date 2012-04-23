@@ -26,6 +26,8 @@
 #include "tui/tui.h"	/* For enum tui_win_type.  */
 #include "gdb_curses.h"	/* For WINDOW.  */
 
+enum tui_scroll_direction;
+
 /* This is a point definition.  */
 struct tui_point
 {
@@ -110,7 +112,7 @@ enum tui_scroll_direction
 /* General list struct.  */
 struct tui_list
 {
-  struct tui_win_info **list;
+  void **list;
   int count;
 };
 
@@ -248,24 +250,48 @@ struct tui_win_element
 /* This describes the content of the window.  */
 typedef struct tui_win_element **tui_win_content;
 
+struct tui_win_info;
 
-/* This struct defines the specific information about a data display
-   window.  */
-struct tui_data_info
+struct tui_win_info_ops
 {
-  tui_win_content data_content;	/* Start of data display content.  */
-  int data_content_count;
-  tui_win_content regs_content;	/* Start of regs display content.  */
-  int regs_content_count;
-  enum tui_register_display_type regs_display_type;
-  int regs_column_count;
-  int display_regs;		/* Should regs be displayed at all?  */
-  struct reggroup *current_group;
+  /* Clear the pertinant detail in the windows.  */
+  void (*clear_detail) (struct tui_win_info *);
+
+  void (*refresh) (struct tui_win_info *);
+
+  void (*refresh_win) (struct tui_win_info *);
+
+  void (*vertical_scroll) (struct tui_win_info *,
+			   enum tui_scroll_direction, int);
+  void (*horizontal_scroll) (struct tui_win_info *,
+			     enum tui_scroll_direction, int);
+
+  /* Delete all curses windows associated with win_info, leaving
+     everything else intact.  */
+  void (*del_window) (struct tui_win_info *);
+
+  void (*free_window) (struct tui_win_info *);
 };
 
-
-struct tui_source_info
+/* This defines information about each logical window.  */
+struct tui_win_info
 {
+  struct tui_gen_win_info generic;	/* General window information.  */
+
+  int can_highlight;	/* Can this window ever be highlighted?  */
+  int is_highlighted;	/* Is this window highlighted?  */
+
+  /* The name of the window.  */
+  const char *name;
+
+  struct tui_win_info_ops *vtable;
+};
+
+/* This defines information about each logical window.  */
+struct tui_source_win_info
+{
+  struct tui_win_info win_info;
+
   int has_locator;		/* Does locator belongs to this window?  */
   /* Execution information window.  */
   struct tui_gen_win_info *execution_info;
@@ -276,34 +302,35 @@ struct tui_source_info
   struct gdbarch *gdbarch;
 };
 
-
-struct tui_command_info
+/* This struct defines the specific information about a data display
+   window.  */
+struct tui_data_display_win_info
 {
+  struct tui_win_info win_info;
+
+  tui_win_content data_content;	/* Start of data display content.  */
+  int data_content_count;
+  tui_win_content regs_content;	/* Start of regs display content.  */
+  int regs_content_count;
+  enum tui_register_display_type regs_display_type;
+  int regs_column_count;
+  int display_regs;		/* Should regs be displayed at all?  */
+  struct reggroup *current_group;
+};
+
+struct tui_command_win_info
+{
+  struct tui_win_info win_info;
+
   int cur_line;			/* The current line position.  */
   int curch;			/* The current cursor position.  */
   int start_line;
 };
 
 
-/* This defines information about each logical window.  */
-struct tui_win_info
-{
-  struct tui_gen_win_info generic;	/* General window information.  */
-  union
-  {
-    struct tui_source_info source_info;
-    struct tui_data_info data_display_info;
-    struct tui_command_info command_info;
-    void *opaque;
-  }
-  detail;
-  int can_highlight;	/* Can this window ever be highlighted?  */
-  int is_highlighted;	/* Is this window highlighted?  */
-};
-
 extern int tui_win_is_source_type (enum tui_win_type win_type);
 extern int tui_win_is_auxillary (enum tui_win_type win_type);
-extern int tui_win_has_locator (struct tui_win_info *win_info);
+extern int tui_source_win_has_locator (struct tui_source_win_info *win_info);
 extern void tui_set_win_highlight (struct tui_win_info *win_info,
 				   int highlight);
 
@@ -311,10 +338,10 @@ extern void tui_set_win_highlight (struct tui_win_info *win_info,
 /* Global Data.  */
 extern struct tui_win_info *(tui_win_list[MAX_MAJOR_WINDOWS]);
 
-#define TUI_SRC_WIN     tui_win_list[SRC_WIN]
-#define TUI_DISASM_WIN	tui_win_list[DISASSEM_WIN]
-#define TUI_DATA_WIN    tui_win_list[DATA_WIN]
-#define TUI_CMD_WIN     tui_win_list[CMD_WIN]
+#define TUI_SRC_WIN     ((struct tui_source_win_info *) tui_win_list[SRC_WIN])
+#define TUI_DISASM_WIN	((struct tui_source_win_info *) tui_win_list[DISASSEM_WIN])
+#define TUI_DATA_WIN    ((struct tui_data_display_win_info *) tui_win_list[DATA_WIN])
+#define TUI_CMD_WIN     ((struct tui_command_win_info *) tui_win_list[CMD_WIN])
 
 /* Data Manipulation Functions.  */
 extern void tui_initialize_static_data (void);
@@ -334,7 +361,7 @@ extern void tui_free_all_source_wins_content (void);
 extern void tui_del_window (struct tui_win_info *);
 extern void tui_del_data_windows (tui_win_content, int);
 extern struct tui_win_info *tui_partial_win_by_name (char *);
-extern char *tui_win_name (struct tui_gen_win_info *);
+extern const char *tui_win_name (struct tui_win_info *);
 extern enum tui_layout_type tui_current_layout (void);
 extern void tui_set_current_layout_to (enum tui_layout_type);
 extern int tui_term_height (void);
@@ -350,7 +377,7 @@ extern struct tui_list *tui_source_windows (void);
 extern void tui_clear_source_windows (void);
 extern void tui_clear_source_windows_detail (void);
 extern void tui_clear_win_detail (struct tui_win_info *);
-extern void tui_add_to_source_windows (struct tui_win_info *);
+extern void tui_add_to_source_windows (struct tui_source_win_info *);
 extern int tui_default_tab_len (void);
 extern void tui_set_default_tab_len (int);
 extern struct tui_win_info *tui_win_with_focus (void);
@@ -361,7 +388,5 @@ extern void tui_set_win_resized_to (int);
 
 extern struct tui_win_info *tui_next_win (struct tui_win_info *);
 extern struct tui_win_info *tui_prev_win (struct tui_win_info *);
-
-extern void tui_add_to_source_windows (struct tui_win_info *);
 
 #endif /* TUI_DATA_H */

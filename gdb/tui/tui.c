@@ -222,9 +222,10 @@ tui_rl_other_window (int count, int key)
   if (win_info)
     {
       tui_set_win_focus_to (win_info);
-      if (TUI_DATA_WIN && TUI_DATA_WIN->generic.is_visible)
+      if (TUI_DATA_WIN && TUI_DATA_WIN->win_info.generic.is_visible)
         tui_refresh_data_win ();
-      keypad (TUI_CMD_WIN->generic.handle, (win_info != TUI_CMD_WIN));
+      keypad (TUI_CMD_WIN->win_info.generic.handle,
+	      (win_info != &TUI_CMD_WIN->win_info));
     }
   return 0;
 }
@@ -389,9 +390,9 @@ tui_enable (void)
 
       tui_show_frame_info (0);
       tui_set_layout (SRC_COMMAND, TUI_UNDEFINED_REGS);
-      tui_set_win_focus_to (TUI_SRC_WIN);
-      keypad (TUI_CMD_WIN->generic.handle, TRUE);
-      wrefresh (TUI_CMD_WIN->generic.handle);
+      tui_set_win_focus_to (&TUI_SRC_WIN->win_info);
+      keypad (TUI_CMD_WIN->win_info.generic.handle, TRUE);
+      wrefresh (TUI_CMD_WIN->win_info.generic.handle);
       tui_finish_init = 0;
     }
   else
@@ -562,7 +563,7 @@ tui_get_command_dimension (unsigned int *width,
       return 0;
     }
   
-  *width = TUI_CMD_WIN->generic.width;
-  *height = TUI_CMD_WIN->generic.height;
+  *width = TUI_CMD_WIN->win_info.generic.width;
+  *height = TUI_CMD_WIN->win_info.generic.height;
   return 1;
 }

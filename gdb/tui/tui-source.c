@@ -54,10 +54,10 @@ tui_set_source_content (struct symtab *s,
 
       if ((ret = tui_alloc_source_buffer (TUI_SRC_WIN)) == TUI_SUCCESS)
 	{
-	  line_width = TUI_SRC_WIN->generic.width - 1;
+	  line_width = TUI_SRC_WIN->win_info.generic.width - 1;
 	  /* Take hilite (window border) into account, when
 	     calculating the number of lines.  */
-	  nlines = (line_no + (TUI_SRC_WIN->generic.height - 2)) - line_no;
+	  nlines = (line_no + (TUI_SRC_WIN->win_info.generic.height - 2)) - line_no;
 	  desc = open_source_file (s);
 	  if (desc < 0)
 	    {
@@ -90,14 +90,12 @@ tui_set_source_content (struct symtab *s,
 		{
 		  int offset, cur_line_no, cur_line, cur_len, threshold;
 		  struct tui_gen_win_info *locator = tui_locator_win_info_ptr ();
-                  struct tui_source_info *src = &TUI_SRC_WIN->detail.source_info;
+                  struct tui_source_win_info *src = TUI_SRC_WIN;
 
-                  if (TUI_SRC_WIN->generic.title)
-                    xfree (TUI_SRC_WIN->generic.title);
-                  TUI_SRC_WIN->generic.title = xstrdup (s->filename);
+		  xfree (TUI_SRC_WIN->win_info.generic.title);
+                  TUI_SRC_WIN->win_info.generic.title = xstrdup (s->filename);
 
-                  if (src->filename)
-                    xfree (src->filename);
+		  xfree (src->filename);
                   src->filename = xstrdup (s->filename);
 
 		  /* Determine the threshold for the length of the
@@ -116,14 +114,14 @@ tui_set_source_content (struct symtab *s,
 		  while (cur_line < nlines)
 		    {
 		      struct tui_win_element *element = (struct tui_win_element *)
-		      TUI_SRC_WIN->generic.content[cur_line];
+		      TUI_SRC_WIN->win_info.generic.content[cur_line];
 
 		      /* Get the first character in the line.  */
 		      c = fgetc (stream);
 
 		      if (offset == 0)
 			src_line = ((struct tui_win_element *)
-				   TUI_SRC_WIN->generic.content[
+				   TUI_SRC_WIN->win_info.generic.content[
 					cur_line])->which_element.source.line;
 		      /* Init the line with the line number.  */
 		      sprintf (src_line, "%-6d", cur_line_no);
@@ -213,12 +211,12 @@ tui_set_source_content (struct symtab *s,
 		      /* Now copy the line taking the offset into
 			 account.  */
 		      if (strlen (src_line) > offset)
-			strcpy (((struct tui_win_element *) TUI_SRC_WIN->generic.content[
+			strcpy (((struct tui_win_element *) TUI_SRC_WIN->win_info.generic.content[
 					cur_line])->which_element.source.line,
 				&src_line[offset]);
 		      else
 			((struct tui_win_element *)
-			 TUI_SRC_WIN->generic.content[
+			 TUI_SRC_WIN->win_info.generic.content[
 			  cur_line])->which_element.source.line[0] = (char) 0;
 		      cur_line++;
 		      cur_line_no++;
@@ -226,7 +224,7 @@ tui_set_source_content (struct symtab *s,
 		  if (offset > 0)
 		    xfree (src_line);
 		  fclose (stream);
-		  TUI_SRC_WIN->generic.content_size = nlines;
+		  TUI_SRC_WIN->win_info.generic.content_size = nlines;
 		  ret = TUI_SUCCESS;
 		}
 	    }
@@ -243,12 +241,13 @@ tui_set_source_content (struct symtab *s,
    source files cannot be accessed.  */
 
 void
-tui_set_source_content_nil (struct tui_win_info *win_info, 
+tui_set_source_content_nil (struct tui_source_win_info *src_win_info,
 			    char *warning_string)
 {
   int line_width;
   int n_lines;
   int curr_line = 0;
+  struct tui_win_info *win_info = &src_win_info->win_info;
 
   line_width = win_info->generic.width - 1;
   n_lines = win_info->generic.height - 2;
@@ -317,7 +316,7 @@ tui_show_symtab_source (struct gdbarch *gdbarch, struct symtab *s,
 			struct tui_line_or_address line, 
 			int noerror)
 {
-  TUI_SRC_WIN->detail.source_info.horizontal_offset = 0;
+  TUI_SRC_WIN->horizontal_offset = 0;
   tui_update_source_window_as_is (TUI_SRC_WIN, gdbarch, s, line, noerror);
 }
 
@@ -327,7 +326,7 @@ tui_show_symtab_source (struct gdbarch *gdbarch, struct symtab *s,
 int
 tui_source_is_displayed (char *fname)
 {
-  return (TUI_SRC_WIN->generic.content_in_use 
+  return (TUI_SRC_WIN->win_info.generic.content_in_use
 	  && (strcmp (((struct tui_win_element *) (tui_locator_win_info_ptr ())->
 		       content[0])->which_element.locator.file_name, fname) == 0));
 }
@@ -335,14 +334,15 @@ tui_source_is_displayed (char *fname)
 
 /* Scroll the source forward or backward vertically.  */
 void
-tui_vertical_source_scroll (enum tui_scroll_direction scroll_direction,
+tui_vertical_source_scroll (struct tui_win_info *win_info,
+			    enum tui_scroll_direction scroll_direction,
 			    int num_to_scroll)
 {
-  if (TUI_SRC_WIN->generic.content != NULL)
+  if (win_info->generic.content != NULL)
     {
       struct tui_line_or_address l;
       struct symtab *s;
-      tui_win_content content = (tui_win_content) TUI_SRC_WIN->generic.content;
+      tui_win_content content = (tui_win_content) win_info->generic.content;
       struct symtab_and_line cursal = get_current_source_symtab_and_line ();
 
       if (cursal.symtab == (struct symtab *) NULL)

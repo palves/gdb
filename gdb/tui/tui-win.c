@@ -469,10 +469,10 @@ tui_update_gdb_sizes (void)
 
   /* Set to TUI command window dimension or use readline values.  */
   sprintf (cmd, "set width %d",
-           tui_active ? TUI_CMD_WIN->generic.width : tui_term_width());
+           tui_active ? TUI_CMD_WIN->win_info.generic.width : tui_term_width());
   execute_command (cmd, 0);
   sprintf (cmd, "set height %d",
-           tui_active ? TUI_CMD_WIN->generic.height : tui_term_height());
+           tui_active ? TUI_CMD_WIN->win_info.generic.height : tui_term_height());
   execute_command (cmd, 0);
 }
 
@@ -499,50 +499,37 @@ void
 tui_scroll_forward (struct tui_win_info *win_to_scroll, 
 		    int num_to_scroll)
 {
-  if (win_to_scroll != TUI_CMD_WIN)
-    {
-      int _num_to_scroll = num_to_scroll;
+  int _num_to_scroll = num_to_scroll;
 
-      if (num_to_scroll == 0)
-	_num_to_scroll = win_to_scroll->generic.height - 3;
+  if (num_to_scroll == 0)
+    _num_to_scroll = win_to_scroll->generic.height - 3;
 
-      /* If we are scrolling the source or disassembly window, do a
-         "psuedo" scroll since not all of the source is in memory,
-         only what is in the viewport.  If win_to_scroll is the
-         command window do nothing since the term should handle
-         it.  */
-      if (win_to_scroll == TUI_SRC_WIN)
-	tui_vertical_source_scroll (FORWARD_SCROLL, _num_to_scroll);
-      else if (win_to_scroll == TUI_DISASM_WIN)
-	tui_vertical_disassem_scroll (FORWARD_SCROLL, _num_to_scroll);
-      else if (win_to_scroll == TUI_DATA_WIN)
-	tui_vertical_data_scroll (FORWARD_SCROLL, _num_to_scroll);
-    }
+  /* If we are scrolling the source or disassembly window, do a
+     "pseudo" scroll since not all of the source is in memory, only
+     what is in the viewport.  If win_to_scroll is the command window
+     do nothing since the term should handle it.  */
+  (*win_to_scroll->vtable->vertical_scroll) (win_to_scroll,
+					     FORWARD_SCROLL,
+					     _num_to_scroll);
 }
 
 void
 tui_scroll_backward (struct tui_win_info *win_to_scroll, 
 		     int num_to_scroll)
 {
-  if (win_to_scroll != TUI_CMD_WIN)
-    {
-      int _num_to_scroll = num_to_scroll;
+  int _num_to_scroll = num_to_scroll;
 
-      if (num_to_scroll == 0)
-	_num_to_scroll = win_to_scroll->generic.height - 3;
+  if (num_to_scroll == 0)
+    _num_to_scroll = win_to_scroll->generic.height - 3;
 
-      /* If we are scrolling the source or disassembly window, do a
-         "psuedo" scroll since not all of the source is in memory,
-         only what is in the viewport.  If win_to_scroll is the
-         command window do nothing since the term should handle
-         it.  */
-      if (win_to_scroll == TUI_SRC_WIN)
-	tui_vertical_source_scroll (BACKWARD_SCROLL, _num_to_scroll);
-      else if (win_to_scroll == TUI_DISASM_WIN)
-	tui_vertical_disassem_scroll (BACKWARD_SCROLL, _num_to_scroll);
-      else if (win_to_scroll == TUI_DATA_WIN)
-	tui_vertical_data_scroll (BACKWARD_SCROLL, _num_to_scroll);
-    }
+  /* If we are scrolling the source or disassembly window, do a
+     "pseudo" scroll since not all of the source is in memory, only
+     what is in the viewport.  If win_to_scroll is the command window
+     do nothing since the term should handle it.  */
+
+  (*win_to_scroll->vtable->vertical_scroll) (win_to_scroll,
+					     BACKWARD_SCROLL,
+					     _num_to_scroll);
 }
 
 
@@ -550,21 +537,18 @@ void
 tui_scroll_left (struct tui_win_info *win_to_scroll,
 		 int num_to_scroll)
 {
-  if (win_to_scroll != TUI_CMD_WIN)
-    {
-      int _num_to_scroll = num_to_scroll;
+  int _num_to_scroll = num_to_scroll;
 
-      if (_num_to_scroll == 0)
-	_num_to_scroll = 1;
+  if (_num_to_scroll == 0)
+    _num_to_scroll = 1;
 
-      /* If we are scrolling the source or disassembly window, do a
-         "psuedo" scroll since not all of the source is in memory,
-         only what is in the viewport. If win_to_scroll is the command
-         window do nothing since the term should handle it.  */
-      if (win_to_scroll == TUI_SRC_WIN
-	  || win_to_scroll == TUI_DISASM_WIN)
-	tui_horizontal_source_scroll (win_to_scroll, LEFT_SCROLL, _num_to_scroll);
-    }
+  /* If we are scrolling the source or disassembly window, do a
+     "pseudo" scroll since not all of the source is in memory, only
+     what is in the viewport. If win_to_scroll is the command window
+     do nothing since the term should handle it.  */
+
+  (*win_to_scroll->vtable->horizontal_scroll)
+    (win_to_scroll, LEFT_SCROLL, _num_to_scroll);
 }
 
 
@@ -572,25 +556,22 @@ void
 tui_scroll_right (struct tui_win_info *win_to_scroll, 
 		  int num_to_scroll)
 {
-  if (win_to_scroll != TUI_CMD_WIN)
-    {
-      int _num_to_scroll = num_to_scroll;
+  int _num_to_scroll = num_to_scroll;
 
-      if (_num_to_scroll == 0)
-	_num_to_scroll = 1;
+  if (_num_to_scroll == 0)
+    _num_to_scroll = 1;
 
-      /* If we are scrolling the source or disassembly window, do a
-         "psuedo" scroll since not all of the source is in memory,
-         only what is in the viewport. If win_to_scroll is the command
-         window do nothing since the term should handle it.  */
-      if (win_to_scroll == TUI_SRC_WIN
-	  || win_to_scroll == TUI_DISASM_WIN)
-	tui_horizontal_source_scroll (win_to_scroll, RIGHT_SCROLL, _num_to_scroll);
-    }
+  /* If we are scrolling the source or disassembly window, do a
+     "pseudo" scroll since not all of the source is in memory, only
+     what is in the viewport. If win_to_scroll is the command window
+     do nothing since the term should handle it.  */
+  (*win_to_scroll->vtable->horizontal_scroll)
+    (win_to_scroll, RIGHT_SCROLL, _num_to_scroll);
 }
 
 
-/* Scroll a window.  Arguments are passed through a va_list.  */
+/* Scroll a window.  */
+
 void
 tui_scroll (enum tui_scroll_direction direction,
 	    struct tui_win_info *win_to_scroll,
@@ -625,25 +606,9 @@ tui_refresh_all_win (void)
   tui_refresh_all (tui_win_list);
   for (type = SRC_WIN; type < MAX_MAJOR_WINDOWS; type++)
     {
-      if (tui_win_list[type] 
+      if (tui_win_list[type]
 	  && tui_win_list[type]->generic.is_visible)
-	{
-	  switch (type)
-	    {
-	    case SRC_WIN:
-	    case DISASSEM_WIN:
-	      tui_show_source_content (tui_win_list[type]);
-	      tui_check_and_display_highlight_if_needed (tui_win_list[type]);
-	      tui_erase_exec_info_content (tui_win_list[type]);
-	      tui_update_exec_info (tui_win_list[type]);
-	      break;
-	    case DATA_WIN:
-	      tui_refresh_data_win ();
-	      break;
-	    default:
-	      break;
-	    }
-	}
+	(*tui_win_list[type]->vtable->refresh_win) (tui_win_list[type]);
     }
   tui_show_locator_content ();
 }
@@ -674,8 +639,8 @@ tui_resize_all (void)
       resize_term (screenheight, screenwidth);
 #endif      
       /* Turn keypad off while we resize.  */
-      if (win_with_focus != TUI_CMD_WIN)
-	keypad (TUI_CMD_WIN->generic.handle, FALSE);
+      if (win_with_focus != &TUI_CMD_WIN->win_info)
+	keypad (TUI_CMD_WIN->win_info.generic.handle, FALSE);
       tui_update_gdb_sizes ();
       tui_set_term_height_to (screenheight);
       tui_set_term_width_to (screenwidth);
@@ -714,26 +679,27 @@ tui_resize_all (void)
 	    new_height = first_win->generic.height + split_diff;
 
 	  make_invisible_and_set_new_height (first_win, new_height);
-	  TUI_CMD_WIN->generic.origin.y = locator->origin.y + 1;
-	  TUI_CMD_WIN->generic.width += width_diff;
-	  new_height = screenheight - TUI_CMD_WIN->generic.origin.y;
-	  make_invisible_and_set_new_height (TUI_CMD_WIN, new_height);
+	  TUI_CMD_WIN->win_info.generic.origin.y = locator->origin.y + 1;
+	  TUI_CMD_WIN->win_info.generic.width += width_diff;
+	  new_height = screenheight - TUI_CMD_WIN->win_info.generic.origin.y;
+	  make_invisible_and_set_new_height (&TUI_CMD_WIN->win_info, new_height);
 	  make_visible_with_new_height (first_win);
-	  make_visible_with_new_height (TUI_CMD_WIN);
+	  make_visible_with_new_height (&TUI_CMD_WIN->win_info);
 	  if (first_win->generic.content_size <= 0)
-	    tui_erase_source_content (first_win, EMPTY_SOURCE_PROMPT);
+	    tui_erase_source_content ((struct tui_source_win_info *) first_win,
+				      EMPTY_SOURCE_PROMPT);
 	  break;
 	default:
 	  if (cur_layout == SRC_DISASSEM_COMMAND)
 	    {
-	      first_win = TUI_SRC_WIN;
+	      first_win = &TUI_SRC_WIN->win_info;
 	      first_win->generic.width += width_diff;
-	      second_win = TUI_DISASM_WIN;
+	      second_win = &TUI_DISASM_WIN->win_info;
 	      second_win->generic.width += width_diff;
 	    }
 	  else
 	    {
-	      first_win = TUI_DATA_WIN;
+	      first_win = &TUI_DATA_WIN->win_info;
 	      first_win->generic.width += width_diff;
 	      second_win = (struct tui_win_info *) (tui_source_windows ())->list[0];
 	      second_win->generic.width += width_diff;
@@ -776,16 +742,18 @@ tui_resize_all (void)
 	  make_invisible_and_set_new_height (second_win, new_height);
 
 	  /* Change the command window's height/width.  */
-	  TUI_CMD_WIN->generic.origin.y = locator->origin.y + 1;
+	  TUI_CMD_WIN->win_info.generic.origin.y = locator->origin.y + 1;
 	  make_invisible_and_set_new_height (
-			     TUI_CMD_WIN, TUI_CMD_WIN->generic.height + cmd_split_diff);
+			     &TUI_CMD_WIN->win_info, TUI_CMD_WIN->win_info.generic.height + cmd_split_diff);
 	  make_visible_with_new_height (first_win);
 	  make_visible_with_new_height (second_win);
-	  make_visible_with_new_height (TUI_CMD_WIN);
+	  make_visible_with_new_height (&TUI_CMD_WIN->win_info);
 	  if (first_win->generic.content_size <= 0)
-	    tui_erase_source_content (first_win, EMPTY_SOURCE_PROMPT);
+	    tui_erase_source_content ((struct tui_source_win_info *) first_win,
+				      EMPTY_SOURCE_PROMPT);
 	  if (second_win->generic.content_size <= 0)
-	    tui_erase_source_content (second_win, EMPTY_SOURCE_PROMPT);
+	    tui_erase_source_content ((struct tui_source_win_info *) second_win,
+				      EMPTY_SOURCE_PROMPT);
 	  break;
 	}
       /* Now remove all invisible windows, and their content so that
@@ -803,8 +771,8 @@ tui_resize_all (void)
       tui_set_win_resized_to (TRUE);
       /* Turn keypad back on, unless focus is in the command
 	 window.  */
-      if (win_with_focus != TUI_CMD_WIN)
-	keypad (TUI_CMD_WIN->generic.handle, TRUE);
+      if (win_with_focus != &TUI_CMD_WIN->win_info)
+	keypad (TUI_CMD_WIN->win_info.generic.handle, TRUE);
     }
 }
 
@@ -928,14 +896,15 @@ The window name specified must be valid and visible.\n"));
       else
 	{
 	  tui_set_win_focus_to (win_info);
-	  keypad (TUI_CMD_WIN->generic.handle, (win_info != TUI_CMD_WIN));
+	  keypad (TUI_CMD_WIN->win_info.generic.handle,
+		  (win_info != &TUI_CMD_WIN->win_info));
 	}
 
-      if (TUI_DATA_WIN && TUI_DATA_WIN->generic.is_visible)
+      if (TUI_DATA_WIN && TUI_DATA_WIN->win_info.generic.is_visible)
 	tui_refresh_data_win ();
       xfree (buf_ptr);
       printf_filtered (_("Focus set to %s window.\n"),
-		       tui_win_name ((struct tui_gen_win_info *) tui_win_with_focus ()));
+		       tui_win_name (tui_win_with_focus ()));
     }
   else
     warning (_("Incorrect Number of Arguments.\n%s"), FOCUS_USAGE);
@@ -962,11 +931,11 @@ tui_all_windows_info (char *arg, int from_tty)
       {
 	if (win_with_focus == tui_win_list[type])
 	  printf_filtered ("        %s\t(%d lines)  <has focus>\n",
-			   tui_win_name (&tui_win_list[type]->generic),
+			   tui_win_name (tui_win_list[type]),
 			   tui_win_list[type]->generic.height);
 	else
 	  printf_filtered ("        %s\t(%d lines)\n",
-			   tui_win_name (&tui_win_list[type]->generic),
+			   tui_win_name (tui_win_list[type]),
 			   tui_win_list[type]->generic.height);
       }
 }
@@ -1153,25 +1122,25 @@ tui_adjust_win_heights (struct tui_win_info *primary_win_info,
 	  if (cur_layout == SRC_COMMAND 
 	      || cur_layout == DISASSEM_COMMAND)
 	    {
-	      struct tui_win_info *src_win_info;
+	      struct tui_source_win_info *src_win_info;
 
 	      make_invisible_and_set_new_height (primary_win_info, new_height);
 	      if (primary_win_info->generic.type == CMD_WIN)
 		{
 		  win_info = (tui_source_windows ())->list[0];
-		  src_win_info = win_info;
+		  src_win_info = (struct tui_source_win_info *) win_info;
 		}
 	      else
 		{
 		  win_info = tui_win_list[CMD_WIN];
-		  src_win_info = primary_win_info;
+		  src_win_info = (struct tui_source_win_info *) primary_win_info;
 		}
 	      make_invisible_and_set_new_height (win_info,
 					     win_info->generic.height + diff);
-	      TUI_CMD_WIN->generic.origin.y = locator->origin.y + 1;
+	      TUI_CMD_WIN->win_info.generic.origin.y = locator->origin.y + 1;
 	      make_visible_with_new_height (win_info);
 	      make_visible_with_new_height (primary_win_info);
-	      if (src_win_info->generic.content_size <= 0)
+	      if (src_win_info->win_info.generic.content_size <= 0)
 		tui_erase_source_content (src_win_info, EMPTY_SOURCE_PROMPT);
 	    }
 	  else
@@ -1181,15 +1150,15 @@ tui_adjust_win_heights (struct tui_win_info *primary_win_info,
 
 	      if (cur_layout == SRC_DISASSEM_COMMAND)
 		{
-		  first_win = TUI_SRC_WIN;
-		  second_win = TUI_DISASM_WIN;
+		  first_win = &TUI_SRC_WIN->win_info;
+		  second_win = &TUI_DISASM_WIN->win_info;
 		}
 	      else
 		{
-		  first_win = TUI_DATA_WIN;
+		  first_win = &TUI_DATA_WIN->win_info;
 		  second_win = (tui_source_windows ())->list[0];
 		}
-	      if (primary_win_info == TUI_CMD_WIN)
+	      if (primary_win_info == &TUI_CMD_WIN->win_info)
 		{ /* Split the change in height accross the 1st & 2nd
 		     windows, adjusting them as well.  */
 		  /* Subtract the locator.  */
@@ -1230,19 +1199,19 @@ tui_adjust_win_heights (struct tui_win_info *primary_win_info,
 		  second_win->generic.origin.y = first_win->generic.height - 1;
 		  make_invisible_and_set_new_height (
 		    second_win, second_win->generic.height + second_split_diff);
-		  TUI_CMD_WIN->generic.origin.y = locator->origin.y + 1;
-		  make_invisible_and_set_new_height (TUI_CMD_WIN, new_height);
+		  TUI_CMD_WIN->win_info.generic.origin.y = locator->origin.y + 1;
+		  make_invisible_and_set_new_height (&TUI_CMD_WIN->win_info, new_height);
 		}
 	      else
 		{
-		  if ((TUI_CMD_WIN->generic.height + diff) < 1)
+		  if ((TUI_CMD_WIN->win_info.generic.height + diff) < 1)
 		    { /* If there is no way to increase the command
 			 window take real estate from the 1st or 2nd
 			 window.  */
-		      if ((TUI_CMD_WIN->generic.height + diff) < 1)
+		      if ((TUI_CMD_WIN->win_info.generic.height + diff) < 1)
 			{
 			  int i;
-			  for (i = TUI_CMD_WIN->generic.height + diff;
+			  for (i = TUI_CMD_WIN->win_info.generic.height + diff;
 			       (i < 1); i++)
 			    if (primary_win_info == first_win)
 			      second_win->generic.height--;
@@ -1262,20 +1231,23 @@ tui_adjust_win_heights (struct tui_win_info *primary_win_info,
 		  else
 		    make_invisible_and_set_new_height (
 				      second_win, second_win->generic.height);
-		  TUI_CMD_WIN->generic.origin.y = locator->origin.y + 1;
-		  if ((TUI_CMD_WIN->generic.height + diff) < 1)
-		    make_invisible_and_set_new_height (TUI_CMD_WIN, 1);
+		  TUI_CMD_WIN->win_info.generic.origin.y = locator->origin.y + 1;
+		  if ((TUI_CMD_WIN->win_info.generic.height + diff) < 1)
+		    make_invisible_and_set_new_height (&TUI_CMD_WIN->win_info, 1);
 		  else
 		    make_invisible_and_set_new_height (
-				     TUI_CMD_WIN, TUI_CMD_WIN->generic.height + diff);
+				     &TUI_CMD_WIN->win_info,
+				     TUI_CMD_WIN->win_info.generic.height + diff);
 		}
-	      make_visible_with_new_height (TUI_CMD_WIN);
+	      make_visible_with_new_height (&TUI_CMD_WIN->win_info);
 	      make_visible_with_new_height (second_win);
 	      make_visible_with_new_height (first_win);
 	      if (first_win->generic.content_size <= 0)
-		tui_erase_source_content (first_win, EMPTY_SOURCE_PROMPT);
+		tui_erase_source_content ((struct tui_source_win_info *) first_win,
+					  EMPTY_SOURCE_PROMPT);
 	      if (second_win->generic.content_size <= 0)
-		tui_erase_source_content (second_win, EMPTY_SOURCE_PROMPT);
+		tui_erase_source_content ((struct tui_source_win_info *) second_win,
+					  EMPTY_SOURCE_PROMPT);
 	    }
 	}
     }
@@ -1285,7 +1257,7 @@ tui_adjust_win_heights (struct tui_win_info *primary_win_info,
 
 
 /* Function make the target window (and auxillary windows associated
-   with the targer) invisible, and set the new height and
+   with the target) invisible, and set the new height and
    location.  */
 static void
 make_invisible_and_set_new_height (struct tui_win_info *win_info, 
@@ -1293,6 +1265,7 @@ make_invisible_and_set_new_height (struct tui_win_info *win_info,
 {
   int i;
   struct tui_gen_win_info *gen_win_info;
+  struct tui_source_win_info *src_win_info;
 
   tui_make_invisible (&win_info->generic);
   win_info->generic.height = height;
@@ -1300,7 +1273,7 @@ make_invisible_and_set_new_height (struct tui_win_info *win_info,
     win_info->generic.viewport_height = height - 1;
   else
     win_info->generic.viewport_height = height;
-  if (win_info != TUI_CMD_WIN)
+  if (win_info != &TUI_CMD_WIN->win_info)
     win_info->generic.viewport_height--;
 
   /* Now deal with the auxillary windows associated with win_info.  */
@@ -1308,7 +1281,8 @@ make_invisible_and_set_new_height (struct tui_win_info *win_info,
     {
     case SRC_WIN:
     case DISASSEM_WIN:
-      gen_win_info = win_info->detail.source_info.execution_info;
+      src_win_info = (struct tui_source_win_info *) win_info;
+      gen_win_info = src_win_info->execution_info;
       tui_make_invisible (gen_win_info);
       gen_win_info->height = height;
       gen_win_info->origin.y = win_info->generic.origin.y;
@@ -1316,10 +1290,10 @@ make_invisible_and_set_new_height (struct tui_win_info *win_info,
 	gen_win_info->viewport_height = height - 1;
       else
 	gen_win_info->viewport_height = height;
-      if (win_info != TUI_CMD_WIN)
+      if (win_info != &TUI_CMD_WIN->win_info)
 	gen_win_info->viewport_height--;
 
-      if (tui_win_has_locator (win_info))
+      if (tui_source_win_has_locator (src_win_info))
 	{
 	  gen_win_info = tui_locator_win_info_ptr ();
 	  tui_make_invisible (gen_win_info);
@@ -1349,6 +1323,7 @@ static void
 make_visible_with_new_height (struct tui_win_info *win_info)
 {
   struct symtab *s;
+  struct tui_source_win_info *src_win_info;
 
   tui_make_visible (&win_info->generic);
   tui_check_and_display_highlight_if_needed (win_info);
@@ -1356,18 +1331,19 @@ make_visible_with_new_height (struct tui_win_info *win_info)
     {
     case SRC_WIN:
     case DISASSEM_WIN:
-      tui_free_win_content (win_info->detail.source_info.execution_info);
-      tui_make_visible (win_info->detail.source_info.execution_info);
+      src_win_info = (struct tui_source_win_info *) win_info;
+      tui_free_win_content (src_win_info->execution_info);
+      tui_make_visible (src_win_info->execution_info);
       if (win_info->generic.content != NULL)
 	{
-	  struct gdbarch *gdbarch = win_info->detail.source_info.gdbarch;
+	  struct gdbarch *gdbarch = src_win_info->gdbarch;
 	  struct tui_line_or_address line_or_addr;
 	  struct symtab_and_line cursal
 	    = get_current_source_symtab_and_line ();
 
-	  line_or_addr = win_info->detail.source_info.start_line_or_addr;
+	  line_or_addr = src_win_info->start_line_or_addr;
 	  tui_free_win_content (&win_info->generic);
-	  tui_update_source_window (win_info, gdbarch,
+	  tui_update_source_window (src_win_info, gdbarch,
 				    cursal.symtab, line_or_addr, TRUE);
 	}
       else if (deprecated_safe_get_selected_frame () != NULL)
@@ -1388,9 +1364,9 @@ make_visible_with_new_height (struct tui_win_info *win_info)
 	      line.loa = LOA_ADDRESS;
 	      find_line_pc (s, cursal.line, &line.u.addr);
 	    }
-	  tui_update_source_window (win_info, gdbarch, s, line, TRUE);
+	  tui_update_source_window (src_win_info, gdbarch, s, line, TRUE);
 	}
-      if (tui_win_has_locator (win_info))
+      if (tui_source_win_has_locator (src_win_info))
 	{
 	  tui_make_visible (tui_locator_win_info_ptr ());
 	  tui_show_locator_content ();
@@ -1400,11 +1376,15 @@ make_visible_with_new_height (struct tui_win_info *win_info)
       tui_display_all_data ();
       break;
     case CMD_WIN:
-      win_info->detail.command_info.cur_line = 0;
-      win_info->detail.command_info.curch = 0;
-      wmove (win_info->generic.handle,
-	     win_info->detail.command_info.cur_line,
-	     win_info->detail.command_info.curch);
+      {
+	struct tui_command_win_info *cmd_win_info;
+
+	cmd_win_info->cur_line = 0;
+	cmd_win_info->curch = 0;
+	wmove (win_info->generic.handle,
+	       cmd_win_info->cur_line,
+	       cmd_win_info->curch);
+      }
       break;
     default:
       break;
@@ -1436,10 +1416,10 @@ new_height_ok (struct tui_win_info *primary_win_info,
 	    {			/* Check the total height.  */
 	      struct tui_win_info *win_info;
 
-	      if (primary_win_info == TUI_CMD_WIN)
+	      if (primary_win_info == &TUI_CMD_WIN->win_info)
 		win_info = (tui_source_windows ())->list[0];
 	      else
-		win_info = TUI_CMD_WIN;
+		win_info = &TUI_CMD_WIN->win_info;
 	      ok = ((new_height +
 		     (win_info->generic.height + diff)) <= tui_term_height ());
 	    }
@@ -1452,12 +1432,12 @@ new_height_ok (struct tui_win_info *primary_win_info,
 
 	  if (cur_layout == SRC_DISASSEM_COMMAND)
 	    {
-	      first_win = TUI_SRC_WIN;
-	      second_win = TUI_DISASM_WIN;
+	      first_win = &TUI_SRC_WIN->win_info;
+	      second_win = &TUI_DISASM_WIN->win_info;
 	    }
 	  else
 	    {
-	      first_win = TUI_DATA_WIN;
+	      first_win = &TUI_DATA_WIN->win_info;
 	      second_win = (tui_source_windows ())->list[0];
 	    }
 	  /* We could simply add all the heights to obtain the same
@@ -1466,8 +1446,8 @@ new_height_ok (struct tui_win_info *primary_win_info,
 	     one for the locator.  */
 	  total_height = cur_total_height =
 	    (first_win->generic.height + second_win->generic.height - 1)
-	    + TUI_CMD_WIN->generic.height + 1;	/* Locator. */
-	  if (primary_win_info == TUI_CMD_WIN)
+	    + TUI_CMD_WIN->win_info.generic.height + 1;	/* Locator. */
+	  if (primary_win_info == &TUI_CMD_WIN->win_info)
 	    {
 	      /* Locator included since first & second win share a line.  */
 	      ok = ((first_win->generic.height +
@@ -1489,7 +1469,7 @@ new_height_ok (struct tui_win_info *primary_win_info,
 	      /* First see if we can increase/decrease the command
 	         window.  And make sure that the command window is at
 	         least 1 line.  */
-	      ok = ((TUI_CMD_WIN->generic.height + diff) > 0);
+	      ok = ((TUI_CMD_WIN->win_info.generic.height + diff) > 0);
 	      if (!ok)
 		{ /* Looks like we have to increase/decrease one of
 		     the other windows.  */
@@ -1503,11 +1483,11 @@ new_height_ok (struct tui_win_info *primary_win_info,
 		  if (primary_win_info == first_win)
 		    total_height = new_height +
 		      second_win->generic.height +
-		      TUI_CMD_WIN->generic.height + diff;
+		      TUI_CMD_WIN->win_info.generic.height + diff;
 		  else
 		    total_height = new_height +
 		      first_win->generic.height +
-		      TUI_CMD_WIN->generic.height + diff;
+		      TUI_CMD_WIN->win_info.generic.height + diff;
 		}
 	    }
 	  /* Now make sure that the proposed total height doesn't
@@ -1580,7 +1560,7 @@ parse_scrolling_args (char *arg,
 	      || !(*win_to_scroll)->generic.is_visible)
 	    error (_("Invalid window specified. \n\
 The window name specified must be valid and visible.\n"));
-	  else if (*win_to_scroll == TUI_CMD_WIN)
+	  else if (*win_to_scroll == &TUI_CMD_WIN->win_info)
 	    *win_to_scroll = (tui_source_windows ())->list[0];
 	}
       xfree (buf);

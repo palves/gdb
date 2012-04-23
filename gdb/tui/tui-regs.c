@@ -78,12 +78,12 @@ tui_last_regs_line_no (void)
 {
   int num_lines = (-1);
 
-  if (TUI_DATA_WIN->detail.data_display_info.regs_content_count > 0)
+  if (TUI_DATA_WIN->regs_content_count > 0)
     {
-      num_lines = (TUI_DATA_WIN->detail.data_display_info.regs_content_count /
-		  TUI_DATA_WIN->detail.data_display_info.regs_column_count);
-      if (TUI_DATA_WIN->detail.data_display_info.regs_content_count %
-	  TUI_DATA_WIN->detail.data_display_info.regs_column_count)
+      num_lines = (TUI_DATA_WIN->regs_content_count /
+		  TUI_DATA_WIN->regs_column_count);
+      if (TUI_DATA_WIN->regs_content_count %
+	  TUI_DATA_WIN->regs_column_count)
 	num_lines++;
     }
   return num_lines;
@@ -96,7 +96,7 @@ tui_last_regs_line_no (void)
 int
 tui_line_from_reg_element_no (int element_no)
 {
-  if (element_no < TUI_DATA_WIN->detail.data_display_info.regs_content_count)
+  if (element_no < TUI_DATA_WIN->regs_content_count)
     {
       int i, line = (-1);
 
@@ -104,7 +104,7 @@ tui_line_from_reg_element_no (int element_no)
       while (line == (-1))
 	{
 	  if (element_no <
-	      (TUI_DATA_WIN->detail.data_display_info.regs_column_count * i))
+	      (TUI_DATA_WIN->regs_column_count * i))
 	    line = i - 1;
 	  else
 	    i++;
@@ -122,11 +122,11 @@ tui_line_from_reg_element_no (int element_no)
 int
 tui_first_reg_element_no_inline (int line_no)
 {
-  if ((line_no * TUI_DATA_WIN->detail.data_display_info.regs_column_count)
-      <= TUI_DATA_WIN->detail.data_display_info.regs_content_count)
+  if ((line_no * TUI_DATA_WIN->regs_column_count)
+      <= TUI_DATA_WIN->regs_content_count)
     return ((line_no + 1) *
-	    TUI_DATA_WIN->detail.data_display_info.regs_column_count) -
-      TUI_DATA_WIN->detail.data_display_info.regs_column_count;
+	    TUI_DATA_WIN->regs_column_count) -
+      TUI_DATA_WIN->regs_column_count;
   else
     return (-1);
 }
@@ -137,10 +137,10 @@ tui_first_reg_element_no_inline (int line_no)
 int
 tui_last_reg_element_no_in_line (int line_no)
 {
-  if ((line_no * TUI_DATA_WIN->detail.data_display_info.regs_column_count) <=
-      TUI_DATA_WIN->detail.data_display_info.regs_content_count)
+  if ((line_no * TUI_DATA_WIN->regs_column_count) <=
+      TUI_DATA_WIN->regs_content_count)
     return ((line_no + 1) *
-	    TUI_DATA_WIN->detail.data_display_info.regs_column_count) - 1;
+	    TUI_DATA_WIN->regs_column_count) - 1;
   else
     return (-1);
 }
@@ -151,32 +151,30 @@ void
 tui_show_registers (struct reggroup *group)
 {
   enum tui_status ret = TUI_FAILURE;
-  struct tui_data_info *display_info;
 
   /* Make sure the curses mode is enabled.  */
   tui_enable ();
 
   /* Make sure the register window is visible.  If not, select an
      appropriate layout.  */
-  if (TUI_DATA_WIN == NULL || !TUI_DATA_WIN->generic.is_visible)
+  if (TUI_DATA_WIN == NULL || !TUI_DATA_WIN->win_info.generic.is_visible)
     tui_set_layout_for_display_command (DATA_NAME);
 
-  display_info = &TUI_DATA_WIN->detail.data_display_info;
   if (group == 0)
     group = general_reggroup;
 
   /* Say that registers should be displayed, even if there is a
      problem.  */
-  display_info->display_regs = TRUE;
+  TUI_DATA_WIN->display_regs = TRUE;
 
-  if (target_has_registers && target_has_stack && target_has_memory)
+  if (has_stack_frames ())
     {
       ret = tui_show_register_group (group, get_current_frame (),
-                                     group == display_info->current_group);
+                                     group == TUI_DATA_WIN->current_group);
     }
   if (ret == TUI_FAILURE)
     {
-      display_info->current_group = 0;
+      TUI_DATA_WIN->current_group = 0;
       tui_erase_data_content (NO_REGS_STRING);
     }
   else
@@ -184,17 +182,17 @@ tui_show_registers (struct reggroup *group)
       int i;
 
       /* Clear all notation of changed values.  */
-      for (i = 0; i < display_info->regs_content_count; i++)
+      for (i = 0; i < TUI_DATA_WIN->regs_content_count; i++)
 	{
 	  struct tui_gen_win_info *data_item_win;
           struct tui_win_element *win;
 
-	  data_item_win = &display_info->regs_content[i]
+	  data_item_win = &TUI_DATA_WIN->regs_content[i]
             ->which_element.data_window;
           win = (struct tui_win_element *) data_item_win->content[0];
           win->which_element.data.highlight = FALSE;
 	}
-      display_info->current_group = group;
+      TUI_DATA_WIN->current_group = group;
       tui_display_all_data ();
     }
 }
@@ -215,13 +213,13 @@ tui_show_register_group (struct reggroup *group,
   int allocated_here = FALSE;
   int regnum, pos;
   char title[80];
-  struct tui_data_info *display_info = &TUI_DATA_WIN->detail.data_display_info;
+  struct tui_data_display_win_info *display_info = TUI_DATA_WIN;
 
   /* Make a new title showing which group we display.  */
   snprintf (title, sizeof (title) - 1, "Register group: %s",
             reggroup_name (group));
-  xfree (TUI_DATA_WIN->generic.title);
-  TUI_DATA_WIN->generic.title = xstrdup (title);
+  xfree (TUI_DATA_WIN->win_info.generic.title);
+  TUI_DATA_WIN->win_info.generic.title = xstrdup (title);
 
   /* See how many registers must be displayed.  */
   nr_regs = 0;
@@ -254,11 +252,11 @@ tui_show_register_group (struct reggroup *group,
     {
       if (!refresh_values_only || allocated_here)
 	{
-	  TUI_DATA_WIN->generic.content = (void*) NULL;
-	  TUI_DATA_WIN->generic.content_size = 0;
-	  tui_add_content_elements (&TUI_DATA_WIN->generic, nr_regs);
+	  TUI_DATA_WIN->win_info.generic.content = (void*) NULL;
+	  TUI_DATA_WIN->win_info.generic.content_size = 0;
+	  tui_add_content_elements (&TUI_DATA_WIN->win_info.generic, nr_regs);
 	  display_info->regs_content
-            = (tui_win_content) TUI_DATA_WIN->generic.content;
+            = (tui_win_content) TUI_DATA_WIN->win_info.generic.content;
 	  display_info->regs_content_count = nr_regs;
 	}
 
@@ -300,7 +298,7 @@ tui_show_register_group (struct reggroup *group,
           pos++;
 	}
 
-      TUI_DATA_WIN->generic.content_size =
+      TUI_DATA_WIN->win_info.generic.content_size =
 	display_info->regs_content_count + display_info->data_content_count;
       ret = TUI_SUCCESS;
     }
@@ -315,7 +313,7 @@ tui_show_register_group (struct reggroup *group,
 void
 tui_display_registers_from (int start_element_no)
 {
-  struct tui_data_info *display_info = &TUI_DATA_WIN->detail.data_display_info;
+  struct tui_data_display_win_info *display_info = TUI_DATA_WIN;
 
   if (display_info->regs_content != (tui_win_content) NULL 
       && display_info->regs_content_count > 0)
@@ -352,17 +350,17 @@ tui_display_registers_from (int start_element_no)
       i = start_element_no;
 
       display_info->regs_column_count =
-        (TUI_DATA_WIN->generic.width - 2) / item_win_width;
+        (TUI_DATA_WIN->win_info.generic.width - 2) / item_win_width;
       if (display_info->regs_column_count == 0)
         display_info->regs_column_count = 1;
       item_win_width =
-        (TUI_DATA_WIN->generic.width - 2) / display_info->regs_column_count;
+        (TUI_DATA_WIN->win_info.generic.width - 2) / display_info->regs_column_count;
 
       /* Now create each data "sub" window, and write the display into
 	 it.  */
       cur_y = 1;
       while (i < display_info->regs_content_count 
-	     && cur_y <= TUI_DATA_WIN->generic.viewport_height)
+	     && cur_y <= TUI_DATA_WIN->win_info.generic.viewport_height)
 	{
 	  for (j = 0;
 	       j < display_info->regs_column_count
@@ -417,8 +415,8 @@ static void
 tui_display_reg_element_at_line (int start_element_no,
 				 int start_line_no)
 {
-  if (TUI_DATA_WIN->detail.data_display_info.regs_content != (tui_win_content) NULL
-      && TUI_DATA_WIN->detail.data_display_info.regs_content_count > 0)
+  if (TUI_DATA_WIN->regs_content != (tui_win_content) NULL
+      && TUI_DATA_WIN->regs_content_count > 0)
     {
       int element_no = start_element_no;
 
@@ -427,7 +425,7 @@ tui_display_reg_element_at_line (int start_element_no,
 	  int last_line_no, first_line_on_last_page;
 
 	  last_line_no = tui_last_regs_line_no ();
-	  first_line_on_last_page = last_line_no - (TUI_DATA_WIN->generic.height - 2);
+	  first_line_on_last_page = last_line_no - (TUI_DATA_WIN->win_info.generic.height - 2);
 	  if (first_line_on_last_page < 0)
 	    first_line_on_last_page = 0;
 
@@ -435,7 +433,7 @@ tui_display_reg_element_at_line (int start_element_no,
 	     the element_no causes us to scroll past the end of the
 	     registers, adjust what element to really start the
 	     display at.  */
-	  if (TUI_DATA_WIN->detail.data_display_info.data_content_count <= 0
+	  if (TUI_DATA_WIN->data_content_count <= 0
 	      && start_line_no > first_line_on_last_page)
 	    element_no = tui_first_reg_element_no_inline (first_line_on_last_page);
 	}
@@ -452,7 +450,7 @@ int
 tui_display_registers_from_line (int line_no, 
 				 int force_display)
 {
-  if (TUI_DATA_WIN->detail.data_display_info.regs_content_count > 0)
+  if (TUI_DATA_WIN->regs_content_count > 0)
     {
       int line, element_no;
 
@@ -465,7 +463,7 @@ tui_display_registers_from_line (int line_no,
 	  if (line_no >= tui_last_regs_line_no ())
 	    {
 	      if ((line = tui_line_from_reg_element_no (
-		 TUI_DATA_WIN->detail.data_display_info.regs_content_count - 1)) < 0)
+		 TUI_DATA_WIN->regs_content_count - 1)) < 0)
 		line = 0;
 	    }
 	  else
@@ -475,7 +473,7 @@ tui_display_registers_from_line (int line_no,
 	line = line_no;
 
       element_no = tui_first_reg_element_no_inline (line);
-      if (element_no < TUI_DATA_WIN->detail.data_display_info.regs_content_count)
+      if (element_no < TUI_DATA_WIN->regs_content_count)
 	tui_display_reg_element_at_line (element_no, line);
       else
 	line = (-1);
@@ -494,10 +492,9 @@ void
 tui_check_register_values (struct frame_info *frame)
 {
   if (TUI_DATA_WIN != NULL
-      && TUI_DATA_WIN->generic.is_visible)
+      && TUI_DATA_WIN->win_info.generic.is_visible)
     {
-      struct tui_data_info *display_info
-        = &TUI_DATA_WIN->detail.data_display_info;
+      struct tui_data_display_win_info *display_info = TUI_DATA_WIN;
 
       if (display_info->regs_content_count <= 0 
 	  && display_info->display_regs)
@@ -563,8 +560,7 @@ tui_reg_next_command (char *arg, int from_tty)
 
   if (TUI_DATA_WIN != 0)
     {
-      struct reggroup *group
-        = TUI_DATA_WIN->detail.data_display_info.current_group;
+      struct reggroup *group = TUI_DATA_WIN->current_group;
 
       group = reggroup_next (gdbarch, group);
       if (group == 0)
@@ -763,12 +759,12 @@ tui_get_register (struct frame_info *frame,
 static void
 tui_scroll_regs_forward_command (char *arg, int from_tty)
 {
-  tui_scroll (FORWARD_SCROLL, TUI_DATA_WIN, 1);
+  tui_scroll (FORWARD_SCROLL, &TUI_DATA_WIN->win_info, 1);
 }
 
 
 static void
 tui_scroll_regs_backward_command (char *arg, int from_tty)
 {
-  tui_scroll (BACKWARD_SCROLL, TUI_DATA_WIN, 1);
+  tui_scroll (BACKWARD_SCROLL, &TUI_DATA_WIN->win_info, 1);
 }

@@ -227,9 +227,12 @@ make_all_visible (int visible)
 	  && ((tui_win_list[i])->generic.type) != CMD_WIN)
 	{
 	  if (tui_win_is_source_type ((tui_win_list[i])->generic.type))
-	    make_visible ((tui_win_list[i])->detail.source_info.execution_info,
-			  visible);
-	  make_visible ((struct tui_gen_win_info *) tui_win_list[i], visible);
+	    {
+	      struct tui_source_win_info *src_win
+		= (struct tui_source_win_info *) tui_win_list[i];
+	      make_visible (src_win->execution_info, visible);
+	    }
+	  make_visible (&tui_win_list[i]->generic, visible);
 	}
     }
 
@@ -259,15 +262,7 @@ tui_refresh_all (struct tui_win_info **list)
   for (type = SRC_WIN; (type < MAX_MAJOR_WINDOWS); type++)
     {
       if (list[type] && list[type]->generic.is_visible)
-	{
-	  if (type == SRC_WIN || type == DISASSEM_WIN)
-	    {
-	      touchwin (list[type]->detail.source_info.execution_info->handle);
-	      tui_refresh_win (list[type]->detail.source_info.execution_info);
-	    }
-	  touchwin (list[type]->generic.handle);
-	  tui_refresh_win (&list[type]->generic);
-	}
+	(*list[type]->vtable->refresh) (list[type]);
     }
   if (locator->is_visible)
     {
@@ -275,8 +270,3 @@ tui_refresh_all (struct tui_win_info **list)
       tui_refresh_win (locator);
     }
 }
-
-
-/*********************************
-** Local Static Functions
-*********************************/

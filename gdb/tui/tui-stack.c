@@ -325,7 +325,7 @@ tui_update_locator_filename (const char *filename)
 void
 tui_show_frame_info (struct frame_info *fi)
 {
-  struct tui_win_info *win_info;
+  struct tui_source_win_info *win_info;
   int i;
 
   if (fi)
@@ -356,7 +356,7 @@ tui_show_frame_info (struct frame_info *fi)
 	  if (win_info == TUI_SRC_WIN)
 	    {
 	      start_line = (item->locator.line_no -
-			   (win_info->generic.viewport_height / 2)) + 1;
+			   (win_info->win_info.generic.viewport_height / 2)) + 1;
 	      if (start_line <= 0)
 		start_line = 1;
 	    }
