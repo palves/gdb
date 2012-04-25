@@ -2002,14 +2002,20 @@ add_partial_symbol (struct partial_die_info *pdi, struct dwarf2_cu *cu)
 	}
       else
 	{
-	  /* Static Variable. Skip symbols without location descriptors.  */
-	  if (pdi->locdesc == NULL)
+	  /* Static Variable.  */
+	  if (pdi->locdesc != NULL)
+	    addr = decode_locdesc (pdi->locdesc, cu);
+	  else
 	    {
-	      if (built_actual_name)
-		xfree (actual_name);
-	      return;
+	      /* Still record the psym, although the address will be
+		 meaningless.  Constant optimized out static variables
+		 will not be visible in the minsyms, which means that
+		 if we don't record them, there's no way of accessing
+		 them until the corresponding psymtab is expanded.  */
+	      addr = 0;
+	      baseaddr = 0;
 	    }
-	  addr = decode_locdesc (pdi->locdesc, cu);
+
 	  /*prim_record_minimal_symbol (actual_name, addr + baseaddr,
 	     mst_file_data, objfile); */
 	  psym = add_psymbol_to_list (actual_name, strlen (actual_name),
