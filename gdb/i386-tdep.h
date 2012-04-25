@@ -106,6 +106,10 @@ struct gdbarch_tdep
   /* ISA-specific data types.  */
   struct type *i386_mmx_type;
   struct type *i386_sse_type;
+
+  /* Non 0 if stack pointer adjustments with _alloca calls are
+     expected.  */
+  int alloca_in_prologue;
 };
 
 /* Floating-point registers.  */

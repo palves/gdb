@@ -232,6 +232,7 @@ i386_cygwin_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
   tdep->gregset_reg_offset = i386_win32_gregset_reg_offset;
   tdep->gregset_num_regs = ARRAY_SIZE (i386_win32_gregset_reg_offset);
   tdep->sizeof_gregset = I386_WIN32_SIZEOF_GREGSET;
+  tdep->alloca_in_prologue = 1;
 
   set_solib_ops (gdbarch, &solib_target_so_ops);
 

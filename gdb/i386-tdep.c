@@ -312,12 +312,16 @@ struct i386_frame_cache
 
   /* Stack space reserved for local variables.  */
   long locals;
+
+  /* The cached frame.  */
+  struct frame_info *frame;
 };
 
-/* Allocate and initialize a frame cache.  */
+/* Allocate and initialize a frame cache.  FRAME is the cached
+   frame.  */
 
 static struct i386_frame_cache *
-i386_alloc_frame_cache (void)
+i386_alloc_frame_cache (struct frame_info *frame)
 {
   struct i386_frame_cache *cache;
   int i;
@@ -339,6 +343,8 @@ i386_alloc_frame_cache (void)
 
   /* Frameless until proven otherwise.  */
   cache->locals = -1;
+
+  cache->frame = frame;
 
   return cache;
 }
@@ -618,6 +624,93 @@ i386_analyze_register_saves (CORE_ADDR pc, CORE_ADDR current_pc,
   return pc;
 }
 
+/* Check that the code pointed to by PC corresponds to a call to
+   __chkstk/_alloca and skip it if so.  Return PC otherwise.  */
+
+static CORE_ADDR
+i386_skip_alloca_call (CORE_ADDR pc, CORE_ADDR limit)
+{
+  gdb_byte op;
+
+  /* If we don't have enough code for a call, return now.  */
+  if (pc + 5 > limit)
+    return pc;
+
+  read_memory_nobpt (pc, &op, 1);
+  if (op == 0xe8)
+    {
+      gdb_byte buf[4];
+      if (target_read_memory (pc + 1, buf, sizeof buf) == 0)
+	{
+	  CORE_ADDR call_dest = pc + 5 + extract_unsigned_integer (buf, 4);
+
+	  struct minimal_symbol *s = lookup_minimal_symbol_by_pc (call_dest);
+	  if (s != NULL
+	      && SYMBOL_LINKAGE_NAME (s) != NULL
+	      && (strcmp (SYMBOL_LINKAGE_NAME (s), "__chkstk") == 0
+		  || strcmp (SYMBOL_LINKAGE_NAME (s), "_alloca") == 0))
+	    pc += 5;
+	}
+    }
+
+  return pc;
+}
+
+/* If the code pointed to by PC corresponds to a call to
+   __chkstk/_alloca, adjust the frame size, and skip it.  Return PC
+   otherwise.  */
+
+static CORE_ADDR
+i386_analyze_alloca_1 (CORE_ADDR pc, CORE_ADDR limit,
+		      struct i386_frame_cache *cache)
+{
+  /* If local variables take more than a page (4k), the stack
+     adjustment will be done using _alloca, because of the need to
+     touch the guard page on NT.  The sequence will be:
+
+    mov $xxx,%eax
+    call __alloca
+
+  */
+
+  gdb_byte op;
+
+  /* mov $xxx,%eax */
+  read_memory_nobpt (pc, &op, 1);
+  if (op == 0xb8)
+    {
+      CORE_ADDR pos = i386_skip_alloca_call (pc + 5, limit);
+      if (pos != pc + 5)
+	{
+	  ULONGEST eax = read_memory_unsigned_integer (pc + 1, 4);
+	  cache->locals += eax;
+	  pc = pos;
+
+	  if (limit <= pc)
+	    return limit;
+	}
+    }
+
+  return pc;
+}
+
+/* If the code pointed to by PC corresponds to multiple calls to
+   __chkstk/_alloca, adjust the frame size, and skip all those
+   recognized.  Stop and return the adjusted PC on the first
+   unrecognized instruction.  */
+
+static CORE_ADDR
+i386_analyze_alloca (CORE_ADDR pc, CORE_ADDR limit,
+		     struct i386_frame_cache *cache)
+{
+  CORE_ADDR next_pc;
+
+  while ((next_pc = i386_analyze_alloca_1 (pc, limit, cache)) != pc)
+    pc = next_pc;
+
+  return pc;
+}
+
 /* Some special instructions that might be migrated by GCC into the
    part of the prologue that sets up the new stack frame.  Because the
    stack frame hasn't been setup yet, no registers have been saved
@@ -730,6 +823,7 @@ i386_analyze_frame_setup (CORE_ADDR pc, CORE_ADDR limit,
   struct i386_insn *insn;
   gdb_byte op;
   int skip = 0;
+  struct gdbarch_tdep *tdep = gdbarch_tdep (get_frame_arch (cache->frame));
 
   if (limit <= pc)
     return limit;
@@ -818,7 +912,7 @@ i386_analyze_frame_setup (CORE_ADDR pc, CORE_ADDR limit,
 	  /* `subl' with signed 8-bit immediate (though it wouldn't
 	     make sense to be negative).  */
 	  cache->locals = read_memory_integer (pc + 2, 1);
-	  return pc + 3;
+	  pc += 3;
 	}
       else if (op == 0x81)
 	{
@@ -829,13 +923,11 @@ i386_analyze_frame_setup (CORE_ADDR pc, CORE_ADDR limit,
 
 	  /* It is `subl' with a 32-bit immediate.  */
 	  cache->locals = read_memory_integer (pc + 2, 4);
-	  return pc + 6;
+	  pc += 6;
 	}
-      else
-	{
-	  /* Some instruction other than `subl'.  */
-	  return pc;
-	}
+
+      if (tdep->alloca_in_prologue)
+	pc = i386_analyze_alloca (pc, limit, cache);
     }
   else if (op == 0xc8)		/* enter */
     {
@@ -860,9 +952,11 @@ i386_analyze_frame_setup (CORE_ADDR pc, CORE_ADDR limit,
    once used in the System V compiler).
 
    Local space is allocated just below the saved %ebp by either the
-   'enter' instruction, or by "subl $<size>, %esp".  'enter' has a
-   16-bit unsigned argument for space to allocate, and the 'addl'
-   instruction could have either a signed byte, or 32-bit immediate.
+   'enter' instruction, or by "subl $<size>, %esp", or by a call to
+   _alloca (libgcc/Cygwin).  'enter' has a 16-bit unsigned argument
+   for space to allocate; the 'addl' instruction could have either a
+   signed byte, or 32-bit immediate; the _alloca call is passed the
+   stack space to allocate in %eax.
 
    Next, the registers used by this function are pushed.  With the
    System V compiler they will always be in the order: %edi, %esi,
@@ -988,7 +1082,7 @@ i386_frame_cache (struct frame_info *next_frame, void **this_cache)
   if (*this_cache)
     return *this_cache;
 
-  cache = i386_alloc_frame_cache ();
+  cache = i386_alloc_frame_cache (next_frame);
   *this_cache = cache;
 
   /* In principle, for normal frames, %ebp holds the frame pointer,
@@ -1211,7 +1305,7 @@ i386_sigtramp_frame_cache (struct frame_info *next_frame, void **this_cache)
   if (*this_cache)
     return *this_cache;
 
-  cache = i386_alloc_frame_cache ();
+  cache = i386_alloc_frame_cache (next_frame);
 
   frame_unwind_register (next_frame, I386_ESP_REGNUM, buf);
   cache->base = extract_unsigned_integer (buf, 4) - 4;
