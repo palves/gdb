@@ -1306,12 +1306,28 @@ i386_frame_base_address (struct frame_info *next_frame, void **this_cache)
   return cache->base;
 }
 
+static CORE_ADDR
+i386_frame_args_address (struct frame_info *next_frame, void **this_cache)
+{
+  struct i386_frame_cache *cache = i386_frame_cache (next_frame, this_cache);
+
+  if (cache->stack_align)
+    /* For `main', the values of LOC_ARG variables are offsets
+       relative to the arglist address, while for other functions the
+       offsets are relative to the frame base.  */
+    return cache->saved_sp;
+
+  /* Arguments are found at 8(%ebp), but STABS parameter values are
+     offsets from %ebp.  */
+  return cache->base;
+}
+
 static const struct frame_base i386_frame_base =
 {
   &i386_frame_unwind,
-  i386_frame_base_address,
-  i386_frame_base_address,
-  i386_frame_base_address
+  i386_frame_base_address, /* base */
+  i386_frame_base_address, /* locals */
+  i386_frame_args_address  /* args */
 };
 
 static struct frame_id
