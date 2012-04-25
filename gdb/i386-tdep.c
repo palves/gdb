@@ -588,6 +588,36 @@ i386_match_insn (CORE_ADDR pc, struct i386_insn *skip_insns)
   return NULL;
 }
 
+/* Check whether PC points at code that saves registers on the stack.
+   If so, it updates CACHE and returns the address of the first
+   instruction after the register saves or CURRENT_PC, whichever is
+   smaller.  Otherwise, return PC.  */
+
+static CORE_ADDR
+i386_analyze_register_saves (CORE_ADDR pc, CORE_ADDR current_pc,
+			     struct i386_frame_cache *cache)
+{
+  CORE_ADDR offset = 0;
+  gdb_byte op;
+  int i;
+
+  if (cache->locals > 0)
+    offset -= cache->locals;
+  for (i = 0; i < 8 && pc < current_pc; i++)
+    {
+      target_read_memory (pc, &op, 1);
+      if (op < 0x50 || op > 0x57)
+	break;
+
+      offset -= 4;
+      cache->saved_regs[op - 0x50] = offset;
+      cache->sp_offset += 4;
+      pc++;
+    }
+
+  return pc;
+}
+
 /* Some special instructions that might be migrated by GCC into the
    part of the prologue that sets up the new stack frame.  Because the
    stack frame hasn't been setup yet, no registers have been saved
@@ -767,6 +797,10 @@ i386_analyze_frame_setup (CORE_ADDR pc, CORE_ADDR limit,
       if (limit <= pc)
 	return limit;
 
+      /* There may be registers saves before the stack is grown for
+	 locals.  */
+      pc = i386_analyze_register_saves (pc, limit, cache);
+
       /* Check for stack adjustment
 
 	    subl $XXX, %esp
@@ -807,36 +841,6 @@ i386_analyze_frame_setup (CORE_ADDR pc, CORE_ADDR limit,
     {
       cache->locals = read_memory_unsigned_integer (pc + 1, 2);
       return pc + 4;
-    }
-
-  return pc;
-}
-
-/* Check whether PC points at code that saves registers on the stack.
-   If so, it updates CACHE and returns the address of the first
-   instruction after the register saves or CURRENT_PC, whichever is
-   smaller.  Otherwise, return PC.  */
-
-static CORE_ADDR
-i386_analyze_register_saves (CORE_ADDR pc, CORE_ADDR current_pc,
-			     struct i386_frame_cache *cache)
-{
-  CORE_ADDR offset = 0;
-  gdb_byte op;
-  int i;
-
-  if (cache->locals > 0)
-    offset -= cache->locals;
-  for (i = 0; i < 8 && pc < current_pc; i++)
-    {
-      target_read_memory (pc, &op, 1);
-      if (op < 0x50 || op > 0x57)
-	break;
-
-      offset -= 4;
-      cache->saved_regs[op - 0x50] = offset;
-      cache->sp_offset += 4;
-      pc++;
     }
 
   return pc;
@@ -1010,9 +1014,23 @@ i386_frame_cache (struct frame_info *next_frame, void **this_cache)
 
   if (cache->stack_align)
     {
-      /* Saved stack pointer has been saved in %ecx, %edx or %eax.  */
-      frame_unwind_register (next_frame, cache->saved_sp_regnum, buf);
-      cache->saved_sp = extract_unsigned_integer(buf, 4);
+      /* The previous frame stack pointer has been saved in %ecx, %edx
+	 or %eax at the beginning of the frame setup.  Since the
+	 storing register may have been clobbered by the time we're
+	 analyzing this frame, we prefer reading it from the stack if
+	 we've seen it being pushed.  */
+      if (cache->saved_regs[cache->saved_sp_regnum] != -1)
+ 	{
+ 	  /* We can only see it being pushed if we found a valid
+	     frame, so we can safely access cache->base here.  */
+ 	  CORE_ADDR reg
+ 	    = cache->base + cache->saved_regs[cache->saved_sp_regnum];
+ 	  read_memory (reg, buf, 4);
+ 	}
+      else
+ 	frame_unwind_register (next_frame, cache->saved_sp_regnum, buf);
+
+      cache->saved_sp = extract_unsigned_integer (buf, 4);
     }
 
   if (cache->locals < 0)
