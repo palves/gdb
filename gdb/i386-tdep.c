@@ -297,8 +297,17 @@ struct i386_frame_cache
 
   /* Saved registers.  */
   CORE_ADDR saved_regs[I386_NUM_SAVED_REGS];
+
+  /* The value of %esp in the calling frame.  */
   CORE_ADDR saved_sp;
+
+  /* Non-zero if this frame has enforced stack alignment.  */
   int stack_align;
+
+  /* If STACK_ALIGN, which register holds %esp of the calling frame,
+     else undefined.  */
+  int saved_sp_regnum;
+
   int pc_in_eax;
 
   /* Stack space reserved for local variables.  */
@@ -507,15 +516,25 @@ i386_analyze_stack_align (CORE_ADDR pc, CORE_ADDR current_pc,
     0xff, 0x70, 0xfc		/* pushl -4(%eax) */
   };
   gdb_byte buf[10];
+  int regnum;
 
-  if (target_read_memory (pc, buf, sizeof buf)
-      || (memcmp (buf, insns_ecx, sizeof buf) != 0
-          && memcmp (buf, insns_edx, sizeof buf) != 0
-          && memcmp (buf, insns_eax, sizeof buf) != 0))
+  if (target_read_memory (pc, buf, sizeof buf))
+    return pc;
+
+  if (memcmp (buf, insns_ecx, sizeof buf) == 0)
+    regnum = I386_ECX_REGNUM;
+  else if (memcmp (buf, insns_edx, sizeof buf) == 0)
+    regnum = I386_EDX_REGNUM;
+  else if (memcmp (buf, insns_eax, sizeof buf) == 0)
+    regnum = I386_EAX_REGNUM;
+  else
     return pc;
 
   if (current_pc > pc + 4)
-    cache->stack_align = 1;
+    {
+      cache->stack_align = 1;
+      cache->saved_sp_regnum = regnum;
+    }
 
   return min (pc + 10, current_pc);
 }
@@ -748,7 +767,7 @@ i386_analyze_frame_setup (CORE_ADDR pc, CORE_ADDR limit,
       if (limit <= pc)
 	return limit;
 
-      /* Check for stack adjustment 
+      /* Check for stack adjustment
 
 	    subl $XXX, %esp
 
@@ -846,7 +865,7 @@ i386_analyze_register_saves (CORE_ADDR pc, CORE_ADDR current_pc,
    %ebx (and sometimes a harmless bug causes it to also save but not
    restore %eax); however, the code below is willing to see the pushes
    in any order, and will handle up to 8 of them.
- 
+
    If the setup sequence is at the end of the function, then the next
    instruction will be a branch back to the start.  */
 
@@ -991,8 +1010,8 @@ i386_frame_cache (struct frame_info *next_frame, void **this_cache)
 
   if (cache->stack_align)
     {
-      /* Saved stack pointer has been saved in %ecx.  */
-      frame_unwind_register (next_frame, I386_ECX_REGNUM, buf);
+      /* Saved stack pointer has been saved in %ecx, %edx or %eax.  */
+      frame_unwind_register (next_frame, cache->saved_sp_regnum, buf);
       cache->saved_sp = extract_unsigned_integer(buf, 4);
     }
 
