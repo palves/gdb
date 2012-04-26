@@ -2384,6 +2384,8 @@ attach_command_post_wait (char *args, int from_tty, int async_exec)
       exec_file = target_pid_to_exec_file (PIDGET (inferior_ptid));
       if (exec_file)
 	{
+	  volatile struct gdb_exception ex;
+
 	  /* It's possible we don't have a full path, but rather just a
 	     filename.  Some targets, such as HP-UX, don't provide the
 	     full path, sigh.
@@ -2395,8 +2397,16 @@ attach_command_post_wait (char *args, int from_tty, int async_exec)
 	  if (!source_full_path_of (exec_file, &full_exec_path))
 	    full_exec_path = xstrdup (exec_file);
 
-	  exec_file_attach (full_exec_path, from_tty);
-	  symbol_file_add_main (full_exec_path, from_tty);
+	  TRY_CATCH (ex, RETURN_MASK_ERROR)
+	    {
+	      /* Failing to open the file shouldn't cancel the attach.
+		 May happen on e.g., GNU/Linux if the process's
+		 executable has since been deleted.  */
+	      exec_file_attach (full_exec_path, from_tty);
+	      symbol_file_add_main (full_exec_path, from_tty);
+	    }
+	    if (ex.reason < 0)
+	      exception_print (gdb_stdout, ex);
 	}
     }
   else
