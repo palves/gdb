@@ -920,8 +920,16 @@ captured_main (void *data)
 
       if (isdigit (pid_or_core_arg[0]))
 	{
-	  if (catch_command_errors (attach_command, pid_or_core_arg,
-				    !batch_flag, RETURN_MASK_ALL) == 0)
+	  catch_command_errors (attach_command, pid_or_core_arg,
+				!batch_flag, RETURN_MASK_ALL);
+
+	  /* Best not rely on the return code of the above.  Something
+	     may throw after we managed to attach to the process.  We
+	     don't want to fallback to looking for a core file in that
+	     case (which, with "set confirm off" could even detach
+	     from the process we just attached to without the user
+	     noticing).  */
+	  if (target_has_execution)
 	    catch_command_errors (core_file_command, pid_or_core_arg,
 				  !batch_flag, RETURN_MASK_ALL);
 	}
