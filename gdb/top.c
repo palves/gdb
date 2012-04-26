@@ -1215,12 +1215,8 @@ kill_or_detach (struct inferior *inf, void *args)
   return 0;
 }
 
-/* Callback for iterate_over_inferiors.  Prints info about what GDB
-   will do to each inferior on a "quit".  ARG points to a struct
-   ui_out where output is to be collected.  */
-
-static int
-print_inferior_quit_action (struct inferior *inf, void *arg)
+int
+print_inferior_confirm_action (struct inferior *inf, void *arg)
 {
   struct ui_file *stb = arg;
 
@@ -1267,7 +1263,7 @@ quit_confirm (void)
   else
     {
       fprintf_filtered (stb, _("A debugging session is active.\n\n"));
-      iterate_over_inferiors (print_inferior_quit_action, stb);
+      iterate_over_inferiors (print_inferior_confirm_action, stb);
       fprintf_filtered (stb, _("\nQuit anyway? "));
     }
 

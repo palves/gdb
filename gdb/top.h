@@ -21,6 +21,8 @@
 #ifndef TOP_H
 #define TOP_H
 
+struct inferior;
+
 /* From top.c.  */
 extern char *saved_command_line;
 extern int saved_command_line_size;
@@ -81,5 +83,11 @@ extern void show_history (char *, int);
 extern void set_verbose (char *, int, struct cmd_list_element *);
 
 extern void do_restore_instream_cleanup (void *stream);
+
+/* Callback for iterate_over_inferiors.  Prints info about what GDB
+   will do to each inferior on a "quit" and similar conditions.  ARG
+   points to a struct ui_out where output is to be collected.  */
+
+extern int print_inferior_confirm_action (struct inferior *inf, void *arg);
 
 #endif

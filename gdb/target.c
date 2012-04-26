@@ -44,6 +44,7 @@
 #include "tracepoint.h"
 #include "gdb/fileio.h"
 #include "agent.h"
+#include "top.h"
 
 static void target_info (char *, int);
 
@@ -2520,13 +2521,41 @@ dispose_inferior (struct inferior *inf, void *args)
       switch_to_thread (thread->ptid);
 
       /* Core inferiors actually should be detached, not killed.  */
-      if (target_has_execution)
+      if (target_has_execution && !inf->attach_flag)
 	target_kill ();
       else
 	target_detach (NULL, 0);
     }
 
   return 0;
+}
+
+static int
+dispose_confirm (void)
+{
+  struct ui_file *stb;
+  struct cleanup *old_chain;
+  char *str;
+  int qr;
+
+  /* Don't even ask if we're only debugging a core file inferior.  */
+  if (!have_live_inferiors ())
+    return 1;
+
+  /* Build the query string as a single string.  */
+  stb = mem_fileopen ();
+  old_chain = make_cleanup_ui_file_delete (stb);
+
+  fprintf_filtered (stb, _("A debugging session is active.\n\n"));
+  iterate_over_inferiors (print_inferior_confirm_action, stb);
+  fprintf_filtered (stb, _("\nProceed anyway? "));
+
+  str = ui_file_xstrdup (stb, NULL);
+  make_cleanup (xfree, str);
+
+  qr = query ("%s", str);
+  do_cleanups (old_chain);
+  return qr;
 }
 
 /* This is to be called by the open routine before it does
@@ -2539,12 +2568,10 @@ target_preopen (int from_tty)
 
   if (have_inferiors ())
     {
-      if (!from_tty
-	  || !have_live_inferiors ()
-	  || query (_("A program is being debugged already.  Kill it? ")))
+      if (!from_tty || dispose_confirm ())
 	iterate_over_inferiors (dispose_inferior, NULL);
       else
-	error (_("Program not killed."));
+	error (_("Not confirmed."));
     }
 
   /* Calling target_kill may remove the target from the stack.  But if
