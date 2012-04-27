@@ -77,6 +77,13 @@ extern const char host_name[];
 
 static int remote_desc;
 
+struct replaylog
+{
+  FILE *fp;
+  int lineno;
+  int col;
+};
+
 #ifdef __MINGW32CE__
 
 #ifndef COUNTOF
@@ -155,11 +162,11 @@ perror_with_name (const char *string)
 }
 
 static void
-sync_error (FILE *fp, char *desc, int expect, int got)
+sync_error (struct replaylog *log, char *desc, int expect, int got)
 {
   fprintf (stderr, "\n%s\n", desc);
-  fprintf (stderr, "At logfile offset %ld, expected '0x%x' got '0x%x'\n",
-	   ftell (fp), expect, got);
+  fprintf (stderr, "At logfile offset %ld (%d:%d), expected 0x%x '%c' got 0x%x '%c'\n",
+	   ftell (log->fp), log->lineno, log->col, expect, expect, got, got);
   fflush (stderr);
   exit (1);
 }
@@ -292,21 +299,23 @@ tohex (int ch)
 }
 
 static int
-logchar (FILE *fp)
+logchar (struct replaylog *log)
 {
   int ch;
   int ch2;
 
-  ch = fgetc (fp);
+  ch = fgetc (log->fp);
   fputc (ch, stdout);
   fflush (stdout);
   switch (ch)
     {
     case '\n':
       ch = EOL;
+      log->lineno++;
+      log->col = 0;
       break;
     case '\\':
-      ch = fgetc (fp);
+      ch = fgetc (log->fp);
       fputc (ch, stdout);
       fflush (stdout);
       switch (ch)
@@ -332,20 +341,23 @@ logchar (FILE *fp)
 	  ch = '\v';
 	  break;
 	case 'x':
-	  ch2 = fgetc (fp);
+	  ch2 = fgetc (log->fp);
 	  fputc (ch2, stdout);
 	  fflush (stdout);
 	  ch = tohex (ch2) << 4;
-	  ch2 = fgetc (fp);
+	  ch2 = fgetc (log->fp);
 	  fputc (ch2, stdout);
 	  fflush (stdout);
 	  ch |= tohex (ch2);
+	  log->col += 2;
 	  break;
 	default:
 	  /* Treat any other char as just itself */
 	  break;
 	}
+      log->col++;
     default:
+      log->col++;
       break;
     }
   return (ch);
@@ -366,19 +378,19 @@ gdbchar (int desc)
    blank) up until a \n is read from fp (which is not matched) */
 
 static void
-expect (FILE *fp)
+expect (struct replaylog *log)
 {
   int fromlog;
   int fromgdb;
 
-  if ((fromlog = logchar (fp)) != ' ')
+  if ((fromlog = logchar (log)) != ' ')
     {
-      sync_error (fp, "Sync error during gdb read of leading blank", ' ',
+      sync_error (log, "Sync error during gdb read of leading blank", ' ',
 		  fromlog);
     }
   do
     {
-      fromlog = logchar (fp);
+      fromlog = logchar (log);
       if (fromlog == EOL)
 	break;
       fromgdb = gdbchar (remote_desc);
@@ -389,7 +401,7 @@ expect (FILE *fp)
 
   if (fromlog != EOL)
     {
-      sync_error (fp, "Sync error during read of gdb packet from log", fromlog,
+      sync_error (log, "Sync error during read of gdb packet from log", fromlog,
 		  fromgdb);
     }
 }
@@ -398,17 +410,17 @@ expect (FILE *fp)
    \n is read from fp (which is discarded and not sent to gdb). */
 
 static void
-play (FILE *fp)
+play (struct replaylog *log)
 {
   int fromlog;
   char ch;
 
-  if ((fromlog = logchar (fp)) != ' ')
+  if ((fromlog = logchar (log)) != ' ')
     {
-      sync_error (fp, "Sync error skipping blank during write to gdb", ' ',
+      sync_error (log, "Sync error skipping blank during write to gdb", ' ',
 		  fromlog);
     }
-  while ((fromlog = logchar (fp)) != EOL)
+  while ((fromlog = logchar (log)) != EOL)
     {
       ch = fromlog;
       if (write (remote_desc, &ch, 1) != 1)
@@ -438,7 +450,7 @@ gdbreplay_usage (FILE *stream)
 int
 main (int argc, char *argv[])
 {
-  FILE *fp;
+  struct replaylog log = {0};
   int ch;
 
   if (argc >= 2 && strcmp (argv[1], "--version") == 0)
@@ -457,27 +469,27 @@ main (int argc, char *argv[])
       gdbreplay_usage (stderr);
       exit (1);
     }
-  fp = fopen (argv[1], "r");
-  if (fp == NULL)
+  log.fp = fopen (argv[1], "r");
+  if (log.fp == NULL)
     {
       perror_with_name (argv[1]);
     }
   remote_open (argv[2]);
-  while ((ch = logchar (fp)) != EOF)
+  while ((ch = logchar (&log)) != EOF)
     {
       switch (ch)
 	{
 	case 'w':
 	  /* data sent from gdb to gdbreplay, accept and match it */
-	  expect (fp);
+	  expect (&log);
 	  break;
 	case 'r':
 	  /* data sent from gdbreplay to gdb, play it */
-	  play (fp);
+	  play (&log);
 	  break;
 	case 'c':
 	  /* Command executed by gdb */
-	  while ((ch = logchar (fp)) != EOL);
+	  while ((ch = logchar (&log)) != EOL);
 	  break;
 	}
     }
