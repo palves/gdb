@@ -739,8 +739,6 @@ get_image_name (HANDLE h, void *address, int unicode)
   return buf;
 }
 
-/* Wait for child to do something.  Return pid of child, or -1 in case
-   of error; store status through argument pointer OURSTATUS.  */
 static int
 handle_load_dll (void *dummy)
 {
@@ -847,12 +845,13 @@ handle_output_debug_string (struct target_waitstatus *ourstatus)
 	&s, 1024, 0)
       || !s || !*s)
     /* nothing to do */;
+#ifndef __CYGWIN__
+  warning ("%s", s);
+#else
   else if (strncmp (s, _CYGWIN_SIGNAL_STRING, sizeof (_CYGWIN_SIGNAL_STRING) - 1) != 0)
     {
-#ifdef __CYGWIN__
       if (strncmp (s, "cYg", 3) != 0)
-#endif
-	warning (("%s"), s);
+	warning ("%s", s);
     }
 #ifdef __COPY_CONTEXT_SIZE
   else
@@ -882,6 +881,7 @@ handle_output_debug_string (struct target_waitstatus *ourstatus)
 	  current_event.dwThreadId = retval;
 	}
     }
+#endif
 #endif
 
   if (s)
