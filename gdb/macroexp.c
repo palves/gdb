@@ -882,17 +882,16 @@ static void scan (struct macro_buffer *dest,
 /* A helper function for substitute_args.
    
    ARGV is a vector of all the arguments; ARGC is the number of
-   arguments.  IS_VARARGS is true if the macro being substituted is a
-   varargs macro; in this case VA_ARG_NAME is the name of the
-   "variable" argument.  VA_ARG_NAME is ignored if IS_VARARGS is
-   false.
+   arguments.  VA_ARG_NAME is non-NULL if the macro being substituted
+   is a varargs macro; in this case VA_ARG_NAME is the name of the
+   "variable" argument.  VA_ARG_NAME is ignored if IS_VARARGS is NULL.
 
    If the token TOK is the name of a parameter, return the parameter's
    index.  If TOK is not an argument, return -1.  */
 
 static int
 find_parameter (const struct macro_buffer *tok,
-		int is_varargs, const struct macro_buffer *va_arg_name,
+		const struct macro_buffer *va_arg_name,
 		int argc, const char * const *argv)
 {
   int i;
@@ -905,7 +904,7 @@ find_parameter (const struct macro_buffer *tok,
 	&& !memcmp (tok->text, argv[i], tok->len))
       return i;
 
-  if (is_varargs && tok->len == va_arg_name->len
+  if (va_arg_name != NULL && tok->len == va_arg_name->len
       && ! memcmp (tok->text, va_arg_name->text, tok->len))
     return argc - 1;
 
@@ -916,11 +915,10 @@ find_parameter (const struct macro_buffer *tok,
    arguments given by ARGC and ARGV, substitute the arguments into the
    replacement list, and store the result in DEST.
 
-   IS_VARARGS should be true if DEF is a varargs macro.  In this case,
-   VA_ARG_NAME should be the name of the "variable" argument -- either
-   __VA_ARGS__ for c99-style varargs, or the final argument name, for
-   GNU-style varargs.  If IS_VARARGS is false, this parameter is
-   ignored.
+   VA_ARG_NAME should be non-null if DEF is a varargs macro.  In this
+   case, VA_ARG_NAME should be the name of the "variable" argument --
+   either __VA_ARGS__ for c99-style varargs, or the final argument
+   name, for GNU-style varargs.
 
    If it is necessary to expand macro invocations in one of the
    arguments, use LOOKUP_FUNC and LOOKUP_BATON to find the macro
@@ -930,7 +928,7 @@ find_parameter (const struct macro_buffer *tok,
 static void
 substitute_args (struct macro_buffer *dest, 
                  struct macro_definition *def,
-		 int is_varargs, const struct macro_buffer *va_arg_name,
+		 const struct macro_buffer *va_arg_name,
                  int argc, struct macro_buffer *argv,
                  struct macro_name_list *no_loop,
                  macro_lookup_ftype *lookup_func,
@@ -981,8 +979,7 @@ substitute_args (struct macro_buffer *dest,
 	  if (!lookahead_valid)
 	    error (_("Stringification operator requires an argument."));
 
-	  arg = find_parameter (&lookahead, is_varargs, va_arg_name,
-				def->argc, def->argv);
+	  arg = find_parameter (&lookahead, va_arg_name, def->argc, def->argv);
 	  if (arg == -1)
 	    error (_("Argument to stringification operator must name "
 		     "a macro parameter."));
@@ -1017,7 +1014,7 @@ substitute_args (struct macro_buffer *dest,
 	    prev_was_comma = 1;
 	  else
 	    {
-	      int arg = find_parameter (&tok, is_varargs, va_arg_name,
+	      int arg = find_parameter (&tok, va_arg_name,
 					def->argc, def->argv);
 
 	      if (arg != -1)
@@ -1043,7 +1040,7 @@ substitute_args (struct macro_buffer *dest,
 		 simply insert the comma.  */
 	      if (prev_was_comma)
 		{
-		  if (! (is_varargs
+		  if (! (va_arg_name != NULL
 			 && tok.len == va_arg_name->len
 			 && !memcmp (tok.text, va_arg_name->text, tok.len)
 			 && argv[argc - 1].len == 0))
@@ -1057,7 +1054,7 @@ substitute_args (struct macro_buffer *dest,
 		prev_was_comma = 1;
 	      else
 		{
-		  int arg = find_parameter (&tok, is_varargs, va_arg_name,
+		  int arg = find_parameter (&tok, va_arg_name,
 					    def->argc, def->argv);
 
 		  if (arg != -1)
@@ -1102,8 +1099,7 @@ substitute_args (struct macro_buffer *dest,
 	{
 	  /* Is this token an identifier?  */
 	  int substituted = 0;
-	  int arg = find_parameter (&tok, is_varargs, va_arg_name,
-				    def->argc, def->argv);
+	  int arg = find_parameter (&tok, va_arg_name, def->argc, def->argv);
 
 	  if (arg != -1)
 	    {
@@ -1182,8 +1178,7 @@ expand (const char *id,
       struct macro_buffer *argv = NULL;
       struct macro_buffer substituted;
       struct macro_buffer substituted_src;
-      struct macro_buffer va_arg_name = {0};
-      int is_varargs = 0;
+      struct macro_buffer *va_arg_name = NULL;
 
       if (def->argc >= 1)
 	{
@@ -1191,9 +1186,9 @@ expand (const char *id,
 	    {
 	      /* In C99-style varargs, substitution is done using
 		 __VA_ARGS__.  */
-	      init_shared_buffer (&va_arg_name, "__VA_ARGS__",
+	      va_arg_name = alloca (sizeof (struct macro_buffer));
+	      init_shared_buffer (va_arg_name, "__VA_ARGS__",
 				  strlen ("__VA_ARGS__"));
-	      is_varargs = 1;
 	    }
 	  else
 	    {
@@ -1205,16 +1200,16 @@ expand (const char *id,
 		  /* In GNU-style varargs, the name of the
 		     substitution parameter is the name of the formal
 		     argument without the "...".  */
-		  init_shared_buffer (&va_arg_name,
+		  va_arg_name = alloca (sizeof (struct macro_buffer));
+		  init_shared_buffer (va_arg_name,
 				      (char *) def->argv[def->argc - 1],
 				      len - 3);
-		  is_varargs = 1;
 		}
 	    }
 	}
 
       make_cleanup (free_current_contents, &argv);
-      argv = gather_arguments (id, src, is_varargs ? def->argc : -1,
+      argv = gather_arguments (id, src, va_arg_name != NULL ? def->argc : -1,
 			       &argc);
 
       /* If we couldn't find any argument list, then we don't expand
@@ -1229,7 +1224,7 @@ expand (const char *id,
          this macro.  */
       if (argc != def->argc)
         {
-	  if (is_varargs && argc >= def->argc - 1)
+	  if (va_arg_name != NULL && argc >= def->argc - 1)
 	    {
 	      /* Ok.  */
 	    }
@@ -1252,7 +1247,7 @@ expand (const char *id,
          expand an argument until we see how it's being used.  */
       init_buffer (&substituted, 0);
       make_cleanup (cleanup_macro_buffer, &substituted);
-      substitute_args (&substituted, def, is_varargs, &va_arg_name,
+      substitute_args (&substituted, def, va_arg_name,
 		       argc, argv, no_loop, lookup_func, lookup_baton);
 
       /* Now `substituted' is the macro's replacement list, with all
