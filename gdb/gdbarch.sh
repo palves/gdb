@@ -616,6 +616,7 @@ f:void:elf_make_msymbol_special:asymbol *sym, struct minimal_symbol *msym:sym, m
 f:void:coff_make_msymbol_special:int val, struct minimal_symbol *msym:val, msym::default_coff_make_msymbol_special::0
 v:int:cannot_step_breakpoint:::0:0::0
 v:int:have_nonsteppable_watchpoint:::0:0::0
+M:int:insn_reads_memory:CORE_ADDR pc, int len, CORE_ADDR stopped_data_address:pc, len, stopped_data_address
 F:int:address_class_type_flags:int byte_size, int dwarf2_addr_class:byte_size, dwarf2_addr_class
 M:const char *:address_class_type_flags_to_name:int type_flags:type_flags
 M:int:address_class_name_to_type_flags:const char *name, int *type_flags_ptr:name, type_flags_ptr

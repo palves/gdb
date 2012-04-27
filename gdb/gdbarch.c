@@ -232,6 +232,7 @@ struct gdbarch
   gdbarch_coff_make_msymbol_special_ftype *coff_make_msymbol_special;
   int cannot_step_breakpoint;
   int have_nonsteppable_watchpoint;
+  gdbarch_insn_reads_memory_ftype *insn_reads_memory;
   gdbarch_address_class_type_flags_ftype *address_class_type_flags;
   gdbarch_address_class_type_flags_to_name_ftype *address_class_type_flags_to_name;
   gdbarch_address_class_name_to_type_flags_ftype *address_class_name_to_type_flags;
@@ -390,6 +391,7 @@ struct gdbarch startup_gdbarch =
   0,  /* coff_make_msymbol_special */
   0,  /* cannot_step_breakpoint */
   0,  /* have_nonsteppable_watchpoint */
+  0,  /* insn_reads_memory */
   0,  /* address_class_type_flags */
   0,  /* address_class_type_flags_to_name */
   0,  /* address_class_name_to_type_flags */
@@ -1026,6 +1028,12 @@ gdbarch_dump (struct gdbarch *gdbarch, struct ui_file *file)
   fprintf_unfiltered (file,
                       "gdbarch_dump: inner_than = <%s>\n",
                       host_address_to_string (gdbarch->inner_than));
+  fprintf_unfiltered (file,
+                      "gdbarch_dump: gdbarch_insn_reads_memory_p() = %d\n",
+                      gdbarch_insn_reads_memory_p (gdbarch));
+  fprintf_unfiltered (file,
+                      "gdbarch_dump: insn_reads_memory = <%s>\n",
+                      host_address_to_string (gdbarch->insn_reads_memory));
   fprintf_unfiltered (file,
                       "gdbarch_dump: int_bit = %s\n",
                       plongest (gdbarch->int_bit));
@@ -3107,6 +3115,30 @@ set_gdbarch_have_nonsteppable_watchpoint (struct gdbarch *gdbarch,
                                           int have_nonsteppable_watchpoint)
 {
   gdbarch->have_nonsteppable_watchpoint = have_nonsteppable_watchpoint;
+}
+
+int
+gdbarch_insn_reads_memory_p (struct gdbarch *gdbarch)
+{
+  gdb_assert (gdbarch != NULL);
+  return gdbarch->insn_reads_memory != NULL;
+}
+
+int
+gdbarch_insn_reads_memory (struct gdbarch *gdbarch, CORE_ADDR pc, int len, CORE_ADDR stopped_data_address)
+{
+  gdb_assert (gdbarch != NULL);
+  gdb_assert (gdbarch->insn_reads_memory != NULL);
+  if (gdbarch_debug >= 2)
+    fprintf_unfiltered (gdb_stdlog, "gdbarch_insn_reads_memory called\n");
+  return gdbarch->insn_reads_memory (gdbarch, pc, len, stopped_data_address);
+}
+
+void
+set_gdbarch_insn_reads_memory (struct gdbarch *gdbarch,
+                               gdbarch_insn_reads_memory_ftype insn_reads_memory)
+{
+  gdbarch->insn_reads_memory = insn_reads_memory;
 }
 
 int

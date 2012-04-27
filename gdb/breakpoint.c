@@ -66,6 +66,7 @@
 #include "skip.h"
 #include "gdb_regex.h"
 #include "ax-gdb.h"
+#include "disasm.h"
 
 /* readline include files */
 #include "readline/readline.h"
@@ -4423,6 +4424,75 @@ bpstat_check_location (const struct bp_location *bl,
   return b->ops->breakpoint_hit (bl, aspace, bp_addr, ws);
 }
 
+/* Look for the instruction that caused the watchpoint trap.  For
+   continuable watchpoint architectures, STOP_PC points at the
+   instruction _after_ the read/write have been done.  Due to variable
+   instruction size encodings, we can't find where the instruction
+   that caused a trap starts by means to simple arithmetic.  Instead,
+   we look for the symbol just before PC, and disassemble starting
+   there, and look for the instruction that is the last before PC.  */
+
+static int
+find_triggered_address (CORE_ADDR pc, CORE_ADDR *out)
+{
+  CORE_ADDR last_addr;
+  struct minimal_symbol *msymbol;
+
+  msymbol = lookup_minimal_symbol_by_pc_section (pc - 1, 0);
+  if (!msymbol)
+    return 0;
+
+  last_addr = SYMBOL_VALUE_ADDRESS (msymbol);
+
+  /* Scan forward disassembling one instruction at a time until we
+     find the one that preceeds PC.  */
+  while (1)
+    {
+      CORE_ADDR next_addr;
+
+      static struct ui_file *gdb_null = NULL;
+      if (!gdb_null)
+	gdb_null = ui_file_new ();
+
+      next_addr = last_addr;
+      next_addr += gdb_print_insn (target_gdbarch, last_addr, gdb_null, NULL);
+
+      /* If disassembling goes backwards, or passes by PC, bail.  */
+      if (next_addr <= last_addr || next_addr > pc)
+	return 0;
+
+      if (next_addr == pc)
+	break; /* done */
+
+      last_addr = next_addr;
+    }
+
+  *out = last_addr;
+  return 1;
+}
+
+static int
+also_watching_for_writes (const struct bp_location *bl)
+{
+  struct breakpoint *other_b;
+
+  if (bl->watchpoint_type == hw_access)
+    return 1;
+
+  ALL_BREAKPOINTS (other_b)
+    if (other_b->type == bp_hardware_watchpoint
+	|| other_b->type == bp_access_watchpoint)
+      {
+	struct watchpoint *other_w =
+	  (struct watchpoint *) other_b;
+
+	if (other_w->watchpoint_triggered == watch_triggered_yes)
+	  return 1;
+      }
+
+  return 0;
+}
+
 /* Determine if the watched values have actually changed, and we
    should stop.  If not, set BS->stop to 0.  */
 
@@ -4506,46 +4576,46 @@ bpstat_check_watchpoint (bpstat bs)
 		     watchpoint watching the same memory as this read
 		     watchpoint.
 
-		     If we're watching memory writes as well as reads,
-		     ignore watchpoint hits when we find that the
-		     value hasn't changed, as reads don't cause
-		     changes.  This still gives false positives when
-		     the program writes the same value to memory as
-		     what there was already in memory (we will confuse
-		     it for a read), but it's much better than
-		     nothing.  */
+		     Reads don't usually cause changes, so to
+		     implement read watchpoints when we're also
+		     watching the same memory for writes, the simplest
+		     is to ignore accesses when we find the value
+		     hasn't changed.  This will give false positives
+		     when the program writes the same value to memory
+		     as what there was already in memory (we will
+		     confuse it for a read).  To fix that, we parse
+		     the instruction that caused the trap to check if
+		     it was an instruction that reads the trapped
+		     address, as e.g, INC/ADD instructions.  Still not
+		     fail proof, but better than nothing.  */
 
-		  int other_write_watchpoint = 0;
-
-		  if (bl->watchpoint_type == hw_read)
+		  if (also_watching_for_writes (bl))
 		    {
-		      struct breakpoint *other_b;
+		      CORE_ADDR trigger_insn_addr, stopped_data_addr;
+		      int res;
 
-		      ALL_BREAKPOINTS (other_b)
-			if (other_b->type == bp_hardware_watchpoint
-			    || other_b->type == bp_access_watchpoint)
-			  {
-			    struct watchpoint *other_w =
-			      (struct watchpoint *) other_b;
+		      res = target_stopped_data_address (&current_target,
+							 &stopped_data_addr);
+		      gdb_assert (res);
 
-			    if (other_w->watchpoint_triggered
-				== watch_triggered_yes)
-			      {
-				other_write_watchpoint = 1;
-				break;
-			      }
-			  }
-		    }
-
-		  if (other_write_watchpoint
-		      || bl->watchpoint_type == hw_access)
-		    {
 		      /* We're watching the same memory for writes,
 			 and the value changed since the last time we
 			 updated it, so this trap must be for a write.
-			 Ignore it.  */
-		      bs->print_it = print_it_noop;
-		      bs->stop = 0;
+			 Ignore it, unless, we can parse the
+			 instruction and check that it was also a
+			 read.  */
+		      if (!gdbarch_insn_reads_memory_p (target_gdbarch)
+			  || !find_triggered_address (stop_pc,
+						      &trigger_insn_addr)
+			  || !gdbarch_insn_reads_memory (target_gdbarch,
+							 trigger_insn_addr,
+							 (stop_pc
+							  - trigger_insn_addr),
+							 stopped_data_addr))
+			{
+			  bs->print_it = print_it_noop;
+			  bs->stop = 0;
+			}
 		    }
 		}
 	      break;
@@ -4558,7 +4628,50 @@ bpstat_check_watchpoint (bpstat bs)
 		  bs->print_it = print_it_noop;
 		  bs->stop = 0;
 		}
-	      /* Stop.  */
+	      else if (b->base.type == bp_read_watchpoint)
+		{
+		  CORE_ADDR trigger_insn_addr, stopped_data_addr;
+		  int res;
+
+		  res = target_stopped_data_address (&current_target,
+						     &stopped_data_addr);
+		  gdb_assert (res);
+
+		  /* If we're watching the triggered memory for both
+		     reads and writes, even if the value hasn't
+		     changed, this may well still be a write.  E.g.,
+
+		     int foo;
+
+		     int main ()
+		     {
+		       foo = 0; // this is a write, not a read.
+		     }
+
+		     Only way to tell accurately, is to parse the
+		     instruction that triggered the watchpoint, and
+		     check if it wasn't reading the address that just
+		     trapped.  Note, !reading, instead of writing.
+		     This is because of instructions like:
+
+		     MOV ADDR, ADDR.
+
+		     This could well be both writing and reading ADDR,
+		     and we do want to stop in that case.  */
+
+		  if (gdbarch_insn_reads_memory_p (target_gdbarch)
+		      && also_watching_for_writes (bl)
+		      && find_triggered_address (stop_pc, &trigger_insn_addr)
+		      && !gdbarch_insn_reads_memory (target_gdbarch,
+						     trigger_insn_addr,
+						     stop_pc - trigger_insn_addr,
+						     stopped_data_addr))
+		    {
+		      /* Don't stop: this was actually a write.  */
+		      bs->print_it = print_it_noop;
+		      bs->stop = 0;
+		    }
+		}
 	      break;
 	    default:
 	      /* Can't happen.  */

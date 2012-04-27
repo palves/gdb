@@ -2569,6 +2569,43 @@ amd64_get_longjmp_target (struct frame_info *frame, CORE_ADDR *pc)
   return 1;
 }
 
+static int
+amd64_insn_reads_memory (struct gdbarch *gdbarch, CORE_ADDR addr, int len,
+			 CORE_ADDR memory)
+{
+  struct amd64_insn details;
+  gdb_byte *buf = alloca (len);
+  gdb_byte *insn;
+
+  read_memory (addr, buf, len);
+
+  insn = buf;
+
+  /* Skip legacy instruction prefixes.  */
+  insn = amd64_skip_prefixes (insn);
+
+  /* Skip REX instruction prefix.  */
+  if (rex_prefix_p (*insn))
+    ++insn;
+
+
+  if (insn[0] == 0x83 && insn[1] == 0x45)
+    {
+      /* 83 45 fc 02    addl   $0x2,-0x4(%rbp) */
+
+      /* Let's claim this reads-writes.  */
+      return 1;
+    }
+
+  if (insn[0] == 0x8b)
+    {
+      /* mov 0x...(%reg),%reg  */
+      return 1;
+    }
+
+  return 0;
+}
+
 static const int amd64_record_regmap[] =
 {
   AMD64_RAX_REGNUM, AMD64_RCX_REGNUM, AMD64_RDX_REGNUM, AMD64_RBX_REGNUM,
@@ -2691,6 +2728,8 @@ amd64_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
   set_gdbarch_relocate_instruction (gdbarch, amd64_relocate_instruction);
 
   set_gdbarch_gen_return_address (gdbarch, amd64_gen_return_address);
+
+  set_gdbarch_insn_reads_memory (gdbarch, amd64_insn_reads_memory);
 }
 
 /* Provide a prototype to silence -Wmissing-prototypes.  */

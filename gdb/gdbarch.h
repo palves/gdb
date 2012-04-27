@@ -663,6 +663,12 @@ extern void set_gdbarch_cannot_step_breakpoint (struct gdbarch *gdbarch, int can
 extern int gdbarch_have_nonsteppable_watchpoint (struct gdbarch *gdbarch);
 extern void set_gdbarch_have_nonsteppable_watchpoint (struct gdbarch *gdbarch, int have_nonsteppable_watchpoint);
 
+extern int gdbarch_insn_reads_memory_p (struct gdbarch *gdbarch);
+
+typedef int (gdbarch_insn_reads_memory_ftype) (struct gdbarch *gdbarch, CORE_ADDR pc, int len, CORE_ADDR stopped_data_address);
+extern int gdbarch_insn_reads_memory (struct gdbarch *gdbarch, CORE_ADDR pc, int len, CORE_ADDR stopped_data_address);
+extern void set_gdbarch_insn_reads_memory (struct gdbarch *gdbarch, gdbarch_insn_reads_memory_ftype *insn_reads_memory);
+
 extern int gdbarch_address_class_type_flags_p (struct gdbarch *gdbarch);
 
 typedef int (gdbarch_address_class_type_flags_ftype) (int byte_size, int dwarf2_addr_class);
