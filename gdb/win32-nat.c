@@ -99,11 +99,21 @@ static int debug_registers_used;
 #define _CYGWIN_SIGNAL_STRING "cYgSiGw00f"
 #endif
 
+static void
+win32_dprintf (const char *fmt, ...)
+{
+  va_list ap;
+  va_start (ap, fmt);
+  vfprintf_unfiltered (gdb_stdlog, fmt, ap);
+  va_end (ap);
+}
+
+#define DEBUG_EXEC(x)	do { if (debug_exec) win32_dprintf x; } while (0)
+#define DEBUG_EVENTS(x)	do { if (debug_events) win32_dprintf x; } while (0)
+#define DEBUG_MEM(x)	do { if (debug_memory) win32_dprintf x; } while (0)
+#define DEBUG_EXCEPT(x)	do { if (debug_exceptions) win32_dprintf x; } while (0)
+
 #define CHECK(x)	check (x, __FILE__,__LINE__)
-#define DEBUG_EXEC(x)	if (debug_exec)		printf_unfiltered x
-#define DEBUG_EVENTS(x)	if (debug_events)	printf_unfiltered x
-#define DEBUG_MEM(x)	if (debug_memory)	printf_unfiltered x
-#define DEBUG_EXCEPT(x)	if (debug_exceptions)	printf_unfiltered x
 
 static void win32_stop (ptid_t);
 static int win32_win32_thread_alive (ptid_t);
@@ -998,10 +1008,9 @@ info_w32_command (char *args, int from_tty)
   help_list (info_w32_cmdlist, "info w32 ", class_info, gdb_stdout);
 }
 
-
-#define DEBUG_EXCEPTION_SIMPLE(x)       if (debug_exceptions) \
-  printf_unfiltered ("gdb: Target exception %s at 0x%08lx\n", x, \
-  (DWORD) current_event.u.Exception.ExceptionRecord.ExceptionAddress)
+#define DEBUG_EXCEPTION_SIMPLE(x) \
+  DEBUG_EXCEPT(("gdb: Target exception %s at 0x%08lx\n", x, \
+  (DWORD) current_event.u.Exception.ExceptionRecord.ExceptionAddress))
 
 static int
 handle_exception (struct target_waitstatus *ourstatus)
@@ -1209,9 +1218,7 @@ win32_resume (ptid_t ptid, int step, enum target_signal sig)
   if (sig != TARGET_SIGNAL_0)
     {
       if (current_event.dwDebugEventCode != EXCEPTION_DEBUG_EVENT)
-	{
-	  DEBUG_EXCEPT(("Cannot continue with signal %d here.\n",sig));
-	}
+	DEBUG_EXCEPT(("Cannot continue with signal %d here.\n",sig));
       else if (sig == last_sig)
 	continue_status = DBG_EXCEPTION_NOT_HANDLED;
       else
@@ -1231,9 +1238,7 @@ win32_resume (ptid_t ptid, int step, enum target_signal sig)
 		break;
 	      }
 	  if (continue_status == DBG_CONTINUE)
-	    {
-	      DEBUG_EXCEPT(("Cannot continue with signal %d.\n",sig));
-	    }
+	    DEBUG_EXCEPT(("Cannot continue with signal %d.\n",sig));
 	}
 #endif
 	DEBUG_EXCEPT(("Can only continue with recieved signal %d.\n",
