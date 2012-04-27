@@ -7751,6 +7751,15 @@ the test-suite default; search the board file for "timeout".}.
 
 @end itemize
 
+Sometimes, you'll be making changes that need to be tested against
+remote servers that don't support certain optional packets.  E.g., You
+want to do some change that would affect stubs that don't support any
+thread related optional packets.  Since @sc{gdbserver} supports
+threads, testing against it may not be exercising all the relevant
+@value{GDBN} code paths.  To help in such situations, @sc{gdbserver}
+accepts the @option{--disable-packet} command line option that allows
+disabling some optional packets.
+
 @section Testsuite Organization
 
 @cindex test suite organization
