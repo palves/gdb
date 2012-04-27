@@ -1288,12 +1288,17 @@ proceed (CORE_ADDR addr, enum target_signal siggnal, int step)
   if (! stepping_over_breakpoint || use_displaced_stepping (gdbarch))
     insert_breakpoints ();
 
-  if (siggnal != TARGET_SIGNAL_DEFAULT)
-    stop_signal = siggnal;
-  /* If this signal should not be seen by program,
-     give it zero.  Used for debugging signals.  */
-  else if (!signal_program[stop_signal])
-    stop_signal = TARGET_SIGNAL_0;
+  /* TARGET_SIGNAL_DEFAULT means to pass whatever signal the inferior
+     stopped with...  */
+  if (siggnal == TARGET_SIGNAL_DEFAULT)
+    {
+      siggnal = stop_signal;
+
+      /* ... unless this signal should not be seen by the inferior.
+	 Used for debugging signals.  */
+      if (!signal_program[siggnal])
+	siggnal = TARGET_SIGNAL_0;
+    }
 
   annotate_starting ();
 
@@ -1335,7 +1340,7 @@ proceed (CORE_ADDR addr, enum target_signal siggnal, int step)
   init_infwait_state ();
 
   /* Resume inferior.  */
-  resume (oneproc || step || bpstat_should_step (), stop_signal);
+  resume (oneproc || step || bpstat_should_step (), siggnal);
 
   /* Wait for it to stop (if not standalone)
      and in any case decode why it stopped, and act accordingly.  */
@@ -2042,7 +2047,6 @@ handle_inferior_event (struct execution_control_state *ecs)
     case TARGET_WAITKIND_VFORKED:
       if (debug_infrun)
         fprintf_unfiltered (gdb_stdlog, "infrun: TARGET_WAITKIND_FORKED\n");
-      stop_signal = TARGET_SIGNAL_TRAP;
       pending_follow.kind = ecs->ws.kind;
 
       pending_follow.fork_event.parent_pid = ecs->ptid;
@@ -2067,12 +2071,13 @@ handle_inferior_event (struct execution_control_state *ecs)
 	  keep_going (ecs);
 	  return;
 	}
+
+      stop_signal = TARGET_SIGNAL_TRAP;
       goto process_event_stop_test;
 
     case TARGET_WAITKIND_EXECD:
       if (debug_infrun)
         fprintf_unfiltered (gdb_stdlog, "infrun: TARGET_WAITKIND_EXECD\n");
-      stop_signal = TARGET_SIGNAL_TRAP;
 
       pending_follow.execd_pathname =
 	savestring (ecs->ws.value.execd_pathname,
@@ -2111,6 +2116,8 @@ handle_inferior_event (struct execution_control_state *ecs)
 	  keep_going (ecs);
 	  return;
 	}
+
+      stop_signal = TARGET_SIGNAL_TRAP;
       goto process_event_stop_test;
 
       /* Be careful not to try to gather much state about a thread
@@ -2626,6 +2633,12 @@ targets should add new threads to the thread list themselves in non-stop mode.")
 	{
 	  ecs->random_signal = !bpstat_explains_signal (stop_bpstat);
 	  if (!ecs->random_signal)
+	    /* Must be a SIGILL or SIGEMT caused by a breakpoint, or
+	       it was a SIGSEGV that was generated due to trying to
+	       execute a breakpoint instruction on a non-executable
+	       stack.  This can happen for call dummy breakpoints for
+	       architectures that place call dummies on the stack.
+	       Change it into a SIGTRAP.  */
 	    stop_signal = TARGET_SIGNAL_TRAP;
 	}
     }
@@ -2647,7 +2660,8 @@ process_event_stop_test:
       int printed = 0;
 
       if (debug_infrun)
-	 fprintf_unfiltered (gdb_stdlog, "infrun: random signal %d\n", stop_signal);
+	 fprintf_unfiltered (gdb_stdlog,
+			     "infrun: random signal %d\n", stop_signal);
 
       stopped_by_random_signal = 1;
 
@@ -2666,10 +2680,6 @@ process_event_stop_test:
          if we took it away.  */
       else if (printed)
 	target_terminal_inferior ();
-
-      /* Clear the signal if it should not be passed.  */
-      if (signal_program[stop_signal] == 0)
-	stop_signal = TARGET_SIGNAL_0;
 
       if (prev_pc == read_pc ()
 	  && stepping_over_breakpoint
@@ -2698,6 +2708,7 @@ process_event_stop_test:
 
       if (step_range_end != 0
 	  && stop_signal != TARGET_SIGNAL_0
+	  && signal_program[stop_signal]
 	  && stop_pc >= step_range_start && stop_pc < step_range_end
 	  && frame_id_eq (get_frame_id (get_current_frame ()),
 			  step_frame_id)
@@ -3605,10 +3616,9 @@ keep_going (struct execution_control_state *ecs)
          equivalent of a SIGNAL_TRAP to the program being debugged. */
 
       if (stop_signal == TARGET_SIGNAL_TRAP && !signal_program[stop_signal])
-	stop_signal = TARGET_SIGNAL_0;
-
-
-      resume (currently_stepping (tss), stop_signal);
+ 	resume (currently_stepping (ecs), TARGET_SIGNAL_0);
+      else
+	resume (currently_stepping (ecs), stop_signal);
     }
 
   prepare_to_wait (ecs);
