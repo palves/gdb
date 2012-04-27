@@ -252,11 +252,6 @@ show_stop_on_solib_events (struct ui_file *file, int from_tty,
 		    value);
 }
 
-/* Nonzero means expecting a trace trap
-   and should stop the inferior and return silently when it happens.  */
-
-int stop_after_trap;
-
 /* Nonzero means expecting a trap and caller will handle it themselves.
    It is used after attach, due to attaching to a process;
    when running in the shell before the child program has been exec'd;
@@ -1143,7 +1138,6 @@ clear_proceed_status (void)
   step_range_end = 0;
   step_frame_id = null_frame_id;
   step_over_calls = STEP_OVER_UNDEBUGGABLE;
-  stop_after_trap = 0;
   stop_soon = NO_STOP_QUIETLY;
   proceed_to_finish = 0;
   breakpoint_proceeded = 1;	/* We're about to proceed... */
@@ -1226,10 +1220,8 @@ proceed (CORE_ADDR addr, enum target_signal siggnal, int step)
   CORE_ADDR pc = regcache_read_pc (regcache);
   int oneproc = 0;
 
-  if (step > 0)
+  if (step)
     step_start_function = find_pc_function (pc);
-  if (step < 0)
-    stop_after_trap = 1;
 
   if (addr == (CORE_ADDR) -1)
     {
@@ -2567,15 +2559,6 @@ targets should add new threads to the thread list themselves in non-stop mode.")
       || stop_soon == STOP_QUIETLY || stop_soon == STOP_QUIETLY_NO_SIGSTOP
       || stop_soon == STOP_QUIETLY_REMOTE)
     {
-      if (stop_signal == TARGET_SIGNAL_TRAP && stop_after_trap)
-	{
-          if (debug_infrun)
-	    fprintf_unfiltered (gdb_stdlog, "infrun: stopped\n");
-	  stop_print_frame = 0;
-	  stop_stepping (ecs);
-	  return;
-	}
-
       /* This is originated from start_remote(), start_inferior() and
          shared libraries hook functions.  */
       if (stop_soon == STOP_QUIETLY || stop_soon == STOP_QUIETLY_REMOTE)
@@ -4364,7 +4347,6 @@ struct inferior_status
   struct frame_id step_frame_id;
   enum step_over_calls_kind step_over_calls;
   CORE_ADDR step_resume_break_address;
-  int stop_after_trap;
   int stop_soon;
 
   /* These are here because if call_function_by_hand has written some
@@ -4409,7 +4391,6 @@ save_inferior_status (int restore_stack_info)
   inf_status->step_range_end = step_range_end;
   inf_status->step_frame_id = step_frame_id;
   inf_status->step_over_calls = step_over_calls;
-  inf_status->stop_after_trap = stop_after_trap;
   inf_status->stop_soon = stop_soon;
   /* Save original bpstat chain here; replace it with copy of chain.
      If caller's caller is walking the chain, they'll be happier if we
@@ -4461,7 +4442,6 @@ restore_inferior_status (struct inferior_status *inf_status)
   step_range_end = inf_status->step_range_end;
   step_frame_id = inf_status->step_frame_id;
   step_over_calls = inf_status->step_over_calls;
-  stop_after_trap = inf_status->stop_after_trap;
   stop_soon = inf_status->stop_soon;
   bpstat_clear (&stop_bpstat);
   stop_bpstat = inf_status->stop_bpstat;

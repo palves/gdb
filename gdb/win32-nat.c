@@ -1487,7 +1487,6 @@ win32_wait (ptid_t ptid, struct target_waitstatus *ourstatus)
 static void
 do_initial_win32_stuff (DWORD pid)
 {
-  extern int stop_after_trap;
   int i;
 
   last_sig = TARGET_SIGNAL_0;
@@ -1515,7 +1514,6 @@ do_initial_win32_stuff (DWORD pid)
   stop_soon = STOP_QUIETLY;
   while (1)
     {
-      stop_after_trap = 1;
       wait_for_inferior (0);
       if (stop_signal != TARGET_SIGNAL_TRAP)
 	resume (0, stop_signal);
@@ -1524,7 +1522,6 @@ do_initial_win32_stuff (DWORD pid)
     }
 
   stop_soon = NO_STOP_QUIETLY;
-  stop_after_trap = 0;
   return;
 }
 
