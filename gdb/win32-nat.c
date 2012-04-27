@@ -1179,7 +1179,7 @@ win32_resume (ptid_t ptid, int step, enum target_signal sig)
   if (sig != TARGET_SIGNAL_0)
     {
       if (current_event.dwDebugEventCode != EXCEPTION_DEBUG_EVENT)
-	DEBUG_EXCEPT(("Cannot continue with signal %d here.\n",sig));
+	error (_("Cannot continue with signal %d here.\n"), sig);
       else if (sig == last_sig)
 	continue_status = DBG_EXCEPTION_NOT_HANDLED;
       else
@@ -1202,8 +1202,7 @@ win32_resume (ptid_t ptid, int step, enum target_signal sig)
 	    DEBUG_EXCEPT(("Cannot continue with signal %d.\n",sig));
 	}
 #endif
-	DEBUG_EXCEPT(("Can only continue with recieved signal %d.\n",
-	  last_sig));
+	error (_("Can only continue with recieved signal %d.\n"), last_sig);
     }
 
   last_sig = TARGET_SIGNAL_0;
