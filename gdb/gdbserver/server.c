@@ -878,6 +878,13 @@ handle_search_memory (char *own_buf, int packet_len)
       return;					\
     }
 
+#define require_current_inferior(BUF)		\
+  if (current_inferior == NULL)			\
+    {						\
+      write_enn (BUF);				\
+      return;					\
+    }
+
 /* Handle monitor commands not handled by target-specific handlers.  */
 
 static void
@@ -959,7 +966,7 @@ handle_qxfer_auxv (const char *annex,
   if (the_target->read_auxv == NULL || writebuf != NULL)
     return -2;
 
-  if (annex[0] != '\0' || !target_running ())
+  if (annex[0] != '\0' || current_inferior == NULL)
     return -1;
 
   return (*the_target->read_auxv) (offset, readbuf, len);
@@ -978,7 +985,7 @@ handle_qxfer_features (const char *annex,
   if (writebuf != NULL)
     return -2;
 
-  if (!target_running ())
+  if (current_inferior == NULL)
     return -1;
 
   /* Grab the correct annex.  */
@@ -1012,7 +1019,7 @@ handle_qxfer_libraries (const char *annex,
   if (writebuf != NULL)
     return -2;
 
-  if (annex[0] != '\0' || !target_running ())
+  if (annex[0] != '\0' || current_inferior == NULL)
     return -1;
 
   /* Over-estimate the necessary memory.  Assume that every character
@@ -1105,7 +1112,7 @@ handle_qxfer_siginfo (const char *annex,
   if (the_target->qxfer_siginfo == NULL)
     return -2;
 
-  if (annex[0] != '\0' || !target_running ())
+  if (annex[0] != '\0' || current_inferior == NULL)
     return -1;
 
   return (*the_target->qxfer_siginfo) (annex, readbuf, writebuf, offset, len);
@@ -1121,7 +1128,7 @@ handle_qxfer_spu (const char *annex,
   if (the_target->qxfer_spu == NULL)
     return -2;
 
-  if (!target_running ())
+  if (current_inferior == NULL)
     return -1;
 
   return (*the_target->qxfer_spu) (annex, readbuf, writebuf, offset, len);
@@ -1139,7 +1146,7 @@ handle_qxfer_statictrace (const char *annex,
   if (writebuf != NULL)
     return -2;
 
-  if (annex[0] != '\0' || !target_running () || current_traceframe == -1)
+  if (annex[0] != '\0' || current_inferior == NULL || current_traceframe == -1)
     return -1;
 
   if (traceframe_read_sdata (current_traceframe, offset,
@@ -1195,7 +1202,7 @@ handle_qxfer_threads (const char *annex,
   if (writebuf != NULL)
     return -2;
 
-  if (!target_running () || annex[0] != '\0')
+  if (current_inferior == NULL || annex[0] != '\0')
     return -1;
 
   if (offset == 0)
@@ -1245,7 +1252,7 @@ handle_qxfer_traceframe_info (const char *annex,
   if (writebuf != NULL)
     return -2;
 
-  if (!target_running () || annex[0] != '\0' || current_traceframe == -1)
+  if (current_inferior == NULL || annex[0] != '\0' || current_traceframe == -1)
     return -1;
 
   if (offset == 0)
@@ -1494,23 +1501,27 @@ handle_query (char *own_buf, int packet_len, int *new_packet_len_p)
 
   if (strcmp ("qSymbol::", own_buf) == 0)
     {
-      /* GDB is suggesting new symbols have been loaded.  This may
-	 mean a new shared library has been detected as loaded, so
-	 take the opportunity to check if breakpoints we think are
-	 inserted, still are.  Note that it isn't guaranteed that
-	 we'll see this when a shared library is loaded, and nor will
-	 we see this for unloads (although breakpoints in unloaded
-	 libraries shouldn't trigger), as GDB may not find symbols for
-	 the library at all.  We also re-validate breakpoints when we
-	 see a second GDB breakpoint for the same address, and or when
-	 we access breakpoint shadows.  */
-      validate_breakpoints ();
+      if (current_inferior != NULL)
+	{
+	  /* GDB is suggesting new symbols have been loaded.  This may
+	     mean a new shared library has been detected as loaded, so
+	     take the opportunity to check if breakpoints we think are
+	     inserted, still are.  Note that it isn't guaranteed that
+	     we'll see this when a shared library is loaded, and nor
+	     will we see this for unloads (although breakpoints in
+	     unloaded libraries shouldn't trigger), as GDB may not
+	     find symbols for the library at all.  We also re-validate
+	     breakpoints when we see a second GDB breakpoint for the
+	     same address, and or when we access breakpoint
+	     shadows.  */
+	  validate_breakpoints ();
 
-      if (target_supports_tracepoints ())
-	tracepoint_look_up_symbols ();
+	  if (target_supports_tracepoints ())
+	    tracepoint_look_up_symbols ();
 
-      if (target_running () && the_target->look_up_symbols != NULL)
-	(*the_target->look_up_symbols) ();
+	  if (the_target->look_up_symbols != NULL)
+	    (*the_target->look_up_symbols) ();
+	}
 
       strcpy (own_buf, "OK");
       return;
@@ -1558,8 +1569,7 @@ handle_query (char *own_buf, int packet_len, int *new_packet_len_p)
     {
       CORE_ADDR text, data;
 
-      require_running (own_buf);
-      if (the_target->read_offsets (&text, &data))
+      if (current_inferior != NULL && the_target->read_offsets (&text, &data))
 	sprintf (own_buf, "Text=%lX;Data=%lX;Bss=%lX",
 		 (long)text, (long)data, (long)data);
       else
@@ -1704,8 +1714,6 @@ handle_query (char *own_buf, int packet_len, int *new_packet_len_p)
       int i, err;
       ptid_t ptid = null_ptid;
 
-      require_running (own_buf);
-
       for (i = 0; i < 3; i++)
 	{
 	  char *p2;
@@ -1817,7 +1825,7 @@ handle_query (char *own_buf, int packet_len, int *new_packet_len_p)
   if (strncmp ("qSearch:memory:", own_buf,
 	       sizeof ("qSearch:memory:") - 1) == 0)
     {
-      require_running (own_buf);
+      require_current_inferior (own_buf);
       handle_search_memory (own_buf, packet_len);
       return;
     }
@@ -1835,7 +1843,7 @@ handle_query (char *own_buf, int packet_len, int *new_packet_len_p)
 	}
       else
 	{
-	  require_running (own_buf);
+	  require_current_inferior (own_buf);
 	  process = current_process ();
 	}
 
@@ -1857,7 +1865,7 @@ handle_query (char *own_buf, int packet_len, int *new_packet_len_p)
       int len;
       unsigned long long crc;
 
-      require_running (own_buf);
+      require_current_inferior (own_buf);
       base = strtoul (own_buf + 5, &comma, 16);
       if (*comma++ != ',')
 	{
@@ -3294,7 +3302,7 @@ process_serial_event (void)
       }
     case 'k':
       response_needed = 0;
-      if (!target_running ())
+      if (current_inferior == NULL)
 	/* The packet we received doesn't make sense - but we can't
 	   reply to it, either.  */
 	return 0;
