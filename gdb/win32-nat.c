@@ -1735,22 +1735,16 @@ win32_attach (char *args, int from_tty)
 static void
 win32_detach (char *args, int from_tty)
 {
-  int detached = 1;
-
   if (has_detach_ability ())
     {
-      ptid_t ptid = {-1};
-      win32_resume (ptid, 0, TARGET_SIGNAL_0);
+      win32_resume (minus_one_ptid, 0, TARGET_SIGNAL_0);
 
       if (!DebugActiveProcessStop (current_event.dwProcessId))
-	{
-	  error (_("Can't detach process %lu (error %lu)"),
-		 current_event.dwProcessId, GetLastError ());
-	  detached = 0;
-	}
+	error (_("Can't detach process %lu (error %lu)"),
+	       current_event.dwProcessId, GetLastError ());
       DebugSetProcessKillOnExit (FALSE);
     }
-  if (detached && from_tty)
+  if (from_tty)
     {
       char *exec_file = get_exec_file (0);
       if (exec_file == 0)
