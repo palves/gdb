@@ -77,16 +77,40 @@ proc get_args { } {
   }
 }
 
-proc stop_process { description } {
+proc stop_process { childpid description } {
   global gdb_prompt
 
   # For this to work we must be sure to consume the "Continuing."
   # message first, or GDB's signal handler may not be in place.
-  after 1000 {send_gdb "\003"}
+#  after 1000 {send_gdb "\003"}
+
+  after 1000 "remote_exec host \"kill -SIGINT ${childpid}\""
+
   gdb_expect {
     -re "Program received signal SIGINT.*$gdb_prompt $"
       {
 	pass $description
+      }
+    timeout
+      {
+	fail "$description (timeout)"
+      }
+  }
+}
+
+proc get_current_process { description } {
+  global gdb_prompt
+
+  send_gdb "info threads\n"
+  gdb_expect {
+    -re ".*hread (\[0-9\]+).*$gdb_prompt $"
+      {
+	pass $description
+	return $expect_out(1,string)
+      }
+    -re "$gdb_prompt $"
+      {
+	fail "$description (unknown output)"
       }
     timeout
       {
@@ -117,6 +141,10 @@ proc get_current_thread { description } {
 }
 
 proc my_continue { msg } {
+
+  set curpid [get_current_process "find current process (1)"]
+  verbose "winpid is $curpid"
+
   send_gdb "continue\n"
   gdb_expect {
     -re "Continuing"
@@ -125,7 +153,7 @@ proc my_continue { msg } {
       { fail "continue ($msg) (timeout)" }
   }
 
-  stop_process "stop all threads ($msg)"
+  stop_process $curpid "stop all threads ($msg)"
 
   # Make sure we're in one of the non-main looping threads.
   gdb_breakpoint [concat [gdb_get_line_number "schedlock.exp: main loop"] " if arg != 0"]
