@@ -1440,6 +1440,14 @@ win32_wait (ptid_t ptid, struct target_waitstatus *ourstatus)
 {
   int pid = -1;
 
+  /* NOTE: palves: How can this be right?  The inferior is running,
+     and we're pulling the terminal to ourselves?  This is recipe for
+     race disaster.  This appears to have been placed here due to the
+     add_thread calls doing output.  Since the Windows debug API
+     guaranties that the whole process stops on return from
+     WaitForDebugEvent, we can just move this to before calling
+     add_thread, and returning the terminal to the inferior before
+     resuming.  */
   target_terminal_ours ();
 
   /* We loop when we get a non-standard exception rather than return
