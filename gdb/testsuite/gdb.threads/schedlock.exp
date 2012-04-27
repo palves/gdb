@@ -26,6 +26,10 @@ if $tracelevel then {
 set prms_id 0
 set bug_id 0
 
+if {([istarget *-*-mingw*] || [istarget *-*-cygwin*])} {
+    return 0
+}
+
 set testfile "schedlock"
 set srcfile ${testfile}.c
 set binfile ${objdir}/${subdir}/${testfile}

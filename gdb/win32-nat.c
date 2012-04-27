@@ -131,9 +131,7 @@ typedef struct thread_info_struct
     HANDLE h;
     char *name;
     int suspended;
-    int reload_context;
     CONTEXT context;
-    STACKFRAME sf;
   }
 thread_info;
 
@@ -257,8 +255,7 @@ check (BOOL ok, const char *file, int line)
 }
 
 /* Find a thread record given a thread id.  If GET_CONTEXT is not 0,
-   then also retrieve the context for this thread.  If GET_CONTEXT is
-   negative, then don't suspend the thread.  */
+   then also retrieve the context for this thread.  */
 static thread_info *
 thread_rec (DWORD id, int get_context)
 {
@@ -267,22 +264,10 @@ thread_rec (DWORD id, int get_context)
   for (th = &thread_head; (th = th->next) != NULL;)
     if (th->id == id)
       {
-	if (!th->suspended && get_context)
+	if (get_context && th->context.ContextFlags == 0)
 	  {
-	    if (get_context > 0 && id != current_event.dwThreadId)
-	      {
-		if (SuspendThread (th->h) == (DWORD) -1)
-		  {
-		    DWORD err = GetLastError ();
-		    warning (_("SuspendThread failed. (winerr %d)"),
-			     (int) err);
-		    return NULL;
-		  }
-		th->suspended = 1;
-	      }
-	    else if (get_context < 0)
-	      th->suspended = -1;
-	    th->reload_context = 1;
+	    th->context.ContextFlags = CONTEXT_DEBUGGER_DR;
+	    CHECK (GetThreadContext (th->h, &th->context));
 	  }
 	return th;
       }
@@ -381,42 +366,6 @@ do_win32_fetch_inferior_registers (struct regcache *regcache, int r)
   struct gdbarch *gdbarch = get_regcache_arch (regcache);
   struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
   long l;
-
-  if (!current_thread)
-    return;	/* Windows sometimes uses a non-existent thread id in its
-		   events */
-
-  if (current_thread->reload_context)
-    {
-#ifdef __COPY_CONTEXT_SIZE
-      if (have_saved_context)
-	{
-	  /* Lie about where the program actually is stopped since cygwin has informed us that
-	     we should consider the signal to have occurred at another location which is stored
-	     in "saved_context. */
-	  memcpy (&current_thread->context, &saved_context, __COPY_CONTEXT_SIZE);
-	  have_saved_context = 0;
-	}
-      else
-#endif
-	{
-	  thread_info *th = current_thread;
-	  th->context.ContextFlags = CONTEXT_DEBUGGER_DR;
-	  GetThreadContext (th->h, &th->context);
-	  /* Copy dr values from that thread. 
-	     But only if there were not modified since last stop. PR gdb/2388 */
-	  if (!debug_registers_changed)
-	    {
-	      dr[0] = th->context.Dr0;
-	      dr[1] = th->context.Dr1;
-	      dr[2] = th->context.Dr2;
-	      dr[3] = th->context.Dr3;
-	      dr[6] = th->context.Dr6;
-	      dr[7] = th->context.Dr7;
-	    }
-	}
-      current_thread->reload_context = 0;
-    }
 
   if (r == I387_FISEG_REGNUM (tdep))
     {
@@ -1021,7 +970,7 @@ handle_exception (struct target_waitstatus *ourstatus)
   ourstatus->kind = TARGET_WAITKIND_STOPPED;
 
   /* Record the context of the current thread */
-  th = thread_rec (current_event.dwThreadId, -1);
+  th = thread_rec (current_event.dwThreadId, TRUE);
 
   switch (code)
     {
@@ -1130,13 +1079,25 @@ handle_exception (struct target_waitstatus *ourstatus)
     }
   exception_count++;
   last_sig = ourstatus->value.sig;
+
+  if (last_sig == TARGET_SIGNAL_TRAP)
+    {
+      /* Record the state of the debug registers.  */
+      dr[0] = th->context.Dr0;
+      dr[1] = th->context.Dr1;
+      dr[2] = th->context.Dr2;
+      dr[3] = th->context.Dr3;
+      dr[6] = th->context.Dr6;
+      dr[7] = th->context.Dr7;
+    }
+
   return 1;
 }
 
 /* Resume all artificially suspended threads if we are continuing
    execution */
 static BOOL
-win32_continue (DWORD continue_status, int id)
+win32_continue (DWORD continue_status)
 {
   int i;
   thread_info *th;
@@ -1147,29 +1108,27 @@ win32_continue (DWORD continue_status, int id)
 		  continue_status == DBG_CONTINUE ?
 		  "DBG_CONTINUE" : "DBG_EXCEPTION_NOT_HANDLED"));
 
-  for (th = &thread_head; (th = th->next) != NULL;)
-    if ((id == -1 || id == (int) th->id)
-	&& th->suspended)
-      {
-	if (debug_registers_changed)
-	  {
-	    th->context.ContextFlags |= CONTEXT_DEBUG_REGISTERS;
-	    th->context.Dr0 = dr[0];
-	    th->context.Dr1 = dr[1];
-	    th->context.Dr2 = dr[2];
-	    th->context.Dr3 = dr[3];
-	    th->context.Dr6 = DR6_CLEAR_VALUE;
-	    th->context.Dr7 = dr[7];
-	  }
-	if (th->context.ContextFlags)
-	  {
-	    CHECK (SetThreadContext (th->h, &th->context));
-	    th->context.ContextFlags = 0;
-	  }
-	if (th->suspended > 0)
-	  (void) ResumeThread (th->h);
-	th->suspended = 0;
-      }
+  for (th = thread_head.next; th; th = th->next)
+    {
+      /* Set the debug register contents in all threads.  */
+      if (debug_registers_changed)
+	{
+	  th->context.ContextFlags |= CONTEXT_DEBUG_REGISTERS;
+	  th->context.Dr0 = dr[0];
+	  th->context.Dr1 = dr[1];
+	  th->context.Dr2 = dr[2];
+	  th->context.Dr3 = dr[3];
+	  th->context.Dr6 = DR6_CLEAR_VALUE;
+	  th->context.Dr7 = dr[7];
+	}
+
+      /* Flush any register changes back into the thread.  */
+      if (th->context.ContextFlags)
+	{
+	  CHECK (SetThreadContext (th->h, &th->context));
+	  th->context.ContextFlags = 0;
+	}
+    }
 
   res = ContinueDebugEvent (current_event.dwProcessId,
 			    current_event.dwThreadId,
@@ -1215,6 +1174,8 @@ win32_resume (ptid_t ptid, int step, enum target_signal sig)
   if (resume_all)
     ptid = inferior_ptid;
 
+  /* Allow continuing with the same signal that interrupted us.
+     Otherwise complain.  */
   if (sig != TARGET_SIGNAL_0)
     {
       if (current_event.dwDebugEventCode != EXCEPTION_DEBUG_EVENT)
@@ -1250,41 +1211,39 @@ win32_resume (ptid_t ptid, int step, enum target_signal sig)
   DEBUG_EXEC (("gdb: win32_resume (pid=%d, tid=%ld, step=%d, sig=%d);\n",
 	       ptid_get_pid (ptid), ptid_get_tid (ptid), step, sig));
 
-  /* Get context for currently selected thread */
-  th = thread_rec (ptid_get_tid (inferior_ptid), FALSE);
-  if (th)
+  if (step)
     {
-      if (step)
-	{
-	  /* Single step by setting t bit */
-	  win32_fetch_inferior_registers (get_current_regcache (),
-					  gdbarch_ps_regnum (current_gdbarch));
-	  th->context.EFlags |= FLAG_TRACE_BIT;
-	}
+      /* Get context of the thread we're about to step.	 */
+      th = thread_rec (ptid_get_tid (ptid), TRUE);
+      /* Single step by setting the T bit.  */
+      th->context.EFlags |= FLAG_TRACE_BIT;
+    }
 
-      if (th->context.ContextFlags)
+  /* Implement scheduler locking.  */
+  for (th = thread_head.next; th != NULL; th = th->next)
+    {
+      if (resume_all || ptid_get_tid (ptid) == th->id)
 	{
-	  if (debug_registers_changed)
+	  /* We're either resuming all threads or this thread only.
+	     Be sure to leave it unsuspended.  */
+	  if (th->suspended)
 	    {
-	      th->context.Dr0 = dr[0];
-	      th->context.Dr1 = dr[1];
-	      th->context.Dr2 = dr[2];
-	      th->context.Dr3 = dr[3];
-	      th->context.Dr6 = DR6_CLEAR_VALUE;
-	      th->context.Dr7 = dr[7];
+	      ResumeThread (th->h);
+	      th->suspended = 0;
 	    }
-	  CHECK (SetThreadContext (th->h, &th->context));
-	  th->context.ContextFlags = 0;
+	}
+      else if (!resume_all)
+	{
+	  /* This thread should be left schedule-locked.  */
+	  if (!th->suspended)
+	    {
+	      SuspendThread (th->h);
+	      th->suspended = 1;
+	    }
 	}
     }
 
-  /* Allow continuing with the same signal that interrupted us.
-     Otherwise complain. */
-
-  if (resume_all)
-    win32_continue (continue_status, -1);
-  else
-    win32_continue (continue_status, ptid_get_tid (ptid));
+  win32_continue (continue_status);
 }
 
 /* Get the next event from the child.  Return 1 if the event requires
@@ -1396,7 +1355,10 @@ get_win32_debug_event (int pid, struct target_waitstatus *ourstatus)
       catch_errors (handle_load_dll, NULL, (char *) "", RETURN_MASK_ALL);
       ourstatus->kind = TARGET_WAITKIND_LOADED;
       ourstatus->value.integer = 0;
-      retval = main_thread_id;
+      /* The thread reported is either the thread that loaded the dll,
+	 in the normal case; or when reporting the initial debug
+	 events on attach, the main thread.  */
+      retval = current_event.dwThreadId;
       break;
 
     case UNLOAD_DLL_DEBUG_EVENT:
@@ -1409,7 +1371,8 @@ get_win32_debug_event (int pid, struct target_waitstatus *ourstatus)
       catch_errors (handle_unload_dll, NULL, (char *) "", RETURN_MASK_ALL);
       ourstatus->kind = TARGET_WAITKIND_LOADED;
       ourstatus->value.integer = 0;
-      retval = main_thread_id;
+      /* The thread reported is the thread that unloaded the dll.  */
+      retval = current_event.dwThreadId;
       break;
 
     case EXCEPTION_DEBUG_EVENT:
@@ -1460,14 +1423,12 @@ get_win32_debug_event (int pid, struct target_waitstatus *ourstatus)
       if (continue_status == -1)
 	win32_resume (minus_one_ptid, 0, 1);
       else
-	CHECK (win32_continue (continue_status, -1));
+	CHECK (win32_continue (continue_status));
     }
   else
-    {
-      inferior_ptid = ptid_build (current_event.dwProcessId, 0,
-				  retval);
-      current_thread = th ?: thread_rec (current_event.dwThreadId, TRUE);
-    }
+    /* FIXME, we shouldn't be setting a current_thread at all, in
+       fact, that variable shouldn't exist at all.  */
+    current_thread = th ?: thread_rec (current_event.dwThreadId, TRUE);
 
 out:
   return retval;
@@ -1930,13 +1891,13 @@ win32_create_inferior (char *exec_file, char *allargs, char **in_env,
 
   do_initial_win32_stuff (pi.dwProcessId);
 
-  /* win32_continue (DBG_CONTINUE, -1); */
+  /* Inferior is stopped with a SIGTRAP at this point.  */
 }
 
 static void
 win32_mourn_inferior (void)
 {
-  (void) win32_continue (DBG_CONTINUE, -1);
+  (void) win32_continue (DBG_CONTINUE);
   i386_cleanup_dregs();
   if (open_process_used)
     {
@@ -1994,7 +1955,7 @@ win32_kill_inferior (void)
 
   for (;;)
     {
-      if (!win32_continue (DBG_CONTINUE, -1))
+      if (!win32_continue (DBG_CONTINUE))
 	break;
       if (!WaitForDebugEvent (&current_event, INFINITE))
 	break;
@@ -2141,6 +2102,7 @@ init_win32_ops (void)
   win32_ops.to_has_stack = 1;
   win32_ops.to_has_registers = 1;
   win32_ops.to_has_execution = 1;
+  win32_ops.to_has_thread_control = tc_schedlock;
   win32_ops.to_pid_to_exec_file = win32_pid_to_exec_file;
   win32_ops.to_magic = OPS_MAGIC;
 }

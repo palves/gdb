@@ -1923,6 +1923,10 @@ handle_inferior_event (struct execution_control_state *ecs)
   switch (ecs->ws.kind)
     {
     case TARGET_WAITKIND_LOADED:
+
+      if (!ptid_equal (ecs->ptid, inferior_ptid))
+	context_switch (ecs->ptid);
+
       if (debug_infrun)
         fprintf_unfiltered (gdb_stdlog, "infrun: TARGET_WAITKIND_LOADED\n");
       /* Ignore gracefully during startup of the inferior, as it might
