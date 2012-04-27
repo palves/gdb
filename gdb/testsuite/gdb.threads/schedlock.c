@@ -48,6 +48,8 @@ int main() {
     exit(EXIT_SUCCESS);
 }
 
+#include <windows.h>
+
 void *thread_function(void *arg) {
     int my_number =  (long) arg;
     int *myp = (int *) &args[my_number];
@@ -57,6 +59,11 @@ void *thread_function(void *arg) {
       {
 	/* schedlock.exp: main loop.  */
 	(*myp) ++;
+#if 1
+	Sleep (100);
+#else
+	usleep (1);
+#endif
       }
 
     pthread_exit(NULL);

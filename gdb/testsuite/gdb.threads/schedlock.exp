@@ -27,7 +27,7 @@ set prms_id 0
 set bug_id 0
 
 if {([istarget *-*-mingw*] || [istarget *-*-cygwin*])} {
-    return 0
+#    return 0
 }
 
 set testfile "schedlock"
@@ -138,14 +138,14 @@ proc step_ten_loops { msg } {
 
     for {set i 0} {[expr $i < 10]} {set i [expr $i + 1]} {
 	send_gdb "step\n"
-	set other_step 0
+	set steps 2
 	gdb_expect {
 	    -re ".*myp\\) \\+\\+;\[\r\n\]+$gdb_prompt $" {
 		pass "step to increment ($msg $i)"
 	    }
 	    -re "$gdb_prompt $" {
-		if {$other_step == 0} {
-		    set other_step 1
+		if {$steps != 0} {
+		    set steps [expr $steps - 1]
 		    send_gdb "step\n"
 		    exp_continue
 		} else {
