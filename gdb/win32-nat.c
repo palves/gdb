@@ -342,8 +342,8 @@ win32_delete_thread (ptid_t ptid)
 
   id = ptid_get_tid (ptid);
 
-  if (info_verbose)
-    printf_unfiltered ("[Deleting %s]\n", target_pid_to_str (ptid));
+  if (print_thread_events)
+    printf_unfiltered (_("[%s exited]\n"), target_pid_to_str (ptid));
   delete_thread (ptid);
 
   for (th = &thread_head;
