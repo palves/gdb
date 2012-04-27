@@ -1416,6 +1416,9 @@ static ptid_t continue_thread;
    It will be -1 if no traceframe is selected.  */
 static int remote_traceframe_number = -1;
 
+static int remote_disable_thread_support = 1;
+static int remote_disable_thread_stop_reply = 1;
+
 /* Find out if the stub attached to PID (and hence GDB should offer to
    detach instead of killing it when bailing out).  */
 
@@ -1506,6 +1509,9 @@ remote_add_inferior (int fake_pid_p, int pid, int attached)
 static void
 remote_add_thread (ptid_t ptid, int running)
 {
+  if (remote_disable_thread_support)
+    return;
+
   add_thread (ptid);
 
   set_executing (ptid, running);
@@ -1819,8 +1825,10 @@ remote_thread_alive (struct target_ops *ops, ptid_t ptid)
 
   if (ptid_get_pid (ptid) != 0 && ptid_get_tid (ptid) == 0)
     /* The main thread is always alive.  This can happen after a
-       vAttach, if the remote side doesn't support
-       multi-threading.  */
+       vAttach, if the remote side doesn't support multi-threading.
+       If the stub does support multi-threading, the ptid of the main
+       thread will never have tid==0, so we'll still detect the main
+       thread exiting.  */
     return 1;
 
   p = rs->buf;
@@ -2581,6 +2589,9 @@ remote_current_thread (ptid_t oldpid)
 {
   struct remote_state *rs = get_remote_state ();
 
+  if (remote_disable_thread_support)
+    return oldpid;
+
   putpkt ("qC");
   getpkt (&rs->buf, &rs->buf_size, 0);
   if (rs->buf[0] == 'Q' && rs->buf[1] == 'C')
@@ -2707,6 +2718,9 @@ remote_threads_info (struct target_ops *ops)
 
   if (remote_desc == 0)		/* paranoia */
     error (_("Command can only be used when connected to the remote target."));
+
+  if (remote_disable_thread_support)
+    return;
 
 #if defined(HAVE_LIBEXPAT)
   if (remote_protocol_packets[PACKET_qXfer_threads].support == PACKET_ENABLE)
@@ -5768,7 +5782,7 @@ remote_wait_as (ptid_t ptid, struct target_waitstatus *status, int options)
   else if (status->kind != TARGET_WAITKIND_EXITED
 	   && status->kind != TARGET_WAITKIND_SIGNALLED)
     {
-      if (!ptid_equal (event_ptid, null_ptid))
+      if (!ptid_equal (event_ptid, null_ptid) && !remote_disable_thread_stop_reply)
 	record_currthread (event_ptid);
       else
 	event_ptid = inferior_ptid;
