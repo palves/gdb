@@ -219,16 +219,14 @@ extern char **complete_on_enum (const char *const *enumlist,
 extern void help_list (struct cmd_list_element *, char *,
 		       enum command_class, struct ui_file *);
 
-/* Method for show a set/show variable's VALUE on FILE.  If this
-   method isn't supplied deprecated_show_value_hack() is called (which
-   is not good).  */
+extern const char *show_command_value (struct cmd_list_element *c,
+				       const char *value);
+
+/* Method for show a set/show variable's VALUE on FILE.  */
 typedef void (show_value_ftype) (struct ui_file *file,
 				 int from_tty,
 				 struct cmd_list_element *cmd,
 				 const char *value);
-/* NOTE: i18n: This function is not i18n friendly.  Callers should
-   instead print the value out directly.  */
-extern show_value_ftype deprecated_show_value_hack;
 
 extern void add_setshow_enum_cmd (char *name,
 				  enum command_class class,

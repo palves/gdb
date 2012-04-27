@@ -3100,6 +3100,15 @@ host_address_to_string (const void *addr)
   return str;
 }
 
+const char *
+quote_string (const char *str)
+{
+  char *quoted_str = get_cell ();
+
+  xsnprintf (quoted_str, CELLSIZE, "\"%s\"", str);
+  return quoted_str;
+}
+
 char *
 gdb_realpath (const char *filename)
 {

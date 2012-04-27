@@ -834,6 +834,15 @@ i386_can_use_hw_breakpoint (int type, int cnt, int othertype)
 }
 
 static void
+show_debug_regs_command (struct ui_file *file, int from_tty,
+			 struct cmd_list_element *c, const char *value)
+{
+  fprintf_filtered (file, _("\
+Whether to show variables that mirror the x86 debug registers is %s.\n"),
+		    show_command_value (c, value));
+}
+
+static void
 add_show_debug_regs_command (void)
 {
   /* A maintenance command to enable printing the internal DRi mirror
@@ -847,7 +856,7 @@ If enabled, the debug registers values are shown when GDB inserts\n\
 or removes a hardware breakpoint or watchpoint, and when the inferior\n\
 triggers a breakpoint or watchpoint."),
 			   NULL,
-			   NULL,
+			   show_debug_regs_command,
 			   &maintenance_set_cmdlist,
 			   &maintenance_show_cmdlist);
 }

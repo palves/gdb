@@ -398,6 +398,8 @@ add_setshow_cmd_full (char *name,
 			      full_show_doc, show_list);
   show->show_value_func = show_func;
 
+  gdb_assert (show->show_value_func);
+
   if (set_result != NULL)
     *set_result = set;
   if (show_result != NULL)

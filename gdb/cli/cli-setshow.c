@@ -28,6 +28,8 @@
 #include "cli/cli-cmds.h"
 #include "cli/cli-setshow.h"
 
+#include "gdb_assert.h"
+
 /* Prototypes for local functions.  */
 
 static int parse_binary_operation (char *);
@@ -90,17 +92,10 @@ parse_binary_operation (char *arg)
     }
 }
 
-void
-deprecated_show_value_hack (struct ui_file *ignore_file,
-			    int ignore_from_tty,
-			    struct cmd_list_element *c,
-			    const char *value)
+
+const char *
+show_command_value (struct cmd_list_element *c, const char *value)
 {
-  /* If there's no command or value, don't try to print it out.  */
-  if (c == NULL || value == NULL)
-    return;
-  /* Print doc minus "show" at start.  */
-  print_doc_line (gdb_stdout, c->doc + 5);
   switch (c->var_type)
     {
     case var_string:
@@ -108,11 +103,9 @@ deprecated_show_value_hack (struct ui_file *ignore_file,
     case var_optional_filename:
     case var_filename:
     case var_enum:
-      printf_filtered ((" is \"%s\".\n"), value);
-      break;
+      return quote_string (value);
     default:
-      printf_filtered ((" is %s.\n"), value);
-      break;
+      return value;
     }
 }
 
@@ -392,10 +385,8 @@ do_setshow_command (char *arg, int from_tty, struct cmd_list_element *c)
 	  char *value = ui_file_xstrdup (stb, NULL);
 
 	  make_cleanup (xfree, value);
-	  if (c->show_value_func != NULL)
-	    c->show_value_func (gdb_stdout, from_tty, c, value);
-	  else
-	    deprecated_show_value_hack (gdb_stdout, from_tty, c, value);
+	  gdb_assert (c->show_value_func != NULL);
+	  c->show_value_func (gdb_stdout, from_tty, c, value);
 	}
       do_cleanups (old_chain);
     }

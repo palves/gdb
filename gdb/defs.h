@@ -524,6 +524,8 @@ extern CORE_ADDR string_to_core_addr (const char *my_string);
 extern char *hex_string (LONGEST);
 extern char *hex_string_custom (LONGEST, int);
 
+extern const char *quote_string (const char *);
+
 extern void fprintf_symbol_filtered (struct ui_file *, const char *,
 				     enum language, int);
 

@@ -7552,6 +7552,23 @@ i386_coff_osabi_sniffer (bfd *abfd)
 }
 
 
+static void
+show_disassembly_flavor_command (struct ui_file *file, int from_tty,
+				 struct cmd_list_element *c, const char *value)
+{
+  printf_filtered (_("The disassembly flavor is %s"),
+		   show_command_value (c, value));
+}
+
+static void
+show_struct_convention_flavor_command (struct ui_file *file, int from_tty,
+				       struct cmd_list_element *c,
+				       const char *value)
+{
+  printf_filtered (_("The convention for returning small structs is %s"),
+		   show_command_value (c, value));
+}
+
 /* Provide a prototype to silence -Wmissing-prototypes.  */
 void _initialize_i386_tdep (void);
 
@@ -7567,7 +7584,7 @@ Set the disassembly flavor."), _("\
 Show the disassembly flavor."), _("\
 The valid values are \"att\" and \"intel\", and the default value is \"att\"."),
 			NULL,
-			NULL, /* FIXME: i18n: */
+			show_disassembly_flavor_command,
 			&setlist, &showlist);
 
   /* Add the variable that controls the convention for returning
@@ -7579,7 +7596,7 @@ Show the convention for returning small structs."), _("\
 Valid values are \"default\", \"pcc\" and \"reg\", and the default value\n\
 is \"default\"."),
 			NULL,
-			NULL, /* FIXME: i18n: */
+			show_struct_convention_flavor_command,
 			&setlist, &showlist);
 
   gdbarch_register_osabi_sniffer (bfd_arch_i386, bfd_target_coff_flavour,

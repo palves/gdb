@@ -2515,6 +2515,71 @@ set_windows_aliases (char *argv0)
 /* -Wmissing-prototypes */
 extern initialize_file_ftype _initialize_windows_nat;
 
+#ifdef __CYGWIN__
+
+static void
+show_shell_command (struct ui_file *file, int from_tty,
+		    struct cmd_list_element *c, const char *value)
+{
+  printf_filtered (_("Use of shell to start subprocess is %s"),
+		   show_command_value (c, value));
+}
+
+static void
+show_cygwin_exceptions_command (struct ui_file *file, int from_tty,
+				struct cmd_list_element *c, const char *value)
+{
+  printf_filtered (_("\
+Whether gdb breaks on exceptions in the Cygwin DLL itself is %s"),
+		   show_command_value (c, value)));
+}
+
+#endif
+
+static void
+show_new_console_command (struct ui_file *file, int from_tty,
+			  struct cmd_list_element *c, const char *value)
+{
+  printf_filtered (_("\
+Creation of new console when creating child process is %s"),
+		   show_command_value (c, value)));
+}
+
+static void
+show_new_group_command (struct ui_file *file, int from_tty,
+			struct cmd_list_element *c, const char *value)
+{
+  printf_filtered (_("\
+Creation of new group when creating child process is %s"),
+		   show_command_value (c, value)));
+}
+
+static void
+show_debugexec_command (struct ui_file *file, int from_tty,
+			struct cmd_list_element *c, const char *value)
+{
+  printf_filtered (_("Whether to display execution in child process is %s"),
+		   show_command_value (c, value)));
+}
+
+static void
+show_debugevents_command (struct ui_file *file, int from_tty,
+			  struct cmd_list_element *c, const char *value)
+{
+  printf_filtered (_("\
+Whether to display kernel events in child process is %s"),
+		   show_command_value (c, value)));
+}
+
+static void
+show_debugexceptions_command (struct ui_file *file, int from_tty,
+			      struct cmd_list_element *c, const char *value)
+{
+  printf_filtered (_("\
+Whether to display kernel exceptions in child process is %s"),
+		   show_command_value (c, value)));
+}
+
 void
 _initialize_windows_nat (void)
 {
@@ -2541,7 +2606,7 @@ _initialize_windows_nat (void)
 Set use of shell to start subprocess."), _("\
 Show use of shell to start subprocess."), NULL,
 			   NULL,
-			   NULL, /* FIXME: i18n: */
+			   show_shell_command,
 			   &setlist, &showlist);
 
   add_setshow_boolean_cmd ("cygwin-exceptions", class_support,
@@ -2549,7 +2614,7 @@ Show use of shell to start subprocess."), NULL,
 Break when an exception is detected in the Cygwin DLL itself."), _("\
 Show whether gdb breaks on exceptions in the Cygwin DLL itself."), NULL,
 			   NULL,
-			   NULL, /* FIXME: i18n: */
+			   show_cygwin_exceptions_command,
 			   &setlist, &showlist);
 #endif
 
@@ -2557,28 +2622,28 @@ Show whether gdb breaks on exceptions in the Cygwin DLL itself."), NULL,
 Set creation of new console when creating child process."), _("\
 Show creation of new console when creating child process."), NULL,
 			   NULL,
-			   NULL, /* FIXME: i18n: */
+			   show_new_console_command,
 			   &setlist, &showlist);
 
   add_setshow_boolean_cmd ("new-group", class_support, &new_group, _("\
 Set creation of new group when creating child process."), _("\
 Show creation of new group when creating child process."), NULL,
 			   NULL,
-			   NULL, /* FIXME: i18n: */
+			   show_new_group_command,
 			   &setlist, &showlist);
 
   add_setshow_boolean_cmd ("debugexec", class_support, &debug_exec, _("\
 Set whether to display execution in child process."), _("\
 Show whether to display execution in child process."), NULL,
 			   NULL,
-			   NULL, /* FIXME: i18n: */
+			   show_debugexec_command,
 			   &setlist, &showlist);
 
   add_setshow_boolean_cmd ("debugevents", class_support, &debug_events, _("\
 Set whether to display kernel events in child process."), _("\
 Show whether to display kernel events in child process."), NULL,
 			   NULL,
-			   NULL, /* FIXME: i18n: */
+			   show_debugevents_command,
 			   &setlist, &showlist);
 
   add_setshow_boolean_cmd ("debugmemory", class_support, &debug_memory, _("\
@@ -2593,7 +2658,7 @@ Show whether to display memory accesses in child process."), NULL,
 Set whether to display kernel exceptions in child process."), _("\
 Show whether to display kernel exceptions in child process."), NULL,
 			   NULL,
-			   NULL, /* FIXME: i18n: */
+			   show_debugexceptions_command,
 			   &setlist, &showlist);
 
   init_w32_command_list ();

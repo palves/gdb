@@ -262,7 +262,9 @@ show_args_command (struct ui_file *file, int from_tty,
 {
   /* Note that we ignore the passed-in value in favor of computing it
      directly.  */
-  deprecated_show_value_hack (file, from_tty, c, get_inferior_args ());
+  printf_filtered (_("\
+Argument list to give program being debugged when it is started is %s"),
+		   show_command_value (c, get_inferior_args ()));
 }
 
 

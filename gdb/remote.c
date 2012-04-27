@@ -11204,6 +11204,17 @@ remote_upload_trace_state_variables (struct uploaded_tsv **utsvp)
   return 0;
 }
 
+static void
+show_remote_interrupt_on_connect_command (struct ui_file *file, int from_tty,
+					  struct cmd_list_element *c,
+					  const char *value)
+{
+  fprintf_filtered (file, _("\
+Whether interrupt-sequence is sent to remote target when \
+gdb connects to is %s.\n"),
+		    show_command_value (c, value));
+}
+
 void
 _initialize_remote (void)
 {
@@ -11301,7 +11312,7 @@ Valid value is \"Ctrl-C\", \"BREAK\" or \"BREAK-g\". The default is \"Ctrl-C\"."
 Set whether interrupt-sequence is sent to remote target when gdb connects to."), _("		\
 Show whether interrupt-sequence is sent to remote target when gdb connects to."), _("		\
 If set, interrupt sequence is sent to remote target."),
-			   NULL, NULL,
+			   NULL, show_remote_interrupt_on_connect_command,
 			   &remote_set_cmdlist, &remote_show_cmdlist);
 
   /* Install commands for configuring memory read/write packets.  */

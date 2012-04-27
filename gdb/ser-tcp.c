@@ -369,6 +369,21 @@ show_tcp_cmd (char *args, int from_tty)
   help_list (tcp_show_cmdlist, "show tcp ", -1, gdb_stdout);
 }
 
+static void
+show_auto_retry_command (struct ui_file *file, int from_tty,
+			 struct cmd_list_element *c, const char *value)
+{
+  fprintf_filtered (file, _("Auto-retry on socket connect is %s.\n"),
+		    show_command_value (c, value));
+}
+
+static void
+show_connect_timeout_command (struct ui_file *file, int from_tty,
+			      struct cmd_list_element *c, const char *value)
+{
+  fprintf_filtered (file, _("Timeout limit for socket connection is %s.\n"),
+		    show_command_value (c, value));
+}
 
 void
 _initialize_ser_tcp (void)
@@ -420,13 +435,15 @@ Configure variables specific to remote TCP connections"),
 			   &tcp_auto_retry, _("\
 Set auto-retry on socket connect"), _("\
 Show auto-retry on socket connect"), 
-			   NULL, NULL, NULL,
+			   NULL, NULL,
+			   show_auto_retry_command,
 			   &tcp_set_cmdlist, &tcp_show_cmdlist);
 
   add_setshow_uinteger_cmd ("connect-timeout", class_obscure,
 			    &tcp_retry_limit, _("\
 Set timeout limit for socket connection"), _("\
 Show timeout limit for socket connection"),
-			   NULL, NULL, NULL,
-			   &tcp_set_cmdlist, &tcp_show_cmdlist);
+			    NULL, NULL,
+			    show_connect_timeout_command,
+			    &tcp_set_cmdlist, &tcp_show_cmdlist);
 }

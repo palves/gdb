@@ -1340,6 +1340,13 @@ show_auto_solib_add (struct ui_file *file, int from_tty,
 		    value);
 }
 
+static void
+show_sysroot_command (struct ui_file *file, int from_tty,
+		      struct cmd_list_element *c, const char *value)
+{
+  fprintf_filtered (file, _("The current system root is %s.\n"),
+		    show_command_value (c, value));
+}
 
 /* Handler for library-specific lookup of global symbol NAME in OBJFILE.  Call
    the library-specific handler if it is installed for the current target.  */
@@ -1488,7 +1495,7 @@ The system root is used to load absolute shared library symbol files.\n\
 For other (relative) files, you can add directories using\n\
 `set solib-search-path'."),
 			    reload_shared_libraries,
-			    NULL,
+			    show_sysroot_command,
 			    &setlist, &showlist);
 
   add_alias_cmd ("solib-absolute-prefix", "sysroot", class_support, 0,

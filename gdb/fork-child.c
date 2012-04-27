@@ -531,6 +531,14 @@ unset_exec_wrapper_command (char *args, int from_tty)
   exec_wrapper = NULL;
 }
 
+static void
+show_exec_wrapper_command (struct ui_file *file, int from_tty,
+			   struct cmd_list_element *c, const char *value)
+{
+  fprintf_filtered (file, _("The wrapper for running programs is %s.\n"),
+		    show_command_value (c, value));
+}
+
 /* Provide a prototype to silence -Wmissing-prototypes.  */
 extern initialize_file_ftype _initialize_fork_child;
 
@@ -542,7 +550,8 @@ Set a wrapper for running programs.\n\
 The wrapper prepares the system and environment for the new program."),
 			    _("\
 Show the wrapper for running programs."), NULL,
-			    NULL, NULL,
+			    NULL,
+			    show_exec_wrapper_command,
 			    &setlist, &showlist);
 
   add_cmd ("exec-wrapper", class_run, unset_exec_wrapper_command,

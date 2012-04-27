@@ -997,19 +997,23 @@ show_mask_address (struct ui_file *file, int from_tty,
 {
   struct gdbarch_tdep *tdep = gdbarch_tdep (target_gdbarch);
 
-  deprecated_show_value_hack (file, from_tty, c, value);
+  printf_filtered (_("Zeroing of upper 32 bits of 64-bit addresses is %s\n"),
+		   value);
   switch (mask_address_var)
     {
     case AUTO_BOOLEAN_TRUE:
-      printf_filtered ("The 32 bit mips address mask is enabled\n");
+      printf_filtered (_("The 32 bit mips address mask is enabled\n"));
       break;
     case AUTO_BOOLEAN_FALSE:
-      printf_filtered ("The 32 bit mips address mask is disabled\n");
+      printf_filtered (_("The 32 bit mips address mask is disabled\n"));
       break;
     case AUTO_BOOLEAN_AUTO:
-      printf_filtered
-	("The 32 bit address mask is set automatically.  Currently %s\n",
-	 mips_mask_address_p (tdep) ? "enabled" : "disabled");
+      if (mips_mask_address_p (tdep))
+	printf_filtered (_("\
+The 32 bit address mask is set automatically.  Currently enabled\n"));
+      else
+	printf_filtered (_("\
+The 32 bit address mask is set automatically.  Currently disabled\n"));
       break;
     default:
       internal_error (__FILE__, __LINE__, _("show_mask_address: bad switch"));

@@ -2012,6 +2012,16 @@ init_thread_db_ops (void)
   thread_db_ops.to_magic = OPS_MAGIC;
 }
 
+static void
+show_libthread_db_search_path_command (struct ui_file *file, int from_tty,
+				       struct cmd_list_element *c,
+				       const char *value)
+{
+  fprintf_filtered (file, _("\
+The current search path of libthread_db is %s.\n"),
+		    show_command_value (c, value));
+}
+
 /* Provide a prototype to silence -Wmissing-prototypes.  */
 extern initialize_file_ftype _initialize_thread_db;
 
@@ -2034,14 +2044,14 @@ _initialize_thread_db (void)
 				     class_support,
 				     &libthread_db_search_path, _("\
 Set search path for libthread_db."), _("\
-Show the current search path or libthread_db."), _("\
+Show the current search path of libthread_db."), _("\
 This path is used to search for libthread_db to be loaded into \
 gdb itself.\n\
 Its value is a colon (':') separate list of directories to search.\n\
 Setting the search path to an empty list resets it to its default value."),
-			    set_libthread_db_search_path,
-			    NULL,
-			    &setlist, &showlist);
+				     set_libthread_db_search_path,
+				     show_libthread_db_search_path_command,
+				     &setlist, &showlist);
 
   add_setshow_zinteger_cmd ("libthread-db", class_maintenance,
 			    &libthread_db_debug, _("\
