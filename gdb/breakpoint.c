@@ -5459,11 +5459,31 @@ print_one_breakpoint_location (struct breakpoint *b,
 	{
 	  struct watchpoint *w = (struct watchpoint *) b;
 
-	  /* Field 4, the address, is omitted (which makes the columns
-	     not line up too nicely with the headers, but the effect
-	     is relatively readable).  */
+	  /* Field 4, the address, is usually omitted (which makes the
+	     columns not line up too nicely with the headers, but the
+	     effect is relatively readable), unless we're doing 'maint
+	     info breakpoints'.  */
 	  if (opts.addressprint)
-	    ui_out_field_skip (uiout, "addr");
+	    {
+	      if (allflag)
+		{
+		  if (header_of_multiple)
+		    ui_out_field_string (uiout, "addr", "<MULTIPLE>");
+		  else if (b->loc == NULL || loc->shlib_disabled)
+		    ui_out_field_string (uiout, "addr", "<PENDING>");
+		  else
+		    {
+		      char *str = xstrprintf ("%s, length %d",
+					      paddress (loc->gdbarch,
+							loc->address),
+					      loc->length);
+		      ui_out_field_string (uiout, "addr", str);
+		      xfree (str);
+		    }
+		}
+	      else
+		ui_out_field_skip (uiout, "addr");
+	    }
 	  annotate_field (5);
 	  ui_out_field_string (uiout, "what", w->exp_string);
 	}
@@ -5726,12 +5746,11 @@ print_one_breakpoint (struct breakpoint *b,
       /* If breakpoint has a single location that is disabled, we
 	 print it as if it had several locations, since otherwise it's
 	 hard to represent "breakpoint enabled, location disabled"
-	 situation.
-
-	 Note that while hardware watchpoints have several locations
-	 internally, that's not a property exposed to user.  */
-      if (b->loc 
-	  && !is_hardware_watchpoint (b)
+	 situation.  Note that while hardware watchpoints have several
+	 locations internally, that's not a property exposed to
+	 user.  */
+      if (b->loc
+	  && (allflag || !is_hardware_watchpoint (b))
 	  && (b->loc->next || !b->loc->enabled))
 	{
 	  struct bp_location *loc;
@@ -5838,6 +5857,8 @@ breakpoint_1 (char *args, int allflag,
   int print_address_bits = 0;
   int print_type_col_width = 14;
   struct ui_out *uiout = current_uiout;
+  int any_watchpoint = 0;
+  int ncolumns = 0;
 
   get_user_print_options (&opts);
 
@@ -5860,6 +5881,9 @@ breakpoint_1 (char *args, int allflag,
 	    continue;
 	}
 
+      if (is_hardware_watchpoint (b))
+	any_watchpoint = 1;
+
       if (allflag || user_breakpoint_p (b))
 	{
 	  int addr_bit, type_len;
@@ -5876,16 +5900,17 @@ breakpoint_1 (char *args, int allflag,
 	}
     }
 
+  ncolumns = 5;
   if (opts.addressprint)
-    bkpttbl_chain 
-      = make_cleanup_ui_out_table_begin_end (uiout, 6,
-					     nr_printable_breakpoints,
-                                             "BreakpointTable");
-  else
-    bkpttbl_chain 
-      = make_cleanup_ui_out_table_begin_end (uiout, 5,
-					     nr_printable_breakpoints,
-                                             "BreakpointTable");
+    ncolumns++;
+
+  if (allflag && opts.addressprint && any_watchpoint)
+    ncolumns++;
+
+  bkpttbl_chain
+    = make_cleanup_ui_out_table_begin_end (uiout, ncolumns,
+					   nr_printable_breakpoints,
+					   "BreakpointTable");
 
   if (nr_printable_breakpoints > 0)
     annotate_breakpoints_headers ();
@@ -5912,6 +5937,8 @@ breakpoint_1 (char *args, int allflag,
       else
 	ui_out_table_header (uiout, 18, ui_left, 
 			     "addr", "Address");		/* 5 */
+      if (allflag && any_watchpoint)
+	ui_out_table_header (uiout, 10, ui_left, "length", "Length");
     }
   if (nr_printable_breakpoints > 0)
     annotate_field (5);
