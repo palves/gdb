@@ -3412,7 +3412,7 @@ check_scope (struct varobj *var)
 static struct value *
 c_value_of_root (struct varobj **var_handle)
 {
-  struct value *new_val = NULL;
+  struct value *ret_val = NULL;
   struct varobj *var = *var_handle;
   int within_scope = 0;
   struct cleanup *back_to;
@@ -3453,15 +3453,13 @@ c_value_of_root (struct varobj **var_handle)
          expression fails we want to just return NULL.  */
       TRY_CATCH (except, RETURN_MASK_ERROR)
 	{
-	  new_val = evaluate_expression (var->root->exp);
+	  ret_val = evaluate_expression (var->root->exp);
 	}
-
-      return new_val;
     }
 
   do_cleanups (back_to);
 
-  return NULL;
+  return ret_val;
 }
 
 static struct value *
