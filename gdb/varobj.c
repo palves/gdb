@@ -3427,22 +3427,14 @@ c_value_of_root (struct varobj **var_handle)
   /* Determine whether the variable is still around.  */
   if (var->root->valid_block == NULL || var->root->floating)
     within_scope = 1;
-  else if (var->root->thread_id == 0)
-    {
-      /* The program was single-threaded when the variable object was
-	 created.  Technically, it's possible that the program became
-	 multi-threaded since then, but we don't support such
-	 scenario yet.  */
-      within_scope = check_scope (var);	  
-    }
   else
     {
-      ptid_t ptid = thread_id_to_pid (var->root->thread_id);
-      if (in_thread_list (ptid))
-	{
-	  switch_to_thread (ptid);
-	  within_scope = check_scope (var);
-	}
+      ptid_t ptid;
+
+      gdb_assert (var->root->thread_id > 0);
+      ptid = thread_id_to_pid (var->root->thread_id);
+      switch_to_thread (ptid);
+      within_scope = check_scope (var);
     }
 
   if (within_scope)

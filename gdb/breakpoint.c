@@ -8118,11 +8118,10 @@ set_momentary_breakpoint (struct gdbarch *gdbarch, struct symtab_and_line sal,
   b->disposition = disp_donttouch;
   b->frame_id = frame_id;
 
-  /* If we're debugging a multi-threaded program, then we want
-     momentary breakpoints to be active in only a single thread of
-     control.  */
-  if (in_thread_list (inferior_ptid))
-    b->thread = pid_to_thread_id (inferior_ptid);
+  /* We want momentary breakpoints to be active in only a single
+     thread of control.  */
+  gdb_assert (in_thread_list (inferior_ptid));
+  b->thread = pid_to_thread_id (inferior_ptid);
 
   update_global_location_list_nothrow (1);
 
@@ -13462,8 +13461,8 @@ breakpoint_re_set_thread (struct breakpoint *b)
 {
   if (b->thread != -1)
     {
-      if (in_thread_list (inferior_ptid))
-	b->thread = pid_to_thread_id (inferior_ptid);
+      gdb_assert (in_thread_list (inferior_ptid));
+      b->thread = pid_to_thread_id (inferior_ptid);
 
       /* We're being called after following a fork.  The new fork is
 	 selected as current, and unless this was a vfork will have a
