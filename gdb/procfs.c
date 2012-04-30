@@ -140,6 +140,7 @@ static int procfs_thread_alive (struct target_ops *ops, ptid_t);
 
 void procfs_find_new_threads (struct target_ops *ops);
 char *procfs_pid_to_str (struct target_ops *, ptid_t);
+static char *procfs_extra_thread_info (struct thread_info *info);
 
 static int proc_find_memory_regions (int (*) (CORE_ADDR,
 					      unsigned long,
@@ -210,6 +211,7 @@ procfs_target (void)
   t->to_find_new_threads = procfs_find_new_threads;
   t->to_thread_alive = procfs_thread_alive;
   t->to_pid_to_str = procfs_pid_to_str;
+  t->to_extra_thread_info = procfs_extra_thread_info;
 
   t->to_has_thread_control = tc_schedlock;
   t->to_find_memory_regions = proc_find_memory_regions;
@@ -416,6 +418,8 @@ typedef struct procinfo {
 
   struct procinfo *thread_list;
 
+  int dying : 1;
+
   int status_valid : 1;
   int gregs_valid  : 1;
   int fpregs_valid : 1;
@@ -525,7 +529,7 @@ open_with_retry (const char *pathname, int flags)
       else if (errno != EINTR && errno != EAGAIN)
 	{
 	  retries_remaining--;
-	  sleep (1);
+	  usleep (10000);
 	}
     }
 
@@ -3044,8 +3048,13 @@ proc_update_threads (procinfo *pi)
     if (direntry->d_name[0] != '.')		/* skip '.' and '..' */
       {
 	lwpid = atoi (&direntry->d_name[0]);
+
 	if ((thread = create_procinfo (pi->pid, lwpid)) == NULL)
 	  proc_error (pi, "update_threads, create_procinfo", __LINE__);
+
+	/* If we can't get status info, this is already dead.  */
+	if (!proc_get_status (thread))
+	  destroy_procinfo (thread);
       }
   pi->threads_valid = 1;
   do_cleanups (old_chain);
@@ -3909,10 +3918,13 @@ wait_again:
 	      case PR_SYSENTRY:
 		if (syscall_is_lwp_exit (pi, what))
 		  {
+		    struct procinfo *pi;
+
 		    if (print_thread_events)
-		      printf_unfiltered (_("[%s exited]\n"),
+		      printf_unfiltered (_("[%s exited SYSENTRY]\n"),
 					 target_pid_to_str (retval));
-		    delete_thread (retval);
+		    pi = find_procinfo_or_die (PIDGET (retval), TIDGET (retval));
+		    pi->dying = 1;
 		    status->kind = TARGET_WAITKIND_SPURIOUS;
 		    return retval;
 		  }
@@ -4048,8 +4060,15 @@ wait_again:
 		else if (syscall_is_lwp_exit (pi, what))
 		  {
 		    if (print_thread_events)
-		      printf_unfiltered (_("[%s exited]\n"),
+		      printf_unfiltered (_("[%s exited SYSEXIT]\n"),
 					 target_pid_to_str (retval));
+
+		    temp_tid = proc_get_current_thread (pi);
+		    if (find_procinfo (pi->pid, temp_tid))
+		      {
+			destroy_procinfo (pi);
+			printf_unfiltered (_("[procinfo destroyed]\n"));
+		      }
 		    delete_thread (retval);
 		    status->kind = TARGET_WAITKIND_SPURIOUS;
 		    return retval;
@@ -4209,6 +4228,12 @@ wait_again:
 
       if (status)
 	store_waitstatus (status, wstat);
+
+      {
+	pi = find_procinfo_or_die (PIDGET (retval), 0);
+	proc_iterate_over_threads (pi, proc_delete_dead_threads, NULL);
+      }
+
     }
 
   return retval;
@@ -4993,6 +5018,10 @@ procfs_thread_alive (struct target_ops *ops, ptid_t ptid)
      What's more, I need to forget about it!  */
   if (!proc_get_status (pi))
     {
+#if 0
+      printf_unfiltered ("thread not alive anymore, deleting %s\n",
+			 target_pid_to_str (ptid));
+#endif
       destroy_procinfo (pi);
       return 0;
     }
@@ -5015,6 +5044,25 @@ procfs_pid_to_str (struct target_ops *ops, ptid_t ptid)
     sprintf (buf, "LWP %ld", TIDGET (ptid));
 
   return buf;
+}
+
+/* Return a string describing the state of the thread specified by
+   INFO.  */
+
+static char *
+procfs_extra_thread_info (struct thread_info *info)
+{
+  procinfo *pi;
+  int proc, thread;
+
+  proc = PIDGET (info->ptid);
+  thread  = TIDGET (info->ptid);
+
+  pi = find_procinfo (proc, thread);
+  if (pi != NULL && pi->dying)
+    return "Exiting";
+
+  return NULL;
 }
 
 /* Insert a watchpoint.  */
