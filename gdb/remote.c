@@ -11337,15 +11337,15 @@ further restriction and ``limit'' to enable that restriction."),
 	   _("Show the maximum number of bytes per memory-read packet."),
 	   &remote_show_cmdlist);
 
-  add_setshow_zinteger_cmd ("hardware-watchpoint-limit", no_class,
-			    &remote_hw_watchpoint_limit, _("\
+  add_setshow_nuzinteger_cmd ("hardware-watchpoint-limit", no_class,
+			      &remote_hw_watchpoint_limit, _("\
 Set the maximum number of target hardware watchpoints."), _("\
 Show the maximum number of target hardware watchpoints."), _("\
 Specify a negative limit for unlimited."),
-			    NULL, NULL, /* FIXME: i18n: The maximum
-					   number of target hardware
-					   watchpoints is %s.  */
-			    &remote_set_cmdlist, &remote_show_cmdlist);
+			      NULL, NULL, /* FIXME: i18n: The maximum
+					     number of target hardware
+					     watchpoints is %s.  */
+			      &remote_set_cmdlist, &remote_show_cmdlist);
   add_setshow_zinteger_cmd ("hardware-watchpoint-length-limit", no_class,
 			    &remote_hw_watchpoint_length_limit, _("\
 Set the maximum length (in bytes) of a target hardware watchpoint."), _("\
@@ -11355,15 +11355,15 @@ Specify a negative limit for unlimited."),
                                            length (in bytes) of a target
                                            hardware watchpoint is %s.  */
 			    &remote_set_cmdlist, &remote_show_cmdlist);
-  add_setshow_zinteger_cmd ("hardware-breakpoint-limit", no_class,
-			    &remote_hw_breakpoint_limit, _("\
+  add_setshow_nuzinteger_cmd ("hardware-breakpoint-limit", no_class,
+			      &remote_hw_breakpoint_limit, _("\
 Set the maximum number of target hardware breakpoints."), _("\
 Show the maximum number of target hardware breakpoints."), _("\
 Specify a negative limit for unlimited."),
-			    NULL, NULL, /* FIXME: i18n: The maximum
-					   number of target hardware
-					   breakpoints is %s.  */
-			    &remote_set_cmdlist, &remote_show_cmdlist);
+			      NULL, NULL, /* FIXME: i18n: The maximum
+					     number of target hardware
+					     breakpoints is %s.  */
+			      &remote_set_cmdlist, &remote_show_cmdlist);
 
   add_setshow_integer_cmd ("remoteaddresssize", class_obscure,
 			   &remote_address_size, _("\

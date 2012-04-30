@@ -91,6 +91,12 @@ typedef enum var_types
     /* String which stores a filename.  (*VAR) is a malloc'd
        string.  */
     var_filename,
+
+    /* NegativeUnlimitedZeroableInteger.  *VAR is an int.  Zero really
+       means zero, and negative values mean "unlimited", which is
+       stored as UINT_MAX.  */
+    var_nuzinteger,
+
     /* ZeroableInteger.  *VAR is an int.  Like Unsigned Integer except
        that zero really means zero.  */
     var_zinteger,
@@ -350,6 +356,17 @@ extern void add_setshow_zuinteger_cmd (char *name,
 				       show_value_ftype *show_func,
 				       struct cmd_list_element **set_list,
 				       struct cmd_list_element **show_list);
+
+extern void add_setshow_nuzinteger_cmd (char *name,
+					enum command_class class,
+					int *var,
+					const char *set_doc,
+					const char *show_doc,
+					const char *help_doc,
+					cmd_sfunc_ftype *set_func,
+					show_value_ftype *show_func,
+					struct cmd_list_element **set_list,
+					struct cmd_list_element **show_list);
 
 /* Do a "show" command for each thing on a command list.  */
 

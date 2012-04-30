@@ -217,6 +217,21 @@ do_setshow_command (char *arg, int from_tty, struct cmd_list_element *c)
 	  if (*(unsigned int *) c->var == 0)
 	    *(unsigned int *) c->var = UINT_MAX;
 	  break;
+	case var_nuzinteger:
+	  {
+	    LONGEST val;
+
+	    if (arg == NULL)
+	      error_no_arg (_("integer to set it to."));
+	    val = parse_and_eval_long (arg);
+	    if (val < 0)
+	      *(unsigned int *) c->var = UINT_MAX;
+	    else if (val >= INT_MAX)
+	      error (_("integer %s out of range"), plongest (val));
+	    else
+	      *(unsigned int *) c->var = val;
+	    break;
+	  }
 	case var_integer:
 	  {
 	    unsigned int val;
@@ -360,7 +375,9 @@ do_setshow_command (char *arg, int from_tty, struct cmd_list_element *c)
 	  break;
 	case var_uinteger:
 	case var_zuinteger:
-	  if (c->var_type == var_uinteger
+	case var_nuzinteger:
+	  if ((c->var_type == var_uinteger
+	       || c->var_type == var_nuzinteger)
 	      && *(unsigned int *) c->var == UINT_MAX)
 	    fputs_filtered ("unlimited", stb);
 	  else
