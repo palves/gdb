@@ -61,11 +61,11 @@
 #include <errno.h>
 #endif
 
-#if USE_WIN32API
+#ifdef USE_WIN32API
 #include <winsock2.h>
 #endif
 
-#if __QNX__
+#ifdef __QNX__
 #include <sys/iomgr.h>
 #endif /* __QNX__ */
 
@@ -75,7 +75,7 @@ typedef int socklen_t;
 
 #ifndef IN_PROCESS_AGENT
 
-#if USE_WIN32API
+#ifdef USE_WIN32API
 # define INVALID_DESCRIPTOR INVALID_SOCKET
 #else
 # define INVALID_DESCRIPTOR -1

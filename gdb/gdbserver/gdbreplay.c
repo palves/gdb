@@ -60,7 +60,7 @@
 #if HAVE_MALLOC_H
 #include <malloc.h>
 #endif
-#if USE_WIN32API
+#ifdef USE_WIN32API
 #include <winsock2.h>
 #endif
 

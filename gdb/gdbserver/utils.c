@@ -297,7 +297,7 @@ paddress (CORE_ADDR addr)
 char *
 pfildes (gdb_fildes_t fd)
 {
-#if USE_WIN32API
+#ifdef USE_WIN32API
   return phex_nz (fd, sizeof (gdb_fildes_t));
 #else
   return plongest (fd);
