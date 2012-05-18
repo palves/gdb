@@ -36,6 +36,9 @@ sinclude([../config/codeset.m4])
 
 sinclude([../config/zlib.m4])
 
+dnl For ACX_BINARY_FOPEN.
+sinclude([../config/binary-fopen.m4])
+
 #
 # Sometimes the native compiler is a bogus stub for gcc or /usr/ucb/cc. This
 # makes configure think it's cross compiling. If --target wasn't used, then

@@ -713,6 +713,9 @@
 /* Define if <thread_db.h> has the TD_VERSION error code. */
 #undef THREAD_DB_HAS_TD_VERSION
 
+/* Use b modifier when opening binary files? */
+#undef USE_BINARY_FOPEN
+
 /* Define to 1 if the regex included in libiberty should be used. */
 #undef USE_INCLUDED_REGEX
 

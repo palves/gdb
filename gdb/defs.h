@@ -757,16 +757,10 @@ enum val_prettyprint
 #include "nm.h"
 #endif
 
-/* Assume that fopen accepts the letter "b" in the mode string.
-   It is demanded by ISO C9X, and should be supported on all
-   platforms that claim to have a standard-conforming C library.  On
-   true POSIX systems it will be ignored and have no effect.  There
-   may still be systems without a standard-conforming C library where
-   an ISO C9X compiler (GCC) is available.  Known examples are SunOS
-   4.x and 4.3BSD.  This assumption means these systems are no longer
-   supported.  */
-#ifndef FOPEN_RB
-# include "fopen-bin.h"
+#ifdef USE_BINARY_FOPEN
+#  include "fopen-bin.h"
+#else
+#  include "fopen-same.h"
 #endif
 
 /* Defaults for system-wide constants (if not defined by xm.h, we fake it).

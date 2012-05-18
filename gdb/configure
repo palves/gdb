@@ -4360,6 +4360,13 @@ case "x$am_cv_prog_cc_stdc" in
 esac
 
 
+case "${host}" in
+*-*-msdos* | *-*-go32* | *-*-mingw32* | *-*-cygwin* | *-*-windows*)
+
+$as_echo "#define USE_BINARY_FOPEN 1" >>confdefs.h
+ ;;
+esac
+
 ac_aux_dir=
 for ac_dir in .. "$srcdir"/..; do
   for ac_t in install-sh install.sh shtool; do

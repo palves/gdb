@@ -1,14 +1,6 @@
 sinclude([../config/zlib.m4])
 
-dnl See whether we need to use fopen-bin.h rather than fopen-same.h.
-AC_DEFUN([BFD_BINARY_FOPEN],
-[AC_REQUIRE([AC_CANONICAL_TARGET])
-case "${host}" in
-changequote(,)dnl
-*-*-msdos* | *-*-go32* | *-*-mingw32* | *-*-cygwin* | *-*-windows*)
-changequote([,])dnl
-  AC_DEFINE(USE_BINARY_FOPEN, 1, [Use b modifier when opening binary files?]) ;;
-esac])dnl
+sinclude([../config/binary-fopen.m4])
 
 dnl Get a default for CC_FOR_BUILD to put into Makefile.
 AC_DEFUN([BFD_CC_FOR_BUILD],
