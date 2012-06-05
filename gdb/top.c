@@ -360,6 +360,11 @@ prepare_execute_command (void)
   if (non_stop)
     target_dcache_invalidate ();
 
+  {
+    extern void frame_garbage_collection (void);
+    frame_garbage_collection ();
+  }
+
   return cleanup;
 }
 

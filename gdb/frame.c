@@ -129,6 +129,14 @@ struct frame_info
   enum unwind_stop_reason stop_reason;
 };
 
+#define DEAD_FRAME_LEVEL (-55)
+
+static void
+validate_frame (struct frame_info *frame)
+{
+  gdb_assert (frame->level != DEAD_FRAME_LEVEL);
+}
+
 /* A frame stash used to speed up frame lookups.  */
 
 /* We currently only stash one frame at a time, as this seems to be
@@ -323,6 +331,8 @@ get_frame_id (struct frame_info *fi)
 {
   if (fi == NULL)
     return null_frame_id;
+
+  validate_frame (fi);
 
   if (!fi->this_id.p)
     {
@@ -621,6 +631,8 @@ frame_find_by_id (struct frame_id id)
 static int
 frame_unwind_pc_if_available (struct frame_info *this_frame, CORE_ADDR *pc)
 {
+  validate_frame (this_frame);
+
   if (!this_frame->prev_pc.p)
     {
       if (gdbarch_unwind_pc_p (frame_unwind_arch (this_frame)))
@@ -1522,12 +1534,30 @@ frame_observer_target_changed (struct target_ops *target)
   reinit_frame_cache ();
 }
 
+typedef struct obstack obstack_s;
+DEF_VEC_O (obstack_s);
+static VEC (obstack_s) *frame_poison_vec;
+
+void frame_garbage_collection (void);
+void
+frame_garbage_collection (void)
+{
+  struct obstack *obstack_p;
+  int ix;
+
+  for (ix = 0; VEC_iterate (obstack_s, frame_poison_vec, ix, obstack_p); ix++)
+    obstack_free (obstack_p, 0);
+
+  VEC_free (obstack_s, frame_poison_vec);
+  frame_poison_vec = NULL;
+}
+
 /* Flush the entire frame cache.  */
 
 void
 reinit_frame_cache (void)
 {
-  struct frame_info *fi;
+  struct frame_info *fi, *fi_prev;
 
   /* Tear down all frame caches.  */
   for (fi = current_frame; fi != NULL; fi = fi->prev)
@@ -1538,8 +1568,15 @@ reinit_frame_cache (void)
 	fi->base->unwind->dealloc_cache (fi, fi->base_cache);
     }
 
+  for (fi = current_frame; fi != NULL; fi = fi_prev)
+    {
+      fi_prev = fi->prev;
+      memset (fi, 0, sizeof (*fi));
+      fi->level = DEAD_FRAME_LEVEL;
+    }
+  VEC_safe_push (obstack_s, frame_poison_vec, &frame_cache_obstack);
+
   /* Since we can't really be sure what the first object allocated was.  */
-  obstack_free (&frame_cache_obstack, 0);
   obstack_init (&frame_cache_obstack);
 
   if (current_frame != NULL)
@@ -2070,6 +2107,8 @@ get_frame_address_in_block_if_available (struct frame_info *this_frame,
 {
   volatile struct gdb_exception ex;
 
+  validate_frame (this_frame);
+
   TRY_CATCH (ex, RETURN_MASK_ERROR)
     {
       *pc = get_frame_address_in_block (this_frame);
@@ -2088,6 +2127,8 @@ find_frame_sal (struct frame_info *frame, struct symtab_and_line *sal)
   struct frame_info *next_frame;
   int notcurrent;
   CORE_ADDR pc;
+
+  validate_frame (frame);
 
   /* If the next frame represents an inlined function call, this frame's
      sal is the "call site" of that inlined function, which can not
@@ -2145,6 +2186,8 @@ find_frame_sal (struct frame_info *frame, struct symtab_and_line *sal)
 CORE_ADDR
 get_frame_base (struct frame_info *fi)
 {
+  validate_frame (fi);
+
   return get_frame_id (fi).stack_addr;
 }
 
@@ -2220,6 +2263,8 @@ frame_relative_level (struct frame_info *fi)
 enum frame_type
 get_frame_type (struct frame_info *frame)
 {
+  validate_frame (frame);
+
   if (frame->unwind == NULL)
     /* Initialize the frame's unwinder because that's what
        provides the frame's type.  */
@@ -2230,6 +2275,8 @@ get_frame_type (struct frame_info *frame)
 struct program_space *
 get_frame_program_space (struct frame_info *frame)
 {
+  validate_frame (frame);
+
   return frame->pspace;
 }
 
@@ -2237,6 +2284,8 @@ struct program_space *
 frame_unwind_program_space (struct frame_info *this_frame)
 {
   gdb_assert (this_frame);
+
+  validate_frame (this_frame);
 
   /* This is really a placeholder to keep the API consistent --- we
      assume for now that we don't have frame chains crossing
@@ -2247,6 +2296,8 @@ frame_unwind_program_space (struct frame_info *this_frame)
 struct address_space *
 get_frame_address_space (struct frame_info *frame)
 {
+  validate_frame (frame);
+
   return frame->aspace;
 }
 
@@ -2256,6 +2307,8 @@ void
 get_frame_memory (struct frame_info *this_frame, CORE_ADDR addr,
 		  gdb_byte *buf, int len)
 {
+  validate_frame (this_frame);
+
   read_memory (addr, buf, len);
 }
 
@@ -2265,6 +2318,8 @@ get_frame_memory_signed (struct frame_info *this_frame, CORE_ADDR addr,
 {
   struct gdbarch *gdbarch = get_frame_arch (this_frame);
   enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
+
+  validate_frame (this_frame);
 
   return read_memory_integer (addr, len, byte_order);
 }
@@ -2276,6 +2331,8 @@ get_frame_memory_unsigned (struct frame_info *this_frame, CORE_ADDR addr,
   struct gdbarch *gdbarch = get_frame_arch (this_frame);
   enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
 
+  validate_frame (this_frame);
+
   return read_memory_unsigned_integer (addr, len, byte_order);
 }
 
@@ -2283,6 +2340,8 @@ int
 safe_frame_unwind_memory (struct frame_info *this_frame,
 			  CORE_ADDR addr, gdb_byte *buf, int len)
 {
+  validate_frame (this_frame);
+
   /* NOTE: target_read_memory returns zero on success!  */
   return !target_read_memory (addr, buf, len);
 }
@@ -2292,12 +2351,15 @@ safe_frame_unwind_memory (struct frame_info *this_frame,
 struct gdbarch *
 get_frame_arch (struct frame_info *this_frame)
 {
+  validate_frame (this_frame);
   return frame_unwind_arch (this_frame->next);
 }
 
 struct gdbarch *
 frame_unwind_arch (struct frame_info *next_frame)
 {
+  validate_frame (next_frame);
+
   if (!next_frame->prev_arch.p)
     {
       struct gdbarch *arch;
@@ -2326,6 +2388,8 @@ frame_unwind_arch (struct frame_info *next_frame)
 struct gdbarch *
 frame_unwind_caller_arch (struct frame_info *next_frame)
 {
+  validate_frame (next_frame);
+
   return frame_unwind_arch (skip_inlined_frames (next_frame));
 }
 
@@ -2335,6 +2399,8 @@ CORE_ADDR
 get_frame_sp (struct frame_info *this_frame)
 {
   struct gdbarch *gdbarch = get_frame_arch (this_frame);
+
+  validate_frame (this_frame);
 
   /* Normality - an architecture that provides a way of obtaining any
      frame inner-most address.  */
@@ -2355,6 +2421,8 @@ get_frame_sp (struct frame_info *this_frame)
 enum unwind_stop_reason
 get_frame_unwind_stop_reason (struct frame_info *frame)
 {
+  validate_frame (frame);
+
   /* If we haven't tried to unwind past this point yet, then assume
      that unwinding would succeed.  */
   if (frame->prev_p == 0)
