@@ -118,3 +118,11 @@ linux_proc_pid_is_zombie (pid_t pid)
 {
   return linux_proc_pid_has_state (pid, "Z (zombie)");
 }
+
+/* Detect `R (running)' in `/proc/PID/status'.  */
+
+int
+linux_proc_pid_is_running (pid_t pid)
+{
+  return linux_proc_pid_has_state (pid, "R (running)");
+}

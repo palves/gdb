@@ -1007,11 +1007,16 @@ add_internal_problem_command (struct internal_problem *problem)
    as the file name for which the error was encountered.
    Then return to command level.  */
 
+int guarded_perror;
+
 void
 perror_with_name (const char *string)
 {
   char *err;
   char *combined;
+
+  if (!guarded_perror)
+    abort ();
 
   err = safe_strerror (errno);
   combined = (char *) alloca (strlen (err) + strlen (string) + 3);

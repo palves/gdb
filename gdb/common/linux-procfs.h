@@ -40,4 +40,8 @@ extern int linux_proc_pid_is_stopped (pid_t pid);
 
 extern int linux_proc_pid_is_zombie (pid_t pid);
 
+/* Return non-zero if PID is running.  */
+
+extern int linux_proc_pid_is_running (pid_t pid);
+
 #endif /* COMMON_LINUX_PROCFS_H */

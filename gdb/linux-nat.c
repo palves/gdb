@@ -78,6 +78,9 @@
 # endif
 #endif /* HAVE_PERSONALITY */
 
+static void
+linux_dump_proc (pid_t pid);
+
 /* This comment documents high-level logic of this file.
 
 Waiting for events in sync mode
@@ -1917,6 +1920,8 @@ resume_lwp (struct lwp_info *lp, int step, enum gdb_signal signo)
       else if (lp->status == 0
 	       && lp->waitstatus.kind == TARGET_WAITKIND_IGNORE)
 	{
+	  volatile struct gdb_exception ex;
+
 	  if (debug_linux_nat)
 	    fprintf_unfiltered (gdb_stdlog,
 				"RC: Resuming sibling %s, %s, %s\n",
@@ -1926,15 +1931,33 @@ resume_lwp (struct lwp_info *lp, int step, enum gdb_signal signo)
 				 : "0"),
 				step ? "step" : "resume");
 
-	  if (linux_nat_prepare_to_resume != NULL)
-	    linux_nat_prepare_to_resume (lp);
-	  linux_ops->to_resume (linux_ops,
-				pid_to_ptid (GET_LWP (lp->ptid)),
-				step, signo);
-	  lp->stopped = 0;
-	  lp->step = step;
-	  memset (&lp->siginfo, 0, sizeof (lp->siginfo));
-	  lp->stopped_by_watchpoint = 0;
+	  TRY_CATCH (ex, RETURN_MASK_ERROR)
+	    {
+	      extern int guarded_perror;
+	      guarded_perror = 1;
+
+	      if (linux_nat_prepare_to_resume != NULL)
+		linux_nat_prepare_to_resume (lp);
+	      linux_ops->to_resume (linux_ops,
+				    pid_to_ptid (GET_LWP (lp->ptid)),
+				    step, signo);
+	      lp->stopped = 0;
+	      lp->step = step;
+	      memset (&lp->siginfo, 0, sizeof (lp->siginfo));
+	      lp->stopped_by_watchpoint = 0;
+	      guarded_perror = 0;
+	    }
+	  if (ex.reason < 0)
+	    {
+	      extern int guarded_perror;
+
+	      guarded_perror = 0;
+
+	      fprintf_unfiltered (gdb_stdlog,
+				  "LLW: caugh exception, became zombie 3?\n");
+	      if (!linux_proc_pid_is_zombie (GET_LWP (lp->ptid)))
+		throw_exception (ex);
+	    }
 	}
       else
 	{
@@ -2000,6 +2023,7 @@ linux_nat_resume (struct target_ops *ops,
   sigset_t prev_mask;
   struct lwp_info *lp;
   int resume_many;
+  volatile struct gdb_exception ex;
 
   if (debug_linux_nat)
     fprintf_unfiltered (gdb_stdlog,
@@ -2089,19 +2113,51 @@ linux_nat_resume (struct target_ops *ops,
   /* Convert to something the lower layer understands.  */
   ptid = pid_to_ptid (GET_LWP (lp->ptid));
 
-  if (linux_nat_prepare_to_resume != NULL)
-    linux_nat_prepare_to_resume (lp);
-  linux_ops->to_resume (linux_ops, ptid, step, signo);
-  memset (&lp->siginfo, 0, sizeof (lp->siginfo));
-  lp->stopped_by_watchpoint = 0;
+  TRY_CATCH (ex, RETURN_MASK_ERROR)
+    {
+      extern int guarded_perror;
+      guarded_perror = 1;
 
-  if (debug_linux_nat)
-    fprintf_unfiltered (gdb_stdlog,
-			"LLR: %s %s, %s (resume event thread)\n",
-			step ? "PTRACE_SINGLESTEP" : "PTRACE_CONT",
-			target_pid_to_str (ptid),
-			(signo != GDB_SIGNAL_0
+      if (linux_nat_prepare_to_resume != NULL)
+	linux_nat_prepare_to_resume (lp);
+      linux_ops->to_resume (linux_ops, ptid, step, signo);
+      memset (&lp->siginfo, 0, sizeof (lp->siginfo));
+      lp->stopped_by_watchpoint = 0;
+
+      if (debug_linux_nat)
+	fprintf_unfiltered (gdb_stdlog,
+			    "LLR: %s %s, %s (resume event thread)\n",
+			    step ? "PTRACE_SINGLESTEP" : "PTRACE_CONT",
+			    target_pid_to_str (ptid),
+			    (signo != GDB_SIGNAL_0
 			 ? strsignal (gdb_signal_to_host (signo)) : "0"));
+      guarded_perror = 0;
+    }
+  if (ex.reason < 0)
+    {
+      extern int guarded_perror;
+      int z;
+
+      guarded_perror = 0;
+
+      fprintf_unfiltered (gdb_stdlog,
+			  "LLW: caugh exception, became zombie 2?\n");
+
+      stop_callback (lp, NULL);
+      while (linux_proc_pid_is_running (GET_LWP (lp->ptid)))
+	;
+      z = linux_proc_pid_is_zombie (GET_LWP (lp->ptid));
+      if (!z)
+	{
+	  linux_dump_proc (GET_LWP (lp->ptid));
+	  sleep (2);
+	  linux_dump_proc (GET_LWP (lp->ptid));
+	}
+      gdb_assert (z);
+
+      if (!linux_proc_pid_is_zombie (GET_LWP (lp->ptid)))
+	throw_exception (ex);
+    }
 
   restore_child_signals_mask (&prev_mask);
   if (target_can_async_p ())
@@ -3489,6 +3545,54 @@ check_zombie_leaders (void)
     }
 }
 
+static void
+linux_dump_syscall (pid_t pid)
+{
+  char buffer[300];
+  FILE *procfile;
+
+  fprintf_unfiltered (gdb_stdlog, "dump of syscall\n");
+
+  xsnprintf (buffer, sizeof (buffer), "/proc/%d/syscall", (int) pid);
+  procfile = fopen (buffer, "r");
+  if (procfile == NULL)
+    {
+      warning (_("unable to open /proc file '%s'"), buffer);
+      return;
+    }
+
+  while (fgets (buffer, sizeof (buffer), procfile) != NULL)
+    fprintf_unfiltered (gdb_stdlog, "%s", buffer);
+
+  fclose (procfile);
+  return;
+}
+
+static void
+linux_dump_proc (pid_t pid)
+{
+  char buffer[100];
+  FILE *procfile;
+
+  linux_dump_syscall (pid);
+
+  fprintf_unfiltered (gdb_stdlog, "dump of status\n");
+
+  xsnprintf (buffer, sizeof (buffer), "/proc/%d/status", (int) pid);
+  procfile = fopen (buffer, "r");
+  if (procfile == NULL)
+    {
+      warning (_("unable to open /proc file '%s'"), buffer);
+      return;
+    }
+
+  while (fgets (buffer, sizeof (buffer), procfile) != NULL)
+    fprintf_unfiltered (gdb_stdlog, "%s", buffer);
+
+  fclose (procfile);
+  return;
+}
+
 static ptid_t
 linux_nat_wait_1 (struct target_ops *ops,
 		  ptid_t ptid, struct target_waitstatus *ourstatus,
@@ -3795,13 +3899,39 @@ retry:
 
 	  TRY_CATCH (ex, RETURN_MASK_ERROR)
 	    {
+	      extern int guarded_perror;
+	      guarded_perror = 1;
+
 	      if (linux_nat_prepare_to_resume != NULL)
 		linux_nat_prepare_to_resume (lp);
 	      linux_ops->to_resume (linux_ops, pid_to_ptid (GET_LWP (lp->ptid)),
 				    lp->step, signo);
+	      guarded_perror = 0;
 	    }
 	  if (ex.reason < 0)
 	    {
+	      extern int guarded_perror;
+	      int z;
+
+	      guarded_perror = 0;
+
+	      stop_callback (lp, NULL);
+	      while (linux_proc_pid_is_running (GET_LWP (lp->ptid)))
+		;
+
+	      linux_dump_proc (GET_LWP (lp->ptid));
+	      fprintf_unfiltered (gdb_stdlog,
+				  "LLW: caugh exception, became zombie?\n");
+
+	      z = linux_proc_pid_is_zombie (GET_LWP (lp->ptid));
+	      if (!z)
+		{
+		  linux_dump_proc (GET_LWP (lp->ptid));
+		  sleep (2);
+		  linux_dump_proc (GET_LWP (lp->ptid));
+		}
+	      gdb_assert (z);
+
 	      if (linux_proc_pid_is_zombie (GET_LWP (lp->ptid)))
 		{
 		  if (debug_linux_nat)
@@ -3810,6 +3940,7 @@ retry:
 					target_pid_to_str (lp->ptid));
 		  goto retry;
 		}
+	      else
 
 	      throw_exception (ex);
 	    }
