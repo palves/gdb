@@ -204,7 +204,7 @@ static LONGEST (*super_xfer_partial) (struct target_ops *,
 				      const gdb_byte *,
 				      ULONGEST, LONGEST);
 
-static int debug_linux_nat;
+static int debug_linux_nat = 1;
 static void
 show_debug_linux_nat (struct ui_file *file, int from_tty,
 		      struct cmd_list_element *c, const char *value)
@@ -3871,6 +3871,8 @@ retry:
   if (WIFSTOPPED (status))
     {
       enum gdb_signal signo = gdb_signal_from_host (WSTOPSIG (status));
+
+      gdb_assert (!linux_proc_pid_is_zombie (GET_LWP (lp->ptid)));
 
       /* When using hardware single-step, we need to report every signal.
 	 Otherwise, signals in pass_mask may be short-circuited.  */

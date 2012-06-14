@@ -1009,6 +1009,8 @@ add_internal_problem_command (struct internal_problem *problem)
 
 int guarded_perror;
 
+volatile int gdb_lock;
+
 void
 perror_with_name (const char *string)
 {
@@ -1017,6 +1019,12 @@ perror_with_name (const char *string)
 
   if (!guarded_perror)
     abort ();
+
+  fprintf (stderr, "waiting for gdb\n");
+  while (!gdb_lock)
+    {
+      usleep (10);
+    }
 
   err = safe_strerror (errno);
   combined = (char *) alloca (strlen (err) + strlen (string) + 3);
