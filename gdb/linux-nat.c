@@ -3773,16 +3773,14 @@ retry:
       if (!lp->step
 	  && WSTOPSIG (status) && sigismember (&pass_mask, WSTOPSIG (status)))
 	{
+	  volatile struct gdb_exception ex;
+
 	  /* FIMXE: kettenis/2001-06-06: Should we resume all threads
 	     here?  It is not clear we should.  GDB may not expect
 	     other threads to run.  On the other hand, not resuming
 	     newly attached threads may cause an unwanted delay in
 	     getting them running.  */
-	  registers_changed ();
-	  if (linux_nat_prepare_to_resume != NULL)
-	    linux_nat_prepare_to_resume (lp);
-	  linux_ops->to_resume (linux_ops, pid_to_ptid (GET_LWP (lp->ptid)),
-				lp->step, signo);
+
 	  if (debug_linux_nat)
 	    fprintf_unfiltered (gdb_stdlog,
 				"LLW: %s %s, %s (preempt 'handle')\n",
@@ -3792,6 +3790,30 @@ retry:
 				(signo != GDB_SIGNAL_0
 				 ? strsignal (gdb_signal_to_host (signo))
 				 : "0"));
+
+	  registers_changed ();
+
+	  TRY_CATCH (ex, RETURN_MASK_ERROR)
+	    {
+	      if (linux_nat_prepare_to_resume != NULL)
+		linux_nat_prepare_to_resume (lp);
+	      linux_ops->to_resume (linux_ops, pid_to_ptid (GET_LWP (lp->ptid)),
+				    lp->step, signo);
+	    }
+	  if (ex.reason < 0)
+	    {
+	      if (linux_proc_pid_is_zombie (GET_LWP (lp->ptid)))
+		{
+		  if (debug_linux_nat)
+		    fprintf_unfiltered (gdb_stdlog,
+					"LLW: %s became zombie\n",
+					target_pid_to_str (lp->ptid));
+		  goto retry;
+		}
+
+	      throw_exception (ex);
+	    }
+
 	  lp->stopped = 0;
 	  goto retry;
 	}
