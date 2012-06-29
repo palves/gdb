@@ -3221,6 +3221,10 @@ handle_inferior_event (struct execution_control_state *ecs)
      non-executable stack.  This happens for call dummy breakpoints
      for architectures like SPARC that place call dummies on the
      stack.  */
+#if 0
+  /* breaks sigall.exp, which triggers and expects to see a SIGILL,
+     and possibly more, when forced-step + single-step-breakpoints are
+     in use.  */
   if (ecs->ws.kind == TARGET_WAITKIND_STOPPED
       && (ecs->ws.value.sig == GDB_SIGNAL_ILL
 	  || ecs->ws.value.sig == GDB_SIGNAL_SEGV
@@ -3237,6 +3241,7 @@ handle_inferior_event (struct execution_control_state *ecs)
 	  ecs->ws.value.sig = GDB_SIGNAL_TRAP;
 	}
     }
+#endif
 
   /* Mark the non-executing threads accordingly.  In all-stop, all
      threads of all processes are stopped when we get any event
@@ -4216,6 +4221,7 @@ handle_inferior_event (struct execution_control_state *ecs)
       if (ecs->event_thread->suspend.stop_signal == GDB_SIGNAL_TRAP)
 	ecs->random_signal
 	  = !(bpstat_explains_signal (ecs->event_thread->control.stop_bpstat)
+	      || 1
 	      || stopped_by_watchpoint
 	      || ecs->event_thread->control.trap_expected
 	      || (ecs->event_thread->control.step_range_end

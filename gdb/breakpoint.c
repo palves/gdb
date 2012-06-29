@@ -5525,6 +5525,8 @@ bpstat_should_step (void)
 {
   struct breakpoint *b;
 
+  return 1;
+
   ALL_BREAKPOINTS (b)
     if (breakpoint_enabled (b) && b->type == bp_watchpoint && b->loc != NULL)
       return 1;
