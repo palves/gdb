@@ -1,4 +1,4 @@
-dnl Autoconf configure script for GDB, the GNU debugger.
+dnl Autoconf configure script for GDB's gnulib import.
 dnl Copyright (C) 1995-2012 Free Software Foundation, Inc.
 dnl
 dnl This file is part of GDB.
@@ -33,30 +33,7 @@ AC_CANONICAL_SYSTEM
 
 gl_INIT
 
-# We don't use automake, but gnulib does.  This line lets us generate
-# its Makefile.in.
-AM_INIT_AUTOMAKE(libgnu, UNUSED-VERSION, [no-define])
+AM_INIT_AUTOMAKE(libgnu, UNUSED-VERSION, [foreign no-dist])
 
-# --------------------- #
-# Checks for programs.  #
-# --------------------- #
-
-AC_PROG_INSTALL
-AC_PROG_LN_S
-AC_PROG_RANLIB
-
-AC_CHECK_TOOL(AR, ar)
-
-# ---------------------- #
-# Checks for libraries.  #
-# ---------------------- #
-
-AC_OUTPUT(Makefile import/Makefile,
-[
-case x$CONFIG_HEADERS in
-xconfig.h:config.in)
-echo > stamp-h ;;
-esac
-])
-
-exit 0
+AC_CONFIG_FILES(Makefile)
+AC_OUTPUT

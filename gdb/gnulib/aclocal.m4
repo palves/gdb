@@ -589,27 +589,6 @@ if test x"${install_sh}" != xset; then
 fi
 AC_SUBST(install_sh)])
 
-# Copyright (C) 2003, 2005  Free Software Foundation, Inc.
-#
-# This file is free software; the Free Software Foundation
-# gives unlimited permission to copy and/or distribute it,
-# with or without modifications, as long as this notice is preserved.
-
-# serial 2
-
-# Check whether the underlying file-system supports filenames
-# with a leading dot.  For instance MS-DOS doesn't.
-AC_DEFUN([AM_SET_LEADING_DOT],
-[rm -rf .tst 2>/dev/null
-mkdir .tst 2>/dev/null
-if test -d .tst; then
-  am__leading_dot=.
-else
-  am__leading_dot=_
-fi
-rmdir .tst 2>/dev/null
-AC_SUBST([am__leading_dot])])
-
 # Add --enable-maintainer-mode option to configure.         -*- Autoconf -*-
 # From Jim Meyering
 
@@ -1014,7 +993,6 @@ AC_SUBST([am__untar])
 
 m4_include([import/m4/00gnulib.m4])
 m4_include([import/m4/alloca.m4])
-m4_include([import/m4/codeset.m4])
 m4_include([import/m4/configmake.m4])
 m4_include([import/m4/extensions.m4])
 m4_include([import/m4/extern-inline.m4])
@@ -1024,7 +1002,6 @@ m4_include([import/m4/glibc21.m4])
 m4_include([import/m4/gnulib-common.m4])
 m4_include([import/m4/gnulib-comp.m4])
 m4_include([import/m4/include_next.m4])
-m4_include([import/m4/inttypes-pri.m4])
 m4_include([import/m4/inttypes.m4])
 m4_include([import/m4/localcharset.m4])
 m4_include([import/m4/locale-fr.m4])
@@ -1049,3 +1026,9 @@ m4_include([import/m4/wchar_h.m4])
 m4_include([import/m4/wchar_t.m4])
 m4_include([import/m4/wctype_h.m4])
 m4_include([import/m4/wint_t.m4])
+m4_include([../../config/codeset.m4])
+m4_include([../../config/depstand.m4])
+m4_include([../../config/inttypes-pri.m4])
+m4_include([../../config/inttypes.m4])
+m4_include([../../config/lead-dot.m4])
+m4_include([../../config/override.m4])
