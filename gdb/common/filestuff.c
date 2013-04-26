@@ -34,10 +34,12 @@
 #ifdef USE_WIN32API
 #include <winsock2.h>
 #include <windows.h>
-#else
+#define HAVE_SOCKETS 1
+#elif defined HAVE_SYS_SOCKET_H
 #include <sys/socket.h>
 /* Define HAVE_F_GETFD if we plan to use F_GETFD.  */
 #define HAVE_F_GETFD F_GETFD
+#define HAVE_SOCKETS 1
 #endif
 
 #ifdef HAVE_SYS_RESOURCE_H
@@ -250,6 +252,8 @@ maybe_mark_cloexec (int fd)
     mark_cloexec (fd);
 }
 
+#ifdef HAVE_SOCKETS
+
 /* Like maybe_mark_cloexec, but for callers that use SOCK_CLOEXEC.  */
 
 static void
@@ -258,6 +262,8 @@ socket_mark_cloexec (int fd)
   if (SOCK_CLOEXEC == 0 || trust_o_cloexec <= 0)
     mark_cloexec (fd);
 }
+
+#endif
 
 
 
@@ -333,12 +339,16 @@ gdb_socketpair_cloexec (int namespace, int style, int protocol, int filedes[2])
 int
 gdb_socket_cloexec (int namespace, int style, int protocol)
 {
+#ifdef HAVE_SOCKETS
   int result = socket (namespace, style | SOCK_CLOEXEC, protocol);
 
   if (result != -1)
     socket_mark_cloexec (result);
 
   return result;
+#else
+  gdb_assert_not_reached (_("socket not available on this host"));
+#endif
 }
 
 /* See filestuff.h.  */
