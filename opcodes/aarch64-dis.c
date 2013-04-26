@@ -2166,7 +2166,7 @@ print_insn_aarch64_word (bfd_vma pc,
       /* Handle undefined instructions.  */
       info->insn_type = dis_noninsn;
       (*info->fprintf_func) (info->stream,".inst\t0x%08x ; %s",
-			     word, err_msg[-ret]);
+			     (unsigned) word, err_msg[-ret]);
       break;
     case ERR_OK:
       user_friendly_fixup (&inst);
@@ -2207,13 +2207,13 @@ print_insn_data (bfd_vma pc ATTRIBUTE_UNUSED,
   switch (info->bytes_per_chunk)
     {
     case 1:
-      info->fprintf_func (info->stream, ".byte\t0x%02x", word);
+      info->fprintf_func (info->stream, ".byte\t0x%02x", (unsigned) word);
       break;
     case 2:
-      info->fprintf_func (info->stream, ".short\t0x%04x", word);
+      info->fprintf_func (info->stream, ".short\t0x%04x", (unsigned) word);
       break;
     case 4:
-      info->fprintf_func (info->stream, ".word\t0x%08x", word);
+      info->fprintf_func (info->stream, ".word\t0x%08x", (unsigned) word);
       break;
     default:
       abort ();

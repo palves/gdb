@@ -2634,14 +2634,14 @@ aarch64_print_operand (char *buf, size_t size, bfd_vma pc,
       if (! optional_operand_p (opcode, idx)
 	  || (opnd->barrier->value
 	      != get_optional_operand_default_value (opcode)))
-	snprintf (buf, size, "#0x%x", opnd->barrier->value);
+	snprintf (buf, size, "#0x%x", (unsigned) opnd->barrier->value);
       break;
 
     case AARCH64_OPND_PRFOP:
       if (opnd->prfop->name != NULL)
 	snprintf (buf, size, "%s", opnd->prfop->name);
       else
-	snprintf (buf, size, "#0x%02x", opnd->prfop->value);
+	snprintf (buf, size, "#0x%02x", (unsigned) opnd->prfop->value);
       break;
 
     default:
