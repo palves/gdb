@@ -998,7 +998,7 @@ hash_pointer (const PTR p)
     }
   else
     {
-      a += v >> 32;
+      a += v >> 16 >> 16;
       b += v & 0xffffffff;
     }
   c = 0x42135234;
