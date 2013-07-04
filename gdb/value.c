@@ -1086,16 +1086,31 @@ value_entirely_optimized_out (struct value *value)
   return !value->location.computed.funcs->check_any_valid (value);
 }
 
-int
-value_bits_valid (const struct value *value, int offset, int length)
+/* Check the validity of some bits in VALUE.  This should return 1
+   if all the bits starting at OFFSET and extending for LENGTH bits
+   are valid, or 0 if any bit is invalid.  */
+
+static int
+value_check_validity (const struct value *value, int offset, int length)
 {
-  if (!value->optimized_out)
-    return 1;
   if (value->lval != lval_computed
       || !value->location.computed.funcs->check_validity)
     return 1;
   return value->location.computed.funcs->check_validity (value, offset,
 							 length);
+}
+
+int
+value_bits_valid (const struct value *value, int offset, int length)
+{
+  /* We can only know if a value is optimized out once we have tried
+     to fetch it.  */
+  gdb_assert (value->optimized_out || !value->lazy);
+
+  if (!value->optimized_out)
+    return 1;
+
+  return value_check_validity (value, offset, length);
 }
 
 int
@@ -3434,9 +3449,10 @@ value_fetch_lazy (struct value *val)
       LONGEST offset = value_offset (val);
       LONGEST num;
 
-      if (!value_bits_valid (val,
-			     TARGET_CHAR_BIT * offset + value_bitpos (val),
-			     value_bitsize (val)))
+      if (val->optimized_out
+	  && !value_check_validity (val,
+				    TARGET_CHAR_BIT * offset + value_bitpos (val),
+				    value_bitsize (val)))
 	error (_("value has been optimized out"));
 
       if (!unpack_value_bits_as_long (value_type (val),
