@@ -1694,7 +1694,7 @@ read_pieced_value (struct value *v)
 		    memset (buffer, 0, this_size);
 
 		    if (optim)
-		      set_value_optimized_out (v, 1);
+		      set_value_optimized_out (v, VAL_OPTIMIZED_OUT_PARTIALLY);
 		    if (unavail)
 		      mark_value_bytes_unavailable (v, offset, this_size);
 		  }
@@ -1754,7 +1754,7 @@ read_pieced_value (struct value *v)
 	  break;
 
 	case DWARF_VALUE_OPTIMIZED_OUT:
-	  set_value_optimized_out (v, 1);
+	  set_value_optimized_out (v, VAL_OPTIMIZED_OUT_PARTIALLY);
 	  break;
 
 	default:
@@ -1792,7 +1792,7 @@ write_pieced_value (struct value *to, struct value *from)
 
   if (frame == NULL)
     {
-      set_value_optimized_out (to, 1);
+      set_value_optimized_out (to, VAL_OPTIMIZED_OUT_ENTIRELY);
       return;
     }
 
@@ -1923,7 +1923,7 @@ write_pieced_value (struct value *to, struct value *from)
 			source_buffer, this_size);
 	  break;
 	default:
-	  set_value_optimized_out (to, 1);
+	  set_value_optimized_out (to, VAL_OPTIMIZED_OUT_PARTIALLY);
 	  break;
 	}
       offset += this_size_bits;

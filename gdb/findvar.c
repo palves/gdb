@@ -713,7 +713,7 @@ read_frame_register_value (struct value *value, struct frame_info *frame)
 
       if (value_optimized_out (regval))
 	{
-	  set_value_optimized_out (value, 1);
+	  set_value_optimized_out (value, VAL_OPTIMIZED_OUT_ENTIRELY);
 	  break;
 	}
 
@@ -762,7 +762,7 @@ value_from_register (struct type *type, int regnum, struct frame_info *frame)
       if (!ok)
 	{
 	  if (optim)
-	    set_value_optimized_out (v, 1);
+	    set_value_optimized_out (v, VAL_OPTIMIZED_OUT_ENTIRELY);
 	  if (unavail)
 	    mark_value_bytes_unavailable (v, 0, TYPE_LENGTH (type));
 	}

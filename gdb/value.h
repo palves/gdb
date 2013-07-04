@@ -318,19 +318,41 @@ extern const gdb_byte *
 extern int value_fetch_lazy (struct value *val);
 extern int value_contents_equal (struct value *val1, struct value *val2);
 
+/* A tristate boolean indicating whether a value is optimized out, and
+   if so, whether it has been entirely optimized out, or maybe just
+   pieces of it.  */
+
+enum val_optimized_out
+{
+  /* Value is not optimized out.  */
+  VAL_NOT_OPTIMIZED_OUT,
+
+  /* Value is at least partially optimized out.  Some, none, or all
+     bits may be valid.  Consult value_bits_valid or
+     value_entirely_optimized_out to be certain.  */
+  VAL_OPTIMIZED_OUT_PARTIALLY,
+
+  /* Value is definitely all optimized out, and has therefore no
+     contents.  */
+  VAL_OPTIMIZED_OUT_ENTIRELY
+};
+
 /* If nonzero, this is the value of a variable which does not actually
-   exist in the program, at least partially.  If the value is lazy,
-   this may fetch it now.  */
-extern int value_optimized_out (struct value *value);
-extern void set_value_optimized_out (struct value *value, int val);
+   exist in the program, at least partially.  The returned enumeration
+   indicates the case.  If the value is lazy, this may fetch it
+   now.  */
+extern enum val_optimized_out value_optimized_out (struct value *value);
+extern void set_value_optimized_out (struct value *value,
+				     enum val_optimized_out val);
 
 /* Like value_optimized_out, but don't fetch the value even if it is
    lazy.  Mainly useful for constructing other values using VALUE as
    template.  */
-extern int value_optimized_out_const (const struct value *value);
+extern
+  enum val_optimized_out value_optimized_out_const (const struct value *value);
 
-/* Like value_optimized_out, but return false if any bit in the object
-   is valid.  If the value is lazy, this may fetch it now.  */
+/* Return false if any bit in the object is valid, true otherwise.  If
+   the value is lazy, this may fetch it now.  */
 extern int value_entirely_optimized_out (struct value *value);
 
 /* Set or return field indicating whether a variable is initialized or

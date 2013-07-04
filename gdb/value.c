@@ -199,7 +199,7 @@ struct value
 
   /* If nonzero, this is the value of a variable which does not
      actually exist in the program.  */
-  unsigned int optimized_out : 1;
+  ENUM_BITFIELD(val_optimized_out) optimized_out : 2;
 
   /* If value is a variable, is it initialized or not.  */
   unsigned int initialized : 1;
@@ -673,7 +673,7 @@ allocate_value_lazy (struct type *type)
   val->bitsize = 0;
   VALUE_REGNUM (val) = -1;
   val->lazy = 1;
-  val->optimized_out = 0;
+  val->optimized_out = VAL_NOT_OPTIMIZED_OUT;
   val->embedded_offset = 0;
   val->pointed_to_offset = 0;
   val->modifiable = 1;
@@ -690,6 +690,8 @@ allocate_value_lazy (struct type *type)
 void
 allocate_value_contents (struct value *val)
 {
+  gdb_assert (val->optimized_out != VAL_OPTIMIZED_OUT_ENTIRELY);
+
   if (!val->contents)
     val->contents = (gdb_byte *) xzalloc (TYPE_LENGTH (val->enclosing_type));
 }
@@ -742,7 +744,7 @@ allocate_optimized_out_value (struct type *type)
 {
   struct value *retval = allocate_value_lazy (type);
 
-  set_value_optimized_out (retval, 1);
+  set_value_optimized_out (retval, VAL_OPTIMIZED_OUT_ENTIRELY);
 
   return retval;
 }
@@ -1051,7 +1053,7 @@ value_contents_equal (struct value *val1, struct value *val2)
 		  TYPE_LENGTH (type1)) == 0);
 }
 
-int
+enum val_optimized_out
 value_optimized_out (struct value *value)
 {
   /* We can only know if a value is optimized out once we have tried to
@@ -1062,16 +1064,26 @@ value_optimized_out (struct value *value)
   return value->optimized_out;
 }
 
-int
+enum val_optimized_out
 value_optimized_out_const (const struct value *value)
 {
   return value->optimized_out;
 }
 
 void
-set_value_optimized_out (struct value *value, int val)
+set_value_optimized_out (struct value *value, enum val_optimized_out val)
 {
   value->optimized_out = val;
+
+  /* An entirely optimized out value doesn't have any contents.  Might
+     as well free then now (and catch/prevent potential misuses of
+     stale contents).  */
+  if (val == VAL_OPTIMIZED_OUT_ENTIRELY)
+    {
+      set_value_lazy (value, 0);
+      xfree (value->contents);
+      value->contents = NULL;
+    }
 }
 
 int
@@ -1405,7 +1417,9 @@ value_copy (struct value *arg)
   struct type *encl_type = value_enclosing_type (arg);
   struct value *val;
 
-  if (value_lazy (arg))
+  if (arg->optimized_out == VAL_OPTIMIZED_OUT_ENTIRELY)
+    val = allocate_optimized_out_value (encl_type);
+  else if (value_lazy (arg))
     val = allocate_value_lazy (encl_type);
   else
     val = allocate_value (encl_type);
@@ -1422,12 +1436,10 @@ value_copy (struct value *arg)
   val->embedded_offset = value_embedded_offset (arg);
   val->pointed_to_offset = arg->pointed_to_offset;
   val->modifiable = arg->modifiable;
-  if (!value_lazy (val))
-    {
-      memcpy (value_contents_all_raw (val), value_contents_all_raw (arg),
-	      TYPE_LENGTH (value_enclosing_type (arg)));
-
-    }
+  if (!value_lazy (val)
+      && val->optimized_out != VAL_OPTIMIZED_OUT_ENTIRELY)
+    memcpy (value_contents_all_raw (val), value_contents_all_raw (arg),
+	    TYPE_LENGTH (value_enclosing_type (arg)));
   val->unavailable = VEC_copy (range_s, arg->unavailable);
   set_value_parent (val, arg->parent);
   if (VALUE_LVAL (val) == lval_computed)
@@ -3434,6 +3446,7 @@ value_initialized (struct value *val)
 int
 value_fetch_lazy (struct value *val)
 {
+  gdb_assert (val->optimized_out != VAL_OPTIMIZED_OUT_ENTIRELY);
   gdb_assert (value_lazy (val));
   allocate_value_contents (val);
   if (value_bitsize (val))
@@ -3513,7 +3526,7 @@ value_fetch_lazy (struct value *val)
 
       /* If the register was not saved, mark it optimized out.  */
       if (value_optimized_out (new_val))
-	set_value_optimized_out (val, 1);
+	set_value_optimized_out (val, VAL_OPTIMIZED_OUT_ENTIRELY);
       else
 	{
 	  set_value_lazy (val, 0);
