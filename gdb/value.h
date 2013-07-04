@@ -330,8 +330,8 @@ extern void set_value_optimized_out (struct value *value, int val);
 extern int value_optimized_out_const (const struct value *value);
 
 /* Like value_optimized_out, but return false if any bit in the object
-   is valid.  */
-extern int value_entirely_optimized_out (const struct value *value);
+   is valid.  If the value is lazy, this may fetch it now.  */
+extern int value_entirely_optimized_out (struct value *value);
 
 /* Set or return field indicating whether a variable is initialized or
    not, based on debugging information supplied by the compiler.

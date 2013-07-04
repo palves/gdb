@@ -1075,10 +1075,11 @@ set_value_optimized_out (struct value *value, int val)
 }
 
 int
-value_entirely_optimized_out (const struct value *value)
+value_entirely_optimized_out (struct value *value)
 {
-  if (!value->optimized_out)
+  if (!value_optimized_out (value))
     return 0;
+
   if (value->lval != lval_computed
       || !value->location.computed.funcs->check_any_valid)
     return 1;
