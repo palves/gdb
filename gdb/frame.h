@@ -405,6 +405,7 @@ extern CORE_ADDR get_frame_base (struct frame_info *);
    instead, since that avoids the bug.  */
 extern struct frame_id get_frame_id (struct frame_info *fi);
 extern struct frame_id get_stack_frame_id (struct frame_info *fi);
+extern struct frame_id frame_unwind_id (struct frame_info *next_frame);
 extern struct frame_id frame_unwind_caller_id (struct frame_info *next_frame);
 
 /* Assuming that a frame is `normal', return its base-address, or 0 if

@@ -244,7 +244,7 @@ extern int valprint_check_validity (struct ui_file *stream, struct type *type,
 extern struct value *allocate_optimized_out_value (struct type *type);
 
 extern struct value *allocate_not_saved_value (struct type *type,
-					       struct frame_info *frame,
+					       struct frame_id frame_id,
 					       int regnum);
 
 /* If VALUE is lval_computed, return its lval_funcs structure.  */

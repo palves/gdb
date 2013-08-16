@@ -445,6 +445,23 @@ frame_unwind_caller_id (struct frame_info *next_frame)
     return null_frame_id;
 }
 
+struct frame_id
+frame_unwind_id (struct frame_info *next_frame)
+{
+  struct frame_info *this_frame;
+
+  /* Use get_prev_frame_1, and not get_prev_frame.  The latter will truncate
+     the frame chain, leading to this function unintentionally
+     returning a null_frame_id (e.g., when a caller requests the frame
+     ID of "main()"s caller.  */
+
+  this_frame = get_prev_frame_1 (next_frame);
+  if (this_frame != NULL)
+    return get_frame_id (this_frame);
+  else
+    return null_frame_id;
+}
+
 const struct frame_id null_frame_id; /* All zeros.  */
 const struct frame_id outer_frame_id = { 0, 0, 0, 0, 0, 1, 0 };
 

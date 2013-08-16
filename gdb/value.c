@@ -751,13 +751,13 @@ allocate_optimized_out_value (struct type *type)
 
 struct value *
 allocate_not_saved_value (struct type *type,
-			  struct frame_info *frame, int regnum)
+			  struct frame_id frame_id, int regnum)
 {
   struct value *retval = allocate_value (type);
 
   set_value_optimized_out (retval, 1);
   VALUE_LVAL (retval) = lval_register;
-  VALUE_FRAME_ID (retval) = get_frame_id (frame);
+  VALUE_FRAME_ID (retval) = frame_id;
   VALUE_REGNUM (retval) = regnum;
 
   return retval;
