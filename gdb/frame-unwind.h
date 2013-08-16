@@ -184,7 +184,7 @@ extern void frame_unwind_find_by_frame (struct frame_info *this_frame,
 
 /* Return a value which indicates that FRAME did not save REGNUM.  */
 
-struct value *frame_unwind_got_optimized (struct frame_info *frame,
+struct value *frame_unwind_got_not_saved (struct frame_info *frame,
 					  int regnum);
 
 /* Return a value which indicates that FRAME copied REGNUM into

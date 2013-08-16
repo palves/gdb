@@ -2098,8 +2098,8 @@ have any lvalue type.  In most circumstances one of these routines
 will generate the appropriate value:
 
 @table @code
-@item frame_unwind_got_optimized
-@findex frame_unwind_got_optimized
+@item frame_unwind_got_not_saved
+@findex frame_unwind_got_not_saved
 This register was not saved.
 
 @item frame_unwind_got_register

@@ -148,7 +148,7 @@ trad_frame_get_prev_register (struct frame_info *this_frame,
     return frame_unwind_got_constant (this_frame, regnum,
 				      this_saved_regs[regnum].addr);
   else
-    return frame_unwind_got_optimized (this_frame, regnum);
+    return frame_unwind_got_not_saved (this_frame, regnum);
 }
 
 struct value *

@@ -1248,14 +1248,14 @@ jit_frame_prev_register (struct frame_info *this_frame, void **cache, int reg)
   struct gdb_reg_value *value;
 
   if (priv == NULL)
-    return frame_unwind_got_optimized (this_frame, reg);
+    return frame_unwind_got_not_saved (this_frame, reg);
 
   gdb_assert (priv->registers);
   value = priv->registers[reg];
   if (value && value->defined)
     return frame_unwind_got_bytes (this_frame, reg, value->value);
   else
-    return frame_unwind_got_optimized (this_frame, reg);
+    return frame_unwind_got_not_saved (this_frame, reg);
 }
 
 /* Relay everything back to the unwinder registered by the JIT debug

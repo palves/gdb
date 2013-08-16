@@ -198,7 +198,9 @@ struct value
   unsigned int lazy : 1;
 
   /* If nonzero, this is the value of a variable which does not
-     actually exist in the program.  */
+     actually exist in the program.  Optimized out lval_register
+     values are presented to the user as "not saved", though behind
+     the scenes they're treated the same as optimized out values.  */
   unsigned int optimized_out : 1;
 
   /* If value is a variable, is it initialized or not.  */
@@ -747,7 +749,8 @@ allocate_optimized_out_value (struct type *type)
   return retval;
 }
 
-/* Allocate a "not saved" value for type TYPE.  */
+/* Return a value for type TYPE that indicates that FRAME_ID did not
+   save REGNUM.  */
 
 struct value *
 allocate_not_saved_value (struct type *type,
@@ -755,6 +758,7 @@ allocate_not_saved_value (struct type *type,
 {
   struct value *retval = allocate_value (type);
 
+  /* "not saved" is encoded as an optimized out lval_register.  */
   set_value_optimized_out (retval, 1);
   VALUE_LVAL (retval) = lval_register;
   VALUE_FRAME_ID (retval) = frame_id;

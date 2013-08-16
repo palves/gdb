@@ -1303,8 +1303,8 @@ dwarf2_frame_prev_register (struct frame_info *this_frame, void **this_cache,
     {
     case DWARF2_FRAME_REG_UNDEFINED:
       /* If CFI explicitly specified that the value isn't defined,
-	 mark it as optimized away; the value isn't available.  */
-      return frame_unwind_got_optimized (this_frame, regnum);
+	 mark it as not saved (optimized out).  */
+      return frame_unwind_got_not_saved (this_frame, regnum);
 
     case DWARF2_FRAME_REG_SAVED_OFFSET:
       addr = cache->cfa + cache->reg[regnum].loc.offset;
