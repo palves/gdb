@@ -747,6 +747,22 @@ allocate_optimized_out_value (struct type *type)
   return retval;
 }
 
+/* Allocate a "not saved" value for type TYPE.  */
+
+struct value *
+allocate_not_saved_value (struct type *type,
+			  struct frame_info *frame, int regnum)
+{
+  struct value *retval = allocate_value (type);
+
+  set_value_optimized_out (retval, 1);
+  VALUE_LVAL (retval) = lval_register;
+  VALUE_FRAME_ID (retval) = get_frame_id (frame);
+  VALUE_REGNUM (retval) = regnum;
+
+  return retval;
+}
+
 /* Accessor methods.  */
 
 struct value *
@@ -886,7 +902,12 @@ static void
 require_not_optimized_out (const struct value *value)
 {
   if (value->optimized_out)
-    error (_("value has been optimized out"));
+    {
+      if (value->lval == lval_register)
+	error (_("register has not been saved in frame"));
+      else
+	error (_("value has been optimized out"));
+    }
 }
 
 static void

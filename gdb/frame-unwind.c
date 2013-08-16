@@ -164,7 +164,7 @@ frame_unwind_got_optimized (struct frame_info *frame, int regnum)
   struct gdbarch *gdbarch = frame_unwind_arch (frame);
   struct type *reg_type = register_type (gdbarch, regnum);
 
-  return allocate_optimized_out_value (reg_type);
+  return allocate_not_saved_value (reg_type, frame, regnum);
 }
 
 /* Return a value which indicates that FRAME copied REGNUM into
