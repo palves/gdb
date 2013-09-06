@@ -17,7 +17,13 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
+struct value_print_options;
 struct type_print_options;
+struct symbol;
+struct type;
+struct ui_file;
+struct value;
+struct gdbarch;
 
 extern int m2_parse (void);	/* Defined in m2-exp.y */
 

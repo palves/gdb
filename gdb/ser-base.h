@@ -23,6 +23,8 @@
 struct serial;
 struct ui_file;
 
+#include "ser-defs.h"
+
 extern int generic_readchar (struct serial *scb, int timeout,
 			     int (*do_readchar) (struct serial *scb,
 						 int timeout));

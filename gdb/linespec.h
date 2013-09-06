@@ -17,8 +17,7 @@
 #if !defined (LINESPEC_H)
 #define LINESPEC_H 1
 
-struct symtab;
-
+#include "symtab.h
 #include "vec.h"
 
 /* Flags to pass to decode_line_1 and decode_line_full.  */

@@ -1,6 +1,6 @@
-/* Serial interface for UN*X file-descriptor based connection.
+/* Base serial interface types and definitions.
 
-   Copyright (C) 1999-2013 Free Software Foundation, Inc.
+   Copyright (C) 2005-2013 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -17,13 +17,12 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#ifndef SER_UNIX_H
-#define SER_UNIX_H
+#ifndef SER_DEFS_H
+#define SER_DEFS_H
 
-struct serial;
+/* Terminal state pointer.  This is specific to each type of
+   interface.  */
 
-extern int ser_unix_read_prim (struct serial *scb, size_t count);
-extern int ser_unix_write_prim (struct serial *scb, const void *buf, 
-				size_t count);
+typedef void *serial_ttystate;
 
 #endif

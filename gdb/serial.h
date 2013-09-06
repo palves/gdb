@@ -24,15 +24,9 @@
 #include <windows.h>
 #endif
 
+#include "ser-defs.h"
+
 struct ui_file;
-
-/* For most routines, if a failure is indicated, then errno should be
-   examined.  */
-
-/* Terminal state pointer.  This is specific to each type of
-   interface.  */
-
-typedef void *serial_ttystate;
 struct serial;
 
 /* Try to open NAME.  Returns a new `struct serial *' on success, NULL

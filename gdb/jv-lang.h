@@ -22,6 +22,7 @@
 
 struct value;
 struct type_print_options;
+struct value_print_options;
 
 extern int java_parse (void);		/* Defined in jv-exp.y */
 

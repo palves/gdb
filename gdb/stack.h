@@ -20,6 +20,11 @@
 #ifndef STACK_H
 #define STACK_H
 
+struct frame_info;
+struct symtab_and_line;
+struct symbol;
+struct block;
+
 void select_frame_command (char *level_exp, int from_tty);
 
 void find_frame_funname (struct frame_info *frame, char **funname,
