@@ -21,6 +21,7 @@
 
 struct expression;
 union exp_element;
+struct symbol;
 
 /* Types and enums */
 
