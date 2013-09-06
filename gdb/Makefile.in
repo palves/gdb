@@ -86,11 +86,15 @@ DEPMODE = @CCDEPMODE@
 DEPDIR = @DEPDIR@
 depcomp = $(SHELL) $(srcdir)/../depcomp
 
+NODEPS_COMPILE.pre = $(CC)
+NODEPS_COMPILE.post = -c -o $@
+NODEPS_COMPILE = $(NODEPS_COMPILE.pre) $(INTERNAL_CFLAGS) $(NODEPS_COMPILE.post)
+
 # Note that these are overridden by GNU make-specific code below if
 # GNU make is used.  The overrides implement dependency tracking.
-COMPILE.pre = $(CC)
-COMPILE.post = -c -o $@
-COMPILE = $(COMPILE.pre) $(INTERNAL_CFLAGS) $(COMPILE.post)
+COMPILE.pre = $(NODEPS_COMPILE.pre)
+COMPILE.post = $(NODEPS_COMPILE.post)
+COMPILE =  = $(NODEPS_COMPILE)
 POSTCOMPILE = @true
 
 # Directory containing source files.
@@ -2260,6 +2264,12 @@ py-utils.o: $(srcdir)/python/py-utils.c
 py-value.o: $(srcdir)/python/py-value.c
 	$(COMPILE) $(PYTHON_CFLAGS) $(srcdir)/python/py-value.c
 	$(POSTCOMPILE)
+
+check-headers:
+	@echo Checking headers.
+	for i in $(HFILES_NO_SRCDIR) ; do \
+		$(NODEPS_COMPILE) -Wno-error $(PYTHON_CFLAGS) -include defs.h $(srcdir)/$$i -o /dev/null ; \
+	done
 
 #
 # Dependency tracking.  Most of this is conditional on GNU Make being
