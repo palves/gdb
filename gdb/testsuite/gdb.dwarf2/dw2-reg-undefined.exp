@@ -44,11 +44,24 @@ for {set f 0} {$f < 3} {incr f} {
 	set pattern_rax_rbx_rcx_info "$hex\\s+$decimal"
 	set pattern_r8_r9_print "$hex"
 	set pattern_r8_r9_info "$hex\\s+$decimal"
+	set pattern_r12_r15_print "$hex"
+	set pattern_r12_r15_info "$hex\\s+$decimal"
     } else {
+	# Even though rbx is callee-saved, these are all explicitly
+	# marked undefined in the debug info.
 	set pattern_rax_rbx_rcx_print "<not saved>"
 	set pattern_rax_rbx_rcx_info "<not saved>"
-	set pattern_r8_r9_print "$hex"
-	set pattern_r8_r9_info "$hex\\s+$decimal"
+
+	# ABI specifies these as caller-saved.  GDB should be
+	# implicitly aware they're not saved, even if the debug info
+	# doesn't explicitly say so (and also doesn't say they were
+	# actually saved).
+	set pattern_r8_r9_print "<not saved>"
+	set pattern_r8_r9_info "<not saved>"
+
+	# ABI specifies these as callee-saved.
+	set pattern_r12_r15_print "$hex"
+	set pattern_r12_r15_info "$hex\\s+$decimal"
     }
 
     # Select frame.
@@ -64,8 +77,18 @@ for {set f 0} {$f < 3} {incr f} {
     gdb_test "p/x \$r8" "$pattern_r8_r9_print" "print \$r8 in frame ${f}"
     gdb_test "p/x \$r9" "$pattern_r8_r9_print" "print \$r9 in frame ${f}"
 
+    gdb_test "p/x \$r12" "$pattern_r12_r15_print" "print \$r12 in frame ${f}"
+    gdb_test "p/x \$r15" "$pattern_r12_r15_print" "print \$r15 in frame ${f}"
 
     # Display register values.
-    gdb_test "info registers rax rbx rcx r8 r9" "rax\\s+${pattern_rax_rbx_rcx_info}\\s*\r\nrbx\\s+${pattern_rax_rbx_rcx_info}\\s*\r\nrcx\\s+${pattern_rax_rbx_rcx_info}\\s*\r\nr8\\s+${pattern_r8_r9_info}\\s*\r\nr9\\s+${pattern_r8_r9_info}\\s*" \
-	"Check values of rax, rbx, rcx, r8, r9 in frame ${f}"
+    send_gdb "info registers rax rbx rcx r8 r9 r12 r15\n"
+    gdb_expect_list "info registers in frame ${f}" "$gdb_prompt $" \
+	[list \
+	     "rax\\s+$pattern_rax_rbx_rcx_info\r\n" \
+	     "rbx\\s+$pattern_rax_rbx_rcx_info\r\n" \
+	     "rcx\\s+$pattern_rax_rbx_rcx_info\r\n" \
+	     "r8\\s+$pattern_r8_r9_info\r\n" \
+	     "r9\\s+$pattern_r8_r9_info\r\n" \
+	     "r12\\s+$pattern_r12_r15_info\r\n" \
+	     "r15\\s+$pattern_r12_r15_info\r\n" ]
 }

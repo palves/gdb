@@ -40,6 +40,7 @@
 #include "exceptions.h"
 #include "amd64-tdep.h"
 #include "i387-tdep.h"
+#include "dwarf2-frame.h"
 
 #include "features/i386/amd64.c"
 #include "features/i386/amd64-avx.c"
@@ -1719,6 +1720,28 @@ amd64_alloc_frame_cache (void)
   return cache;
 }
 
+/* Return true if the ABI specifies REGNUM as a callee-saved
+   register.  */
+
+static int
+amd64_register_callee_saved (int regnum)
+{
+  if (regnum == AMD64_RBP_REGNUM
+      || regnum == AMD64_RBX_REGNUM
+      || (AMD64_R12_REGNUM <= regnum && regnum <= AMD64_R15_REGNUM))
+    return 1;
+
+  /* The control bits of the MXCSR register are callee-saved.  */
+  if (regnum == AMD64_MXCSR_REGNUM)
+    return 1;
+
+  /* The x87 control word is callee-saved.  */
+  if (regnum == AMD64_FCTRL_REGNUM)
+    return 1;
+
+  return 0;
+}
+
 /* GCC 4.4 and later, can put code in the prologue to realign the
    stack pointer.  Check whether PC points to such code, and update
    CACHE accordingly.  Return the first instruction after the code
@@ -2398,7 +2421,10 @@ amd64_frame_prev_register (struct frame_info *this_frame, void **this_cache,
     return frame_unwind_got_memory (this_frame, regnum,
 				    cache->saved_regs[regnum]);
 
-  return frame_unwind_got_register (this_frame, regnum, regnum);
+  if (amd64_register_callee_saved (regnum))
+    return frame_unwind_got_register (this_frame, regnum, regnum);
+  else
+    return frame_unwind_got_optimized (this_frame, regnum);
 }
 
 static const struct frame_unwind amd64_frame_unwind =
@@ -2821,6 +2847,30 @@ static const int amd64_record_regmap[] =
   AMD64_DS_REGNUM, AMD64_ES_REGNUM, AMD64_FS_REGNUM, AMD64_GS_REGNUM
 };
 
+/* Implement the "init_reg" dwarf2_frame_ops method.  */
+
+static void
+amd64_dwarf2_frame_init_reg (struct gdbarch *gdbarch, int regnum,
+			     struct dwarf2_frame_state_reg *reg,
+			     struct frame_info *this_frame)
+{
+  /* Mark the PC as the destination for the return address.  */
+  if (regnum == gdbarch_pc_regnum (gdbarch))
+    reg->how = DWARF2_FRAME_REG_RA;
+
+  /* Mark the stack pointer as the call frame address.  */
+  else if (regnum == gdbarch_sp_regnum (gdbarch))
+    reg->how = DWARF2_FRAME_REG_CFA;
+
+  /* The above was taken from the default init_reg in dwarf2-frame.c
+     while the below is AMD64 specific.  */
+
+  else if (amd64_register_callee_saved (regnum))
+    reg->how = DWARF2_FRAME_REG_SAME_VALUE;
+  else
+    reg->how = DWARF2_FRAME_REG_UNDEFINED;
+}
+
 void
 amd64_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
 {
@@ -2918,6 +2968,8 @@ amd64_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
   frame_unwind_append_unwinder (gdbarch, &amd64_sigtramp_frame_unwind);
   frame_unwind_append_unwinder (gdbarch, &amd64_frame_unwind);
   frame_base_set_default (gdbarch, &amd64_frame_base);
+
+  dwarf2_frame_set_init_reg (gdbarch, amd64_dwarf2_frame_init_reg);
 
   /* If we have a register mapping, enable the generic core file support.  */
   if (tdep->gregset_reg_offset)

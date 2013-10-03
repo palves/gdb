@@ -52,20 +52,47 @@ mi_gdb_test "111-stack-list-frames" \
     "111\\^done,stack=\\\[frame=\{level=\"0\",addr=\"$hex\",func=\"stop_frame\",.*\},frame=\{level=\"1\",addr=\"$hex\",func=\"first_frame\",.*\},frame=\{level=\"2\",addr=\"$hex\",func=\"main\",.*\}\\\]" \
     "stack frame listing"
 
-set not_saved_pattern "<not saved>"
-
 for {set f 0} {$f < 3} {incr f} {
     if {${f} == 0} {
-	set pattern_0_1_2 ${hex}
+	set pattern ${hex}
     } else {
-	set pattern_0_1_2 ${not_saved_pattern}
+	set pattern "<not saved>"
     }
 
-    mi_gdb_test "22${f}-data-list-register-values --thread 1 --frame ${f} x  0 1 2 8 9" \
-	"22${f}\\^done,register-values=\\\[\{number=\"0\",value=\"${pattern_0_1_2}\"\},\{number=\"1\",value=\"${pattern_0_1_2}\"\},\{number=\"2\",value=\"${pattern_0_1_2}\"\},\{number=\"8\",value=\"$hex\"\},\{number=\"9\",value=\"$hex\"\}\\\]" \
+    # - rax,rbx,rcx are explicitly marked undefined in the debug info,
+    #   so GDB should display them all as not saved, even though rbx
+    #   is callee-saved.
+    #
+    # - r8-r9 are caller-saved.  GDB should be implicitly aware
+    #   they're not saved, even if the debug info doesn't explicitly
+    #   say so (and also doesn't say they were actually saved).
+    #
+    # - r12-r15 are callee-saved.  GDB should be able to find their
+    #   values.
+
+    mi_gdb_test "22${f}-data-list-register-values --thread 1 --frame ${f} x  0 1 2 8 9 12 15" \
+	[join [list \
+		   "22${f}\\^done,register-values=\\\["\
+		   "\{number=\"0\",value=\"${pattern}\"\}," \
+		   "\{number=\"1\",value=\"${pattern}\"\}," \
+		   "\{number=\"2\",value=\"${pattern}\"\}," \
+		   "\{number=\"8\",value=\"${pattern}\"\}," \
+		   "\{number=\"9\",value=\"${pattern}\"\}," \
+		   "\{number=\"12\",value=\"$hex\"\}," \
+		   "\{number=\"15\",value=\"$hex\"\}" \
+		   "\\\]" ] "" ] \
 	"register values, format x, frame ${f}"
 
-    mi_gdb_test "33${f}-data-list-register-values --thread 1 --frame ${f} r 0 1 2 8 9" \
-	"33${f}\\^done,register-values=\\\[\{number=\"0\",value=\"${pattern_0_1_2}\"\},\{number=\"1\",value=\"${pattern_0_1_2}\"\},\{number=\"2\",value=\"${pattern_0_1_2}\"\},\{number=\"8\",value=\"$hex\"\},\{number=\"9\",value=\"$hex\"\}\\\]" \
+    mi_gdb_test "33${f}-data-list-register-values --thread 1 --frame ${f} r  0 1 2 8 9 12 15" \
+	[join [list \
+		   "33${f}\\^done,register-values=\\\["\
+		   "\{number=\"0\",value=\"${pattern}\"\}," \
+		   "\{number=\"1\",value=\"${pattern}\"\}," \
+		   "\{number=\"2\",value=\"${pattern}\"\}," \
+		   "\{number=\"8\",value=\"${pattern}\"\}," \
+		   "\{number=\"9\",value=\"${pattern}\"\}," \
+		   "\{number=\"12\",value=\"$hex\"\}," \
+		   "\{number=\"15\",value=\"$hex\"\}" \
+		   "\\\]" ] "" ] \
 	"register values, format r, frame ${f}"
 }
