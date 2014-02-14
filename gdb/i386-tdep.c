@@ -9188,7 +9188,7 @@ i386_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   set_gdbarch_fast_tracepoint_valid_at (gdbarch,
 					i386_fast_tracepoint_valid_at);
 
-  set_gdbarch_software_single_step (gdbarch, i386_software_single_step);
+  // set_gdbarch_software_single_step (gdbarch, i386_software_single_step);
 
   return gdbarch;
 }
