@@ -199,12 +199,14 @@ enum enable_state
 			    automatically enabled and reset when the
 			    call "lands" (either completes, or stops
 			    at another eventpoint).  */
+#if 0
     bp_permanent	 /* There is a breakpoint instruction
 			    hard-wired into the target's code.  Don't
 			    try to write another breakpoint
 			    instruction on top of it, or restore its
 			    value.  Step over it using the
 			    architecture's SKIP_INSN macro.  */
+#endif
   };
 
 
@@ -229,12 +231,48 @@ enum condition_status
     condition_updated
   };
 
+/* GDB maintains two types of information about each breakpoint (or
+   watchpoint, or other related event).  The first type corresponds
+   to struct breakpoint; this is a relatively high-level structure
+   which contains the source location(s), stopping conditions, user
+   commands to execute when the breakpoint is hit, and so forth.
+
+   The second type of information corresponds to struct bp_location.
+   Each breakpoint has one or (eventually) more locations associated
+   with it, which represent target-specific and machine-specific
+   mechanisms for stopping the program.  For instance, a watchpoint
+   expression may require multiple hardware watchpoints in order to
+   catch all changes in the value of the expression being watched.  */
+
+enum bp_loc_type
+{
+  bp_loc_software_breakpoint,
+  bp_loc_hardware_breakpoint,
+  bp_loc_hardware_watchpoint,
+  bp_loc_other			/* Miscellaneous...  */
+};
+
 /* Information used by targets to insert and remove breakpoints.  */
 
 struct bp_target_info
 {
+  int refc;
+
+  int permanent;
+
+  /* Type of this breakpoint location.  */
+  enum bp_loc_type loc_type;
+
+  /* Type of hardware watchpoint.  */
+  enum target_hw_bp_type watchpoint_type;
+
   /* Address space at which the breakpoint was placed.  */
   struct address_space *placed_address_space;
+
+  /* gdbarch describing properties of the address space at which the
+     breakpoint was placed.  Maybe this should be a field of the
+     address space itself?  */
+  struct gdbarch *placed_gdbarch;
 
   /* Address at which the breakpoint was placed.  This is normally the
      same as ADDRESS from the bp_location, except when adjustment
@@ -275,27 +313,6 @@ struct bp_target_info
   /* Flag that is true if the breakpoint should be left in place even
      when GDB is not connected.  */
   int persist;
-};
-
-/* GDB maintains two types of information about each breakpoint (or
-   watchpoint, or other related event).  The first type corresponds
-   to struct breakpoint; this is a relatively high-level structure
-   which contains the source location(s), stopping conditions, user
-   commands to execute when the breakpoint is hit, and so forth.
-
-   The second type of information corresponds to struct bp_location.
-   Each breakpoint has one or (eventually) more locations associated
-   with it, which represent target-specific and machine-specific
-   mechanisms for stopping the program.  For instance, a watchpoint
-   expression may require multiple hardware watchpoints in order to
-   catch all changes in the value of the expression being watched.  */
-
-enum bp_loc_type
-{
-  bp_loc_software_breakpoint,
-  bp_loc_hardware_breakpoint,
-  bp_loc_hardware_watchpoint,
-  bp_loc_other			/* Miscellaneous...  */
 };
 
 /* This structure is a collection of function pointers that, if
@@ -417,7 +434,7 @@ struct bp_location
   int length;
 
   /* Type of hardware watchpoint.  */
-  enum target_hw_bp_type watchpoint_type;
+  enum target_hw_bp_type watchpoint_type; // XX should remove.
 
   /* For any breakpoint type with an address, this is the section
      associated with the address.  Used primarily for overlay
@@ -444,7 +461,7 @@ struct bp_location
   char *function_name;
 
   /* Details of the placed breakpoint, when inserted.  */
-  struct bp_target_info target_info;
+  struct bp_target_info *target_info;
 
   /* Similarly, for the breakpoint at an overlay's LMA, if necessary.  */
   struct bp_target_info overlay_target_info;

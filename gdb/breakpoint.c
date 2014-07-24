@@ -568,13 +568,21 @@ static struct bp_location **bp_location;
 
 static unsigned bp_location_count;
 
+/* Array is sorted by bp_location_compare - primarily by the ADDRESS.  */
+
+static struct bp_target_info **bp_target_info;
+
+/* Number of elements of BP_TARGET_INFO.  */
+
+static unsigned bp_target_info_count;
+
 /* Maximum alignment offset between bp_target_info.PLACED_ADDRESS and
    ADDRESS for the current elements of BP_LOCATION which get a valid
    result from bp_location_has_shadow.  You can use it for roughly
    limiting the subrange of BP_LOCATION to scan for shadow bytes for
    an address you need to read.  */
 
-static CORE_ADDR bp_location_placed_address_before_address_max;
+static CORE_ADDR bp_target_info_placed_address_before_address_max;
 
 /* Maximum offset plus alignment between bp_target_info.PLACED_ADDRESS
    + bp_target_info.SHADOW_LEN and ADDRESS for the current elements of
@@ -582,7 +590,7 @@ static CORE_ADDR bp_location_placed_address_before_address_max;
    You can use it for roughly limiting the subrange of BP_LOCATION to
    scan for shadow bytes for an address you need to read.  */
 
-static CORE_ADDR bp_location_shadow_len_after_address_max;
+static CORE_ADDR bp_target_info_shadow_len_after_address_max;
 
 /* The locations that no longer correspond to any breakpoint, unlinked
    from bp_location array, but for which a hit may still be reported
@@ -1407,16 +1415,10 @@ commands_from_control_command (char *arg, struct command_line *cmd)
 /* Return non-zero if BL->TARGET_INFO contains valid information.  */
 
 static int
-bp_location_has_shadow (struct bp_location *bl)
+bp_target_info_has_shadow (struct bp_target_info *bl)
 {
-  if (bl->loc_type != bp_loc_software_breakpoint)
-    return 0;
-  if (!bl->inserted)
-    return 0;
-  if (bl->target_info.shadow_len == 0)
-    /* BL isn't valid, or doesn't shadow memory.  */
-    return 0;
-  return 1;
+  return (bl->loc_type == bp_loc_software_breakpoint
+	  && bl->shadow_len != 0);
 }
 
 /* Update BUF, which is LEN bytes read from the target address
@@ -1431,8 +1433,7 @@ static void
 one_breakpoint_xfer_memory (gdb_byte *readbuf, gdb_byte *writebuf,
 			    const gdb_byte *writebuf_org,
 			    ULONGEST memaddr, LONGEST len,
-			    struct bp_target_info *target_info,
-			    struct gdbarch *gdbarch)
+			    struct bp_target_info *target_info)
 {
   /* Now do full processing of the found relevant range of elements.  */
   CORE_ADDR bp_addr = 0;
@@ -1505,12 +1506,89 @@ one_breakpoint_xfer_memory (gdb_byte *readbuf, gdb_byte *writebuf,
 
       /* Determine appropriate breakpoint contents and size for this
 	 address.  */
-      bp = gdbarch_breakpoint_from_pc (gdbarch, &placed_address, &placed_size);
+      bp = gdbarch_breakpoint_from_pc (target_info->placed_gdbarch,
+				       &placed_address, &placed_size);
 
       /* Update the final write buffer with this inserted
 	 breakpoint's INSN.  */
       memcpy (writebuf + bp_addr - memaddr, bp + bptoffset, bp_size);
     }
+}
+
+
+/* Update BUF, which is LEN bytes read from the target address MEMADDR,
+   by replacing any memory breakpoints with their shadowed contents.
+
+   If READBUF is not NULL, this buffer must not overlap with any of
+   the breakpoint location's shadow_contents buffers.  Otherwise,
+   a failed assertion internal error will be raised.
+
+   The range of shadowed area by each bp_location is:
+     bl->address - bp_location_placed_address_before_address_max
+     up to bl->address + bp_location_shadow_len_after_address_max
+   The range we were requested to resolve shadows for is:
+     memaddr ... memaddr + len
+   Thus the safe cutoff boundaries for performance optimization are
+     memaddr + len <= (bl->address
+		       - bp_location_placed_address_before_address_max)
+   and:
+     bl->address + bp_location_shadow_len_after_address_max <= memaddr  */
+
+static int
+find_leftmost_bp_target_info (CORE_ADDR address, CORE_ADDR after_address_max)
+{
+  /* Left boundary, right boundary and median element of our binary
+     search.  */
+  unsigned bc_l, bc_r, bc;
+
+  /* Find BC_L which is a leftmost element which may affect BUF
+     content.  It is safe to report lower value but a failure to
+     report higher one.  */
+
+  bc_l = 0;
+  bc_r = bp_location_count;
+  while (bc_l + 1 < bc_r)
+    {
+      struct bp_target_info *bl;
+
+      bc = (bc_l + bc_r) / 2;
+      bl = bp_target_info[bc];
+
+      /* Check first BL->ADDRESS will not overflow due to the added
+	 constant.  Then advance the left boundary only if we are sure
+	 the BC element can in no way affect the BUF content (MEMADDR
+	 to MEMADDR + LEN range).
+
+	 Use the BP_LOCATION_SHADOW_LEN_AFTER_ADDRESS_MAX safety
+	 offset so that we cannot miss a breakpoint with its shadow
+	 range tail still reaching MEMADDR.  */
+
+      if ((bl->placed_address + after_address_max >= bl->placed_address)
+	  && (bl->placed_address + after_address_max <= address))
+	bc_l = bc;
+      else
+	bc_r = bc;
+    }
+
+  /* Due to the binary search above, we need to make sure we pick the
+     first location that's at BC_L's address.  E.g., if there are
+     multiple locations at the same address, BC_L may end up pointing
+     at a duplicate location, and miss the "master"/"inserted"
+     location.  Say, given locations L1, L2 and L3 at addresses A and
+     B:
+
+      L1@A, L2@A, L3@B, ...
+
+     BC_L could end up pointing at location L2, while the "master"
+     location could be L1.  Since the `loc->inserted' flag is only set
+     on "master" locations, we'd forget to restore the shadow of L1
+     and L2.  */
+  while (bc_l > 0
+	 && (bp_target_info[bc_l]->placed_address
+	     == bp_target_info[bc_l - 1]->placed_address))
+    bc_l--;
+
+  return bc_l;
 }
 
 /* Update BUF, which is LEN bytes read from the target address MEMADDR,
@@ -1536,90 +1614,41 @@ breakpoint_xfer_memory (gdb_byte *readbuf, gdb_byte *writebuf,
 			const gdb_byte *writebuf_org,
 			ULONGEST memaddr, LONGEST len)
 {
-  /* Left boundary, right boundary and median element of our binary
-     search.  */
-  unsigned bc_l, bc_r, bc;
+  unsigned bc, bc_l;
   size_t i;
 
   /* Find BC_L which is a leftmost element which may affect BUF
      content.  It is safe to report lower value but a failure to
      report higher one.  */
-
-  bc_l = 0;
-  bc_r = bp_location_count;
-  while (bc_l + 1 < bc_r)
-    {
-      struct bp_location *bl;
-
-      bc = (bc_l + bc_r) / 2;
-      bl = bp_location[bc];
-
-      /* Check first BL->ADDRESS will not overflow due to the added
-	 constant.  Then advance the left boundary only if we are sure
-	 the BC element can in no way affect the BUF content (MEMADDR
-	 to MEMADDR + LEN range).
-
-	 Use the BP_LOCATION_SHADOW_LEN_AFTER_ADDRESS_MAX safety
-	 offset so that we cannot miss a breakpoint with its shadow
-	 range tail still reaching MEMADDR.  */
-
-      if ((bl->address + bp_location_shadow_len_after_address_max
-	   >= bl->address)
-	  && (bl->address + bp_location_shadow_len_after_address_max
-	      <= memaddr))
-	bc_l = bc;
-      else
-	bc_r = bc;
-    }
-
-  /* Due to the binary search above, we need to make sure we pick the
-     first location that's at BC_L's address.  E.g., if there are
-     multiple locations at the same address, BC_L may end up pointing
-     at a duplicate location, and miss the "master"/"inserted"
-     location.  Say, given locations L1, L2 and L3 at addresses A and
-     B:
-
-      L1@A, L2@A, L3@B, ...
-
-     BC_L could end up pointing at location L2, while the "master"
-     location could be L1.  Since the `loc->inserted' flag is only set
-     on "master" locations, we'd forget to restore the shadow of L1
-     and L2.  */
-  while (bc_l > 0
-	 && bp_location[bc_l]->address == bp_location[bc_l - 1]->address)
-    bc_l--;
+  bc_l = find_leftmost_bp_target_info (memaddr,
+				       bp_target_info_shadow_len_after_address_max);
 
   /* Now do full processing of the found relevant range of elements.  */
 
-  for (bc = bc_l; bc < bp_location_count; bc++)
-  {
-    struct bp_location *bl = bp_location[bc];
-    CORE_ADDR bp_addr = 0;
-    int bp_size = 0;
-    int bptoffset = 0;
+  for (bc = bc_l; bc < bp_target_info_count; bc++)
+    {
+      struct bp_target_info *bl = bp_target_info[bc];
+      CORE_ADDR bp_addr = 0;
+      int bp_size = 0;
+      int bptoffset = 0;
 
-    /* bp_location array has BL->OWNER always non-NULL.  */
-    if (bl->owner->type == bp_none)
-      warning (_("reading through apparently deleted breakpoint #%d?"),
-	       bl->owner->number);
+      /* Performance optimization: any further element can no longer
+	 affect BUF content.  */
 
-    /* Performance optimization: any further element can no longer affect BUF
-       content.  */
+      if (bl->placed_address >= bp_target_info_placed_address_before_address_max
+	  && memaddr + len <= (bl->placed_address
+			       - bp_target_info_placed_address_before_address_max))
+	break;
 
-    if (bl->address >= bp_location_placed_address_before_address_max
-        && memaddr + len <= (bl->address
-			     - bp_location_placed_address_before_address_max))
-      break;
+      if (!bp_target_info_has_shadow (bl))
+	continue;
 
-    if (!bp_location_has_shadow (bl))
-      continue;
-
-    one_breakpoint_xfer_memory (readbuf, writebuf, writebuf_org,
-				memaddr, len, &bl->target_info, bl->gdbarch);
-  }
+      one_breakpoint_xfer_memory (readbuf, writebuf, writebuf_org,
+				  memaddr, len, bl);
+    }
 
   /* Now process single-step breakpoints.  These are not found in the
-     bp_location array.  */
+     bp_target_info array.  */
   for (i = 0; i < 2; i++)
     {
       struct breakpoint *bp = single_step_breakpoints[i];
@@ -1629,7 +1658,7 @@ breakpoint_xfer_memory (gdb_byte *readbuf, gdb_byte *writebuf,
 	  struct bp_location *bl = bp->loc;
 
 	  one_breakpoint_xfer_memory (readbuf, writebuf, writebuf_org,
-				      memaddr, len, &bl->target_info, bl->gdbarch);
+				      memaddr, len, bl->target_info);
 	}
     }
 }
@@ -2159,7 +2188,7 @@ build_target_condition_list (struct bp_location *bl)
   struct bp_location *loc;
 
   /* Release conditions left over from a previous insert.  */
-  VEC_free (agent_expr_p, bl->target_info.conditions);
+  VEC_free (agent_expr_p, bl->target_info->conditions);
 
   /* This is only meaningful if the target is
      evaluating conditions and if the user has
@@ -2243,7 +2272,7 @@ build_target_condition_list (struct bp_location *bl)
 	  && loc->enabled)
 	/* Add the condition to the vector.  This will be used later to send the
 	   conditions to the target.  */
-	VEC_safe_push (agent_expr_p, bl->target_info.conditions,
+	VEC_safe_push (agent_expr_p, bl->target_info->conditions,
 		       loc->cond_bytecode);
     }
 
@@ -2345,15 +2374,14 @@ parse_cmd_to_aexpr (CORE_ADDR scope, char *cmd)
    different commands, we will add any such to the list.  */
 
 static void
-build_target_command_list (struct bp_location *bl)
+build_target_command_list (int modified, struct bp_target_info *bl)
 {
   struct bp_location **locp = NULL, **loc2p;
   int null_command_or_parse_error = 0;
-  int modified = bl->needs_update;
   struct bp_location *loc;
 
   /* Release commands left over from a previous insert.  */
-  VEC_free (agent_expr_p, bl->target_info.tcommands);
+  VEC_free (agent_expr_p, bl->tcommands);
 
   if (!target_can_run_breakpoint_commands ())
     return;
@@ -2366,11 +2394,11 @@ build_target_command_list (struct bp_location *bl)
      don't install the target-side commands, as that would make the
      breakpoint not be reported to the core, and we'd lose
      control.  */
-  ALL_BP_LOCATIONS_AT_ADDR (loc2p, locp, bl->address)
+  ALL_BP_LOCATIONS_AT_ADDR (loc2p, locp, bl->placed_address)
     {
       loc = (*loc2p);
       if (is_breakpoint (loc->owner)
-	  && loc->pspace->num == bl->pspace->num
+	  && loc->pspace->aspace == bl->placed_address_space
 	  && loc->owner->type != bp_dprintf)
 	return;
     }
@@ -2380,10 +2408,11 @@ build_target_command_list (struct bp_location *bl)
      bytecode.  If any of these happen, then it's no use to send conditions
      to the target since this location will always trigger and generate a
      response back to GDB.  */
-  ALL_BP_LOCATIONS_AT_ADDR (loc2p, locp, bl->address)
+  ALL_BP_LOCATIONS_AT_ADDR (loc2p, locp, bl->placed_address)
     {
       loc = (*loc2p);
-      if (is_breakpoint (loc->owner) && loc->pspace->num == bl->pspace->num)
+      if (is_breakpoint (loc->owner)
+	  && loc->pspace->aspace == bl->placed_address_space)
 	{
 	  if (modified)
 	    {
@@ -2393,7 +2422,7 @@ build_target_command_list (struct bp_location *bl)
 		 case we already freed the command bytecodes (see
 		 force_breakpoint_reinsertion).  We just
 		 need to parse the command to bytecodes again.  */
-	      aexpr = parse_cmd_to_aexpr (bl->address,
+	      aexpr = parse_cmd_to_aexpr (bl->placed_address,
 					  loc->owner->extra_string);
 	      loc->cmd_bytecode = aexpr;
 
@@ -2415,11 +2444,11 @@ build_target_command_list (struct bp_location *bl)
      and so clean up.  */
   if (null_command_or_parse_error)
     {
-      ALL_BP_LOCATIONS_AT_ADDR (loc2p, locp, bl->address)
+      ALL_BP_LOCATIONS_AT_ADDR (loc2p, locp, bl->placed_address)
 	{
 	  loc = (*loc2p);
 	  if (is_breakpoint (loc->owner)
-	      && loc->pspace->num == bl->pspace->num)
+	      && loc->pspace->aspace == bl->placed_address_space)
 	    {
 	      /* Only go as far as the first NULL bytecode is
 		 located.  */
@@ -2434,24 +2463,56 @@ build_target_command_list (struct bp_location *bl)
 
   /* No NULL commands or failed bytecode generation.  Build a command list
      for this location's address.  */
-  ALL_BP_LOCATIONS_AT_ADDR (loc2p, locp, bl->address)
+  ALL_BP_LOCATIONS_AT_ADDR (loc2p, locp, bl->placed_address)
     {
       loc = (*loc2p);
       if (loc->owner->extra_string
 	  && is_breakpoint (loc->owner)
-	  && loc->pspace->num == bl->pspace->num
+	  && loc->pspace->aspace == bl->placed_address_space
 	  && loc->owner->enable_state == bp_enabled
 	  && loc->enabled)
 	/* Add the command to the vector.  This will be used later
 	   to send the commands to the target.  */
-	VEC_safe_push (agent_expr_p, bl->target_info.tcommands,
-		       loc->cmd_bytecode);
+	VEC_safe_push (agent_expr_p, bl->tcommands, loc->cmd_bytecode);
     }
 
-  bl->target_info.persist = 0;
+  bl->persist = 0;
   /* Maybe flag this location as persistent.  */
-  if (bl->owner->type == bp_dprintf && disconnected_dprintf)
-    bl->target_info.persist = 1;
+  ALL_BP_LOCATIONS_AT_ADDR (loc2p, locp, bl->placed_address)
+    {
+      loc = (*loc2p);
+      if (loc->pspace->aspace == bl->placed_address_space
+	  && loc->owner->type == bp_dprintf && disconnected_dprintf)
+	{
+	  bl->persist = 1;
+	  break;
+	}
+    }
+}
+
+static struct bp_target_info *
+find_bp_target_info (enum bp_loc_type loc_type,
+		     struct address_space *aspace, CORE_ADDR address)
+{
+  unsigned bc, bc_l;
+
+  gdb_assert (loc_type != bp_loc_other);
+
+  bc_l = find_leftmost_bp_target_info (address, 0);
+
+  for (bc = bc_l; bc < bp_target_info_count; bc++)
+    {
+      struct bp_target_info *bp_tgt = bp_target_info[bc];
+
+      if (bp_tgt->placed_address != address)
+	break;
+
+      if (bp_tgt->loc_type == loc_type
+	  && bp_tgt->placed_address_space == aspace)
+	return bp_tgt;
+    }
+
+  return NULL;
 }
 
 /* Insert a low-level "breakpoint" of some type.  BL is the breakpoint
@@ -2472,22 +2533,46 @@ insert_bp_location (struct bp_location *bl,
   enum errors bp_err = GDB_NO_ERROR;
   const char *bp_err_message = NULL;
   volatile struct gdb_exception e;
+  struct bp_target_info *bp_tgt;
 
   if (!should_be_inserted (bl) || (bl->inserted && !bl->needs_update))
     return 0;
 
-  /* Note we don't initialize bl->target_info, as that wipes out
-     the breakpoint location's shadow_contents if the breakpoint
-     is still inserted at that location.  This in turn breaks
-     target_read_memory which depends on these buffers when
-     a memory read is requested at the breakpoint location:
-     Once the target_info has been wiped, we fail to see that
-     we have a breakpoint inserted at that address and thus
-     read the breakpoint instead of returning the data saved in
-     the breakpoint location's shadow contents.  */
-  bl->target_info.placed_address = bl->address;
-  bl->target_info.placed_address_space = bl->pspace->aspace;
-  bl->target_info.length = bl->length;
+  if (bl->inserted)
+    bp_tgt = bl->target_info;
+  else
+    {
+      if (bl->loc_type != bp_loc_other)
+	bp_tgt = find_bp_target_info (bl->loc_type,
+				      bl->pspace->aspace, bl->address);
+      else
+	bp_tgt = NULL;
+
+      if (bp_tgt != NULL)
+	bp_tgt->refc++;
+      else
+	{
+	  bp_tgt = XCNEW (struct bp_target_info);
+	  bp_tgt->refc = 1;
+
+	  /* Note we don't initialize bl->target_info, as that wipes out
+	     the breakpoint location's shadow_contents if the breakpoint
+	     is still inserted at that location.  This in turn breaks
+	     target_read_memory which depends on these buffers when a
+	     memory read is requested at the breakpoint location: Once the
+	     target_info has been wiped, we fail to see that we have a
+	     breakpoint inserted at that address and thus read the
+	     breakpoint instead of returning the data saved in the
+	     breakpoint location's shadow contents.  */
+
+	  /* XXX */
+	  bp_tgt->placed_address = bl->address;
+	  bp_tgt->placed_address_space = bl->pspace->aspace;
+	  bp_tgt->length = bl->length;
+	}
+
+      bl->target_info = bp_tgt;
+    }
 
   /* When working with target-side conditions, we must pass all the conditions
      for the same breakpoint address down to the target since GDB will not
@@ -2497,7 +2582,7 @@ insert_bp_location (struct bp_location *bl,
   if (is_breakpoint (bl->owner))
     {
       build_target_condition_list (bl);
-      build_target_command_list (bl);
+      build_target_command_list (bl->needs_update, bp_tgt);
       /* Reset the modification marker.  */
       bl->needs_update = 0;
     }
@@ -2525,9 +2610,8 @@ insert_bp_location (struct bp_location *bl,
 	     problem is that memory map has changed during running
 	     program, but it's not going to work anyway with current
 	     gdb.  */
-	  struct mem_region *mr 
-	    = lookup_mem_region (bl->target_info.placed_address);
-	  
+	  struct mem_region *mr = lookup_mem_region (bl->address);
+
 	  if (mr)
 	    {
 	      if (automatic_hardware_breakpoints)
@@ -2596,6 +2680,7 @@ insert_bp_location (struct bp_location *bl,
 			 bl->owner->number);
 	      else
 		{
+#if 0
 		  CORE_ADDR addr = overlay_unmapped_address (bl->address,
 							     bl->section);
 		  /* Set a software (trap) breakpoint at the LMA.  */
@@ -2623,6 +2708,7 @@ insert_bp_location (struct bp_location *bl,
 					"Overlay breakpoint %d "
 					"failed: in ROM?\n",
 					bl->owner->number);
+#endif
 		}
 	    }
 	  /* Shall we set a breakpoint at the VMA? */
@@ -2759,7 +2845,12 @@ insert_bp_location (struct bp_location *bl,
 	      {
 		bl->duplicate = 1;
 		bl->inserted = 1;
+
+		bp_tgt->refc--;
+		if (bp_tgt->refc == 0)
+		  xfree (bp_tgt);
 		bl->target_info = loc->target_info;
+		bl->target_info->refc++;
 		bl->watchpoint_type = hw_access;
 		val = 0;
 		break;
@@ -3776,9 +3867,11 @@ remove_breakpoint_1 (struct bp_location *bl, insertion_state_t is)
   /* BL is never in moribund_locations by our callers.  */
   gdb_assert (bl->owner != NULL);
 
-  if (bl->owner->enable_state == bp_permanent)
-    /* Permanent breakpoints cannot be inserted or removed.  */
-    return 0;
+  if (bl->bp_target_info->permanent)
+    {
+      /* Permanent breakpoints cannot be inserted or removed.  */
+      return 0;
+    }
 
   /* The type of none suggests that owner is actually deleted.
      This should not ever happen.  */
@@ -3791,13 +3884,25 @@ remove_breakpoint_1 (struct bp_location *bl, insertion_state_t is)
 	 trap-instruction bp (bp_breakpoint), or a
 	 bp_hardware_breakpoint.  */
 
-      /* First check to see if we have to handle an overlay.  */
-      if (overlay_debugging == ovly_off
-	  || bl->section == NULL
-	  || !(section_is_overlay (bl->section)))
+      /* First check to see if we have to handle an overlay -- did we
+	 set a breakpoint at the LMA?  */
+      if (bl->overlay_target_info != NULL)
 	{
-	  /* No overlay handling: just remove the breakpoint.  */
+	  struct bp_target_info *bp_tgt = bl->overlay_target_info;
 
+	  /* Ignore any failures: if the LMA is in ROM, we will
+	     have already warned when we failed to insert it.  */
+	  if (bp_tgt->loc_type == bp_loc_hardware_breakpoint)
+	    target_remove_hw_breakpoint (bp_tgt->placed_gdbarch,
+					 bp_tgt);
+	  else
+	    target_remove_breakpoint (bp_tgt->placed_gdbarch, bp_tgt);
+	}
+
+      /* Did we set a breakpoint at the VMA?  If so, we will have
+	 marked the breakpoint 'inserted'.  */
+      if (bl->inserted)
+	{
 	  /* If we're trying to uninsert a memory breakpoint that we
 	     know is set in a dynamic object that is marked
 	     shlib_disabled, then either the dynamic object was
@@ -3816,54 +3921,21 @@ remove_breakpoint_1 (struct bp_location *bl, insertion_state_t is)
 	     implemented using a mechanism that is not dependent on
 	     being able to modify the target's memory, and as such
 	     they should always be removed.  */
-	  if (bl->shlib_disabled
-	      && bl->target_info.shadow_len != 0
-	      && !memory_validate_breakpoint (bl->gdbarch, &bl->target_info))
+
+	  if (bl->target_info->shadow_len != 0
+	      && (bl->shlib_disabled
+		  || (bl->section != NULL
+		      && section_is_overlay (bl->section)
+		      && !section_is_mapped (bl->section)))
+	      && !memory_validate_breakpoint (bl->gdbarch, bl->target_info))
 	    val = 0;
 	  else
 	    val = bl->owner->ops->remove_location (bl);
 	}
       else
 	{
-	  /* This breakpoint is in an overlay section.
-	     Did we set a breakpoint at the LMA?  */
-	  if (!overlay_events_enabled)
-	      {
-		/* Yes -- overlay event support is not active, so we
-		   should have set a breakpoint at the LMA.  Remove it.  
-		*/
-		/* Ignore any failures: if the LMA is in ROM, we will
-		   have already warned when we failed to insert it.  */
-		if (bl->loc_type == bp_loc_hardware_breakpoint)
-		  target_remove_hw_breakpoint (bl->gdbarch,
-					       &bl->overlay_target_info);
-		else
-		  target_remove_breakpoint (bl->gdbarch,
-					    &bl->overlay_target_info);
-	      }
-	  /* Did we set a breakpoint at the VMA? 
-	     If so, we will have marked the breakpoint 'inserted'.  */
-	  if (bl->inserted)
-	    {
-	      /* Yes -- remove it.  Previously we did not bother to
-		 remove the breakpoint if the section had been
-		 unmapped, but let's not rely on that being safe.  We
-		 don't know what the overlay manager might do.  */
-
-	      /* However, we should remove *software* breakpoints only
-		 if the section is still mapped, or else we overwrite
-		 wrong code with the saved shadow contents.  */
-	      if (bl->loc_type == bp_loc_hardware_breakpoint
-		  || section_is_mapped (bl->section))
-		val = bl->owner->ops->remove_location (bl);
-	      else
-		val = 0;
-	    }
-	  else
-	    {
-	      /* No -- not inserted, so no need to remove.  No error.  */
-	      val = 0;
-	    }
+	  /* No -- not inserted, so no need to remove.  No error.  */
+	  val = 0;
 	}
 
       /* In some cases, we might not be able to remove a breakpoint in
@@ -4090,15 +4162,14 @@ breakpoint_here_p (struct address_space *aspace, CORE_ADDR pc)
 	continue;
 
       /* ALL_BP_LOCATIONS bp_location has BL->OWNER always non-NULL.  */
-      if ((breakpoint_enabled (bl->owner)
-	   || bl->owner->enable_state == bp_permanent)
+      if (breakpoint_enabled (bl->owner)
 	  && breakpoint_location_address_match (bl, aspace, pc))
 	{
 	  if (overlay_debugging 
 	      && section_is_overlay (bl->section)
 	      && !section_is_mapped (bl->section))
 	    continue;		/* unmapped overlay -- can't be a match */
-	  else if (bl->owner->enable_state == bp_permanent)
+	  else if (bl->bp_target_info->permanent)
 	    return permanent_breakpoint_here;
 	  else
 	    any_breakpoint_here = 1;
@@ -4140,7 +4211,7 @@ regular_breakpoint_inserted_here_p (struct address_space *aspace,
 	  && bl->loc_type != bp_loc_hardware_breakpoint)
 	continue;
 
-      if (bl->inserted
+      if (bl->target_info != NULL
 	  && breakpoint_location_address_match (bl, aspace, pc))
 	{
 	  if (overlay_debugging 
@@ -5210,7 +5281,7 @@ bpstat_check_watchpoint (bpstat bs)
 
 		  int other_write_watchpoint = 0;
 
-		  if (bl->watchpoint_type == hw_read)
+		  if (bl->target_info->watchpoint_type == hw_read)
 		    {
 		      struct breakpoint *other_b;
 
@@ -5231,7 +5302,7 @@ bpstat_check_watchpoint (bpstat bs)
 		    }
 
 		  if (other_write_watchpoint
-		      || bl->watchpoint_type == hw_access)
+		      || bl->target_info->watchpoint_type == hw_access)
 		    {
 		      /* We're watching the same memory for writes,
 			 and the value changed since the last time we
@@ -7725,10 +7796,13 @@ disable_breakpoints_in_unloaded_shlib (struct so_list *solib)
 	&& solib_contains_address_p (solib, loc->address))
       {
 	loc->shlib_disabled = 1;
+
+#if 0
 	/* At this point, we cannot rely on remove_breakpoint
 	   succeeding so we must mark the breakpoint as not inserted
 	   to prevent future errors occurring in remove_breakpoints.  */
 	loc->inserted = 0;
+#endif
 
 	/* This may cause duplicate notifications for the same breakpoint.  */
 	observer_notify_breakpoint_modified (b);
@@ -13184,67 +13258,22 @@ bkpt_re_set (struct breakpoint *b)
   breakpoint_re_set_default (b);
 }
 
-/* Copy SRC's shadow buffer and whatever else we'd set if we actually
-   inserted DEST, so we can remove it later, in case SRC is removed
-   first.  */
-
-static void
-bp_target_info_copy_insertion_state (struct bp_target_info *dest,
-				     const struct bp_target_info *src)
-{
-  dest->shadow_len = src->shadow_len;
-  memcpy (dest->shadow_contents, src->shadow_contents, src->shadow_len);
-  dest->placed_size = src->placed_size;
-}
-
 static int
 bkpt_insert_location (struct bp_location *bl)
 {
   if (bl->loc_type == bp_loc_hardware_breakpoint)
-    return target_insert_hw_breakpoint (bl->gdbarch,
-					&bl->target_info);
+    return target_insert_hw_breakpoint (bl->gdbarch, bl->target_info);
   else
-    {
-      struct bp_target_info *bp_tgt = &bl->target_info;
-      int ret;
-      int sss_slot;
-
-      /* There is no need to insert a breakpoint if an unconditional
-	 raw/sss breakpoint is already inserted at that location.  */
-      sss_slot = find_single_step_breakpoint (bp_tgt->placed_address_space,
-					      bp_tgt->placed_address);
-      if (sss_slot >= 0)
-	{
-	  struct breakpoint *sss_bp = single_step_breakpoints[sss_slot];
-
-	  bp_target_info_copy_insertion_state (bp_tgt,
-					       &sss_bp->loc->target_info);
-	  return 0;
-	}
-
-      return target_insert_breakpoint (bl->gdbarch, bp_tgt);
-    }
+    return target_insert_breakpoint (bl->gdbarch, bl->target_info);
 }
 
 static int
 bkpt_remove_location (struct bp_location *bl)
 {
   if (bl->loc_type == bp_loc_hardware_breakpoint)
-    return target_remove_hw_breakpoint (bl->gdbarch, &bl->target_info);
+    return target_remove_hw_breakpoint (bl->gdbarch, bl->target_info);
   else
-    {
-      struct bp_target_info *bp_tgt = &bl->target_info;
-      struct address_space *aspace = bp_tgt->placed_address_space;
-      CORE_ADDR address = bp_tgt->placed_address;
-
-      /* Only remove the breakpoint if there is no raw/sss breakpoint
-	 still inserted at this location.  Otherwise, we would be
-	 effectively disabling the raw/sss breakpoint.  */
-      if (single_step_breakpoint_inserted_here_p (aspace, address))
-	return 0;
-
-      return target_remove_breakpoint (bl->gdbarch, bp_tgt);
-    }
+    return target_remove_breakpoint (bl->gdbarch, bl->target_info);
 }
 
 static int
@@ -15255,27 +15284,27 @@ deprecated_insert_raw_breakpoint (struct gdbarch *gdbarch,
   struct bp_target_info *bp_tgt;
   struct bp_location *bl;
 
-  bp_tgt = XCNEW (struct bp_target_info);
-
-  bp_tgt->placed_address_space = aspace;
-  bp_tgt->placed_address = pc;
-
-  /* If an unconditional non-raw breakpoint is already inserted at
-     that location, there's no need to insert another.  However, with
+  /* If an unconditional breakpoint is already inserted at that
+     location, there's no need to insert another.  However, with
      target-side evaluation of breakpoint conditions, if the
      breakpoint that is currently inserted on the target is
      conditional, we need to make it unconditional.  Note that a
      breakpoint with target-side commands is not reported even if
      unconditional, so we need to remove the commands from the target
      as well.  */
-  bl = find_non_raw_software_breakpoint_inserted_here (aspace, pc);
-  if (bl != NULL
-      && VEC_empty (agent_expr_p, bl->target_info.conditions)
-      && VEC_empty (agent_expr_p, bl->target_info.tcommands))
+  bp_tgt = find_bp_target_info (bp_loc_software_breakpoint, aspace, pc);
+  if (bp_tgt != NULL
+      && VEC_empty (agent_expr_p, bp_tgt->conditions)
+      && VEC_empty (agent_expr_p, bp_tgt->tcommands))
     {
-      bp_target_info_copy_insertion_state (bp_tgt, &bl->target_info);
+      bp_tgt->refc++;
       return bp_tgt;
     }
+
+  bp_tgt = XCNEW (struct bp_target_info);
+  bp_tgt->placed_address_space = aspace;
+  bp_tgt->placed_address = pc;
+  bp_tgt->placed_gdbarch = gdbarch;
 
   if (target_insert_breakpoint (gdbarch, bp_tgt) != 0)
     {
@@ -15291,34 +15320,34 @@ deprecated_insert_raw_breakpoint (struct gdbarch *gdbarch,
    deprecated_insert_raw_breakpoint.  */
 
 int
-deprecated_remove_raw_breakpoint (struct gdbarch *gdbarch, void *bp)
+deprecated_remove_raw_breakpoint (struct gdbarch *gdbarch, void *bp_)
 {
-  struct bp_target_info *bp_tgt = bp;
+  struct breakpoint *bp = bp_;
+  struct bp_location *bl = bp->loc;
+  struct bp_target_info *bp_tgt = bl->target_info;
   struct address_space *aspace = bp_tgt->placed_address_space;
   CORE_ADDR address = bp_tgt->placed_address;
-  struct bp_location *bl;
   int ret;
 
-  bl = find_non_raw_software_breakpoint_inserted_here (aspace, address);
 
   /* Only remove the raw breakpoint if there are no other non-raw
      breakpoints still inserted at this location.  Otherwise, we would
      be effectively disabling those breakpoints.  */
-  if (bl == NULL)
-    ret = target_remove_breakpoint (gdbarch, bp_tgt);
-  else if (!VEC_empty (agent_expr_p, bl->target_info.conditions)
-	   || !VEC_empty (agent_expr_p, bl->target_info.tcommands))
+  if (--bp_tgt->refc == 0)
+    {
+      ret = target_remove_breakpoint (gdbarch, bp_tgt);
+      xfree (bp_tgt);
+      bl->target_info = NULL;
+    }
+  else if (!VEC_empty (agent_expr_p, bg_tgt->conditions)
+	   || !VEC_empty (agent_expr_p, bg_tgt->tcommands))
     {
       /* The target is evaluating conditions, and when we inserted the
 	 software single-step breakpoint, we had made the breakpoint
 	 unconditional and command-less on the target side.  Reinsert
 	 to restore the conditions/commands.  */
-      ret = target_insert_breakpoint (bl->gdbarch, &bl->target_info);
+      ret = target_insert_breakpoint (bl->gdbarch, bl->target_info);
     }
-  else
-    ret = 0;
-
-  xfree (bp_tgt);
 
   return ret;
 }
