@@ -50,6 +50,9 @@ extern int
   default_displaced_step_hw_singlestep (struct gdbarch *,
 					struct displaced_step_closure *);
 
+/* Default implementation of gdbarch_displaced_step_aborted.  */
+extern void default_displaced_step_aborted (struct gdbarch *, struct displaced_step_closure *, CORE_ADDR, CORE_ADDR, struct regcache *);
+
 /* Possible value for gdbarch_displaced_step_location:
    Place displaced instructions at the program's entry point,
    leaving space for inferior function call return breakpoints.  */
