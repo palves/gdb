@@ -2086,8 +2086,9 @@ should_be_inserted (struct bp_location *bl)
 
   /* Don't insert a breakpoint if we're trying to step past its
      location.  */
-  if ((bl->loc_type == bp_loc_software_breakpoint
-       || bl->loc_type == bp_loc_hardware_breakpoint)
+  if (bl->owner->type != bp_single_step
+      && (bl->loc_type == bp_loc_software_breakpoint
+	  || bl->loc_type == bp_loc_hardware_breakpoint)
       && stepping_past_instruction_at (bl->pspace->aspace,
 				       bl->address))
     return 0;
