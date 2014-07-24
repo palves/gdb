@@ -1884,6 +1884,8 @@ a command like `return' or `jump' to continue execution."));
   else if (step)
     step = maybe_software_singlestep (gdbarch, pc);
 
+  gdb_assert (!step);
+
   /* Currently, our software single-step implementation leads to different
      results than hardware single-stepping in one situation: when stepping
      into delivering a signal which has an associated signal handler,
