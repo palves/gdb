@@ -237,6 +237,12 @@ struct gdbarch_tdep
   int (*i386_sysenter_record) (struct regcache *regcache);
   /* Parse syscall args.  */
   int (*i386_syscall_record) (struct regcache *regcache);
+
+  /* If FRAME is stopped at a syscall instruction that would transfer
+     control to some address not the one after the syscall
+     instruction, writes the expected next PC to NEXT_PC, and returns
+     true.  Otherwise, returns false.  */
+  int (*syscall_next_pc) (struct frame_info *frame, CORE_ADDR *next_pc);
 };
 
 /* Floating-point registers.  */
@@ -410,6 +416,8 @@ extern void i386_svr4_init_abi (struct gdbarch_info, struct gdbarch *);
 
 extern int i386_process_record (struct gdbarch *gdbarch,
                                 struct regcache *regcache, CORE_ADDR addr);
+
+int i386_software_single_step (struct frame_info *frame);
 
 
 
