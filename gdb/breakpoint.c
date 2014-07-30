@@ -2528,6 +2528,7 @@ insert_bp_location (struct bp_location *bl,
 
       bp_tgt = XCNEW (struct bp_target_info);
       bp_tgt->refc = 1;
+      bp_tgt->loc_type = bl->loc_type;
       bp_tgt->placed_address = bl->address;
       bp_tgt->placed_address_space = bl->pspace->aspace;
       bp_tgt->placed_gdbarch = bl->gdbarch;
@@ -15192,6 +15193,28 @@ bp_target_info_lessthan (struct bp_target_info *a, struct bp_target_info *b)
 }
 
 static void
+dump_bp_target_info (const char *prefix)
+{
+  struct bp_target_info *bp_tgt;
+  int idx;
+
+  fprintf_unfiltered (gdb_stdlog, "===== bp_target_info:%s (%d)=======\n",
+		      prefix, VEC_length (bp_target_info_p, bp_target_info));
+
+  for (idx = 0;
+       VEC_iterate (bp_target_info_p, bp_target_info, idx, bp_tgt);
+       ++idx)
+    {
+      fprintf_unfiltered (gdb_stdlog, "%d: type=%s, aspace=%s, address=%s, refc=%d\n", idx,
+			  plongest (bp_tgt->loc_type),
+			  host_address_to_string (bp_tgt->placed_address_space),
+			  paddress (bp_tgt->placed_gdbarch,
+				    bp_tgt->placed_address),
+			  bp_tgt->refc);
+    }
+}
+
+static void
 add_bp_target_info (struct bp_target_info *bp_tgt)
 {
   int idx;
@@ -15202,6 +15225,8 @@ add_bp_target_info (struct bp_target_info *bp_tgt)
   /* It's likely more efficient/faster to always push here and then
      sort at first use.  */
   VEC_safe_insert (bp_target_info_p, bp_target_info, idx, bp_tgt);
+
+  dump_bp_target_info ("add");
 }
 
 static void
@@ -15216,6 +15241,8 @@ remove_bp_target_info (struct bp_target_info *bp_tgt)
   el = VEC_index (bp_target_info_p, bp_target_info, idx);
   gdb_assert (el == bp_tgt);
   VEC_ordered_remove (bp_target_info_p, bp_target_info, idx);
+
+  dump_bp_target_info ("remove");
 }
 
 /* Create and insert a raw software breakpoint at PC.  Return an
