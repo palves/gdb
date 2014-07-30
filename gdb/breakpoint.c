@@ -568,7 +568,8 @@ static struct bp_location **bp_location;
 
 static unsigned bp_location_count;
 
-/* Array is sorted by bp_location_compare - primarily by the ADDRESS.  */
+/* Array is sorted by bp_target_info_compare - primarily by
+   PLACED_ADDRESS.  */
 
 static struct bp_target_info **bp_target_info;
 
@@ -1546,7 +1547,7 @@ find_leftmost_bp_target_info (CORE_ADDR address, CORE_ADDR after_address_max)
      report higher one.  */
 
   bc_l = 0;
-  bc_r = bp_location_count;
+  bc_r = bp_target_info_count;
   while (bc_l + 1 < bc_r)
     {
       struct bp_target_info *bl;
@@ -2096,7 +2097,7 @@ should_be_inserted (struct bp_location *bl)
   if (bl->owner->disposition == disp_del_at_next_stop)
     return 0;
 
-  if (!bl->enabled || bl->shlib_disabled || bl->duplicate)
+  if (!bl->enabled || bl->shlib_disabled)
     return 0;
 
   if (user_breakpoint_p (bl->owner) && bl->pspace->executing_startup)
@@ -2125,6 +2126,7 @@ should_be_inserted (struct bp_location *bl)
   return 1;
 }
 
+#if 0
 /* Same as should_be_inserted but does the check assuming
    that the location is not duplicated.  */
 
@@ -2139,6 +2141,7 @@ unduplicated_should_be_inserted (struct bp_location *bl)
   bl->duplicate = save_duplicate;
   return result;
 }
+#endif
 
 /* Parses a conditional described by an expression COND into an
    agent expression bytecode suitable for evaluation
@@ -2843,7 +2846,6 @@ insert_bp_location (struct bp_location *bl,
 		&& loc->watchpoint_type == hw_access
 		&& watchpoint_locations_match (bl, loc))
 	      {
-		bl->duplicate = 1;
 		bl->inserted = 1;
 
 		bp_tgt->refc--;
@@ -2983,6 +2985,7 @@ iterate_over_bp_locations (walk_bp_location_callback callback)
     }
 }
 
+#if 0
 /* This is used when we need to synch breakpoint conditions between GDB and the
    target.  It is the case with deleting and disabling of breakpoints when using
    always-inserted mode.  */
@@ -3043,6 +3046,7 @@ update_inserted_breakpoint_locations (void)
 
   do_cleanups (cleanups);
 }
+#endif
 
 /* Used when starting or continuing the program.  */
 
@@ -3863,15 +3867,14 @@ static int
 remove_breakpoint_1 (struct bp_location *bl, insertion_state_t is)
 {
   int val;
+  struct bp_target_info *bp_tgt = bl->target_info;
 
   /* BL is never in moribund_locations by our callers.  */
   gdb_assert (bl->owner != NULL);
 
-  if (bl->bp_target_info->permanent)
-    {
-      /* Permanent breakpoints cannot be inserted or removed.  */
-      return 0;
-    }
+  if (bl->owner->enable_state == bp_permanent)
+    /* Permanent breakpoints cannot be inserted or removed.  */
+    return 0;
 
   /* The type of none suggests that owner is actually deleted.
      This should not ever happen.  */
@@ -3888,21 +3891,41 @@ remove_breakpoint_1 (struct bp_location *bl, insertion_state_t is)
 	 set a breakpoint at the LMA?  */
       if (bl->overlay_target_info != NULL)
 	{
-	  struct bp_target_info *bp_tgt = bl->overlay_target_info;
+	  struct bp_target_info *ovl_bp_tgt = bl->overlay_target_info;
 
-	  /* Ignore any failures: if the LMA is in ROM, we will
-	     have already warned when we failed to insert it.  */
-	  if (bp_tgt->loc_type == bp_loc_hardware_breakpoint)
-	    target_remove_hw_breakpoint (bp_tgt->placed_gdbarch,
-					 bp_tgt);
+	  if (is == mark_uninserted && ovl_bp_tgt->refc > 1)
+	    {
+	      --ovl_bp_tgt->refc;
+	      bl->overlay_target_info = NULL;
+	    }
 	  else
-	    target_remove_breakpoint (bp_tgt->placed_gdbarch, bp_tgt);
+	    {
+	      /* Ignore any failures: if the LMA is in ROM, we will
+		 have already warned when we failed to insert it.  */
+	      if (ovl_bp_tgt->loc_type == bp_loc_hardware_breakpoint)
+		target_remove_hw_breakpoint (ovl_bp_tgt->placed_gdbarch,
+					     ovl_bp_tgt);
+	      else
+		target_remove_breakpoint (ovl_bp_tgt->placed_gdbarch, ovl_bp_tgt);
+
+	      if (is == mark_uninserted)
+		{
+		  if (ovl_bp_tgt->refc == 1)
+		    xfree (bl->overlay_target_info);
+		  bl->overlay_target_info = NULL;
+		}
+	    }
 	}
 
       /* Did we set a breakpoint at the VMA?  If so, we will have
 	 marked the breakpoint 'inserted'.  */
       if (bl->inserted)
 	{
+	  if (is == mark_uninserted && bp_tgt->refc > 1)
+	    val = 0;
+	  else
+	    {
+	  
 	  /* If we're trying to uninsert a memory breakpoint that we
 	     know is set in a dynamic object that is marked
 	     shlib_disabled, then either the dynamic object was
@@ -3931,6 +3954,7 @@ remove_breakpoint_1 (struct bp_location *bl, insertion_state_t is)
 	    val = 0;
 	  else
 	    val = bl->owner->ops->remove_location (bl);
+	    }
 	}
       else
 	{
@@ -3957,6 +3981,13 @@ remove_breakpoint_1 (struct bp_location *bl, insertion_state_t is)
 
       if (val)
 	return val;
+
+      if (is == mark_uninserted && bl->inserted && bp_tgt->refc == 1)
+	{
+	  xfree (bl->target_info);
+	  bl->target_info = NULL;
+	}
+
       bl->inserted = (is == mark_inserted);
     }
   else if (bl->loc_type == bp_loc_hardware_watchpoint)
@@ -3965,24 +3996,43 @@ remove_breakpoint_1 (struct bp_location *bl, insertion_state_t is)
 		  && bl->owner->ops->remove_location != NULL);
 
       bl->inserted = (is == mark_inserted);
-      bl->owner->ops->remove_location (bl);
 
-      /* Failure to remove any of the hardware watchpoints comes here.  */
-      if ((is == mark_uninserted) && (bl->inserted))
-	warning (_("Could not remove hardware watchpoint %d."),
-		 bl->owner->number);
+      if (is == mark_uninserted && bp_tgt->refc > 1)
+	{
+	  bp_tgt->refc--;
+	  bl->target_info = NULL;
+	}
+      else
+	{
+	  bl->owner->ops->remove_location (bl);
+
+	  /* Failure to remove any of the hardware watchpoints comes here.  */
+	  if (is == mark_uninserted)
+	    {
+	      if (bl->inserted)
+		warning (_("Could not remove hardware watchpoint %d."),
+			 bl->owner->number);
+	      xfree (bl->target_info);
+	      bl->target_info = NULL;
+	    }
+	}
     }
-  else if (bl->owner->type == bp_catchpoint
-           && breakpoint_enabled (bl->owner)
-           && !bl->duplicate)
+  else if (bl->owner->type == bp_catchpoint)
     {
       gdb_assert (bl->owner->ops != NULL
 		  && bl->owner->ops->remove_location != NULL);
 
-      val = bl->owner->ops->remove_location (bl);
-      if (val)
-	return val;
+      if (bp_tgt->refc > 1)
+	bp_tgt->refc--;
+      else
+	{
+	  val = bl->owner->ops->remove_location (bl);
+	  if (val)
+	    return val;
 
+	  xfree (bl->target_info);
+	}
+      bl->target_info = NULL;
       bl->inserted = (is == mark_inserted);
     }
 
@@ -4162,14 +4212,15 @@ breakpoint_here_p (struct address_space *aspace, CORE_ADDR pc)
 	continue;
 
       /* ALL_BP_LOCATIONS bp_location has BL->OWNER always non-NULL.  */
-      if (breakpoint_enabled (bl->owner)
+      if ((breakpoint_enabled (bl->owner)
+	   || bl->owner->enable_state == bp_permanent)
 	  && breakpoint_location_address_match (bl, aspace, pc))
 	{
 	  if (overlay_debugging 
 	      && section_is_overlay (bl->section)
 	      && !section_is_mapped (bl->section))
 	    continue;		/* unmapped overlay -- can't be a match */
-	  else if (bl->bp_target_info->permanent)
+	  else if (bl->owner->enable_state == bp_permanent)
 	    return permanent_breakpoint_here;
 	  else
 	    any_breakpoint_here = 1;
@@ -4211,7 +4262,7 @@ regular_breakpoint_inserted_here_p (struct address_space *aspace,
 	  && bl->loc_type != bp_loc_hardware_breakpoint)
 	continue;
 
-      if (bl->target_info != NULL
+      if (bl->inserted
 	  && breakpoint_location_address_match (bl, aspace, pc))
 	{
 	  if (overlay_debugging 
@@ -6957,6 +7008,7 @@ describe_other_breakpoints (struct gdbarch *gdbarch,
 
 */
 
+#if 0
 static int
 breakpoint_address_is_meaningful (struct breakpoint *bpt)
 {
@@ -6964,6 +7016,7 @@ breakpoint_address_is_meaningful (struct breakpoint *bpt)
 
   return (type != bp_watchpoint && type != bp_catchpoint);
 }
+#endif
 
 /* Assuming LOC1 and LOC2's owners are hardware watchpoints, returns
    true if LOC1 and LOC2 represent the same watchpoint location.  */
@@ -12377,7 +12430,9 @@ breakpoint_auto_delete (bpstat bs)
    terciarily just ensuring the array is sorted stable way despite
    qsort being an unstable algorithm.  */
 
-static int
+int
+bp_location_compare (const void *ap, const void *bp);
+int
 bp_location_compare (const void *ap, const void *bp)
 {
   struct bp_location *a = *(void **) ap;
@@ -12450,7 +12505,9 @@ bp_location_target_extensions_update (void)
 
 /* Download tracepoint locations if they haven't been.  */
 
-static void
+void
+download_tracepoint_locations (void);
+void
 download_tracepoint_locations (void)
 {
   struct breakpoint *b;
@@ -12496,6 +12553,7 @@ download_tracepoint_locations (void)
   do_cleanups (old_chain);
 }
 
+#if 0
 /* Swap the insertion/duplication state between two locations.  */
 
 static void
@@ -12521,13 +12579,16 @@ swap_insertion (struct bp_location *left, struct bp_location *right)
   right->needs_update = left_needs_update;
   right->target_info = left_target_info;
 }
+#endif
 
 /* Force the re-insertion of the locations at ADDRESS.  This is called
    once a new/deleted/modified duplicate location is found and we are evaluating
    conditions on the target's side.  Such conditions need to be updated on
    the target.  */
 
-static void
+void
+force_breakpoint_reinsertion (struct bp_location *bl);
+void
 force_breakpoint_reinsertion (struct bp_location *bl)
 {
   struct bp_location **locp = NULL, **loc2p;
@@ -12600,17 +12661,6 @@ update_global_location_list (int should_insert)
   CORE_ADDR last_addr = 0;
   /* Last breakpoint location program space that was marked for update.  */
   int last_pspace_num = -1;
-
-  /* Used in the duplicates detection below.  When iterating over all
-     bp_locations, points to the first bp_location of a given address.
-     Breakpoints and watchpoints of different types are never
-     duplicates of each other.  Keep one pointer for each type of
-     breakpoint/watchpoint, so we only need to loop over all locations
-     once.  */
-  struct bp_location *bp_loc_first;  /* breakpoint */
-  struct bp_location *wp_loc_first;  /* hardware watchpoint */
-  struct bp_location *awp_loc_first; /* access watchpoint */
-  struct bp_location *rwp_loc_first; /* read watchpoint */
 
   /* Saved former bp_location array which we compare against the newly
      built bp_location from the current state of ALL_BREAKPOINTS.  */
@@ -12834,6 +12884,7 @@ update_global_location_list (int should_insert)
 	      old_loc->events_till_retirement = 3 * (thread_count () + 1);
 	      old_loc->owner = NULL;
 
+	      /// XXX only if last this was the last target_info ref.
 	      VEC_safe_push (bp_location_p, moribund_locations, old_loc);
 	    }
 	  else
@@ -12842,88 +12893,6 @@ update_global_location_list (int should_insert)
 	      decref_bp_location (&old_loc);
 	    }
 	}
-    }
-
-  /* Rescan breakpoints at the same address and section, marking the
-     first one as "first" and any others as "duplicates".  This is so
-     that the bpt instruction is only inserted once.  If we have a
-     permanent breakpoint at the same place as BPT, make that one the
-     official one, and the rest as duplicates.  Permanent breakpoints
-     are sorted first for the same address.
-
-     Do the same for hardware watchpoints, but also considering the
-     watchpoint's type (regular/access/read) and length.  */
-
-  bp_loc_first = NULL;
-  wp_loc_first = NULL;
-  awp_loc_first = NULL;
-  rwp_loc_first = NULL;
-  ALL_BP_LOCATIONS (loc, locp)
-    {
-      /* ALL_BP_LOCATIONS bp_location has LOC->OWNER always
-	 non-NULL.  */
-      struct bp_location **loc_first_p;
-      b = loc->owner;
-
-      if (!unduplicated_should_be_inserted (loc)
-	  || !breakpoint_address_is_meaningful (b)
-	  /* Don't detect duplicate for tracepoint locations because they are
-	   never duplicated.  See the comments in field `duplicate' of
-	   `struct bp_location'.  */
-	  || is_tracepoint (b))
-	{
-	  /* Clear the condition modification flag.  */
-	  loc->condition_changed = condition_unchanged;
-	  continue;
-	}
-
-      /* Permanent breakpoint should always be inserted.  */
-      if (b->enable_state == bp_permanent && ! loc->inserted)
-	internal_error (__FILE__, __LINE__,
-			_("allegedly permanent breakpoint is not "
-			"actually inserted"));
-
-      if (b->type == bp_hardware_watchpoint)
-	loc_first_p = &wp_loc_first;
-      else if (b->type == bp_read_watchpoint)
-	loc_first_p = &rwp_loc_first;
-      else if (b->type == bp_access_watchpoint)
-	loc_first_p = &awp_loc_first;
-      else
-	loc_first_p = &bp_loc_first;
-
-      if (*loc_first_p == NULL
-	  || (overlay_debugging && loc->section != (*loc_first_p)->section)
-	  || !breakpoint_locations_match (loc, *loc_first_p))
-	{
-	  *loc_first_p = loc;
-	  loc->duplicate = 0;
-
-	  if (is_breakpoint (loc->owner) && loc->condition_changed)
-	    {
-	      loc->needs_update = 1;
-	      /* Clear the condition modification flag.  */
-	      loc->condition_changed = condition_unchanged;
-	    }
-	  continue;
-	}
-
-
-      /* This and the above ensure the invariant that the first location
-	 is not duplicated, and is the inserted one.
-	 All following are marked as duplicated, and are not inserted.  */
-      if (loc->inserted)
-	swap_insertion (loc, *loc_first_p);
-      loc->duplicate = 1;
-
-      /* Clear the condition modification flag.  */
-      loc->condition_changed = condition_unchanged;
-
-      if ((*loc_first_p)->owner->enable_state == bp_permanent && loc->inserted
-	  && b->enable_state != bp_permanent)
-	internal_error (__FILE__, __LINE__,
-			_("another breakpoint was inserted on top of "
-			"a permanent breakpoint"));
     }
 
   if (breakpoints_always_inserted_mode ()
@@ -13058,8 +13027,11 @@ bp_location_dtor (struct bp_location *self)
     free_agent_expr (self->cond_bytecode);
   xfree (self->function_name);
 
-  VEC_free (agent_expr_p, self->target_info.conditions);
-  VEC_free (agent_expr_p, self->target_info.tcommands);
+  if (self->target_info != NULL)
+    {
+      VEC_free (agent_expr_p, self->target_info->conditions);
+      VEC_free (agent_expr_p, self->target_info->tcommands);
+    }
 }
 
 static const struct bp_location_ops bp_location_ops =
@@ -15339,8 +15311,8 @@ deprecated_remove_raw_breakpoint (struct gdbarch *gdbarch, void *bp_)
       xfree (bp_tgt);
       bl->target_info = NULL;
     }
-  else if (!VEC_empty (agent_expr_p, bg_tgt->conditions)
-	   || !VEC_empty (agent_expr_p, bg_tgt->tcommands))
+  else if (!VEC_empty (agent_expr_p, bp_tgt->conditions)
+	   || !VEC_empty (agent_expr_p, bp_tgt->tcommands))
     {
       /* The target is evaluating conditions, and when we inserted the
 	 software single-step breakpoint, we had made the breakpoint
@@ -15376,32 +15348,37 @@ insert_single_step_breakpoint (struct gdbarch *gdbarch,
       bp_p = &single_step_breakpoints[1];
     }
 
-  /* NOTE drow/2006-04-11: A future improvement to this function would
-     be to only create the breakpoints once, and actually put them on
-     the breakpoint chain.  That would let us use set_raw_breakpoint.
-     We could adjust the addresses each time they were needed.  Doing
-     this requires corresponding changes elsewhere where single step
-     breakpoints are handled, however.  So, for now, we use this.  */
-  bp = XNEW (struct breakpoint);
-  init_momentary_breakpoint_at_pc (bp, gdbarch, next_pc, bp_single_step);
+  bp = set_momentary_breakpoint_at_pc (gdbarch, next_pc, bp_single_step);
   bl = bp->loc;
 
-  bl->target_info.placed_address = bl->address;
-  bl->target_info.placed_address_space = bl->pspace->aspace;
-  bl->target_info.length = bl->length;
-
-  TRY_CATCH (ex, RETURN_MASK_ALL)
-    {
-      val = bp->ops->insert_location (bl);
-    }
-  if (ex.reason < 0 || val != 0)
-    {
-      delete_breakpoint (bp);
-      error (_("Could not insert single-step breakpoint at %s"),
-	     paddress (gdbarch, next_pc));
-    }
+  bl->target_info = find_bp_target_info (bl->loc_type,
+					 bl->pspace->aspace, bl->address);
+  if (bl->target_info != NULL)
+    bl->target_info->refc++;
   else
-    *bp_p = bp;
+    {
+      struct bp_target_info *bp_tgt;
+
+      bp_tgt = XCNEW (struct bp_target_info);
+      bp_tgt->refc = 1;
+
+      bp_tgt->placed_address = bl->address;
+      bp_tgt->placed_address_space = bl->pspace->aspace;
+      bp_tgt->length = bl->length;
+      bl->target_info = bp_tgt;
+
+      TRY_CATCH (ex, RETURN_MASK_ALL)
+	{
+	  val = bp->ops->insert_location (bl);
+	}
+      if (ex.reason < 0 || val != 0)
+	{
+	  delete_breakpoint (bp);
+	  error (_("Could not insert single-step breakpoint at %s"),
+		 paddress (gdbarch, next_pc));
+	}
+    }
+  *bp_p = bp;
 }
 
 /* Check if the breakpoints used for software single stepping

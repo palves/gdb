@@ -199,14 +199,12 @@ enum enable_state
 			    automatically enabled and reset when the
 			    call "lands" (either completes, or stops
 			    at another eventpoint).  */
-#if 0
     bp_permanent	 /* There is a breakpoint instruction
 			    hard-wired into the target's code.  Don't
 			    try to write another breakpoint
 			    instruction on top of it, or restore its
 			    value.  Step over it using the
 			    architecture's SKIP_INSN macro.  */
-#endif
   };
 
 
@@ -257,8 +255,6 @@ enum bp_loc_type
 struct bp_target_info
 {
   int refc;
-
-  int permanent;
 
   /* Type of this breakpoint location.  */
   enum bp_loc_type loc_type;
@@ -402,7 +398,7 @@ struct bp_location
      kinds of breakpoints, because two locations at the same
      address may have different actions, so both of these locations
      should be downloaded and so that `tfind N' always works.  */
-  char duplicate;
+  // char duplicate;
 
   /* If we someday support real thread-specific breakpoints, then
      the breakpoint location will need a thread identifier.  */
@@ -464,7 +460,7 @@ struct bp_location
   struct bp_target_info *target_info;
 
   /* Similarly, for the breakpoint at an overlay's LMA, if necessary.  */
-  struct bp_target_info overlay_target_info;
+  struct bp_target_info *overlay_target_info;
 
   /* In a non-stop mode, it's possible that we delete a breakpoint,
      but as we do that, some still running thread hits that breakpoint.

@@ -1615,14 +1615,14 @@ static void
 record_full_sync_record_breakpoints (struct bp_location *loc, void *data)
 {
   if (loc->loc_type != bp_loc_software_breakpoint)
-      return;
+    return;
 
   if (loc->inserted)
     {
       struct record_full_breakpoint *bp = XNEW (struct record_full_breakpoint);
 
-      bp->addr = loc->target_info.placed_address;
-      bp->address_space = loc->target_info.placed_address_space;
+      bp->addr = loc->target_info->placed_address;
+      bp->address_space = loc->target_info->placed_address_space;
 
       bp->in_target_beneath = 1;
 
