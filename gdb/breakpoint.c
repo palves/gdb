@@ -4062,8 +4062,17 @@ mark_breakpoints_out (void)
   struct bp_location *bl, **blp_tmp;
 
   ALL_BP_LOCATIONS (bl, blp_tmp)
-    if (bl->pspace == current_program_space)
-      bl->inserted = 0;
+    if (bl->pspace == current_program_space
+	&& bl->inserted)
+      {
+	bl->inserted = 0;
+	if (--bl->target_info->refc == 0)
+	  {
+	    remove_bp_target_info (bl->target_info);
+	    xfree (bl->target_info);
+	    bl->target_info = NULL;
+	  }
+      }
 }
 
 /* Clear the "inserted" flag in all breakpoints and delete any
@@ -4095,8 +4104,17 @@ breakpoint_init_inferior (enum inf_context context)
   {
     /* ALL_BP_LOCATIONS bp_location has BL->OWNER always non-NULL.  */
     if (bl->pspace == pspace
-	&& bl->owner->enable_state != bp_permanent)
-      bl->inserted = 0;
+	&& bl->owner->enable_state != bp_permanent
+	&& bl->inserted)
+      {
+	bl->inserted = 0;
+	if (--bl->target_info->refc == 0)
+	  {
+	    remove_bp_target_info (bl->target_info);
+	    xfree (bl->target_info);
+	    bl->target_info = NULL;
+	  }
+      }
   }
 
   ALL_BREAKPOINTS_SAFE (b, b_tmp)
@@ -15265,9 +15283,9 @@ deprecated_remove_raw_breakpoint (struct gdbarch *gdbarch, void *bp_)
   if (--bp_tgt->refc == 0)
     {
       ret = target_remove_breakpoint (gdbarch, bp_tgt);
+      remove_bp_target_info (bp_tgt);
       xfree (bp_tgt);
       bl->target_info = NULL;
-      remove_bp_target_info (bp_tgt);
     }
   else if (!VEC_empty (agent_expr_p, bp_tgt->conditions)
 	   || !VEC_empty (agent_expr_p, bp_tgt->tcommands))
