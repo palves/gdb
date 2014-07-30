@@ -1501,7 +1501,6 @@ one_breakpoint_xfer_memory (gdb_byte *readbuf, gdb_byte *writebuf,
     }
 }
 
-
 /* Update BUF, which is LEN bytes read from the target address MEMADDR,
    by replacing any memory breakpoints with their shadowed contents.
 
@@ -1521,113 +1520,41 @@ one_breakpoint_xfer_memory (gdb_byte *readbuf, gdb_byte *writebuf,
      bl->address + bp_location_shadow_len_after_address_max <= memaddr  */
 
 static int
-find_leftmost_bp_target_info (CORE_ADDR address)
-{
-  /* Left boundary, right boundary and median element of our binary
-     search.  */
-  unsigned bc_l, bc_r, bc;
-  unsigned bp_target_info_count = VEC_length (bp_target_info_p, bp_target_info);
-
-  /* Find BC_L which is a leftmost element which may affect BUF
-     content.  It is safe to report lower value but a failure to
-     report higher one.  */
-
-  bc_l = 0;
-  bc_r = bp_target_info_count;
-  while (bc_l + 1 < bc_r)
-    {
-      struct bp_target_info *bl;
-
-      bc = (bc_l + bc_r) / 2;
-      bl = VEC_index (bp_target_info_p, bp_target_info, bc);
-
-      /* Check first BL->ADDRESS will not overflow due to the added
-	 constant.  Then advance the left boundary only if we are sure
-	 the BC element can in no way affect the BUF content (MEMADDR
-	 to MEMADDR + LEN range).
-
-	 Use the BP_LOCATION_SHADOW_LEN_AFTER_ADDRESS_MAX safety
-	 offset so that we cannot miss a breakpoint with its shadow
-	 range tail still reaching MEMADDR.  */
-
-      if (bl->placed_address <= address)
-	bc_l = bc;
-      else
-	bc_r = bc;
-    }
-
-  /* Due to the binary search above, we need to make sure we pick the
-     first location that's at BC_L's address.  E.g., if there are
-     multiple locations at the same address, BC_L may end up pointing
-     at a duplicate location, and miss the "master"/"inserted"
-     location.  Say, given locations L1, L2 and L3 at addresses A and
-     B:
-
-      L1@A, L2@A, L3@B, ...
-
-     BC_L could end up pointing at location L2, while the "master"
-     location could be L1.  Since the `loc->inserted' flag is only set
-     on "master" locations, we'd forget to restore the shadow of L1
-     and L2.  */
-  while (bc_l > 0
-	 && (VEC_index (bp_target_info_p, bp_target_info, bc_l)->placed_address
-	     == VEC_index (bp_target_info_p, bp_target_info, bc_l - 1)->placed_address))
-    bc_l--;
-
-  return bc_l;
-}
-
-/* Update BUF, which is LEN bytes read from the target address MEMADDR,
-   by replacing any memory breakpoints with their shadowed contents.
-
-   If READBUF is not NULL, this buffer must not overlap with any of
-   the breakpoint location's shadow_contents buffers.  Otherwise,
-   a failed assertion internal error will be raised.
-
-   The range of shadowed area by each bp_location is:
-     bl->address - bp_location_placed_address_before_address_max
-     up to bl->address + bp_location_shadow_len_after_address_max
-   The range we were requested to resolve shadows for is:
-     memaddr ... memaddr + len
-   Thus the safe cutoff boundaries for performance optimization are
-     memaddr + len <= (bl->address
-		       - bp_location_placed_address_before_address_max)
-   and:
-     bl->address + bp_location_shadow_len_after_address_max <= memaddr  */
+bp_target_info_lessthan (struct bp_target_info *a, struct bp_target_info *b);
 
 void
 breakpoint_xfer_memory (gdb_byte *readbuf, gdb_byte *writebuf,
 			const gdb_byte *writebuf_org,
 			ULONGEST memaddr, LONGEST len)
 {
-  unsigned bc, bc_l;
-  size_t i;
+  struct bp_target_info key;
+  struct bp_target_info *bp_tgt;
+  int idx;
 
-  /* Find BC_L which is a leftmost element which may affect BUF
-     content.  It is safe to report lower value but a failure to
-     report higher one.  */
-  /* XXX use VEC_lower_bound_*/
-  bc_l = find_leftmost_bp_target_info (memaddr);
+  key.loc_type = bp_loc_software_breakpoint;
+  key.placed_address_space = current_program_space->aspace;
+  key.placed_address = memaddr > BREAKPOINT_MAX ? memaddr - BREAKPOINT_MAX : 0;
+
+  idx = VEC_lower_bound (bp_target_info_p, bp_target_info,
+			 &key, bp_target_info_lessthan);
+
+  // XXX look backwards
 
   /* Now do full processing of the found relevant range of elements.  */
-
-  for (bc = bc_l; bc < VEC_length (bp_target_info_p, bp_target_info); bc++)
+  for (;
+       VEC_iterate (bp_target_info_p, bp_target_info, idx, bp_tgt);
+       ++idx)
     {
-      struct bp_target_info *bl = VEC_index (bp_target_info_p, bp_target_info, bc);
-      CORE_ADDR bp_addr = 0;
-      int bp_size = 0;
-      int bptoffset = 0;
-
-      /* Performance optimization: any further element can no longer
-	 affect BUF content.  */
-      if (bl->placed_address >= memaddr + len)
+      if (bp_tgt->placed_address_space != key.placed_address_space)
+	break;
+      if (bp_tgt->placed_address >= memaddr + len)
 	break;
 
-      if (!bp_target_info_has_shadow (bl))
+      if (!bp_target_info_has_shadow (bp_tgt))
 	continue;
 
       one_breakpoint_xfer_memory (readbuf, writebuf, writebuf_org,
-				  memaddr, len, bl);
+				  memaddr, len, bp_tgt);
     }
 }
 
@@ -2460,30 +2387,51 @@ build_target_command_list (CORE_ADDR address, struct bp_target_info *bl)
 }
 
 static struct bp_target_info *
-find_bp_target_info (enum bp_loc_type loc_type,
-		     struct address_space *aspace, CORE_ADDR address)
+find_bp_target_info_1 (enum bp_loc_type loc_type,
+		     enum target_hw_bp_type watchpoint_type,
+		     struct address_space *aspace, CORE_ADDR address,
+		     int length)
 {
-  unsigned bc, bc_l;
+  struct bp_target_info key;
+  struct bp_target_info *bp_tgt;
+  int idx;
 
   gdb_assert (loc_type != bp_loc_other);
 
-  bc_l = find_leftmost_bp_target_info (address);
+  key.loc_type = loc_type;
+  key.watchpoint_type = watchpoint_type;
+  key.placed_address_space = aspace;
+  key.placed_address = address;
+  key.length = length;
 
-  for (bc = bc_l; bc < VEC_length (bp_target_info_p, bp_target_info); bc++)
-    {
-      struct bp_target_info *bp_tgt
-	= VEC_index (bp_target_info_p, bp_target_info, bc);
+  idx = VEC_lower_bound (bp_target_info_p, bp_target_info,
+			 &key, bp_target_info_lessthan);
+  if (idx == VEC_length (bp_target_info_p, bp_target_info))
+    return NULL;
 
-      if (bp_tgt->placed_address != address)
-	break;
+  bp_tgt = VEC_index (bp_target_info_p, bp_target_info, idx);
+  if (bp_target_info_lessthan (&key, bp_tgt))
+    return NULL;
 
-      if (bp_tgt->loc_type == loc_type
-	  && bp_tgt->placed_address_space == aspace)
-	return bp_tgt;
-    }
-
-  return NULL;
+  return bp_tgt;
 }
+
+static struct bp_target_info *
+find_bp_target_info (enum bp_loc_type loc_type,
+		     struct address_space *aspace, CORE_ADDR address)
+{
+  return find_bp_target_info_1 (loc_type, 0, aspace, address, 0);
+}
+
+static struct bp_target_info *
+find_bp_target_info_loc (struct bp_location *bl)
+{
+  return find_bp_target_info_1 (bl->loc_type, bl->watchpoint_type,
+				bl->pspace->aspace, bl->address,
+				bl->length);
+}
+
+static void dump_bp_target_info (const char *prefix);
 
 /* Insert a low-level "breakpoint" of some type.  BL is the breakpoint
    location.  Any error messages are printed to TMP_ERROR_STREAM; and
@@ -2500,6 +2448,7 @@ insert_bp_location (struct bp_location *bl,
 		    int *hw_breakpoint_error,
 		    int *hw_bp_error_explained_already)
 {
+  /// XXX leaks on error
   enum errors bp_err = GDB_NO_ERROR;
   const char *bp_err_message = NULL;
   volatile struct gdb_exception e;
@@ -2515,13 +2464,13 @@ insert_bp_location (struct bp_location *bl,
     {
       if (bl->loc_type != bp_loc_other)
 	{
-	  bp_tgt = find_bp_target_info (bl->loc_type,
-					bl->pspace->aspace, bl->address);
+	  bp_tgt = find_bp_target_info_loc (bl);
 	  if (bp_tgt != NULL)
 	    {
 	      bp_tgt->refc++;
 	      bl->target_info = bp_tgt;
 	      bl->inserted = 1;
+	      dump_bp_target_info ("insert_bp_location");
 	      return 0;
 	    }
 	}
@@ -2529,6 +2478,7 @@ insert_bp_location (struct bp_location *bl,
       bp_tgt = XCNEW (struct bp_target_info);
       bp_tgt->refc = 1;
       bp_tgt->loc_type = bl->loc_type;
+      bp_tgt->watchpoint_type = bl->watchpoint_type;
       bp_tgt->placed_address = bl->address;
       bp_tgt->placed_address_space = bl->pspace->aspace;
       bp_tgt->placed_gdbarch = bl->gdbarch;
@@ -2814,13 +2764,13 @@ insert_bp_location (struct bp_location *bl,
 	  /* XXX should really iterate over bp_target_info's.  */
 	  ALL_BP_LOCATIONS (loc, loc_temp)
 	    if (loc != bl
+		&& loc->inserted
 		&& loc->watchpoint_type == hw_access
 		&& watchpoint_locations_match (bl, loc))
 	      {
 		bl->inserted = 1;
 
-		bp_tgt->refc--;
-		if (bp_tgt->refc == 0)
+		if (--bp_tgt->refc == 0)
 		  {
 		    xfree (bp_tgt);
 		    remove_bp_target_info (bp_tgt);
@@ -6934,6 +6884,8 @@ maintenance_info_breakpoints (char *args, int from_tty)
   breakpoint_1 (args, 1, NULL);
 
   default_collect_info ();
+
+  dump_bp_target_info ("info break");
 }
 
 static int
@@ -15187,16 +15139,52 @@ invalidate_bp_value_on_memory_change (struct inferior *inferior,
 static int
 bp_target_info_lessthan (struct bp_target_info *a, struct bp_target_info *b)
 {
-  return (a->loc_type < b->loc_type
-	  || a->placed_address_space < b->placed_address_space
-	  || a->placed_address < b->placed_address);
+  if (a->placed_address_space != b->placed_address_space)
+    return (a->placed_address_space < b->placed_address_space);
+
+  if (a->loc_type != b->loc_type)
+    return (a->loc_type < b->loc_type);
+
+  if (a->loc_type == bp_loc_hardware_watchpoint
+      && a->watchpoint_type != b->watchpoint_type)
+    return (a->watchpoint_type < b->watchpoint_type);
+
+  if (a->placed_address != b->placed_address)
+    return (a->placed_address < b->placed_address);
+
+  if (a->length != b->length)
+    return (a->length < b->length);
+
+  return 0;
 }
+
+static const char *
+bp_loc_type_to_string (enum bp_loc_type loc_type)
+{
+#define CASE(X) case X: return #X
+
+  switch (loc_type)
+    {
+      CASE (bp_loc_software_breakpoint);
+      CASE (bp_loc_hardware_breakpoint);
+      CASE (bp_loc_hardware_watchpoint);
+    }
+
+#undef CASE
+
+  return "???";
+}
+
+static int debug_breakpoints = 0;
 
 static void
 dump_bp_target_info (const char *prefix)
 {
   struct bp_target_info *bp_tgt;
   int idx;
+
+  if (!debug_breakpoints)
+    return;
 
   fprintf_unfiltered (gdb_stdlog, "===== bp_target_info:%s (%d)=======\n",
 		      prefix, VEC_length (bp_target_info_p, bp_target_info));
@@ -15205,9 +15193,11 @@ dump_bp_target_info (const char *prefix)
        VEC_iterate (bp_target_info_p, bp_target_info, idx, bp_tgt);
        ++idx)
     {
-      fprintf_unfiltered (gdb_stdlog, "%d: type=%s, aspace=%s, address=%s, refc=%d\n", idx,
-			  plongest (bp_tgt->loc_type),
+      fprintf_unfiltered (gdb_stdlog, "%d: aspace=%s, type=%s(%s), address=%s, refc=%d\n",
+			  idx,
 			  host_address_to_string (bp_tgt->placed_address_space),
+			  bp_loc_type_to_string (bp_tgt->loc_type),
+			  plongest (bp_tgt->loc_type),
 			  paddress (bp_tgt->placed_gdbarch,
 				    bp_tgt->placed_address),
 			  bp_tgt->refc);
@@ -15276,9 +15266,11 @@ deprecated_insert_raw_breakpoint (struct gdbarch *gdbarch,
     }
 
   bp_tgt = XCNEW (struct bp_target_info);
+  bp_tgt->loc_type = bp_loc_software_breakpoint;
   bp_tgt->placed_address_space = aspace;
   bp_tgt->placed_address = pc;
   bp_tgt->placed_gdbarch = gdbarch;
+  bp_tgt->length = 99999999; // XXXXXXXX
 
   if (target_insert_breakpoint (gdbarch, bp_tgt) != 0)
     {
@@ -15357,7 +15349,10 @@ insert_single_step_breakpoint (struct gdbarch *gdbarch,
   bl->target_info = find_bp_target_info (bl->loc_type,
 					 bl->pspace->aspace, bl->address);
   if (bl->target_info != NULL)
-    bl->target_info->refc++;
+    {
+      bl->target_info->refc++;
+      dump_bp_target_info ("insert_single_step_breakpoint");
+    }
   else
     {
       struct bp_target_info *bp_tgt;
@@ -15365,6 +15360,7 @@ insert_single_step_breakpoint (struct gdbarch *gdbarch,
       bp_tgt = XCNEW (struct bp_target_info);
       bp_tgt->refc = 1;
 
+      bp_tgt->loc_type = bl->loc_type;
       bp_tgt->placed_address = bl->address;
       bp_tgt->placed_address_space = bl->pspace->aspace;
       bp_tgt->placed_gdbarch = bl->gdbarch;
