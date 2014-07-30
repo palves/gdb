@@ -2514,27 +2514,24 @@ insert_bp_location (struct bp_location *bl,
   else
     {
       if (bl->loc_type != bp_loc_other)
-	bp_tgt = find_bp_target_info (bl->loc_type,
-				      bl->pspace->aspace, bl->address);
-      else
-	bp_tgt = NULL;
-
-      if (bp_tgt != NULL)
 	{
-	  bp_tgt->refc++;
-	  return 0;
-	}
-      else
-	{
-	  bp_tgt = XCNEW (struct bp_target_info);
-	  bp_tgt->refc = 1;
-	  bp_tgt->placed_address = bl->address;
-	  bp_tgt->placed_address_space = bl->pspace->aspace;
-	  bp_tgt->placed_gdbarch = bl->gdbarch;
-	  bp_tgt->length = bl->length;
-	  add_bp_target_info (bp_tgt);
+	  bp_tgt = find_bp_target_info (bl->loc_type,
+					bl->pspace->aspace, bl->address);
+	  if (bp_tgt != NULL)
+	    {
+	      bp_tgt->refc++;
+	      bl->target_info = bp_tgt;
+	      bl->inserted = 1;
+	      return 0;
+	    }
 	}
 
+      bp_tgt = XCNEW (struct bp_target_info);
+      bp_tgt->refc = 1;
+      bp_tgt->placed_address = bl->address;
+      bp_tgt->placed_address_space = bl->pspace->aspace;
+      bp_tgt->placed_gdbarch = bl->gdbarch;
+      bp_tgt->length = bl->length;
       bl->target_info = bp_tgt;
     }
 
@@ -2705,6 +2702,13 @@ insert_bp_location (struct bp_location *bl,
 	{
 	  /* Can't set the breakpoint.  */
 
+	  if (--bp_tgt->refc == 0)
+	    {
+	      remove_bp_target_info (bp_tgt);
+	      xfree (bp_tgt);
+	      bl->target_info = NULL;
+	    }
+
 	  /* In some cases, we might not be able to insert a
 	     breakpoint in a shared library that has already been
 	     removed, but we have not yet processed the shlib unload
@@ -2775,8 +2779,11 @@ insert_bp_location (struct bp_location *bl,
 
 	    }
 	}
-      else
-	bl->inserted = 1;
+      else if (!bl->inserted)
+	{
+	  add_bp_target_info (bp_tgt);
+	  bl->inserted = 1;
+	}
 
       return 0;
     }
@@ -2802,6 +2809,8 @@ insert_bp_location (struct bp_location *bl,
 	  /* But don't try to insert it, if there's already another
 	     hw_access location that would be considered a duplicate
 	     of this one.  */
+
+	  /* XXX should really iterate over bp_target_info's.  */
 	  ALL_BP_LOCATIONS (loc, loc_temp)
 	    if (loc != bl
 		&& loc->watchpoint_type == hw_access
@@ -2818,22 +2827,32 @@ insert_bp_location (struct bp_location *bl,
 		bl->target_info = loc->target_info;
 		bl->target_info->refc++;
 		bl->watchpoint_type = hw_access;
-		val = 0;
-		break;
+		return 0;
 	      }
 
-	  if (val == 1)
-	    {
-	      bl->watchpoint_type = hw_access;
-	      val = bl->owner->ops->insert_location (bl);
+	  bl->watchpoint_type = hw_access;
+	  val = bl->owner->ops->insert_location (bl);
 
-	      if (val)
-		/* Back to the original value.  */
-		bl->watchpoint_type = hw_read;
+	  if (val)
+	    {
+	      /* Back to the original value.  */
+	      bl->watchpoint_type = hw_read;
+	    }
+	}
+
+      if (val && bl->inserted)
+	{
+	  if (--bp_tgt->refc == 0)
+	    {
+	      remove_bp_target_info (bp_tgt);
+	      xfree (bp_tgt);
+	      bl->target_info = NULL;
 	    }
 	}
 
       bl->inserted = (val == 0);
+      if (bl->inserted)
+	add_bp_target_info (bp_tgt);
     }
 
   else if (bl->owner->type == bp_catchpoint)
@@ -2857,6 +2876,8 @@ of catchpoint."), bl->owner->number);
 	}
 
       bl->inserted = (val == 0);
+      if (bl->inserted)
+	add_bp_target_info (bp_tgt);
 
       /* We've already printed an error message if there was a problem
 	 inserting this catchpoint, and we've disabled the catchpoint,
@@ -12515,9 +12536,7 @@ swap_insertion (struct bp_location *left, struct bp_location *right)
    conditions on the target's side.  Such conditions need to be updated on
    the target.  */
 
-void
-force_breakpoint_reinsertion (struct bp_location *bl);
-void
+static void
 force_breakpoint_reinsertion (struct bp_location *bl)
 {
   struct bp_location **locp = NULL, **loc2p;
@@ -12540,6 +12559,8 @@ force_breakpoint_reinsertion (struct bp_location *bl)
      the same program space as the location
      as "its condition has changed".  We need to
      update the conditions on the target's side.  */
+
+  /* XXX do we need this, or can we only flag the bp_target_info?  */
   ALL_BP_LOCATIONS_AT_ADDR (loc2p, locp, address)
     {
       loc = *loc2p;
@@ -12704,6 +12725,8 @@ update_global_location_list (int should_insert)
 	      if (old_loc->target_info->refc > 1)
 		{
 		  --old_loc->target_info->refc;
+		  old_loc->target_info = NULL;
+		  old_loc->inserted = 0;
 		  keep_in_target = 1;
 		}
 	    }
@@ -12734,6 +12757,8 @@ update_global_location_list (int should_insert)
 	      && breakpoint_address_is_meaningful (old_loc->owner)
 	      && !is_hardware_watchpoint (old_loc->owner))
 	    {
+	      /* XXX */
+
 	      /* This location was removed from the target.  In
 		 non-stop mode, a race condition is possible where
 		 we've removed a breakpoint, but stop events for that
@@ -15143,27 +15168,9 @@ invalidate_bp_value_on_memory_change (struct inferior *inferior,
 static int
 bp_target_info_lessthan (struct bp_target_info *a, struct bp_target_info *b)
 {
-  if (a->placed_address != b->placed_address)
-    return (a->placed_address < b->placed_address);
-
-  /* Sort locations at the same address by their pspace number, keeping
-     locations of the same inferior (in a multi-inferior environment)
-     grouped.  */
-
-  if (a->placed_address_space != b->placed_address_space)
-    return (a->placed_address_space < b->placed_address_space);
-
-#if 0
-  /* Make the internal GDB representation stable across GDB runs
-     where A and B memory inside GDB can differ.  Breakpoint locations of
-     the same type at the same address can be sorted in arbitrary order.  */
-
-  if (a->owner->number != b->owner->number)
-    return ((a->owner->number > b->owner->number)
-	    - (a->owner->number < b->owner->number));
-#endif
-
-  return (a < b);
+  return (a->loc_type < b->loc_type
+	  || a->placed_address_space < b->placed_address_space
+	  || a->placed_address < b->placed_address);
 }
 
 static void
