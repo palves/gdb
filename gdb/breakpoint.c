@@ -3950,6 +3950,7 @@ remove_breakpoint_1 (struct bp_location *bl, insertion_state_t is)
 	      if (bl->inserted)
 		warning (_("Could not remove hardware watchpoint %d."),
 			 bl->owner->number);
+	      remove_bp_target_info (bl->target_info);
 	      xfree (bl->target_info);
 	      bl->target_info = NULL;
 	    }
@@ -15224,6 +15225,8 @@ remove_bp_target_info (struct bp_target_info *bp_tgt)
 {
   struct bp_target_info *el;
   int idx;
+
+  dump_bp_target_info ("remove, before");
 
   idx = VEC_lower_bound (bp_target_info_p, bp_target_info,
 		       bp_tgt, bp_target_info_lessthan);
