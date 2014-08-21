@@ -2782,12 +2782,14 @@ insert_bp_location (struct bp_location *bl,
 	      }
 
 	  bl->watchpoint_type = hw_access;
+	  bp_tgt->watchpoint_type = bl->watchpoint_type;
 	  val = bl->owner->ops->insert_location (bl);
 
 	  if (val)
 	    {
 	      /* Back to the original value.  */
 	      bl->watchpoint_type = hw_read;
+	      bp_tgt->watchpoint_type = bl->watchpoint_type;
 	    }
 	}
 
