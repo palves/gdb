@@ -1,3 +1,5 @@
+static int debug_breakpoints = 0;
+
 /* Everything about breakpoints, for GDB.
 
    Copyright (C) 1986-2014 Free Software Foundation, Inc.
@@ -2770,14 +2772,12 @@ insert_bp_location (struct bp_location *bl,
 	      {
 		bl->inserted = 1;
 
-		if (--bp_tgt->refc == 0)
-		  {
-		    xfree (bp_tgt);
-		    remove_bp_target_info (bp_tgt);
-		  }
+		gdb_assert (bp_tgt->refc == 1);
+		xfree (bp_tgt);
 		bl->target_info = loc->target_info;
 		bl->target_info->refc++;
 		bl->watchpoint_type = hw_access;
+		dump_bp_target_info ("insert_bp_location, emulate read-watchpoint with access wp");
 		return 0;
 	      }
 
@@ -3812,6 +3812,10 @@ remove_breakpoint_1 (struct bp_location *bl, insertion_state_t is)
     /* Permanent breakpoints cannot be inserted or removed.  */
     return 0;
 
+  if (debug_breakpoints)
+    fprintf_unfiltered (gdb_stdlog, "remove_breakpoint_1: removing %s\n",
+			paddress (bl->gdbarch, bl->address));
+
   /* The type of none suggests that owner is actually deleted.
      This should not ever happen.  */
   gdb_assert (bl->owner->type != bp_none);
@@ -3921,10 +3925,13 @@ remove_breakpoint_1 (struct bp_location *bl, insertion_state_t is)
       if (val)
 	return val;
 
-      if (is == mark_uninserted && bl->inserted && bp_tgt->refc == 1)
+      if (is == mark_uninserted && bl->inserted)
 	{
-	  remove_bp_target_info (bl->target_info);
-	  xfree (bl->target_info);
+	  if (--bp_tgt->refc == 0)
+	    {
+	      remove_bp_target_info (bl->target_info);
+	      xfree (bl->target_info);
+	    }
 	  bl->target_info = NULL;
 	}
 
@@ -6399,6 +6406,9 @@ print_one_breakpoint_location (struct breakpoint *b,
     }
 
   ui_out_text (uiout, "\n");
+
+  if (allflag && loc->inserted)
+    ui_out_text (uiout, "\tinserted\n");
 
   if (!part_of_multiple)
     b->ops->print_one_detail (b, uiout);
@@ -12359,6 +12369,8 @@ clear_command (char *arg, int from_tty)
     putchar_unfiltered ('\n');
 
   do_cleanups (cleanups);
+
+  dump_bp_target_info ("clear_command");
 }
 
 /* Delete breakpoint in BS if they are `delete' breakpoints and
@@ -15177,8 +15189,6 @@ bp_loc_type_to_string (enum bp_loc_type loc_type)
 
   return "???";
 }
-
-static int debug_breakpoints = 0;
 
 static void
 dump_bp_target_info (const char *prefix)
