@@ -2829,8 +2829,6 @@ of catchpoint."), bl->owner->number);
 	}
 
       bl->inserted = (val == 0);
-      if (bl->inserted)
-	add_bp_target_info (bp_tgt);
 
       /* We've already printed an error message if there was a problem
 	 inserting this catchpoint, and we've disabled the catchpoint,
@@ -3970,17 +3968,13 @@ remove_breakpoint_1 (struct bp_location *bl, insertion_state_t is)
       gdb_assert (bl->owner->ops != NULL
 		  && bl->owner->ops->remove_location != NULL);
 
-      if (bp_tgt->refc > 1)
-	bp_tgt->refc--;
-      else
-	{
-	  val = bl->owner->ops->remove_location (bl);
-	  if (val)
-	    return val;
+      gdb_assert (bp_tgt->refc == 1);
 
-	  remove_bp_target_info (bl->target_info);
-	  xfree (bl->target_info);
-	}
+      val = bl->owner->ops->remove_location (bl);
+      if (val)
+	return val;
+
+      xfree (bl->target_info);
       bl->target_info = NULL;
       bl->inserted = (is == mark_inserted);
     }
@@ -4029,7 +4023,8 @@ mark_breakpoints_out (void)
 	bl->inserted = 0;
 	if (--bl->target_info->refc == 0)
 	  {
-	    remove_bp_target_info (bl->target_info);
+	    if (bl->loc_type != bp_loc_other)
+	      remove_bp_target_info (bl->target_info);
 	    xfree (bl->target_info);
 	    bl->target_info = NULL;
 	  }
@@ -4071,7 +4066,8 @@ breakpoint_init_inferior (enum inf_context context)
 	bl->inserted = 0;
 	if (--bl->target_info->refc == 0)
 	  {
-	    remove_bp_target_info (bl->target_info);
+	    if (bl->loc_type != bp_loc_other)
+	      remove_bp_target_info (bl->target_info);
 	    xfree (bl->target_info);
 	    bl->target_info = NULL;
 	  }
@@ -15222,6 +15218,8 @@ add_bp_target_info (struct bp_target_info *bp_tgt)
 {
   int idx;
 
+  gdb_assert (bp_tgt->loc_type != bp_loc_other);
+
   idx = VEC_lower_bound (bp_target_info_p, bp_target_info,
 			 bp_tgt, bp_target_info_lessthan);
 
@@ -15239,6 +15237,8 @@ remove_bp_target_info (struct bp_target_info *bp_tgt)
   int idx;
 
   dump_bp_target_info ("remove, before");
+
+  gdb_assert (bp_tgt->loc_type != bp_loc_other);
 
   idx = VEC_lower_bound (bp_target_info_p, bp_target_info,
 		       bp_tgt, bp_target_info_lessthan);
