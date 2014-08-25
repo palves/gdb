@@ -15359,6 +15359,8 @@ insert_single_step_breakpoint (struct gdbarch *gdbarch,
     }
 
   bp = set_momentary_breakpoint_at_pc (gdbarch, next_pc, bp_single_step);
+
+#if 0
   bl = bp->loc;
 
   bl->target_info = find_bp_target_info (bl->loc_type,
@@ -15367,6 +15369,7 @@ insert_single_step_breakpoint (struct gdbarch *gdbarch,
     {
       bl->target_info->refc++;
       dump_bp_target_info ("insert_single_step_breakpoint");
+      bl->inserted = 1;
     }
   else
     {
@@ -15382,7 +15385,6 @@ insert_single_step_breakpoint (struct gdbarch *gdbarch,
 
       bp_tgt->length = bl->length;
       bl->target_info = bp_tgt;
-      add_bp_target_info (bp_tgt);
 
       TRY_CATCH (ex, RETURN_MASK_ALL)
 	{
@@ -15394,7 +15396,10 @@ insert_single_step_breakpoint (struct gdbarch *gdbarch,
 	  error (_("Could not insert single-step breakpoint at %s"),
 		 paddress (gdbarch, next_pc));
 	}
+      add_bp_target_info (bp_tgt);
+      bl->inserted = 1;
     }
+#endif
   *bp_p = bp;
 }
 
@@ -15423,7 +15428,20 @@ remove_single_step_breakpoints (void)
 
       if (bp != NULL)
 	{
-	  bp->ops->remove_location (bp->loc);
+#if 0
+	  struct bp_location *bl = bp->loc;
+
+	  if (--bl->target_info->refc == 0)
+	    {
+	      bp->ops->remove_location (bp->loc);
+
+	      remove_bp_target_info (bl->target_info);
+	      xfree (bl->target_info);
+	    }
+
+	  bl->inserted = 0;
+#endif
+
 	  delete_breakpoint (bp);
 	  single_step_breakpoints[i] = NULL;
 	}
