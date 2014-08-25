@@ -2039,6 +2039,13 @@ unduplicated_should_be_inserted (struct bp_location *bl)
 }
 #endif
 
+static int
+bl_needs_update (struct bp_location *bl)
+{
+  return (bl->loc_type != bp_loc_other
+	  && bl->target_info->needs_update);
+}
+
 /* Returns 1 iff breakpoint location should be
    inserted in the inferior.  We don't differentiate the type of BL's owner
    (breakpoint vs. tracepoint), although insert_location in tracepoint's
@@ -2047,11 +2054,8 @@ unduplicated_should_be_inserted (struct bp_location *bl)
 static int
 should_be_inserted_or_reinserted (struct bp_location *bl)
 {
-  if (is_tracepoint (bl->owner))
-    return 0;
-
   return (should_be_inserted (bl)
-	  && (!bl->inserted || bl->target_info->needs_update));
+	  && (!bl->inserted || bl_needs_update (bl)));
 }
 
 /* Parses a conditional described by an expression COND into an
@@ -2476,19 +2480,16 @@ insert_bp_location (struct bp_location *bl,
 
   if (bl->inserted)
     bp_tgt = bl->target_info;
-  else
+  else if (bl->loc_type != bp_loc_other)
     {
-      if (bl->loc_type != bp_loc_other)
+      bp_tgt = find_bp_target_info_loc (bl);
+      if (bp_tgt != NULL)
 	{
-	  bp_tgt = find_bp_target_info_loc (bl);
-	  if (bp_tgt != NULL)
-	    {
-	      bp_tgt->refc++;
-	      bl->target_info = bp_tgt;
-	      bl->inserted = 1;
-	      dump_bp_target_info ("insert_bp_location");
-	      return 0;
-	    }
+	  bp_tgt->refc++;
+	  bl->target_info = bp_tgt;
+	  bl->inserted = 1;
+	  dump_bp_target_info ("insert_bp_location");
+	  return 0;
 	}
 
       bp_tgt = XCNEW (struct bp_target_info);
@@ -2501,6 +2502,8 @@ insert_bp_location (struct bp_location *bl,
       bp_tgt->length = bl->length;
       bl->target_info = bp_tgt;
     }
+  else
+    bp_tgt = NULL;
 
   /* When working with target-side conditions, we must pass all the conditions
      for the same breakpoint address down to the target since GDB will not
@@ -3982,14 +3985,10 @@ remove_breakpoint_1 (struct bp_location *bl, insertion_state_t is)
       gdb_assert (bl->owner->ops != NULL
 		  && bl->owner->ops->remove_location != NULL);
 
-      gdb_assert (bp_tgt->refc == 1);
-
       val = bl->owner->ops->remove_location (bl);
       if (val)
 	return val;
 
-      xfree (bl->target_info);
-      bl->target_info = NULL;
       bl->inserted = (is == mark_inserted);
     }
 #if 0
