@@ -2039,6 +2039,21 @@ unduplicated_should_be_inserted (struct bp_location *bl)
 }
 #endif
 
+/* Returns 1 iff breakpoint location should be
+   inserted in the inferior.  We don't differentiate the type of BL's owner
+   (breakpoint vs. tracepoint), although insert_location in tracepoint's
+   breakpoint_ops is not defined, because in insert_bp_location,
+   tracepoint's insert_location will not be called.  */
+static int
+should_be_inserted_or_reinserted (struct bp_location *bl)
+{
+  if (is_tracepoint (bl->owner))
+    return 0;
+
+  return (should_be_inserted (bl)
+	  && (!bl->inserted || bl->target_info->needs_update));
+}
+
 /* Parses a conditional described by an expression COND into an
    agent expression bytecode suitable for evaluation
    by the bytecode interpreter.  Return NULL if there was
@@ -2456,8 +2471,7 @@ insert_bp_location (struct bp_location *bl,
   volatile struct gdb_exception e;
   struct bp_target_info *bp_tgt;
 
-  if (!should_be_inserted (bl)
-      || (bl->inserted && !bl->target_info->needs_update))
+  if (!should_be_inserted_or_reinserted (bl))
     return 0;
 
   if (bl->inserted)
@@ -3006,7 +3020,7 @@ insert_breakpoint_locations (void)
 
   ALL_BP_LOCATIONS (bl, blp_tmp)
     {
-      if (!should_be_inserted (bl) || (bl->inserted && !bl->target_info->needs_update))
+      if (!should_be_inserted_or_reinserted (bl))
 	continue;
 
       /* There is no point inserting thread-specific breakpoints if
@@ -3978,6 +3992,10 @@ remove_breakpoint_1 (struct bp_location *bl, insertion_state_t is)
       bl->target_info = NULL;
       bl->inserted = (is == mark_inserted);
     }
+#if 0
+  else
+    gdb_assert_not_reached ("don't know how to remove this breakpoint");
+#endif
 
   return 0;
 }
@@ -12463,9 +12481,6 @@ download_tracepoint_locations (void)
 
       for (bl = b->loc; bl; bl = bl->next)
 	{
-	  /* In tracepoint, locations are _never_ duplicated, so
-	     should_be_inserted is equivalent to
-	     unduplicated_should_be_inserted.  */
 	  if (!should_be_inserted (bl) || bl->inserted)
 	    continue;
 
@@ -12698,7 +12713,7 @@ update_global_location_list (int should_insert)
 	      /* This location still exists, but it won't be kept in the
 		 target since it may have been disabled.  We proceed to
 		 remove its target-side condition.  */
-
+#if 0
 	      /* The location is either no longer present, or got
 		 disabled.  See if there's another location at the
 		 same address, in which case we don't need to remove
@@ -12711,6 +12726,7 @@ update_global_location_list (int should_insert)
 		  old_loc->inserted = 0;
 		  keep_in_target = 1;
 		}
+#endif
 	    }
 
 	  if (!keep_in_target)
