@@ -4599,8 +4599,8 @@ proc relative_filename {root full} {
 # Log gdb command line and script if requested.
 if {[info exists TRANSCRIPT]} {
   rename send_gdb real_send_gdb
-  rename remote_spawn real_remote_spawn
-  rename remote_close real_remote_close
+  rename gdb_spawn real_gdb_spawn
+  rename gdb_exit real_gdb_exit
 
   global gdb_transcript
   set gdb_transcript ""
@@ -4608,20 +4608,21 @@ if {[info exists TRANSCRIPT]} {
   global gdb_trans_count
   set gdb_trans_count 1
 
-  proc remote_spawn {args} {
+  proc gdb_spawn {args} {
     global gdb_transcript gdb_trans_count outdir
+    global GDB INTERNAL_GDBFLAGS GDBFLAGS
 
     if {$gdb_transcript != ""} {
       close $gdb_transcript
     }
     set gdb_transcript [open [file join $outdir transcript.$gdb_trans_count] w]
-    puts $gdb_transcript [lindex $args 1]
+    puts $gdb_transcript "# $GDB $INTERNAL_GDBFLAGS $GDBFLAGS"
     incr gdb_trans_count
 
-    return [uplevel real_remote_spawn $args]
+    return [uplevel real_gdb_spawn $args]
   }
 
-  proc remote_close {args} {
+  proc gdb_exit {args} {
     global gdb_transcript
 
     if {$gdb_transcript != ""} {
@@ -4629,7 +4630,7 @@ if {[info exists TRANSCRIPT]} {
       set gdb_transcript ""
     }
 
-    return [uplevel real_remote_close $args]
+    return [uplevel real_gdb_exit $args]
   }
 
   proc send_gdb {args} {
