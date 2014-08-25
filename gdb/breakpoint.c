@@ -1536,6 +1536,7 @@ breakpoint_xfer_memory (gdb_byte *readbuf, gdb_byte *writebuf,
   key.loc_type = bp_loc_software_breakpoint;
   key.placed_address_space = current_program_space->aspace;
   key.placed_address = memaddr > BREAKPOINT_MAX ? memaddr - BREAKPOINT_MAX : 0;
+  key.length = 0;
 
   idx = VEC_lower_bound (bp_target_info_p, bp_target_info,
 			 &key, bp_target_info_lessthan);
@@ -2672,9 +2673,9 @@ insert_bp_location (struct bp_location *bl,
 	{
 	  /* Can't set the breakpoint.  */
 
-	  if (--bp_tgt->refc == 0)
+	  if (!bl->inserted)
 	    {
-	      remove_bp_target_info (bp_tgt);
+	      gdb_assert (bp_tgt->refc == 1);
 	      xfree (bp_tgt);
 	      bl->target_info = NULL;
 	    }
@@ -4042,8 +4043,7 @@ mark_breakpoints_out (void)
 	  {
 	    if (--bl->target_info->refc == 0)
 	      {
-		if (bl->loc_type != bp_loc_other)
-		  remove_bp_target_info (bl->target_info);
+		remove_bp_target_info (bl->target_info);
 		xfree (bl->target_info);
 		bl->target_info = NULL;
 	      }
