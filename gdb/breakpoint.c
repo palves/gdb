@@ -4038,12 +4038,15 @@ mark_breakpoints_out (void)
 	&& bl->inserted)
       {
 	bl->inserted = 0;
-	if (--bl->target_info->refc == 0)
+	if (bl->loc_type != bp_loc_other)
 	  {
-	    if (bl->loc_type != bp_loc_other)
-	      remove_bp_target_info (bl->target_info);
-	    xfree (bl->target_info);
-	    bl->target_info = NULL;
+	    if (--bl->target_info->refc == 0)
+	      {
+		if (bl->loc_type != bp_loc_other)
+		  remove_bp_target_info (bl->target_info);
+		xfree (bl->target_info);
+		bl->target_info = NULL;
+	      }
 	  }
       }
 }
