@@ -2454,6 +2454,7 @@ find_bp_target_info_loc (struct bp_location *bl)
 }
 
 static void dump_bp_target_info (const char *prefix);
+static void bp_target_info_free (struct bp_target_info *bp_tgt);
 
 /* Insert a low-level "breakpoint" of some type.  BL is the breakpoint
    location.  Any error messages are printed to TMP_ERROR_STREAM; and
@@ -2811,12 +2812,17 @@ insert_bp_location (struct bp_location *bl,
 	    }
 	}
 
-      if (val && bl->inserted)
+      if (val)
 	{
 	  if (--bp_tgt->refc == 0)
 	    {
-	      remove_bp_target_info (bp_tgt);
-	      xfree (bp_tgt);
+	      if (bl->inserted)
+		{
+		  /* We were reinserting an already inserted
+		     location.  */
+		  remove_bp_target_info (bp_tgt);
+		}
+	      bp_target_info_free (bp_tgt);
 	      bl->target_info = NULL;
 	    }
 	}
@@ -3869,7 +3875,7 @@ remove_breakpoint_1 (struct bp_location *bl, insertion_state_t is)
 		  if (ovl_bp_tgt->refc == 1)
 		    {
 		      remove_bp_target_info (ovl_bp_tgt);
-		      xfree (bl->overlay_target_info);
+		      bp_target_info_free (ovl_bp_tgt);
 		    }
 		  bl->overlay_target_info = NULL;
 		}
@@ -3946,7 +3952,7 @@ remove_breakpoint_1 (struct bp_location *bl, insertion_state_t is)
 	  if (--bp_tgt->refc == 0)
 	    {
 	      remove_bp_target_info (bl->target_info);
-	      xfree (bl->target_info);
+	      bp_target_info_free (bl->target_info);
 	    }
 	  bl->target_info = NULL;
 	}
@@ -3976,7 +3982,7 @@ remove_breakpoint_1 (struct bp_location *bl, insertion_state_t is)
 		warning (_("Could not remove hardware watchpoint %d."),
 			 bl->owner->number);
 	      remove_bp_target_info (bl->target_info);
-	      xfree (bl->target_info);
+	      bp_target_info_free (bl->target_info);
 	      bl->target_info = NULL;
 	    }
 	}
@@ -4044,9 +4050,9 @@ mark_breakpoints_out (void)
 	    if (--bl->target_info->refc == 0)
 	      {
 		remove_bp_target_info (bl->target_info);
-		xfree (bl->target_info);
-		bl->target_info = NULL;
+		bp_target_info_free (bl->target_info);
 	      }
+	    bl->target_info = NULL;
 	  }
       }
 }
@@ -4084,12 +4090,14 @@ breakpoint_init_inferior (enum inf_context context)
 	&& bl->inserted)
       {
 	bl->inserted = 0;
-	if (--bl->target_info->refc == 0)
+	if (bl->loc_type != bp_loc_other)
 	  {
-	    if (bl->loc_type != bp_loc_other)
-	      remove_bp_target_info (bl->target_info);
-	    xfree (bl->target_info);
-	    bl->target_info = NULL;
+	    if (--bl->target_info->refc == 0)
+	      {
+		remove_bp_target_info (bl->target_info);
+		bp_target_info_free (bl->target_info);
+		bl->target_info = NULL;
+	      }
 	  }
       }
   }
@@ -12939,6 +12947,14 @@ say_where (struct breakpoint *b)
     }
 }
 
+static void
+bp_target_info_free (struct bp_target_info *bp_tgt)
+{
+  VEC_free (agent_expr_p, bp_tgt->conditions);
+  VEC_free (agent_expr_p, bp_tgt->tcommands);
+  xfree (bp_tgt);
+}
+
 /* Default bp_location_ops methods.  */
 
 static void
@@ -12951,8 +12967,13 @@ bp_location_dtor (struct bp_location *self)
 
   if (self->target_info != NULL)
     {
-      VEC_free (agent_expr_p, self->target_info->conditions);
-      VEC_free (agent_expr_p, self->target_info->tcommands);
+      gdb_assert (self->loc_type != bp_loc_other);
+
+      if (--self->target_info->refc == 0)
+	{
+	  remove_bp_target_info (self->target_info);
+	  bp_target_info_free (self->target_info);
+	}
     }
 }
 
@@ -15336,7 +15357,7 @@ deprecated_remove_raw_breakpoint (struct gdbarch *gdbarch, void *bp_)
     {
       ret = target_remove_breakpoint (gdbarch, bp_tgt);
       remove_bp_target_info (bp_tgt);
-      xfree (bp_tgt);
+      bp_target_info_free (bp_tgt);
       bl->target_info = NULL;
     }
   else if (!VEC_empty (agent_expr_p, bp_tgt->conditions)
@@ -15454,7 +15475,7 @@ remove_single_step_breakpoints (void)
 	      bp->ops->remove_location (bp->loc);
 
 	      remove_bp_target_info (bl->target_info);
-	      xfree (bl->target_info);
+	      bp_target_info_free (bl->target_info);
 	    }
 
 	  bl->inserted = 0;
