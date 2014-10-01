@@ -59,6 +59,7 @@ enum bptype
     bp_none = 0,		/* Eventpoint has been deleted */
     bp_breakpoint,		/* Normal breakpoint */
     bp_hardware_breakpoint,	/* Hardware assisted breakpoint */
+    bp_single_step,		/* Software single-step */
     bp_until,			/* used by until command */
     bp_finish,			/* used by finish command */
     bp_watchpoint,		/* Watchpoint */
