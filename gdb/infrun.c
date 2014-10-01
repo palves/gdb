@@ -82,7 +82,7 @@ static int follow_fork (void);
 static void set_schedlock_func (char *args, int from_tty,
 				struct cmd_list_element *c);
 
-static int currently_stepping (struct thread_info *tp);
+int currently_stepping (struct thread_info *tp);
 
 static void xdb_handle_command (char *args, int from_tty);
 
@@ -1891,7 +1891,7 @@ a command like `return' or `jump' to continue execution."));
   else if (step)
     step = maybe_software_singlestep (gdbarch, pc);
 
-  gdb_assert (!step);
+  gdb_assert (!step || execution_direction == EXEC_REVERSE);
 
   /* Currently, our software single-step implementation leads to different
      results than hardware single-stepping in one situation: when stepping
@@ -3021,8 +3021,13 @@ context_switch (ptid_t ptid)
   switch_to_thread (ptid);
 }
 
-static void
-adjust_pc_after_break (struct execution_control_state *ecs)
+void
+adjust_pc_after_break (struct thread_info *event_thread,
+		       struct target_waitstatus *ws);
+
+void
+adjust_pc_after_break (struct thread_info *event_thread,
+		       struct target_waitstatus *ws)
 {
   struct regcache *regcache;
   struct gdbarch *gdbarch;
@@ -3050,10 +3055,10 @@ adjust_pc_after_break (struct execution_control_state *ecs)
      target with both of these set in GDB history, and it seems unlikely to be
      correct, so gdbarch_have_nonsteppable_watchpoint is not checked here.  */
 
-  if (ecs->ws.kind != TARGET_WAITKIND_STOPPED)
+  if (ws->kind != TARGET_WAITKIND_STOPPED)
     return;
 
-  if (ecs->ws.value.sig != GDB_SIGNAL_TRAP)
+  if (ws->value.sig != GDB_SIGNAL_TRAP)
     return;
 
   /* In reverse execution, when a breakpoint is hit, the instruction
@@ -3087,7 +3092,7 @@ adjust_pc_after_break (struct execution_control_state *ecs)
 
   /* If this target does not decrement the PC after breakpoints, then
      we have nothing to do.  */
-  regcache = get_thread_regcache (ecs->ptid);
+  regcache = get_thread_regcache (event_thread->ptid);
   gdbarch = get_regcache_arch (regcache);
 
   decr_pc = target_decr_pc_after_break (gdbarch);
@@ -3136,9 +3141,9 @@ adjust_pc_after_break (struct execution_control_state *ecs)
 
       if (singlestep_breakpoints_inserted_p
 	  || single_step_breakpoint_inserted_here_p (aspace, breakpoint_pc)
-	  || !ptid_equal (ecs->ptid, inferior_ptid)
-	  || !currently_stepping (ecs->event_thread)
-	  || ecs->event_thread->prev_pc == breakpoint_pc)
+	  || !ptid_equal (event_thread->ptid, inferior_ptid)
+	  || !currently_stepping (event_thread)
+	  || event_thread->prev_pc == breakpoint_pc)
 	regcache_write_pc (regcache, breakpoint_pc);
 
       do_cleanups (old_cleanups);
@@ -3325,8 +3330,7 @@ handle_inferior_event (struct execution_control_state *ecs)
       ecs->event_thread->control.may_range_step = 0;
     }
 
-  /* Dependent on valid ECS->EVENT_THREAD.  */
-  adjust_pc_after_break (ecs);
+  adjust_pc_after_break (ecs->event_thread, &ecs->ws);
 
   /* Dependent on the current PC value modified by adjust_pc_after_break.  */
   reinit_frame_cache ();
@@ -5356,7 +5360,7 @@ switch_back_to_stepped_thread (struct execution_control_state *ecs)
 
 /* Is thread TP in the middle of single-stepping?  */
 
-static int
+int
 currently_stepping (struct thread_info *tp)
 {
   return ((tp->control.step_range_end
