@@ -1724,6 +1724,8 @@ linux_nat_resume (struct target_ops *ops,
   struct lwp_info *lp;
   int resume_many;
 
+  gdb_assert (!step);
+
   if (debug_linux_nat)
     fprintf_unfiltered (gdb_stdlog,
 			"LLR: Preparing to %s %s, %s, inferior_ptid %s\n",

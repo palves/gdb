@@ -1846,6 +1846,7 @@ gdb_caching_proc support_complex_tests {
 # handler, otherwise, return 0.
 
 proc can_single_step_to_signal_handler {} {
+    return 0
 
     # Targets don't have hardware single step.  On these targets, when
     # a signal is delivered during software single step, gdb is unable
