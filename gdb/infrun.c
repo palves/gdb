@@ -1088,6 +1088,10 @@ stepping_past_instruction_at (struct address_space *aspace,
      same effect the instruction would have had if we had executed it
      at its original address.  We use this in step n3.
 
+   - gdbarch_displaced_step_abort is called when single-stepping the
+     instruction fails to complete due to a signal.  We use this in
+     step n3.
+
    - gdbarch_displaced_step_free_closure provides cleanup.
 
    The gdbarch_displaced_step_copy_insn and
@@ -1101,7 +1105,7 @@ stepping_past_instruction_at (struct address_space *aspace,
 
    See the comments in gdbarch.sh for details.
 
-   Note that displaced stepping and software single-step cannot
+   FIXME comment.  Note that displaced stepping and software single-step cannot
    currently be used in combination, although with some care I think
    they could be made to.  Software single-step works by placing
    breakpoints on all possible subsequent instructions; if the
@@ -1520,6 +1524,8 @@ displaced_step_fixup (ptid_t event_ptid, enum gdb_signal signal)
   /* Did the instruction complete successfully?  */
   if (signal == GDB_SIGNAL_TRAP)
     {
+      context_switch (event_ptid);
+
       /* Fix up the resulting state.  */
       gdbarch_displaced_step_fixup (displaced->step_gdbarch,
                                     displaced->step_closure,
@@ -1536,6 +1542,12 @@ displaced_step_fixup (ptid_t event_ptid, enum gdb_signal signal)
 
       pc = displaced->step_original + (pc - displaced->step_copy);
       regcache_write_pc (regcache, pc);
+
+      gdbarch_displaced_step_aborted (displaced->step_gdbarch,
+				      displaced->step_closure,
+				      displaced->step_original,
+				      displaced->step_copy,
+				      get_thread_regcache (displaced->step_ptid));
     }
 
   do_cleanups (old_cleanups);
@@ -3123,6 +3135,7 @@ adjust_pc_after_break (struct execution_control_state *ecs)
 	 we also need to back up to the breakpoint address.  */
 
       if (singlestep_breakpoints_inserted_p
+	  || single_step_breakpoint_inserted_here_p (aspace, breakpoint_pc)
 	  || !ptid_equal (ecs->ptid, inferior_ptid)
 	  || !currently_stepping (ecs->event_thread)
 	  || ecs->event_thread->prev_pc == breakpoint_pc)
