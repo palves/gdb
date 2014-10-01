@@ -44,6 +44,14 @@ extern struct target_desc *tdesc_i386_avx_linux;
 extern struct target_desc *tdesc_i386_mpx_linux;
 extern struct target_desc *tdesc_i386_avx512_linux;
 
+/* Enum that defines some syscall identifiers for i386 Linux.  */
+
+enum i386_syscall
+  {
+    i386_sys_sigreturn = 119,
+    i386_sys_rt_sigreturn = 173,
+  };
+
 /* Format of XSAVE extended state is:
  	struct
 	{
