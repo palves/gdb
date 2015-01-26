@@ -180,6 +180,8 @@ struct ps_prochandle
 {
   /* The LWP we use for memory reads.  */
   ptid_t ptid;
+
+  int workaround;
 };
 
 #endif /* gdb_proc_service.h */

@@ -236,6 +236,9 @@ ps_lsetfpregs (gdb_ps_prochandle_t ph, lwpid_t lwpid,
 pid_t
 ps_getpid (gdb_ps_prochandle_t ph)
 {
+  if (ph->workaround)
+    return 0;
+
   return ptid_get_pid (ph->ptid);
 }
 

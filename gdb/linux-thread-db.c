@@ -1569,7 +1569,9 @@ find_new_threads_callback (const td_thrhandle_t *th_p, void *data)
   struct callback_data *cb_data = (struct callback_data *) data;
   struct thread_db_info *info = cb_data->info;
 
+  info->proc_handle.workaround = 1;
   err = info->td_thr_get_info_p (th_p, &ti);
+  info->proc_handle.workaround = 0;
   if (err != TD_OK)
     error (_("find_new_threads_callback: cannot get thread info: %s"),
 	   thread_db_err_str (err));
