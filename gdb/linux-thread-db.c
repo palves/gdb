@@ -1614,6 +1614,13 @@ find_new_threads_callback (const td_thrhandle_t *th_p, void *data)
 
       return 0;
     }
+  else if (ti.ti_lid == 0)
+    {
+      /* A thread other than the main thread, that is still
+	 initializing (doesn't have a kernel thread associated yet).
+	 Ignore.  */
+      return 0;
+    }
 
   /* Ignore stale parent threads, caused by glibc/BZ5983.  This is a
      bit expensive, as it needs to open /proc/pid/status, so try to
