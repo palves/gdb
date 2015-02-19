@@ -533,7 +533,7 @@ dnl We have to check these in C, not C++, because autoconf generates
 dnl tests which have no type information, and current glibc provides
 dnl multiple declarations of functions like basename when compiling
 dnl with C++.
-AC_CHECK_DECLS([basename, ffs, asprintf, vasprintf, snprintf, vsnprintf, strverscmp])
+libiberty_INIT
 
 dnl Check if gcc supports the -gpubnames option.
 dnl Use -Werror in case of compilers that make unknown -g options warnings.
@@ -573,7 +573,7 @@ esac
 AC_SUBST(DLOPEN_LIBS)
 
 AC_CHECK_FUNCS(mallinfo posix_fallocate fallocate readv sysconf times)
-AC_CHECK_DECLS([basename, ffs, asprintf, vasprintf, snprintf, vsnprintf, strverscmp, strndup, memmem])
+AC_CHECK_DECLS([strndup, memmem])
 
 # Use of ::std::tr1::unordered_map::rehash causes undefined symbols
 # at link time with some versions of GCC.
