@@ -112,9 +112,6 @@ extern char **environ;
 #ifdef NEED_DECLARATION_ERRNO
 extern int errno;
 #endif
-#ifdef NEED_DECLARATION_FFS
-extern int ffs (int);
-#endif
 #ifdef NEED_DECLARATION_FREE
 extern void free ();
 #endif

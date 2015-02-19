@@ -92,3 +92,5 @@ AC_DEFUN([GAS_HAVE_SYS_STAT_TYPE_MEMBER],
  fi
  AC_MSG_RESULT($gas_cv_have_sys_stat_type_member_$2_$3)
 ])dnl
+
+m4_include([../libiberty/libiberty.m4])

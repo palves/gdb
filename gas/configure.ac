@@ -727,6 +727,8 @@ AM_MAINTAINER_MODE
 AM_CONDITIONAL(GENINSRC_NEVER, false)
 AC_EXEEXT
 
+libiberty_INIT
+
 AC_CHECK_HEADERS(string.h stdlib.h memory.h strings.h unistd.h errno.h sys/types.h limits.h locale.h time.h sys/stat.h)
 ACX_HEADER_STRING
 
@@ -806,13 +808,12 @@ if test $gas_cv_decl_getopt_unistd_h = yes; then
 fi
 
 GAS_CHECK_DECL_NEEDED(environ, f, char **f, $gas_test_headers)
-GAS_CHECK_DECL_NEEDED(ffs, f, int (*f)(int), $gas_test_headers)
 GAS_CHECK_DECL_NEEDED(free, f, void (*f)(), $gas_test_headers)
 GAS_CHECK_DECL_NEEDED(malloc, f, char *(*f)(), $gas_test_headers)
 GAS_CHECK_DECL_NEEDED(sbrk, f, char *(*f)(), $gas_test_headers)
 GAS_CHECK_DECL_NEEDED(strstr, f, char *(*f)(), $gas_test_headers)
 
-AC_CHECK_DECLS([free, getenv, malloc, mempcpy, realloc, stpcpy, strstr, vsnprintf])
+AC_CHECK_DECLS([free, getenv, malloc, mempcpy, realloc, stpcpy, strstr])
 
 BFD_BINARY_FOPEN
 
