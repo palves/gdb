@@ -188,6 +188,8 @@ AC_SUBST(HOSTING_LIBS)
 AC_SUBST(HOSTING_SLIBS)
 AC_SUBST(NATIVE_LIB_DIRS)
 
+libiberty_INIT
+
 AC_CHECK_HEADERS(string.h strings.h stdlib.h unistd.h elf-hints.h limits.h locale.h sys/param.h)
 AC_CHECK_HEADERS(fcntl.h sys/file.h sys/time.h sys/stat.h)
 ACX_HEADER_STRING
