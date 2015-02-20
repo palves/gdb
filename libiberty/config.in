@@ -152,7 +152,7 @@
 /* Define to 1 if you have the <limits.h> header file. */
 #undef HAVE_LIMITS_H
 
-/* Define if you have the `long long' type. */
+/* Define to 1 if the system has the type `long long'. */
 #undef HAVE_LONG_LONG
 
 /* Define to 1 if you have the <machine/hal_sysinfo.h> header file. */

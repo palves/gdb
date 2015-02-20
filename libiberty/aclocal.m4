@@ -3,6 +3,7 @@ sinclude(../config/no-executables.m4)
 sinclude(../config/override.m4)
 sinclude(../config/picflag.m4)
 sinclude(../config/warnings.m4)
+m4_include([libiberty.m4])
 
 dnl See whether strncmp reads past the end of its string parameters.
 dnl On some versions of SunOS4 at least, strncmp reads a word at a time
