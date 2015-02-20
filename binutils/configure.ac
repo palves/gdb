@@ -124,8 +124,9 @@ case "${host}" in
 esac
 AC_SUBST(DEMANGLER_NAME)
 
+libiberty_INIT
+
 AC_CHECK_SIZEOF([long])
-AC_CHECK_TYPES([long long], [AC_CHECK_SIZEOF(long long)])
 
 AC_CHECK_HEADERS(string.h strings.h stdlib.h unistd.h fcntl.h sys/file.h limits.h locale.h sys/param.h wchar.h)
 AC_HEADER_SYS_WAIT
@@ -199,7 +200,7 @@ if test $bu_cv_header_utime_h = yes; then
 fi
 
 AC_CHECK_DECLS([environ, fprintf, getc_unlocked, getenv,
-		sbrk, snprintf, stpcpy, strnlen, strstr, vsnprintf])
+		sbrk, stpcpy, strnlen, strstr])
 
 # Link in zlib if we can.  This allows us to read compressed debug
 # sections.  This is used only by readelf.c (objdump uses bfd for
