@@ -1696,6 +1696,9 @@ extern int target_async_permitted;
 /* Is the target in asynchronous execution mode?  */
 #define target_is_async_p() (current_target.to_is_async_p (&current_target))
 
+/* Controls whether async mode is permitted.  */
+extern int target_non_stop_permitted;
+
 /* Is the target in non-stop mode?  */
 #define target_is_non_stop_p() (current_target.to_is_non_stop_p (&current_target))
 

@@ -4466,7 +4466,7 @@ linux_nat_supports_non_stop (struct target_ops *self)
 static int
 linux_nat_is_non_stop_p (struct target_ops *self)
 {
-  return 1;
+  return target_non_stop_permitted;
 }
 
 /* True if we want to support multi-process.  To be removed when GDB

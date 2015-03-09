@@ -3680,6 +3680,37 @@ maint_show_target_async_command (struct ui_file *file, int from_tty,
 		      "asynchronous mode is %s.\n"), value);
 }
 
+/* Controls if targets can report that they always run in non-stop
+   mode.  This is just for maintainers to use when debugging gdb.  */
+int target_non_stop_permitted = 1;
+
+/* The set command writes to this variable.  If the inferior is
+   executing, target_async_permitted is *not* updated.  */
+static int target_non_stop_permitted_1 = 1;
+
+static void
+maint_set_target_non_stop_command (char *args, int from_tty,
+				   struct cmd_list_element *c)
+{
+  if (have_live_inferiors ())
+    {
+      target_non_stop_permitted_1 = target_non_stop_permitted;
+      error (_("Cannot change this setting while the inferior is running."));
+    }
+
+  target_non_stop_permitted = target_non_stop_permitted_1;
+}
+
+static void
+maint_show_target_non_stop_command (struct ui_file *file, int from_tty,
+				    struct cmd_list_element *c,
+				    const char *value)
+{
+  fprintf_filtered (file,
+		    _("Controlling the inferior in "
+		      "non-stop mode is %s.\n"), value);
+}
+
 /* Temporary copies of permission settings.  */
 
 static int may_write_registers_1 = 1;
@@ -3779,6 +3810,16 @@ Show whether gdb controls the inferior in asynchronous mode."), _("\
 Tells gdb whether to control the inferior in asynchronous mode."),
 			   maint_set_target_async_command,
 			   maint_show_target_async_command,
+			   &maintenance_set_cmdlist,
+			   &maintenance_show_cmdlist);
+
+  add_setshow_boolean_cmd ("target-non-stop", no_class,
+			   &target_async_permitted_1, _("\
+Set whether gdb controls the inferior in non-stop mode."), _("\
+Show whether gdb controls the inferior in non-stop mode."), _("\
+Tells gdb whether to control the inferior in non-stop mode."),
+			   maint_set_target_non_stop_command,
+			   maint_show_target_non_stop_command,
 			   &maintenance_set_cmdlist,
 			   &maintenance_show_cmdlist);
 
