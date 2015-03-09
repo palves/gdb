@@ -1692,8 +1692,7 @@ extern int target_async_permitted;
 #define target_is_non_stop_p() (current_target.to_is_non_stop_p (&current_target))
 
 /* Put the target in async mode with the specified callback function.  */
-#define target_async(CALLBACK,CONTEXT) \
-     (current_target.to_async (&current_target, (CALLBACK), (CONTEXT)))
+extern void target_async (async_callback_ftype *, void *);
 
 #define target_execution_direction() \
   (current_target.to_execution_direction (&current_target))

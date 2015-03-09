@@ -3628,6 +3628,15 @@ maintenance_print_target_stack (char *cmd, int from_tty)
     }
 }
 
+void infrun_async (int enabled);
+
+void
+target_async (async_callback_ftype *callback, void *context)
+{
+  infrun_async (callback != NULL);
+  current_target.to_async (&current_target, callback, context);
+}
+
 /* Controls if targets can report that they can/are async.  This is
    just for maintainers to use when debugging gdb.  */
 int target_async_permitted = 1;

@@ -70,6 +70,9 @@ inferior_event_handler (enum inferior_event_type event_type,
     case INF_EXEC_COMPLETE:
       if (!non_stop)
 	{
+	  if (debug_infrun)
+	    fprintf_unfiltered (gdb_stdlog, "infrun: INF_EXEC_COMPLETE\n");
+
 	  /* Unregister the inferior from the event loop.  This is done
 	     so that when the inferior is not running we don't get
 	     distracted by spurious inferior output.  */

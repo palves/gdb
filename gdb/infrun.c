@@ -67,6 +67,29 @@
 
 static struct async_event_handler *infrun_async_inferior_event_token;
 
+void infrun_async (int enabled);
+
+static int infrun_is_async = -1;
+
+void
+infrun_async (int enabled)
+{
+  if (infrun_is_async != enabled)
+    {
+      infrun_is_async = enabled;
+
+      if (debug_infrun)
+	fprintf_unfiltered (gdb_stdlog,
+			    "infrun: infrun_async(%d)\n",
+			    enabled);
+
+      if (enabled)
+	mark_async_event_handler (infrun_async_inferior_event_token);
+      else
+	clear_async_event_handler (infrun_async_inferior_event_token);
+    }
+}
+
 /* Prototypes for local functions */
 
 static void signals_info (char *, int);
