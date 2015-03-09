@@ -2271,12 +2271,6 @@ gnu_terminal_init (struct target_ops *self)
   child_terminal_init_with_pgrp (gnu_current_inf->pid);
 }
 
-static void
-gnu_stop (struct target_ops *self, ptid_t ptid)
-{
-  error (_("to_stop target function not implemented"));
-}
-
 static int
 gnu_thread_alive (struct target_ops *ops, ptid_t ptid)
 {
@@ -2686,7 +2680,6 @@ gnu_target (void)
   t->to_mourn_inferior = gnu_mourn_inferior;
   t->to_thread_alive = gnu_thread_alive;
   t->to_pid_to_str = gnu_pid_to_str;
-  t->to_stop = gnu_stop;
 
   return t;
 }
