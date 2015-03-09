@@ -8821,6 +8821,14 @@ static const struct internalvar_funcs siginfo_funcs =
 static void
 infrun_async_inferior_event_handler (gdb_client_data data)
 {
+  /* If the target is closed while this event source is marked, we
+     will reach here without execution, or a target to call
+     target_wait on, which is an error.  Instead of tracking whether
+     the target has been popped already, or whether we do have threads
+     with pending statutes, simply ignore the event.  */
+  if (!target_is_async_p ())
+    return;
+
   inferior_event_handler (INF_REG_EVENT, NULL);
 }
 
