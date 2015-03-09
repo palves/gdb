@@ -2266,7 +2266,7 @@ monitor_load (struct target_ops *self, const char *args, int from_tty)
 }
 
 static void
-monitor_stop (struct target_ops *self, ptid_t ptid)
+monitor_interrupt (struct target_ops *self, ptid_t ptid)
 {
   monitor_debug ("MON stop\n");
   if ((current_monitor->flags & MO_SEND_BREAK_ON_STOP) != 0)
@@ -2374,7 +2374,7 @@ init_base_monitor_ops (void)
   monitor_ops.to_load = monitor_load;
   monitor_ops.to_create_inferior = monitor_create_inferior;
   monitor_ops.to_mourn_inferior = monitor_mourn_inferior;
-  monitor_ops.to_stop = monitor_stop;
+  monitor_ops.to_interrupt = monitor_interrupt;
   monitor_ops.to_rcmd = monitor_rcmd;
   monitor_ops.to_log_command = serial_log_command;
   monitor_ops.to_thread_alive = monitor_thread_alive;
