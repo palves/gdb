@@ -410,6 +410,8 @@ struct inferior
      this gdbarch.  */
   struct gdbarch *gdbarch;
 
+  struct thread_info *step_over_queue_head;
+
   /* Per inferior data-pointers required by other GDB modules.  */
   REGISTRY_FIELDS;
 };

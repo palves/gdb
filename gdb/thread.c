@@ -307,6 +307,145 @@ add_thread (ptid_t ptid)
   return add_thread_with_info (ptid, NULL);
 }
 
+static int
+step_over_chain_count (struct thread_info *list)
+{
+  int count_n = 1, count_p = 1;
+  struct thread_info *next, *prev;
+
+  if (list == NULL)
+    return 0;
+
+  next = list->step_over_next;
+  prev = list->step_over_prev;
+
+  while (next != list)
+    {
+      count_n++;
+      next = next->step_over_next;
+    }
+
+  while (prev != list)
+    {
+      count_p++;
+      prev = prev->step_over_prev;
+    }
+
+  if (count_n != count_p)
+    {
+      fprintf_unfiltered (gdb_stdlog, "next = %d, prev = %d\n",
+			  count_n, count_p);
+    }
+
+  gdb_assert (count_n == count_p);
+  gdb_assert (count_n > 0);
+
+  return count_n;
+}
+
+extern int debug_displaced;
+
+void
+step_over_chain_enqueue (struct thread_info **list_p, struct thread_info *tp)
+{
+  int count_before, count_after;
+
+  gdb_assert (tp->step_over_next == NULL);
+  gdb_assert (tp->step_over_prev == NULL);
+
+  if (debug_displaced)
+    fprintf_unfiltered (gdb_stdlog, "enqueue, counting before\n");
+
+  count_before = step_over_chain_count (*list_p);
+
+  if (*list_p == NULL)
+    {
+      *list_p = tp;
+      tp->step_over_prev = tp->step_over_next = tp;
+    }
+  else
+    {
+      struct thread_info *head = *list_p;
+      struct thread_info *tail = head->step_over_prev;
+
+      tp->step_over_prev = tail;
+      tp->step_over_next = head;
+      head->step_over_prev = tp;
+      tail->step_over_next = tp;
+    }
+
+  if (debug_displaced)
+    fprintf_unfiltered (gdb_stdlog, "enqueue, counting after\n");
+
+  count_after = step_over_chain_count (*list_p);
+
+  gdb_assert (count_after == count_before + 1);
+}
+
+void
+inferior_step_over_chain_enqueue (struct thread_info *tp)
+{
+  struct inferior *inf;
+
+  inf = find_inferior_ptid (tp->ptid);
+  gdb_assert (inf != NULL);
+
+  step_over_chain_enqueue (&inf->step_over_queue_head, tp);
+}
+
+void
+inferior_step_over_chain_remove (struct thread_info *tp)
+{
+  struct inferior *inf;
+
+  inf = find_inferior_ptid (tp->ptid);
+  gdb_assert (inf != NULL);
+
+  step_over_chain_remove (&inf->step_over_queue_head, tp);
+}
+
+void
+step_over_chain_remove (struct thread_info **list_p, struct thread_info *tp)
+{
+  int count_before, count_after;
+
+  gdb_assert (tp->step_over_next != NULL);
+  gdb_assert (tp->step_over_prev != NULL);
+
+  count_before = step_over_chain_count (*list_p);
+  gdb_assert (count_before > 0);
+
+  if (*list_p == tp)
+    {
+      if (tp == tp->step_over_next)
+	*list_p = NULL;
+      else
+	*list_p = tp->step_over_next;
+    }
+
+  tp->step_over_prev->step_over_next = tp->step_over_next;
+  tp->step_over_next->step_over_prev = tp->step_over_prev;
+  tp->step_over_prev = tp->step_over_next = NULL;
+
+  count_after = step_over_chain_count (*list_p);
+
+  if (count_after != count_before - 1)
+    {
+      if (debug_displaced)
+	{
+	  fprintf_unfiltered (gdb_stdlog, "after = %d, before = %d\n",
+			      count_after, count_before);
+	}
+    }
+  gdb_assert (count_after == count_before - 1);
+}
+
+void
+step_over_chain_dequeue (struct thread_info **list_p)
+{
+  step_over_chain_remove (list_p, *list_p);
+}
+
 /* Delete thread PTID.  If SILENT, don't notify the observer of this
    exit.  */
 static void
@@ -322,6 +461,10 @@ delete_thread_1 (ptid_t ptid, int silent)
 
   if (!tp)
     return;
+
+  /* Dead threads don't need to step-over.  Remove from queue.  */
+  if (tp->step_over_next != NULL)
+    inferior_step_over_chain_remove (tp);
 
   /* If this is the current thread, or there's code out there that
      relies on it existing (refcount > 0) we can't delete yet.  Mark
