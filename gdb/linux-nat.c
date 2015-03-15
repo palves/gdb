@@ -3906,6 +3906,16 @@ linux_nat_thread_alive (struct target_ops *ops, ptid_t ptid)
   return linux_thread_alive (ptid);
 }
 
+
+static void
+linux_nat_update_thread_list (struct target_ops *ops)
+{
+  /* Delete threads marked as exited.  We don't need anything else, as
+     we add/delete threads from the list as we process clone/exit
+     events.  */
+  prune_threads ();
+}
+
 static char *
 linux_nat_pid_to_str (struct target_ops *ops, ptid_t ptid)
 {
@@ -4741,6 +4751,7 @@ linux_nat_add_target (struct target_ops *t)
   t->to_kill = linux_nat_kill;
   t->to_mourn_inferior = linux_nat_mourn_inferior;
   t->to_thread_alive = linux_nat_thread_alive;
+  t->to_update_thread_list = linux_nat_update_thread_list;
   t->to_pid_to_str = linux_nat_pid_to_str;
   t->to_thread_name = linux_nat_thread_name;
   t->to_has_thread_control = tc_schedlock;
