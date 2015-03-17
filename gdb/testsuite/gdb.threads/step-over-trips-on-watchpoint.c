@@ -43,23 +43,26 @@ child_function (void *arg)
   pthread_exit (NULL);
 }
 
-static int
-wait_threads (void)
-{
-  return 1; /* in wait_threads */
-}
-
 int
 main ()
 {
   int res;
   long i;
 
+  alarm (300);
+
   pthread_barrier_init (&barrier, NULL, 2);
 
   res = pthread_create (&child_thread, NULL, child_function, NULL);
   pthread_barrier_wait (&barrier);
-  wait_threads (); /* set wait-thread breakpoint here */
+
+  /* Use an infinite loop with no function calls so that "step" over
+     this line never finishes before the watchpoint in the other
+     thread triggers.  That can happen when the step over of thread 2
+     is done with displaced stepping, and the target is always in
+     non-stop mode.  The combination makes it possible to run both
+     threads simultaneously.  */
+  while (1); /* set wait-thread breakpoint here */
 
   pthread_join (child_thread, NULL);
 
