@@ -131,7 +131,10 @@ enum target_stop_reason
   TARGET_STOPPED_BY_HW_BREAKPOINT,
 
   /* Stopped by a watchpoint.  */
-  TARGET_STOPPED_BY_WATCHPOINT
+  TARGET_STOPPED_BY_WATCHPOINT,
+
+  /* Stopped by a hardware single step finishing.  */
+  TARGET_STOPPED_BY_HW_STEP
 };
 
 /* Prototypes */

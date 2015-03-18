@@ -635,6 +635,8 @@ struct target_ops
        comment on 'to_can_run'.  */
     int (*to_supports_non_stop) (struct target_ops *)
       TARGET_DEFAULT_RETURN (0);
+    int (*to_is_non_stop_p) (struct target_ops *)
+      TARGET_DEFAULT_RETURN (0);
     /* find_memory_regions support method for gcore */
     int (*to_find_memory_regions) (struct target_ops *,
 				   find_memory_region_ftype func, void *data)
@@ -1685,6 +1687,9 @@ extern int target_async_permitted;
 
 /* Is the target in asynchronous execution mode?  */
 #define target_is_async_p() (current_target.to_is_async_p (&current_target))
+
+/* Is the target in non-stop mode?  */
+#define target_is_non_stop_p() (current_target.to_is_non_stop_p (&current_target))
 
 /* Put the target in async mode with the specified callback function.  */
 #define target_async(CALLBACK,CONTEXT) \

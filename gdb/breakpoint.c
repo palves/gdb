@@ -468,6 +468,8 @@ breakpoints_should_be_inserted_now (void)
     }
   else if (target_has_execution)
     {
+      struct thread_info *tp;
+
       if (always_inserted_mode)
 	{
 	  /* The user wants breakpoints inserted even if all threads
@@ -477,6 +479,13 @@ breakpoints_should_be_inserted_now (void)
 
       if (threads_are_executing ())
 	return 1;
+
+      /* Don't remove breakpoints yet if, even though all threads are
+	 stopped, we still have events to process.  */
+      ALL_NON_EXITED_THREADS (tp)
+	if (tp->control.resumed
+	    && tp->suspend.waitstatus_pending_p)
+	  return 1;
     }
   return 0;
 }
@@ -3185,6 +3194,12 @@ remove_breakpoints (void)
   struct bp_location *bl, **blp_tmp;
   int val = 0;
 
+  if (debug_infrun)
+    {
+      fprintf_unfiltered (gdb_stdlog,
+			  "infrun: remove_breakpoints\n");
+    }
+
   ALL_BP_LOCATIONS (bl, blp_tmp)
   {
     if (bl->inserted && !is_tracepoint (bl->owner))
@@ -4279,6 +4294,38 @@ breakpoint_inserted_here_p (struct address_space *aspace, CORE_ADDR pc)
     }
   return 0;
 }
+
+/* Returns non-zero iff there's a breakpoint inserted at PC.  */
+
+int
+breakpoint_should_be_inserted_here_p (struct address_space *aspace, CORE_ADDR pc)
+{
+  struct bp_location **blp, **blp_tmp = NULL;
+  struct bp_location *bl;
+
+  ALL_BP_LOCATIONS_AT_ADDR (blp, blp_tmp, pc)
+    {
+      struct bp_location *bl = *blp;
+
+      if (bl->loc_type != bp_loc_software_breakpoint
+	  && bl->loc_type != bp_loc_hardware_breakpoint)
+	continue;
+
+      if (!breakpoint_address_match (bl->pspace->aspace, bl->address,
+				    aspace, pc))
+	continue;
+
+      if (overlay_debugging
+	  && section_is_overlay (bl->section)
+	  && !section_is_mapped (bl->section))
+	continue;		/* unmapped overlay -- can't be a match */
+
+      if (unduplicated_should_be_inserted (bl))
+	return 1;
+    }
+  return 0;
+}
+
 
 /* This function returns non-zero iff there is a software breakpoint
    inserted at PC.  */
@@ -12337,7 +12384,7 @@ update_global_location_list (enum ugll_insert_mode insert_mode)
 
       if (!found_object)
 	{
-	  if (removed && non_stop
+	  if (removed && target_is_non_stop_p ()
 	      && need_moribund_for_location_type (old_loc))
 	    {
 	      /* This location was removed from the target.  In

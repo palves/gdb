@@ -232,6 +232,7 @@ new_thread (ptid_t ptid)
   /* Nothing to follow yet.  */
   tp->pending_follow.kind = TARGET_WAITKIND_SPURIOUS;
   tp->state = THREAD_STOPPED;
+  tp->suspend.waitstatus.kind = TARGET_WAITKIND_IGNORE;
 
   return tp;
 }

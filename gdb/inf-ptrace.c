@@ -160,6 +160,7 @@ inf_ptrace_attach (struct target_ops *ops, const char *args, int from_tty)
   char *exec_file;
   pid_t pid;
   struct inferior *inf;
+  struct thread_info *tp;
 
   /* Do not change either targets above or the same target if already present.
      The reason is the target stack is shared across multiple inferiors.  */
@@ -209,7 +210,8 @@ inf_ptrace_attach (struct target_ops *ops, const char *args, int from_tty)
 
   /* Always add a main thread.  If some target extends the ptrace
      target, it should decorate the ptid later with more info.  */
-  add_thread_silent (inferior_ptid);
+  tp = add_thread_silent (inferior_ptid);
+  tp->control.resumed = 1;
 
   discard_cleanups (back_to);
 }
