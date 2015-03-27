@@ -3795,8 +3795,18 @@ handle_inferior_event (struct execution_control_state *ecs)
      any other process were left running.  */
   if (!non_stop)
     set_executing (minus_one_ptid, 0);
-  else if (ecs->ws.kind != TARGET_WAITKIND_SIGNALLED
-	   && ecs->ws.kind != TARGET_WAITKIND_EXITED)
+  else if (ecs->ws.kind == TARGET_WAITKIND_SIGNALLED
+	   && ecs->ws.kind == TARGET_WAITKIND_EXITED)
+    {
+      ptid_t pid_ptid;
+
+      /* Some targets still have execution when a process exits.
+	 E.g., for "checkpoint", when when a fork exits and is
+	 mourned, linux-fork.c switches to another fork.  */
+      pid_ptid = pid_to_ptid (ptid_get_pid (ecs->ptid));
+      set_executing (pid_ptid, 0);
+    }
+  else
     set_executing (ecs->ptid, 0);
 
   switch (ecs->ws.kind)
@@ -6535,6 +6545,7 @@ normal_stop (void)
   struct target_waitstatus last;
   ptid_t last_ptid;
   struct cleanup *old_chain = make_cleanup (null_cleanup, NULL);
+  ptid_t pid_ptid;
 
   get_last_target_status (&last_ptid, &last);
 
@@ -6544,9 +6555,19 @@ normal_stop (void)
      here, so do this before any filtered output.  */
   if (!non_stop)
     make_cleanup (finish_thread_state_cleanup, &minus_one_ptid);
-  else if (last.kind != TARGET_WAITKIND_SIGNALLED
-	   && last.kind != TARGET_WAITKIND_EXITED
-	   && last.kind != TARGET_WAITKIND_NO_RESUMED)
+  else if (last.kind == TARGET_WAITKIND_SIGNALLED
+	   || last.kind == TARGET_WAITKIND_EXITED)
+    {
+      /* Some targets still have execution when a process exits.
+	 E.g., for "checkpoint", when when a fork exits and is
+	 mourned, linux-fork.c switches to another fork.  */
+      if (!ptid_equal (inferior_ptid, null_ptid))
+	{
+	  pid_ptid = pid_to_ptid (ptid_get_pid (inferior_ptid));
+	  make_cleanup (finish_thread_state_cleanup, &pid_ptid);
+	}
+    }
+  else if (last.kind != TARGET_WAITKIND_NO_RESUMED)
     make_cleanup (finish_thread_state_cleanup, &inferior_ptid);
 
   /* As we're presenting a stop, and potentially removing breakpoints,

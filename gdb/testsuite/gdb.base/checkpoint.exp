@@ -13,6 +13,20 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
+#
+# This tests gdb checkpoint and restart.
+#
+
+# Note this file is also sourced by checkpoint-ns.exp to run all the
+# tests below in non-stop mode.  That's driven by a separate file so
+# testing both all-stop and non-stop can be done in parallel.
+
+# This is the variable checkpoint-ns.exp sets to request non-stop
+# mode.  When not set, default to all-stop mode.
+if {![info exists checkpoint_non_stop]} {
+    set checkpoint_non_stop 0
+}
+
 if { [is_remote target] || ![isnative] } then {
     continue
 }
@@ -24,8 +38,10 @@ if {![istarget "*-*-linux*"]} then {
     continue
 }
 
-
-standard_testfile .c
+# Must name the source file explicitly, otherwise when driven by
+# checkpoints-ns.exp, we'd try compiling checkpoints-ns.c, which
+# doesn't exist.
+standard_testfile checkpoint.c
 
 set pi_txt [gdb_remote_download host ${srcdir}/${subdir}/pi.txt]
 if {[is_remote host]} {
@@ -42,9 +58,9 @@ if {[prepare_for_testing ${testfile}.exp $testfile $srcfile \
 
 global gdb_prompt
 
-#
-# This tests gdb checkpoint and restart.
-#
+if {$checkpoint_non_stop} {
+    gdb_test_no_output "set non-stop on"
+}
 
 runto_main
 set break1_loc [gdb_get_line_number "breakpoint 1"]
@@ -326,6 +342,11 @@ gdb_exit
 gdb_start
 gdb_reinitialize_dir $srcdir/$subdir
 gdb_load ${binfile}
+
+if {$checkpoint_non_stop} {
+    gdb_test_no_output "set non-stop on" \
+	"set non-stop on, for many checkpoints"
+}
 
 runto_main
 gdb_breakpoint $break1_loc
