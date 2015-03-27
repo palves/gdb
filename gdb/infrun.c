@@ -2403,7 +2403,7 @@ resume (enum gdb_signal sig)
       && tp->control.trap_expected
       && use_displaced_stepping_now_p (gdbarch, sig))
     {
-      struct regcache *resume_regcache = get_thread_regcache (resume_ptid);
+      struct regcache *resume_regcache = get_thread_regcache (tp->ptid);
       struct gdbarch *resume_gdbarch = get_regcache_arch (resume_regcache);
       CORE_ADDR actual_pc = regcache_read_pc (resume_regcache);
       gdb_byte buf[4];
