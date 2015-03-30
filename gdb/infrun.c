@@ -1581,12 +1581,30 @@ show_can_use_displaced_stepping (struct ui_file *file, int from_tty,
    over breakpoints.  */
 
 static int
-use_displaced_stepping (struct gdbarch *gdbarch)
+can_use_displaced_stepping_p (struct gdbarch *gdbarch)
 {
   return (((can_use_displaced_stepping == AUTO_BOOLEAN_AUTO && non_stop)
 	   || can_use_displaced_stepping == AUTO_BOOLEAN_TRUE)
 	  && gdbarch_displaced_step_copy_insn_p (gdbarch)
 	  && find_record_target () == NULL);
+}
+
+/* Return non-zero if displaced stepping should be used to step
+   over a breakpoint in the current thread.  */
+
+static int
+use_displaced_stepping_now_p (struct gdbarch *gdbarch,
+			      enum gdb_signal sig)
+{
+  CORE_ADDR retval;
+
+  /* We can't use displaced stepping when we have a signal to deliver;
+     the comments for displaced_step_prepare explain why.  The
+     comments in the handle_inferior event for dealing with 'random
+     signals' explain what we do instead.  */
+  return  (sig == GDB_SIGNAL_0
+	   && can_use_displaced_stepping_p (gdbarch)
+	   && entry_point_address_query (&retval));
 }
 
 /* Clean out any stray displaced stepping state.  */
@@ -2139,6 +2157,10 @@ resume (enum gdb_signal sig)
 	fprintf_unfiltered (gdb_stdlog,
 			    "infrun: resume : clear step\n");
       step = 0;
+
+      /* Likewise, make sure we don't use displaced stepping, which
+	 would poke the scratch buffer in the child.  */
+      tp->control.trap_expected = 0;
     }
 
   if (debug_infrun)
@@ -2234,20 +2256,8 @@ resume (enum gdb_signal sig)
     tp->control.may_range_step = 0;
 
   /* If enabled, step over breakpoints by executing a copy of the
-     instruction at a different address.
-
-     We can't use displaced stepping when we have a signal to deliver;
-     the comments for displaced_step_prepare explain why.  The
-     comments in the handle_inferior event for dealing with 'random
-     signals' explain what we do instead.
-
-     We can't use displaced stepping when we are waiting for vfork_done
-     event, displaced stepping breaks the vfork child similarly as single
-     step software breakpoint.  */
-  if (use_displaced_stepping (gdbarch)
-      && tp->control.trap_expected
-      && sig == GDB_SIGNAL_0
-      && !current_inferior ()->waiting_for_vfork_done)
+     instruction at a different address.  */
+  if (tp->control.trap_expected && use_displaced_stepping_now_p (gdbarch, sig))
     {
       struct displaced_step_inferior_state *displaced;
 
@@ -2390,8 +2400,8 @@ resume (enum gdb_signal sig)
     }
 
   if (debug_displaced
-      && use_displaced_stepping (gdbarch)
-      && tp->control.trap_expected)
+      && tp->control.trap_expected
+      && use_displaced_stepping_now_p (gdbarch, sig))
     {
       struct regcache *resume_regcache = get_thread_regcache (resume_ptid);
       struct gdbarch *resume_gdbarch = get_regcache_arch (resume_regcache);
@@ -2706,7 +2716,9 @@ proceed (CORE_ADDR addr, enum gdb_signal siggnal)
      displaced stepping to do so, insert all breakpoints (watchpoints,
      etc.) but the one we're stepping over, step one instruction, and
      then re-insert the breakpoint when that step is finished.  */
-  if (tp->stepping_over_breakpoint && !use_displaced_stepping (gdbarch))
+  if (tp->stepping_over_breakpoint
+      && !use_displaced_stepping_now_p (gdbarch,
+					tp->suspend.stop_signal))
     {
       struct regcache *regcache = get_current_regcache ();
 
@@ -6254,6 +6266,7 @@ keep_going (struct execution_control_state *ecs)
       struct regcache *regcache = get_current_regcache ();
       int remove_bp;
       int remove_wps;
+      enum gdb_signal signo;
 
       /* Either the trap was not expected, but we are continuing
 	 anyway (if we got a signal, the user asked it be passed to
@@ -6279,7 +6292,25 @@ keep_going (struct execution_control_state *ecs)
       remove_wps = (ecs->event_thread->stepping_over_watchpoint
 		    && !target_have_steppable_watchpoint);
 
-      if (remove_bp && !use_displaced_stepping (get_regcache_arch (regcache)))
+      /* Do not deliver GDB_SIGNAL_TRAP (except when the user
+	 explicitly specifies that such a signal should be delivered
+	 to the target program).  Typically, that would occur when a
+	 user is debugging a target monitor on a simulator: the target
+	 monitor sets a breakpoint; the simulator encounters this
+	 breakpoint and halts the simulation handing control to GDB;
+	 GDB, noting that the stop address doesn't map to any known
+	 breakpoint, returns control back to the simulator; the
+	 simulator then delivers the hardware equivalent of a
+	 GDB_SIGNAL_TRAP to the program being debugged.	 */
+      if (ecs->event_thread->suspend.stop_signal == GDB_SIGNAL_TRAP
+	  && !signal_program[ecs->event_thread->suspend.stop_signal])
+	ecs->event_thread->suspend.stop_signal = GDB_SIGNAL_0;
+
+      signo = ecs->event_thread->suspend.stop_signal;
+
+      if (remove_bp
+	  && !use_displaced_stepping_now_p (get_regcache_arch (regcache),
+					    signo))
 	{
 	  set_step_over_info (get_regcache_aspace (regcache),
 			      regcache_read_pc (regcache), remove_wps);
@@ -6304,20 +6335,6 @@ keep_going (struct execution_control_state *ecs)
       END_CATCH
 
       ecs->event_thread->control.trap_expected = (remove_bp || remove_wps);
-
-      /* Do not deliver GDB_SIGNAL_TRAP (except when the user
-	 explicitly specifies that such a signal should be delivered
-	 to the target program).  Typically, that would occur when a
-	 user is debugging a target monitor on a simulator: the target
-	 monitor sets a breakpoint; the simulator encounters this
-	 breakpoint and halts the simulation handing control to GDB;
-	 GDB, noting that the stop address doesn't map to any known
-	 breakpoint, returns control back to the simulator; the
-	 simulator then delivers the hardware equivalent of a
-	 GDB_SIGNAL_TRAP to the program being debugged.	 */
-      if (ecs->event_thread->suspend.stop_signal == GDB_SIGNAL_TRAP
-	  && !signal_program[ecs->event_thread->suspend.stop_signal])
-	ecs->event_thread->suspend.stop_signal = GDB_SIGNAL_0;
 
       discard_cleanups (old_cleanups);
       resume (ecs->event_thread->suspend.stop_signal);
