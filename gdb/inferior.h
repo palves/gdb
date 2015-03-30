@@ -410,6 +410,10 @@ struct inferior
      this gdbarch.  */
   struct gdbarch *gdbarch;
 
+  /* The queue of this inferior's threads that need to do a step-over
+     operation to get past e.g., a breakpoint.  */
+  struct thread_info *step_over_queue_head;
+
   /* Per inferior data-pointers required by other GDB modules.  */
   REGISTRY_FIELDS;
 };
