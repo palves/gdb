@@ -2520,7 +2520,7 @@ clear_proceed_status (int step)
    meanwhile, we can skip the whole step-over dance.  */
 
 static int
-thread_still_needs_step_over (struct thread_info *tp)
+thread_still_needs_step_over_bp (struct thread_info *tp)
 {
   if (tp->stepping_over_breakpoint)
     {
@@ -2535,6 +2535,34 @@ thread_still_needs_step_over (struct thread_info *tp)
     }
 
   return 0;
+}
+
+/* Bit flags indicating what the thread needs to step over.  */
+
+enum step_over_what
+  {
+    STEP_OVER_BREAKPOINT = 1,
+    STEP_OVER_WATCHPOINT = 2
+  };
+
+/* Check whether thread TP still needs to start a step-over in order
+   to make progress when resumed.  Returns a union of enum
+   step_over_what bits, indicating what needs to be stepped over.  */
+
+static int
+thread_still_needs_step_over (struct thread_info *tp)
+{
+  struct inferior *inf = find_inferior_ptid (tp->ptid);
+  int what = 0;
+
+  if (thread_still_needs_step_over_bp (tp))
+    what |= STEP_OVER_BREAKPOINT;
+
+  if (tp->stepping_over_watchpoint
+      && !target_have_steppable_watchpoint)
+    what |= STEP_OVER_WATCHPOINT;
+
+  return what;
 }
 
 /* Returns true if scheduler locking applies.  STEP indicates whether
@@ -6273,6 +6301,7 @@ keep_going (struct execution_control_state *ecs)
       int remove_bp;
       int remove_wps;
       enum gdb_signal signo;
+      enum step_over_what step_what;
 
       /* Either the trap was not expected, but we are continuing
 	 anyway (if we got a signal, the user asked it be passed to
@@ -6293,11 +6322,6 @@ keep_going (struct execution_control_state *ecs)
 	 instruction, and then re-insert the breakpoint when that step
 	 is finished.  */
 
-      remove_bp = (ecs->hit_singlestep_breakpoint
-		   || thread_still_needs_step_over (ecs->event_thread));
-      remove_wps = (ecs->event_thread->stepping_over_watchpoint
-		    && !target_have_steppable_watchpoint);
-
       /* Do not deliver GDB_SIGNAL_TRAP (except when the user
 	 explicitly specifies that such a signal should be delivered
 	 to the target program).  Typically, that would occur when a
@@ -6314,6 +6338,12 @@ keep_going (struct execution_control_state *ecs)
 
       signo = ecs->event_thread->suspend.stop_signal;
 
+      step_what = thread_still_needs_step_over (ecs->event_thread);
+
+      remove_bp = (ecs->hit_singlestep_breakpoint
+		   || (step_what & STEP_OVER_BREAKPOINT));
+      remove_wps = (step_what & STEP_OVER_WATCHPOINT);
+
       if (remove_bp
 	  && !use_displaced_stepping_now_p (get_regcache_arch (regcache),
 					    signo))
@@ -6325,6 +6355,8 @@ keep_going (struct execution_control_state *ecs)
 	set_step_over_info (NULL, 0, remove_wps);
       else
 	clear_step_over_info ();
+
+      ecs->event_thread->control.trap_expected = (remove_bp || remove_wps);
 
       /* Stop stepping if inserting breakpoints fails.  */
       TRY
@@ -6339,8 +6371,6 @@ keep_going (struct execution_control_state *ecs)
 	  return;
 	}
       END_CATCH
-
-      ecs->event_thread->control.trap_expected = (remove_bp || remove_wps);
 
       discard_cleanups (old_cleanups);
       resume (ecs->event_thread->suspend.stop_signal);
