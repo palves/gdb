@@ -196,4 +196,7 @@ extern void signal_catch_update (const unsigned int *);
    systems.  Use of symbolic signal names is strongly encouraged.  */
 enum gdb_signal gdb_signal_from_command (int num);
 
+/* Enables/disables infrun's async event source in the event loop.  */
+extern void infrun_async (int enable);
+
 #endif /* INFRUN_H */
