@@ -1792,6 +1792,8 @@ displaced_step_fixup (ptid_t event_ptid, enum gdb_signal signal)
   struct cleanup *old_cleanups;
   struct displaced_step_inferior_state *displaced
     = get_displaced_stepping_state (ptid_get_pid (event_ptid));
+  struct regcache *regcache;
+  struct gdbarch *gdbarch;
 
   /* Was any thread of this process doing a displaced step?  */
   if (displaced == NULL)
@@ -1806,13 +1808,20 @@ displaced_step_fixup (ptid_t event_ptid, enum gdb_signal signal)
 
   displaced_step_restore (displaced, displaced->step_ptid);
 
-  /* Did the instruction complete successfully?  */
-  if (signal == GDB_SIGNAL_TRAP)
-    {
-      /* Fixup may need to read memory/registers.  Switch to the
-	 thread that we're fixing up.  */
-      switch_to_thread (event_ptid);
+  /* Fixup may need to read memory/registers.  Switch to the thread
+     that we're fixing up.  Also, target_stopped_by_watchpoint checks
+     the current thread.  */
+  switch_to_thread (event_ptid);
 
+  regcache = get_thread_regcache (event_ptid);
+  gdbarch  = get_regcache_arch (regcache);
+
+  /* Did the instruction complete successfully?  */
+  if (signal == GDB_SIGNAL_TRAP
+      && !(target_stopped_by_watchpoint ()
+	   && (target_have_steppable_watchpoint
+	       || gdbarch_have_nonsteppable_watchpoint (gdbarch))))
+    {
       /* Fix up the resulting state.  */
       gdbarch_displaced_step_fixup (displaced->step_gdbarch,
                                     displaced->step_closure,
@@ -1824,7 +1833,6 @@ displaced_step_fixup (ptid_t event_ptid, enum gdb_signal signal)
     {
       /* Since the instruction didn't complete, all we can do is
          relocate the PC.  */
-      struct regcache *regcache = get_thread_regcache (event_ptid);
       CORE_ADDR pc = regcache_read_pc (regcache);
 
       pc = displaced->step_original + (pc - displaced->step_copy);
@@ -2260,7 +2268,9 @@ resume (enum gdb_signal sig)
 
   /* If enabled, step over breakpoints by executing a copy of the
      instruction at a different address.  */
-  if (tp->control.trap_expected && use_displaced_stepping_now_p (gdbarch, sig))
+  if (tp->control.trap_expected
+      && !step_over_info_valid_p ()
+      && use_displaced_stepping_now_p (gdbarch, sig))
     {
       struct displaced_step_inferior_state *displaced;
 
@@ -2404,6 +2414,7 @@ resume (enum gdb_signal sig)
 
   if (debug_displaced
       && tp->control.trap_expected
+      && !step_over_info_valid_p ()
       && use_displaced_stepping_now_p (gdbarch, sig))
     {
       struct regcache *resume_regcache = get_thread_regcache (tp->ptid);
@@ -6350,15 +6361,18 @@ keep_going (struct execution_control_state *ecs)
 		   || (step_what & STEP_OVER_BREAKPOINT));
       remove_wps = (step_what & STEP_OVER_WATCHPOINT);
 
-      if (remove_bp
-	  && !use_displaced_stepping_now_p (get_regcache_arch (regcache),
-					    signo))
+      if (remove_wps && remove_bp)
+	set_step_over_info (get_regcache_aspace (regcache),
+			    regcache_read_pc (regcache), remove_wps);
+      else if (remove_wps)
+	set_step_over_info (NULL, 0, remove_wps);
+      else if (remove_bp
+	       && !use_displaced_stepping_now_p (get_regcache_arch (regcache),
+						 signo))
 	{
 	  set_step_over_info (get_regcache_aspace (regcache),
 			      regcache_read_pc (regcache), remove_wps);
 	}
-      else if (remove_wps)
-	set_step_over_info (NULL, 0, remove_wps);
       else
 	clear_step_over_info ();
 
