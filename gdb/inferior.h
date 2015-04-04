@@ -414,6 +414,10 @@ struct inferior
      operation to get past e.g., a breakpoint.  */
   struct thread_info *step_over_queue_head;
 
+  /* True if preparing a displaced step ever failed.  If so, we won't
+     try displaced stepping for this inferior again.  */
+  int displaced_stepping_failed;
+
   /* Per inferior data-pointers required by other GDB modules.  */
   REGISTRY_FIELDS;
 };

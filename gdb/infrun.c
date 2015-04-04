@@ -1617,7 +1617,7 @@ can_use_displaced_stepping_p (struct gdbarch *gdbarch)
    over a breakpoint in the current thread.  */
 
 static int
-use_displaced_stepping_now_p (struct gdbarch *gdbarch,
+use_displaced_stepping_now_p (struct inferior *inf, struct gdbarch *gdbarch,
 			      enum gdb_signal sig)
 {
   CORE_ADDR retval;
@@ -1626,7 +1626,8 @@ use_displaced_stepping_now_p (struct gdbarch *gdbarch,
      the comments for displaced_step_prepare explain why.  The
      comments in the handle_inferior event for dealing with 'random
      signals' explain what we do instead.  */
-  return  (sig == GDB_SIGNAL_0
+  return  (!inf->displaced_stepping_failed
+	   && sig == GDB_SIGNAL_0
 	   && can_use_displaced_stepping_p (gdbarch)
 	   && entry_point_address_query (&retval));
 }
@@ -1926,6 +1927,7 @@ static void keep_going_pass (struct execution_control_state *ecs);
 static void prepare_to_wait (struct execution_control_state *ecs);
 static int keep_going_stepped_thread (struct thread_info *tp);
 static int thread_still_needs_step_over (struct thread_info *tp);
+static void stop_all_threads (void);
 
 /* Are there any pending step-over requests for INF?  If so, run one
    now and return true.  Otherwise, return false.  */
@@ -2372,11 +2374,40 @@ resume (enum gdb_signal sig)
      instruction at a different address.  */
   if (tp->control.trap_expected
       && !step_over_info_valid_p ()
-      && use_displaced_stepping_now_p (gdbarch, sig))
+      && use_displaced_stepping_now_p (current_inferior (), gdbarch, sig))
     {
-      struct displaced_step_inferior_state *displaced;
+      int prepared = -1;
 
-      if (!displaced_step_prepare (inferior_ptid))
+      TRY
+	{
+	  prepared = displaced_step_prepare (inferior_ptid);
+	}
+      CATCH (ex, RETURN_MASK_ERROR)
+	{
+	  if (ex.error != MEMORY_ERROR)
+	    throw_exception (ex);
+
+	  if (debug_infrun)
+	    {
+	      fprintf_unfiltered (gdb_stdlog,
+				  "infrun: disabling displaced stepping: %s\n",
+				  ex.message);
+	    }
+
+	  /* Be verbose if "set displaced-stepping" is "on", silent if
+	     "auto".  */
+	  if (can_use_displaced_stepping == AUTO_BOOLEAN_TRUE)
+	    {
+	      warning (_("disabling displaced stepping: %s\n"),
+		       ex.message);
+	    }
+
+	  /* Disable further displaced stepping attempts.  */
+	  current_inferior ()->displaced_stepping_failed = 1;
+	}
+      END_CATCH
+
+      if (prepared == 0)
 	{
 	  if (debug_infrun)
 	    fprintf_unfiltered (gdb_stdlog,
@@ -2387,14 +2418,32 @@ resume (enum gdb_signal sig)
 	  discard_cleanups (old_cleanups);
 	  return;
 	}
+      else if (prepared < 0)
+	{
+	  /* Fallback to stepping over the breakpoint in-line.  */
 
-      /* Update pc to reflect the new address from which we will execute
-	 instructions due to displaced stepping.  */
-      pc = regcache_read_pc (get_thread_regcache (inferior_ptid));
+	  if (target_is_non_stop_p ())
+	    stop_all_threads ();
 
-      displaced = get_displaced_stepping_state (ptid_get_pid (inferior_ptid));
-      step = gdbarch_displaced_step_hw_singlestep (gdbarch,
-						   displaced->step_closure);
+	  set_step_over_info (get_regcache_aspace (regcache),
+			      regcache_read_pc (regcache), 0);
+
+	  step = maybe_software_singlestep (gdbarch, pc);
+
+	  insert_breakpoints ();
+	}
+      else if (prepared > 0)
+	{
+	  struct displaced_step_inferior_state *displaced;
+
+	  /* Update pc to reflect the new address from which we will
+	     execute instructions due to displaced stepping.  */
+	  pc = regcache_read_pc (get_thread_regcache (inferior_ptid));
+
+	  displaced = get_displaced_stepping_state (ptid_get_pid (inferior_ptid));
+	  step = gdbarch_displaced_step_hw_singlestep (gdbarch,
+						       displaced->step_closure);
+	}
     }
 
   /* Do we need to do it the hard way, w/temp breakpoints?  */
@@ -2524,7 +2573,7 @@ resume (enum gdb_signal sig)
   if (debug_displaced
       && tp->control.trap_expected
       && !step_over_info_valid_p ()
-      && use_displaced_stepping_now_p (gdbarch, sig))
+      && use_displaced_stepping_now_p (current_inferior (), gdbarch, sig))
     {
       struct regcache *resume_regcache = get_thread_regcache (tp->ptid);
       struct gdbarch *resume_gdbarch = get_regcache_arch (resume_regcache);
@@ -7178,7 +7227,8 @@ keep_going_pass (struct execution_control_state *ecs)
       else if (remove_wps)
 	set_step_over_info (NULL, 0, remove_wps);
       else if (remove_bp
-	       && !use_displaced_stepping_now_p (get_regcache_arch (regcache),
+	       && !use_displaced_stepping_now_p (current_inferior (),
+						 get_regcache_arch (regcache),
 						 signo))
 	{
 	  set_step_over_info (get_regcache_aspace (regcache),
