@@ -92,18 +92,16 @@ proc do_test { displaced } {
 
     gdb_test "set displaced-stepping $displaced"
 
-    if ![runto_main] then {
-	fail "Can't run to main"
-	return 0
-    }
+    # Don't rely on runto leaving the breakpoint behind.
+    gdb_breakpoint "main"
+
+    gdb_run_cmd
+
+    gdb_test "" "Breakpoint 1, main .* foo \\(1\\);" "run to main"
 
     gdb_assert $our_gdb_file_cmd_called "overridden gdb_file_cmd called"
 
-    # Don't rely on runto leaving the breakpoint behind.
-    delete_breakpoints
-    gdb_test "break" "Breakpoint .* at .*" "set breakpoint at current address"
-
-    gdb_test "next" "foo \\(2\\);" "next"
+    gdb_test "next" "foo \\(2\\);" "step over breakpoint"
 }
 
 foreach displaced { "off" "on" } {
