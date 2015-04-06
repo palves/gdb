@@ -1,0 +1,126 @@
+# Copyright 2015 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Test that displaced stepping works if the program is loaded with
+# "symbol-file + exec-file", in that order.  GDB used to end up with a
+# broken entry point address on PPC64 in that case.  (The displaced
+# stepping scratch pad is put at the entry point.)
+
+standard_testfile
+
+if {[build_executable "failed to build" $testfile $srcfile debug] == -1} {
+    return -1
+}
+
+# Override gdb_file_cmd, allowing gdb_load to do its normal thing.
+# This way remotes and simulators work, too.
+
+set old_gdb_file_cmd_args [info args gdb_file_cmd]
+set old_gdb_file_cmd_body [info body gdb_file_cmd]
+
+set our_gdb_file_cmd_called 0
+
+set symbol_file_first 0
+
+proc gdb_file_cmd {arg} {
+    upvar timeout timeout
+    global last_loaded_file
+    global our_gdb_file_cmd_called
+    global symbol_file_first
+
+    set our_gdb_file_cmd_called 1
+
+    set last_loaded_file $arg
+
+    if [is_remote host] {
+        set arg [remote_download host $arg]
+        if { $arg == "" } {
+            error "download failed"
+            return -1
+        }
+    }
+
+    proc symbol_file {} {
+	upvar arg arg
+
+	if {[gdb_test "symbol-file $arg" \
+		 "Reading symbols from.*done\\." \
+		 "symbol-file \$arg"] != 0 } {
+	    return -code return -1
+	}
+    }
+
+    proc exec_file {} {
+	upvar arg arg
+
+	if {[gdb_test_no_output "exec-file $arg" \
+		 "exec-file \$arg"] != 0} {
+	    return -code return -1
+	}
+    }
+
+    if $symbol_file_first {
+	symbol_file
+	exec_file
+    } else {
+	exec_file
+	symbol_file
+    }
+
+    return 0
+}
+
+proc do_test { displaced } {
+    global our_gdb_file_cmd_called
+    global binfile
+
+    set our_gdb_file_cmd_called 0
+
+    clean_restart $binfile
+
+    gdb_test "set displaced-stepping $displaced"
+
+    if ![runto_main] then {
+	fail "Can't run to main"
+	return 0
+    }
+
+    gdb_assert $our_gdb_file_cmd_called "overridden gdb_file_cmd called"
+
+    # Don't rely on runto leaving the breakpoint behind.
+    delete_breakpoints
+    gdb_test "break" "Breakpoint .* at .*" "set breakpoint at current address"
+
+    gdb_test "next" "foo \\(2\\);" "next"
+}
+
+foreach displaced { "off" "on" } {
+    foreach symfile_first { 0 1 } {
+	set symbol_file_first $symfile_first
+
+	if { $symfile_first } {
+	    set prefix "symbol-file + exec-file"
+	} else {
+	    set prefix "exec-file + symbol-file"
+	}
+
+	with_test_prefix "displaced=$displaced: $prefix" {
+	    do_test $displaced
+	}
+    }
+}
+
+# Restore gdb_file_cmd.
+eval proc gdb_file_cmd {$old_gdb_file_cmd_args} {$old_gdb_file_cmd_body}
