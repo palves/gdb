@@ -2348,6 +2348,32 @@ linux_infcall_mmap (CORE_ADDR size, unsigned prot)
   return retval;
 }
 
+/* See linux-tdep.h.  */
+
+CORE_ADDR
+linux_displaced_step_location (struct gdbarch *gdbarch)
+{
+  CORE_ADDR addr;
+  int bp_len;
+
+  /* Determine entry point from target auxiliary vector.  */
+  if (target_auxv_search (&current_target, AT_ENTRY, &addr) <= 0)
+    error (_("Cannot find AT_ENTRY auxiliary vector entry."));
+
+  /* Make certain that the address points at real code, and not a
+     function descriptor.  */
+  addr = gdbarch_convert_from_func_ptr_addr (gdbarch, addr,
+					     &current_target);
+
+  /* Inferior calls also use the entry point as a breakpoint location.
+     We don't want displaced stepping to interfere with those
+     breakpoints, so leave space.  */
+  gdbarch_breakpoint_from_pc (gdbarch, &addr, &bp_len);
+  addr += bp_len * 2;
+
+  return addr;
+}
+
 /* Display whether the gcore command is using the
    /proc/PID/coredump_filter file.  */
 
