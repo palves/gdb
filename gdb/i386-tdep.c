@@ -8144,7 +8144,7 @@ get_sp (struct frame_info *frame)
 /* If the instruction at PC is a jump, return the address of its
    target.  Otherwise, return PC.  */
 
-static int
+int
 i386_cond_jump_dest (struct frame_info *frame,
 		     const gdb_byte *insn, const CORE_ADDR pc, CORE_ADDR *dest)
 {
@@ -8357,7 +8357,7 @@ arch_reg_to_regnum (struct gdbarch *gdbarch, int reg)
 /* If the instruction at PC is a jump, write to *DEST the address of
    its target and return true.  Otherwise, return false.  */
 
-static int
+int
 i386_jump_dest (struct frame_info *frame,
 		const gdb_byte *insn, const CORE_ADDR pc, CORE_ADDR *dest)
 {
@@ -8564,6 +8564,41 @@ i386_jump_dest (struct frame_info *frame,
   return 1;
 }
 
+int
+i386_ret_dest (struct frame_info *frame,
+	       const gdb_byte *insn, const CORE_ADDR pc, CORE_ADDR *dest)
+{
+  struct gdbarch *gdbarch = get_frame_arch (frame);
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
+  gdb_byte op;
+  int offset = 0;
+  int rex_p = 0;
+
+  op = insn[offset++];
+
+  /* Skip REX instruction prefix.  */
+  rex_p = rex_prefix_p (op);
+  if (rex_p)
+    op = insn[offset++];
+
+  if (op == 0xf3) /* repz retq ? */
+    op = insn[offset++];
+
+  if (*insn == 0xc3)	/* 'ret' instruction.  */
+    {
+      gdb_byte buf[8];
+      CORE_ADDR sp;
+
+      sp = get_sp (frame);
+      *dest = read_memory_unsigned_integer (sp,
+					    register_size (gdbarch, 0),
+					    byte_order);
+      return 1;
+    }
+
+  return 0;
+}
+
 /* Determine where to set a single step breakpoint.  */
 
 static CORE_ADDR
@@ -8591,19 +8626,9 @@ i386_get_next_pc_1 (struct frame_info *frame, CORE_ADDR pc)
   pc += insn - buf;
 
   if (i386_cond_jump_dest (frame, insn, pc, &next_pc)
-      || i386_jump_dest (frame, insn, pc, &next_pc))
+      || i386_jump_dest (frame, insn, pc, &next_pc)
+      || i386_ret_dest (frame, insn, pc, &next_pc))
     return next_pc;
-
-  if (*insn == 0xc3)	/* 'ret' instruction.  */
-    {
-      gdb_byte buf[8];
-      CORE_ADDR sp;
-
-      sp = get_sp (frame);
-      return read_memory_unsigned_integer (sp,
-					   register_size (gdbarch, 0),
-					   byte_order);
-    }
 
   if (i386_syscall_p (insn, &len))
     {

@@ -1425,6 +1425,10 @@ step_over_info_valid_p (void)
      same effect the instruction would have had if we had executed it
      at its original address.  We use this in step n3.
 
+   - gdbarch_displaced_step_abort is called when single-stepping the
+     instruction fails to complete due to a signal.  We use this in
+     step n3.
+
    - gdbarch_displaced_step_free_closure provides cleanup.
 
    The gdbarch_displaced_step_copy_insn and
@@ -1438,7 +1442,7 @@ step_over_info_valid_p (void)
 
    See the comments in gdbarch.sh for details.
 
-   Note that displaced stepping and software single-step cannot
+   FIXME comment.  Note that displaced stepping and software single-step cannot
    currently be used in combination, although with some care I think
    they could be made to.  Software single-step works by placing
    breakpoints on all possible subsequent instructions; if the
@@ -1962,7 +1966,14 @@ displaced_step_fixup (ptid_t event_ptid, enum gdb_signal signal)
 
       pc = displaced->step_original + (pc - displaced->step_copy);
       regcache_write_pc (regcache, pc);
+
       ret = -1;
+
+      gdbarch_displaced_step_aborted (displaced->step_gdbarch,
+				      displaced->step_closure,
+				      displaced->step_original,
+				      displaced->step_copy,
+				      get_thread_regcache (displaced->step_ptid));
     }
 
   do_cleanups (old_cleanups);

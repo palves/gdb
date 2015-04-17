@@ -93,6 +93,10 @@ extern void amd64_displaced_step_fixup (struct gdbarch *gdbarch,
 					struct displaced_step_closure *closure,
 					CORE_ADDR from, CORE_ADDR to,
 					struct regcache *regs);
+extern void amd64_displaced_step_aborted (struct gdbarch *gdbarch,
+					  struct displaced_step_closure *closure,
+					  CORE_ADDR from, CORE_ADDR to,
+					  struct regcache *regcache);
 
 extern void amd64_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch);
 extern void amd64_x32_init_abi (struct gdbarch_info info,

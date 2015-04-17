@@ -74,6 +74,15 @@ default_displaced_step_hw_singlestep (struct gdbarch *gdbarch,
   return !gdbarch_software_single_step_p (gdbarch);
 }
 
+void
+default_displaced_step_aborted (struct gdbarch *gdbarch,
+				struct displaced_step_closure *closure,
+				CORE_ADDR from, CORE_ADDR to,
+				struct regcache *regcache)
+{
+  /* Nothing to do by default.  */
+}
+
 CORE_ADDR
 displaced_step_at_entry_point (struct gdbarch *gdbarch)
 {

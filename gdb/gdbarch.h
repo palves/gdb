@@ -972,6 +972,23 @@ typedef void (gdbarch_displaced_step_fixup_ftype) (struct gdbarch *gdbarch, stru
 extern void gdbarch_displaced_step_fixup (struct gdbarch *gdbarch, struct displaced_step_closure *closure, CORE_ADDR from, CORE_ADDR to, struct regcache *regs);
 extern void set_gdbarch_displaced_step_fixup (struct gdbarch *gdbarch, gdbarch_displaced_step_fixup_ftype *displaced_step_fixup);
 
+/* Fix up the state resulting from not succeding to single-stepping a
+   displaced instruction, due to a signal.  infrun.c relocates the PC
+   before calling this.  An architecture might want to remove auxilary
+   breakpoints here, for example.  The default implementation does
+   nothing.
+  
+   REGS is the register state resulting from single-stepping the
+   displaced instruction.
+  
+   CLOSURE is the result from the matching call to
+   gdbarch_displaced_step_copy_insn.
+   */
+
+typedef void (gdbarch_displaced_step_aborted_ftype) (struct gdbarch *gdbarch, struct displaced_step_closure *closure, CORE_ADDR from, CORE_ADDR to, struct regcache *regs);
+extern void gdbarch_displaced_step_aborted (struct gdbarch *gdbarch, struct displaced_step_closure *closure, CORE_ADDR from, CORE_ADDR to, struct regcache *regs);
+extern void set_gdbarch_displaced_step_aborted (struct gdbarch *gdbarch, gdbarch_displaced_step_aborted_ftype *displaced_step_aborted);
+
 /* Free a closure returned by gdbarch_displaced_step_copy_insn.
   
    If you provide gdbarch_displaced_step_copy_insn, you must provide
