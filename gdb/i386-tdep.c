@@ -48,6 +48,7 @@ extern int use_software_single_step;
 #include "i386-tdep.h"
 #include "i387-tdep.h"
 #include "x86-xstate.h"
+#include "gdbthread.h"
 
 #include "record.h"
 #include "record-full.h"
@@ -797,7 +798,8 @@ i386_insn_is_jump (struct gdbarch *gdbarch, CORE_ADDR addr)
   return i386_jmp_p (insn);
 }
 
-/* Some kernels may run one past a syscall insn, so we have to cope.  */
+/* Some kernels may run one past a syscall insn, so we have to
+   cope.  */
 
 struct displaced_step_closure *
 i386_displaced_step_copy_insn (struct gdbarch *gdbarch,
@@ -805,23 +807,111 @@ i386_displaced_step_copy_insn (struct gdbarch *gdbarch,
 			       struct regcache *regs)
 {
   size_t len = gdbarch_max_insn_length (gdbarch);
-  i386_displaced_step_closure *closure = new i386_displaced_step_closure (len);
-  gdb_byte *buf = closure->buf.data ();
+  int fixup_sentinel_space = len;
+  i386_displaced_step_closure *dsc
+    = new i386_displaced_step_closure (len + fixup_sentinel_space);
+  gdb_byte *buf = dsc->insn_buf.data ();
+  struct frame_info *frame = get_current_frame (); /* FIXME */
+  CORE_ADDR next_pc;
+  gdb_byte *insn;
+  CORE_ADDR pc = from;
+  int syscall_length;
+
+  dsc->tmp_used = 0;
 
   read_memory (from, buf, len);
 
-  /* GDB may get control back after the insn after the syscall.
-     Presumably this is a kernel bug.
-     If this is a syscall, make sure there's a nop afterwards.  */
-  {
-    int syscall_length;
-    gdb_byte *insn;
+  insn = i386_skip_prefixes (buf, len);
 
-    insn = i386_skip_prefixes (buf, len);
-    if (insn != NULL && i386_syscall_p (insn, &syscall_length))
+  if (i386_cond_jump_dest (regs, insn, pc, &next_pc)
+      || i386_jump_dest (regs, insn, pc, &next_pc))
+    {
+      if (debug_displaced)
+	fprintf_unfiltered (gdb_stdlog,
+			    "jump/call from => next_pc : %s => %s\n",
+			    paddress (gdbarch, from),
+			    paddress (gdbarch, next_pc));
+
+      /* Copying a relative call/jmp to the scratch pad, stepping it,
+	 and then fix up the PC at fixup time doesn't work with
+	 software single-step, because in that case we need to set a
+	 breakpoint at the destination of the relative jump, and that
+	 might well be an invalid/unmapped address.  Also, with
+	 software single-step, we'll put a breakpoint at the
+	 destination, and we want to avoid other thread having to trip
+	 on that breakpoint.  So we convert calls to push/jump, with
+	 the address pushed being the location where the original call
+	 in the user program would return to.  Jumps are converted to
+	 nops.  In both cases, the actual jumps are performed at fixup
+	 time, by manually setting the PC.  */
+      if (i386_call_p (insn))
+	{
+	  uint32_t ret_addr;
+	  const int call_insn_length = 5;
+	  int regno = I386_EAX_REGNUM;
+	  ULONGEST orig_value;
+
+	  if (debug_displaced)
+	    fprintf_unfiltered (gdb_stdlog,
+				"converting call to push %%eax + (manual) jmp\n");
+
+	  regcache_cooked_read_unsigned (regs, regno, &orig_value);
+	  dsc->tmp_regno = regno;
+	  dsc->tmp_save = orig_value;
+	  dsc->tmp_used = 1;
+
+	  buf[0] = 0x50; /* push %rax */
+	  len = 1;
+
+	  ret_addr = from + call_insn_length;
+	  regcache_cooked_write_unsigned (regs, regno, ret_addr);
+	}
+      else
+	{
+	  /* Jump instructions are performed at fixup time, by
+	     manually setting PC.  */
+
+	  if (debug_displaced)
+	    fprintf_unfiltered (gdb_stdlog,
+				"converting jmp to nop + (manual) jmp\n");
+
+	  buf[0] = NOP_OPCODE;
+	  len = 1;
+	}
+      dsc->branch_dest = next_pc;
+      dsc->branch_p = 1;
+    }
+  else if (i386_ret_dest (regs, insn, pc, &next_pc))
+    {
+      int regno = I386_EAX_REGNUM;
+      ULONGEST orig_value;
+
+      if (debug_displaced)
+	fprintf_unfiltered (gdb_stdlog,
+			    "converting ret to pop %%rax + (manual) jmp\n");
+
+      regcache_cooked_read_unsigned (regs, regno, &orig_value);
+      dsc->tmp_regno = regno;
+      dsc->tmp_save = orig_value;
+      dsc->tmp_used = 1;
+
+      buf[0] = 0x58; /* pop %eax */
+      len = 1;
+
+      dsc->branch_dest = next_pc;
+      dsc->branch_p = 1;
+    }
+  else if (i386_syscall_p (insn, &syscall_length))
+    {
+      /* GDB may get control back after the insn after the syscall.
+	 Presumably this is a kernel bug.
+	 If this is a syscall, make sure there's a nop afterwards.  */
+
       insn[syscall_length] = NOP_OPCODE;
-  }
+    }
 
+  len = gdb_buffered_insn_length (gdbarch, buf, dsc->insn_buf.size (), to);
+  insert_single_step_breakpoint (gdbarch, regs->aspace (), to + len);
   write_memory (to, buf, len);
 
   if (debug_displaced)
@@ -831,7 +921,7 @@ i386_displaced_step_copy_insn (struct gdbarch *gdbarch,
       displaced_step_dump_bytes (gdb_stdlog, buf, len);
     }
 
-  return closure;
+  return dsc;
 }
 
 /* Fix up the state of registers and memory after having single-stepped
@@ -839,7 +929,7 @@ i386_displaced_step_copy_insn (struct gdbarch *gdbarch,
 
 void
 i386_displaced_step_fixup (struct gdbarch *gdbarch,
-                           struct displaced_step_closure *closure_,
+                           struct displaced_step_closure *closure,
                            CORE_ADDR from, CORE_ADDR to,
                            struct regcache *regs)
 {
@@ -851,11 +941,13 @@ i386_displaced_step_fixup (struct gdbarch *gdbarch,
      applying it.  */
   ULONGEST insn_offset = to - from;
 
-  i386_displaced_step_closure *closure
-    = (i386_displaced_step_closure *) closure_;
-  gdb_byte *insn = closure->buf.data ();
+  i386_displaced_step_closure *dsc
+    = (i386_displaced_step_closure *) closure;
+  gdb_byte *insn = dsc->insn_buf.data ();
   /* The start of the insn, needed in case we see some prefixes.  */
   gdb_byte *insn_start = insn;
+
+  delete_single_step_breakpoints (inferior_thread ());
 
   if (debug_displaced)
     fprintf_unfiltered (gdb_stdlog,
@@ -863,6 +955,36 @@ i386_displaced_step_fixup (struct gdbarch *gdbarch,
                         "insn = 0x%02x 0x%02x ...\n",
                         paddress (gdbarch, from), paddress (gdbarch, to),
 			insn[0], insn[1]);
+
+  /* If we used a tmp reg, restore it.	*/
+
+  if (dsc->tmp_used)
+    {
+      if (debug_displaced)
+	fprintf_unfiltered (gdb_stdlog, "displaced: restoring reg %d to %s\n",
+			    dsc->tmp_regno, paddress (gdbarch, dsc->tmp_save));
+      regcache_cooked_write_unsigned (regs, dsc->tmp_regno, dsc->tmp_save);
+    }
+
+  if (dsc->branch_p)
+    {
+      if (debug_displaced)
+	{
+	  CORE_ADDR current_pc;
+
+	  current_pc = regcache_read_pc (regs);
+	  fprintf_unfiltered (gdb_stdlog,
+			      "displaced: fixup jmp/call: %s => %s\n",
+			      paddress (gdbarch, current_pc),
+			      paddress (gdbarch, dsc->branch_dest));
+	}
+
+      /* Clean up branch instructions (actually perform the branch, by
+	 setting PC).  */
+      regcache_cooked_write_unsigned (regs, I386_EIP_REGNUM,
+				      dsc->branch_dest);
+      return;
+    }
 
   /* The list of issues to contend with here is taken from
      resume_execution in arch/i386/kernel/kprobes.c, Linux 2.6.20.

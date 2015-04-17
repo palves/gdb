@@ -843,7 +843,7 @@ i386_linux_displaced_step_copy_insn (struct gdbarch *gdbarch,
 	= (i386_displaced_step_closure *) closure_;
 
       /* Fake nop.  */
-      closure->buf[0] = 0x90;
+      closure->insn_buf[0] = 0x90;
     }
 
   return closure_;

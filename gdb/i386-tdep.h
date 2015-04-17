@@ -424,7 +424,27 @@ extern void
 				     void *cb_data,
 				     const struct regcache *regcache);
 
-typedef buf_displaced_step_closure i386_displaced_step_closure;
+struct i386_displaced_step_closure : displaced_step_closure
+{
+  explicit i386_displaced_step_closure (size_t size)
+    : insn_buf (size),
+      branch_p (false),
+      branch_dest (false)
+  {}
+
+  /* For rip-relative insns, saved copy of the reg we use instead of
+     %rip.  */
+  int tmp_used = 0;
+  int tmp_regno = 0;
+  ULONGEST tmp_save = 0;
+
+  gdb::byte_vector insn_buf;
+
+  /* True if we're stepping over a jmp/branch.  */
+  bool branch_p : 1;
+  /* The jmp/branch destination address.  */
+  CORE_ADDR branch_dest;
+};
 
 extern struct displaced_step_closure *i386_displaced_step_copy_insn
   (struct gdbarch *gdbarch, CORE_ADDR from, CORE_ADDR to,
