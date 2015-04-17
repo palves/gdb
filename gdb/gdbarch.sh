@@ -833,6 +833,20 @@ m;int;displaced_step_hw_singlestep;struct displaced_step_closure *closure;closur
 # see the comments in infrun.c.
 M;void;displaced_step_fixup;struct displaced_step_closure *closure, CORE_ADDR from, CORE_ADDR to, struct regcache *regs;closure, from, to, regs;;NULL
 
+# Fix up the state resulting from not succeding to single-stepping a
+# displaced instruction, due to a signal.  infrun.c relocates the PC
+# before calling this.  An architecture might want to remove auxilary
+# breakpoints here, for example.  The default implementation does
+# nothing.
+#
+# REGS is the register state resulting from single-stepping the
+# displaced instruction.
+#
+# CLOSURE is the result from the matching call to
+# gdbarch_displaced_step_copy_insn.
+#
+m;void;displaced_step_aborted;struct displaced_step_closure *closure, CORE_ADDR from, CORE_ADDR to, struct regcache *regs;closure, from, to, regs;;default_displaced_step_aborted;;0
+
 # Return the address of an appropriate place to put displaced
 # instructions while we step over them.  There need only be one such
 # place, since we're only stepping one thread over a breakpoint at a

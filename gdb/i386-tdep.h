@@ -452,6 +452,14 @@ extern const struct target_desc *i386_target_description (uint64_t xcr0);
 extern int i386_mpx_enabled (void);
 std::vector<CORE_ADDR> i386_software_single_step (struct regcache *regcache);
 
+int i386_cond_jump_dest (struct regcache *regcache,
+			 const gdb_byte *insn, CORE_ADDR pc, CORE_ADDR *dest);
+int i386_jump_dest (struct regcache *regcache,
+		    const gdb_byte *insn, CORE_ADDR pc, CORE_ADDR *dest);
+
+int i386_ret_dest (struct regcache *regcache,
+		   const gdb_byte *insn, const CORE_ADDR pc, CORE_ADDR *dest);
+
 
 
 /* Functions and variables exported from i386-bsd-tdep.c.  */

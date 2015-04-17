@@ -1861,6 +1861,7 @@ amd64_linux_init_abi_common(struct gdbarch_info info, struct gdbarch *gdbarch)
   set_gdbarch_displaced_step_copy_insn (gdbarch,
                                         amd64_displaced_step_copy_insn);
   set_gdbarch_displaced_step_fixup (gdbarch, amd64_displaced_step_fixup);
+  set_gdbarch_displaced_step_aborted (gdbarch, amd64_displaced_step_aborted);
   set_gdbarch_displaced_step_location (gdbarch,
                                        linux_displaced_step_location);
 

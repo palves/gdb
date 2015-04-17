@@ -296,6 +296,7 @@ struct gdbarch
   gdbarch_displaced_step_copy_insn_ftype *displaced_step_copy_insn;
   gdbarch_displaced_step_hw_singlestep_ftype *displaced_step_hw_singlestep;
   gdbarch_displaced_step_fixup_ftype *displaced_step_fixup;
+  gdbarch_displaced_step_aborted_ftype *displaced_step_aborted;
   gdbarch_displaced_step_location_ftype *displaced_step_location;
   gdbarch_relocate_instruction_ftype *relocate_instruction;
   gdbarch_overlay_update_ftype *overlay_update;
@@ -443,6 +444,7 @@ gdbarch_alloc (const struct gdbarch_info *info,
   gdbarch->skip_permanent_breakpoint = default_skip_permanent_breakpoint;
   gdbarch->displaced_step_hw_singlestep = default_displaced_step_hw_singlestep;
   gdbarch->displaced_step_fixup = NULL;
+  gdbarch->displaced_step_aborted = default_displaced_step_aborted;
   gdbarch->displaced_step_location = NULL;
   gdbarch->relocate_instruction = NULL;
   gdbarch->has_shared_address_space = default_has_shared_address_space;
@@ -657,6 +659,7 @@ verify_gdbarch (struct gdbarch *gdbarch)
   /* Skip verify of displaced_step_copy_insn, has predicate.  */
   /* Skip verify of displaced_step_hw_singlestep, invalid_p == 0 */
   /* Skip verify of displaced_step_fixup, has predicate.  */
+  /* Skip verify of displaced_step_aborted, invalid_p == 0 */
   if ((! gdbarch->displaced_step_location) != (! gdbarch->displaced_step_copy_insn))
     log.puts ("\n\tdisplaced_step_location");
   /* Skip verify of relocate_instruction, has predicate.  */
@@ -904,6 +907,9 @@ gdbarch_dump (struct gdbarch *gdbarch, struct ui_file *file)
   fprintf_unfiltered (file,
                       "gdbarch_dump: disassembler_options = %s\n",
                       pstring_ptr (gdbarch->disassembler_options));
+  fprintf_unfiltered (file,
+                      "gdbarch_dump: displaced_step_aborted = <%s>\n",
+                      host_address_to_string (gdbarch->displaced_step_aborted));
   fprintf_unfiltered (file,
                       "gdbarch_dump: gdbarch_displaced_step_copy_insn_p() = %d\n",
                       gdbarch_displaced_step_copy_insn_p (gdbarch));
@@ -3983,6 +3989,23 @@ set_gdbarch_displaced_step_fixup (struct gdbarch *gdbarch,
                                   gdbarch_displaced_step_fixup_ftype displaced_step_fixup)
 {
   gdbarch->displaced_step_fixup = displaced_step_fixup;
+}
+
+void
+gdbarch_displaced_step_aborted (struct gdbarch *gdbarch, struct displaced_step_closure *closure, CORE_ADDR from, CORE_ADDR to, struct regcache *regs)
+{
+  gdb_assert (gdbarch != NULL);
+  gdb_assert (gdbarch->displaced_step_aborted != NULL);
+  if (gdbarch_debug >= 2)
+    fprintf_unfiltered (gdb_stdlog, "gdbarch_displaced_step_aborted called\n");
+  gdbarch->displaced_step_aborted (gdbarch, closure, from, to, regs);
+}
+
+void
+set_gdbarch_displaced_step_aborted (struct gdbarch *gdbarch,
+                                    gdbarch_displaced_step_aborted_ftype displaced_step_aborted)
+{
+  gdbarch->displaced_step_aborted = displaced_step_aborted;
 }
 
 CORE_ADDR

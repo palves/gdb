@@ -94,6 +94,10 @@ extern void amd64_displaced_step_fixup (struct gdbarch *gdbarch,
 					struct displaced_step_closure *closure,
 					CORE_ADDR from, CORE_ADDR to,
 					struct regcache *regs);
+extern void amd64_displaced_step_aborted (struct gdbarch *gdbarch,
+					  struct displaced_step_closure *closure,
+					  CORE_ADDR from, CORE_ADDR to,
+					  struct regcache *regcache);
 
 /* Initialize the ABI for amd64.  Uses DEFAULT_TDESC as fallback
    tdesc, if INFO does not specify one.  */

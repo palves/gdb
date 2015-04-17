@@ -45,6 +45,7 @@ extern int use_software_single_step;
 #include "target-descriptions.h"
 #include "arch/amd64.h"
 #include "producer.h"
+#include "gdbthread.h"
 #include "ax.h"
 #include "ax-gdb.h"
 #include "common/byte-vector.h"
@@ -1053,7 +1054,9 @@ struct amd64_insn
 struct amd64_displaced_step_closure : public displaced_step_closure
 {
   amd64_displaced_step_closure (int insn_buf_len)
-  : insn_buf (insn_buf_len, 0)
+    : insn_buf (insn_buf_len, 0),
+      branch_p (false),
+      branch_dest (0)
   {}
 
   /* For rip-relative insns, saved copy of the reg we use instead of %rip.  */
@@ -1066,6 +1069,11 @@ struct amd64_displaced_step_closure : public displaced_step_closure
 
   /* The possibly modified insn.  */
   gdb::byte_vector insn_buf;
+
+  /* True if we're stepping over a jmp/branch.  */
+  int branch_p : 1;
+  /* The jmp/branch destination address.  */
+  CORE_ADDR branch_dest;
 };
 
 /* WARNING: Keep onebyte_has_modrm, twobyte_has_modrm in sync with
@@ -1413,6 +1421,8 @@ fixup_displaced_copy (struct gdbarch *gdbarch,
     }
 }
 
+static int amd64_call_p (const struct amd64_insn *details);
+
 struct displaced_step_closure *
 amd64_displaced_step_copy_insn (struct gdbarch *gdbarch,
 				CORE_ADDR from, CORE_ADDR to,
@@ -1426,6 +1436,10 @@ amd64_displaced_step_copy_insn (struct gdbarch *gdbarch,
     = new amd64_displaced_step_closure (len + fixup_sentinel_space);
   gdb_byte *buf = &dsc->insn_buf[0];
   struct amd64_insn *details = &dsc->insn_details;
+  CORE_ADDR next_pc;
+  const gdb_byte *insn;
+  CORE_ADDR pc;
+  int syscall_length;
 
   read_memory (from, buf, len);
 
@@ -1435,21 +1449,108 @@ amd64_displaced_step_copy_insn (struct gdbarch *gdbarch,
   memset (buf + len, 0, fixup_sentinel_space);
 
   amd64_get_insn_details (buf, details);
+  insn = &details->raw_insn[details->opcode_offset];
+  pc = from + details->opcode_offset;
 
-  /* GDB may get control back after the insn after the syscall.
-     Presumably this is a kernel bug.
-     If this is a syscall, make sure there's a nop afterwards.  */
-  {
-    int syscall_length;
+  if (i386_cond_jump_dest (regs, insn, pc, &next_pc)
+      || i386_jump_dest (regs, insn, pc, &next_pc))
+    {
+      if (debug_displaced)
+	fprintf_unfiltered (gdb_stdlog,
+			    "jump/call from => next_pc : %s => %s\n",
+			    paddress (gdbarch, from),
+			    paddress (gdbarch, next_pc));
 
-    if (amd64_syscall_p (details, &syscall_length))
+      /* Copying a relative call/jmp to the scratch pad, stepping it,
+	 and then fix up the PC at fixup time doesn't work with
+	 software single-step, because in that case we need to set a
+	 breakpoint at the destination of the relative jump, and that
+	 might well be an invalid/unmapped address.  Also, with
+	 software single-step, we'll put a breakpoint at the
+	 destination, and we want to avoid other thread having to trip
+	 on that breakpoint.  So we convert calls to push/jump, with
+	 the address pushed being the location where the original call
+	 in the user program would return to.  Jumps are converted to
+	 nops.  In both cases, the actual jumps are performed at fixup
+	 time, by manually setting the PC.  */
+      if (amd64_call_p (details))
+	{
+	  ULONGEST ret_addr;
+	  const int call_insn_length = 5;
+	  int regno = AMD64_RAX_REGNUM;
+	  ULONGEST orig_value;
+
+	  if (debug_displaced)
+	    fprintf_unfiltered (gdb_stdlog,
+				"converting call to push %%rax + (manual) jmp\n");
+
+	  regcache_cooked_read_unsigned (regs, regno, &orig_value);
+	  dsc->tmp_regno = regno;
+	  dsc->tmp_save = orig_value;
+	  dsc->tmp_used = 1;
+
+	  buf[0] = 0x50; /* push %rax */
+	  len = 1;
+
+	  ret_addr = from + call_insn_length;
+	  regcache_cooked_write_unsigned (regs, regno, ret_addr);
+	}
+      else
+	{
+	  /* Jump instructions are performed at fixup time, by
+	     manually setting PC.  */
+
+	  if (debug_displaced)
+	    fprintf_unfiltered (gdb_stdlog,
+				"converting jmp to nop + (manual) jmp\n");
+
+	  buf[0] = NOP_OPCODE;
+	  len = 1;
+	}
+      dsc->branch_dest = next_pc;
+      dsc->branch_p = 1;
+    }
+  else if (i386_ret_dest (regs, insn, pc, &next_pc))
+    {
+      int regno = AMD64_RAX_REGNUM;
+      ULONGEST orig_value;
+
+      if (debug_displaced)
+	fprintf_unfiltered (gdb_stdlog,
+			    "converting ret to pop %%rax + (manual) jmp\n");
+
+      regcache_cooked_read_unsigned (regs, regno, &orig_value);
+      dsc->tmp_regno = regno;
+      dsc->tmp_save = orig_value;
+      dsc->tmp_used = 1;
+
+      buf[0] = 0x58; /* pop %rax */
+      len = 1;
+
+      dsc->branch_dest = next_pc;
+      dsc->branch_p = 1;
+    }
+  else if (amd64_syscall_p (details, &syscall_length))
+    {
+      /* GDB may get control back after the insn after the syscall.
+	 Presumably this is a kernel bug.
+	 If this is a syscall, make sure there's a nop afterwards.  */
+
       buf[details->opcode_offset + syscall_length] = NOP_OPCODE;
-  }
+      len = details->opcode_offset + syscall_length + 1;
+    }
+  else
+    {
+      /* Modify the insn to cope with the address where it will be
+	 executed from.  In particular, handle any rip-relative
+	 addressing.  */
+      fixup_displaced_copy (gdbarch, dsc, from, to, regs);
+      len = gdb_buffered_insn_length (gdbarch, buf, dsc->insn_buf.size (), to);
+    }
 
-  /* Modify the insn to cope with the address where it will be executed from.
-     In particular, handle any rip-relative addressing.	 */
-  fixup_displaced_copy (gdbarch, dsc, from, to, regs);
-
+  /* Put breakpoint afterwards.  Must be a breakpoint the breakpoint's
+     module knows about so that adjust_pc_after_break works.  */
+  insert_single_step_breakpoint (gdbarch, regs->aspace (), to + len);
   write_memory (to, buf, len);
 
   if (debug_displaced)
@@ -1539,6 +1640,18 @@ amd64_ret_p (const struct amd64_insn *details)
 }
 
 static int
+amd64_relative_call_p (const struct amd64_insn *details)
+{
+  const gdb_byte *insn = &details->raw_insn[details->opcode_offset];
+
+  /* call near, relative */
+  if (insn[0] == 0xe8)
+    return 1;
+
+  return 0;
+}
+
+static int
 amd64_call_p (const struct amd64_insn *details)
 {
   const gdb_byte *insn = &details->raw_insn[details->opcode_offset];
@@ -1546,8 +1659,7 @@ amd64_call_p (const struct amd64_insn *details)
   if (amd64_absolute_call_p (details))
     return 1;
 
-  /* call near, relative */
-  if (insn[0] == 0xe8)
+  if (amd64_relative_call_p (details))
     return 1;
 
   return 0;
@@ -1632,6 +1744,8 @@ amd64_displaced_step_fixup (struct gdbarch *gdbarch,
   gdb_byte *insn = dsc->insn_buf.data ();
   const struct amd64_insn *insn_details = &dsc->insn_details;
 
+  delete_single_step_breakpoints (inferior_thread ());
+
   if (debug_displaced)
     fprintf_unfiltered (gdb_stdlog,
 			"displaced: fixup (%s, %s), "
@@ -1647,6 +1761,26 @@ amd64_displaced_step_fixup (struct gdbarch *gdbarch,
 	fprintf_unfiltered (gdb_stdlog, "displaced: restoring reg %d to %s\n",
 			    dsc->tmp_regno, paddress (gdbarch, dsc->tmp_save));
       regcache_cooked_write_unsigned (regs, dsc->tmp_regno, dsc->tmp_save);
+    }
+
+  if (dsc->branch_p)
+    {
+      if (debug_displaced)
+	{
+	  CORE_ADDR current_pc;
+
+	  current_pc = regcache_read_pc (regs);
+	  fprintf_unfiltered (gdb_stdlog,
+			      "displaced: fixup jmp/call: %s => %s\n",
+			      paddress (gdbarch, current_pc),
+			      paddress (gdbarch, dsc->branch_dest));
+	}
+
+      /* Clean up branch instructions (actually perform the branch, by
+	 setting PC).  */
+      regcache_cooked_write_unsigned (regs, AMD64_RIP_REGNUM,
+				      dsc->branch_dest);
+      return;
     }
 
   /* The list of issues to contend with here is taken from
@@ -1741,6 +1875,15 @@ amd64_displaced_step_fixup (struct gdbarch *gdbarch,
 			    paddress (gdbarch, rsp),
 			    paddress (gdbarch, retaddr));
     }
+}
+
+void
+amd64_displaced_step_aborted (struct gdbarch *gdbarch,
+			      struct displaced_step_closure *closure,
+			      CORE_ADDR from, CORE_ADDR to,
+			      struct regcache *regcache)
+{
+  delete_single_step_breakpoints (inferior_thread ());
 }
 
 /* If the instruction INSN uses RIP-relative addressing, return the
