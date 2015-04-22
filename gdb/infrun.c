@@ -1632,7 +1632,7 @@ show_can_use_displaced_stepping (struct ui_file *file, int from_tty,
     fprintf_filtered (file,
 		      _("Debugger's willingness to use displaced stepping "
 			"to step over breakpoints is %s (currently %s).\n"),
-		      value, non_stop ? "on" : "off");
+		      value, target_is_non_stop_p () ? "on" : "off");
   else
     fprintf_filtered (file,
 		      _("Debugger's willingness to use displaced stepping "
@@ -1645,7 +1645,8 @@ show_can_use_displaced_stepping (struct ui_file *file, int from_tty,
 static int
 use_displaced_stepping (struct gdbarch *gdbarch)
 {
-  return (((can_use_displaced_stepping == AUTO_BOOLEAN_AUTO && non_stop)
+  return (((can_use_displaced_stepping == AUTO_BOOLEAN_AUTO
+	    && target_is_non_stop_p ())
 	   || can_use_displaced_stepping == AUTO_BOOLEAN_TRUE)
 	  && gdbarch_displaced_step_copy_insn_p (gdbarch)
 	  && find_record_target () == NULL);
@@ -2016,7 +2017,7 @@ start_step_over (void)
 	 because we wouldn't be able to resume anything else until the
 	 target stops again.  In non-stop, the resume always resumes
 	 only TP, so it's OK to let the thread resume freely.  */
-      if (!non_stop && !step_what)
+      if (!target_is_non_stop_p () && !step_what)
 	continue;
 
       switch_to_thread (tp->ptid);
@@ -2035,7 +2036,7 @@ start_step_over (void)
 	  return 1;
 	}
 
-      if (!non_stop)
+      if (!target_is_non_stop_p ())
 	{
 	  /* On all-stop, shouldn't have resumed unless we needed a
 	     step over.  */
@@ -2383,7 +2384,10 @@ resume (enum gdb_signal sig)
 	      insert_single_step_breakpoint (gdbarch, aspace, pc);
 	      insert_breakpoints ();
 
-	      resume_ptid = user_visible_resume_ptid (user_step);
+	      if (target_is_non_stop_p ())
+		resume_ptid = inferior_ptid;
+	      else
+		resume_ptid = user_visible_resume_ptid (user_step);
 	      do_target_resume (resume_ptid, 0, GDB_SIGNAL_0);
 	      discard_cleanups (old_cleanups);
 	      tp->resumed = 1;
@@ -2498,8 +2502,14 @@ resume (enum gdb_signal sig)
   resume_ptid = user_visible_resume_ptid (user_step);
 
   /* Maybe resume a single thread after all.  */
-  if ((step || thread_has_single_step_breakpoints_set (tp))
-      && tp->control.trap_expected)
+  if (target_is_non_stop_p ())
+    {
+      /* If non-stop mode, threads are always controlled
+	 individually.  */
+      resume_ptid = inferior_ptid;
+    }
+  else if ((step || thread_has_single_step_breakpoints_set (tp))
+	   && tp->control.trap_expected)
     {
       /* We're allowing a thread to run past a breakpoint it has
 	 hit, by single-stepping the thread with the breakpoint
@@ -2935,10 +2945,50 @@ proceed (CORE_ADDR addr, enum gdb_signal siggnal)
 	 other thread was already doing one.  In either case, don't
 	 resume anything else until the step-over is finished.  */
     }
-  else if (started && !non_stop)
+  else if (started && !target_is_non_stop_p ())
     {
       /* A new displaced stepping sequence was started.  In all-stop,
 	 we can't talk to the target anymore until it next stops.  */
+    }
+  else if (!non_stop && target_is_non_stop_p ())
+    {
+      /* Start all other threads that are implicitly resumed too.  */
+      ALL_NON_EXITED_THREADS (tp)
+        {
+	  /* Ignore threads of processes we're not resuming.  */
+	  if (!ptid_match (tp->ptid, resume_ptid))
+	    continue;
+
+	  if (tp->resumed)
+	    {
+	      if (debug_infrun)
+		fprintf_unfiltered (gdb_stdlog,
+				    "infrun: proceed: [%s] resumed\n",
+				    target_pid_to_str (tp->ptid));
+	      gdb_assert (tp->executing || tp->suspend.waitstatus_pending_p);
+	      continue;
+	    }
+
+	  if (thread_is_in_step_over_chain (tp))
+	    {
+	      if (debug_infrun)
+		fprintf_unfiltered (gdb_stdlog,
+				    "infrun: proceed: [%s] needs step-over\n",
+				    target_pid_to_str (tp->ptid));
+	      continue;
+	    }
+
+	  if (debug_infrun)
+	    fprintf_unfiltered (gdb_stdlog,
+				"infrun: proceed: resuming %s\n",
+				target_pid_to_str (tp->ptid));
+
+	  reset_ecs (ecs, tp);
+	  switch_to_thread (tp->ptid);
+	  keep_going_pass_signal (ecs);
+	  if (!ecs->wait_some_more)
+	    error ("Command aborted.");
+	}
     }
   else if (!tp->resumed && !thread_is_in_step_over_chain (tp))
     {
@@ -3151,7 +3201,7 @@ for_each_just_stopped_thread (for_each_just_stopped_thread_callback_func func)
   if (!target_has_execution || ptid_equal (inferior_ptid, null_ptid))
     return;
 
-  if (non_stop)
+  if (target_is_non_stop_p ())
     {
       /* If in non-stop mode, only the current thread stopped.  */
       func (inferior_thread ());
@@ -3632,7 +3682,7 @@ fetch_inferior_event (void *client_data)
   /* If an error happens while handling the event, propagate GDB's
      knowledge of the executing state to the frontend/user running
      state.  */
-  if (!non_stop)
+  if (!target_is_non_stop_p ())
     ts_old_chain = make_cleanup (finish_thread_state_cleanup, &minus_one_ptid);
   else
     ts_old_chain = make_cleanup (finish_thread_state_cleanup, &ecs->ptid);
@@ -3871,7 +3921,8 @@ adjust_pc_after_break (struct thread_info *thread,
      to get the "stopped by SW BP and needs adjustment" info out of
      the target/kernel (and thus never reach here; see above).  */
   if (software_breakpoint_inserted_here_p (aspace, breakpoint_pc)
-      || (non_stop && moribund_breakpoint_here_p (aspace, breakpoint_pc)))
+      || (target_is_non_stop_p ()
+	  && moribund_breakpoint_here_p (aspace, breakpoint_pc)))
     {
       struct cleanup *old_cleanups = make_cleanup (null_cleanup, NULL);
 
@@ -4152,7 +4203,7 @@ stop_all_threads (void)
   ptid_t entry_ptid;
   struct cleanup *old_chain;
 
-  gdb_assert (non_stop);
+  gdb_assert (target_is_non_stop_p ());
 
   if (debug_infrun)
     fprintf_unfiltered (gdb_stdlog, "infrun: stop_all_threads\n");
@@ -4462,7 +4513,7 @@ handle_inferior_event (struct execution_control_state *ecs)
   {
     ptid_t mark_ptid;
 
-    if (!non_stop)
+    if (!target_is_non_stop_p ())
       mark_ptid = minus_one_ptid;
     else if (ecs->ws.kind == TARGET_WAITKIND_SIGNALLED
 	     || ecs->ws.kind == TARGET_WAITKIND_EXITED)
@@ -4776,7 +4827,8 @@ Cannot fill $_exitsignal with the correct signal number.\n"));
 	  child = ecs->ws.value.related_pid;
 
 	  /* In non-stop mode, also resume the other branch.  */
-	  if (non_stop && !detach_fork)
+	  if (!detach_fork && (non_stop
+			       || (sched_multi && target_is_non_stop_p ())))
 	    {
 	      if (follow_child)
 		switch_to_thread (parent);
@@ -5044,7 +5096,7 @@ finish_step_over (struct execution_control_state *ecs)
 	clear_step_over_info ();
     }
 
-  if (!non_stop)
+  if (!target_is_non_stop_p ())
     return 0;
 
   /* Start a new step-over in another thread if there's one that
@@ -5624,7 +5676,7 @@ handle_signal_stop (struct execution_control_state *ecs)
 	  /* Reset trap_expected to ensure breakpoints are re-inserted.  */
 	  ecs->event_thread->control.trap_expected = 0;
 
-	  if (non_stop)
+	  if (target_is_non_stop_p ())
 	    {
 	      keep_going (ecs);
 
@@ -6527,7 +6579,7 @@ process_event_stop_test (struct execution_control_state *ecs)
 static int
 switch_back_to_stepped_thread (struct execution_control_state *ecs)
 {
-  if (!non_stop)
+  if (!target_is_non_stop_p ())
     {
       struct thread_info *tp;
       struct thread_info *stepping_thread;
@@ -6618,7 +6670,8 @@ switch_back_to_stepped_thread (struct execution_control_state *ecs)
 
       ALL_NON_EXITED_THREADS (tp)
         {
-	  /* Ignore threads of processes we're not resuming.  */
+	  /* Ignore threads of processes the caller is not
+	     resuming.  */
 	  if (!sched_multi
 	      && ptid_get_pid (tp->ptid) != ptid_get_pid (ecs->ptid))
 	    continue;
@@ -6764,7 +6817,10 @@ keep_going_stepped_thread (struct thread_info *tp)
 				     stop_pc);
 
       tp->resumed = 1;
-      resume_ptid = user_visible_resume_ptid (tp->control.stepping_command);
+      if (target_is_non_stop_p ())
+	resume_ptid = inferior_ptid;
+      else
+	resume_ptid = user_visible_resume_ptid (tp->control.stepping_command);
       do_target_resume (resume_ptid, 0, GDB_SIGNAL_0);
     }
   else
@@ -7184,6 +7240,11 @@ stop_waiting (struct execution_control_state *ecs)
 
   /* Let callers know we don't want to wait for the inferior anymore.  */
   ecs->wait_some_more = 0;
+
+  /* If all-stop, but the target is always in non-stop mode, stop all
+     threads now that we're presenting the stop to the user.  */
+  if (!non_stop && target_is_non_stop_p ())
+    stop_all_threads ();
 }
 
 /* Like keep_going, but passes the signal to the inferior, even if the
@@ -7298,7 +7359,7 @@ keep_going_pass_signal (struct execution_control_state *ecs)
 	 insert_breakpoints below, because that removes the breakpoint
 	 we're about to step over, otherwise other threads could miss
 	 it.  */
-      if (step_over_info_valid_p () && non_stop)
+      if (step_over_info_valid_p () && target_is_non_stop_p ())
 	stop_all_threads ();
 
       /* Stop stepping if inserting breakpoints fails.  */
