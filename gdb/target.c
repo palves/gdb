@@ -3244,6 +3244,18 @@ target_stop (ptid_t ptid)
   (*current_target.to_stop) (&current_target, ptid);
 }
 
+void
+target_interrupt (ptid_t ptid)
+{
+  if (!may_stop)
+    {
+      warning (_("May not interrupt or stop the target, ignoring attempt"));
+      return;
+    }
+
+  (*current_target.to_interrupt) (&current_target, ptid);
+}
+
 /* See target/target.h.  */
 
 void
