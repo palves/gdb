@@ -381,7 +381,8 @@ print_recreate_exception_catchpoint (struct breakpoint *b,
 }
 
 static void
-handle_gnu_v3_exceptions (int tempflag, char *except_rx, char *cond_string,
+handle_gnu_v3_exceptions (struct itset *trigger_set, struct itset *suspend_set,
+			  int tempflag, char *except_rx, char *cond_string,
 			  enum exception_event_kind ex_event, int from_tty)
 {
   struct exception_catchpoint *cp;
@@ -400,7 +401,9 @@ handle_gnu_v3_exceptions (int tempflag, char *except_rx, char *cond_string,
   cp = XCNEW (struct exception_catchpoint);
   make_cleanup (xfree, cp);
 
-  init_catchpoint (&cp->base, get_current_arch (), tempflag, cond_string,
+  init_catchpoint (&cp->base,
+		   trigger_set, suspend_set,
+		   get_current_arch (), tempflag, cond_string,
 		   &gnu_v3_exception_catchpoint_ops);
   /* We need to reset 'type' in order for code in breakpoint.c to do
      the right thing.  */
@@ -463,14 +466,18 @@ catch_exception_command_1 (enum exception_event_kind ex_event, char *arg,
 {
   char *except_rx;
   char *cond_string = NULL;
+  struct itset *trigger_set, *suspend_set;
   struct cleanup *cleanup;
 
   if (!arg)
     arg = "";
+
+  cleanup = parse_breakpoint_args (&arg, &trigger_set, &suspend_set);
+
   arg = skip_spaces (arg);
 
   except_rx = extract_exception_regexp (&arg);
-  cleanup = make_cleanup (xfree, except_rx);
+  make_cleanup (xfree, except_rx);
 
   cond_string = ep_parse_optional_if_clause (&arg);
 
@@ -482,7 +489,8 @@ catch_exception_command_1 (enum exception_event_kind ex_event, char *arg,
       && ex_event != EX_EVENT_RETHROW)
     error (_("Unsupported or unknown exception event; cannot catch it"));
 
-  handle_gnu_v3_exceptions (tempflag, except_rx, cond_string,
+  handle_gnu_v3_exceptions (trigger_set, suspend_set,
+			    tempflag, except_rx, cond_string,
 			    ex_event, from_tty);
 
   discard_cleanups (cleanup);

@@ -29,6 +29,7 @@
 #include "arch-utils.h"
 #include "observer.h"
 #include "xml-syscall.h"
+#include "itset.h"
 
 /* An instance of this type is used to represent a syscall catchpoint.
    It includes a "struct breakpoint" as a kind of base class; users
@@ -425,14 +426,17 @@ syscall_catchpoint_p (struct breakpoint *b)
 }
 
 static void
-create_syscall_event_catchpoint (int tempflag, VEC(int) *filter,
+create_syscall_event_catchpoint (struct itset *trigger_set,
+				 struct itset *stop_set,
+				 int tempflag, VEC(int) *filter,
                                  const struct breakpoint_ops *ops)
 {
   struct syscall_catchpoint *c;
   struct gdbarch *gdbarch = get_current_arch ();
 
   c = XNEW (struct syscall_catchpoint);
-  init_catchpoint (&c->base, gdbarch, tempflag, NULL, ops);
+  init_catchpoint (&c->base, trigger_set, stop_set,
+		   gdbarch, tempflag, NULL, ops);
   c->syscalls_to_be_caught = filter;
 
   install_breakpoint (0, &c->base, 1);
@@ -497,6 +501,8 @@ catch_syscall_command_1 (char *arg, int from_tty,
   VEC(int) *filter;
   struct syscall s;
   struct gdbarch *gdbarch = get_current_arch ();
+  struct cleanup *old_chain;
+  struct itset *trigger_set, *suspend_set;
 
   /* Checking if the feature if supported.  */
   if (gdbarch_get_syscall_number_p (gdbarch) == 0)
@@ -505,6 +511,7 @@ this architecture yet."));
 
   tempflag = get_cmd_context (command) == CATCH_TEMPORARY;
 
+  old_chain = parse_breakpoint_args (&arg, &trigger_set, &suspend_set);
   arg = skip_spaces (arg);
 
   /* We need to do this first "dummy" translation in order
@@ -524,8 +531,11 @@ this architecture yet."));
   else
     filter = NULL;
 
-  create_syscall_event_catchpoint (tempflag, filter,
+  create_syscall_event_catchpoint (trigger_set, suspend_set,
+				   tempflag, filter,
 				   &catch_syscall_breakpoint_ops);
+
+  discard_cleanups (old_chain);
 }
 
 

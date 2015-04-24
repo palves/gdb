@@ -33,6 +33,7 @@
 #include "command.h"
 #include "inferior.h"
 #include "infrun.h"
+#include "itset.h"
 #include "gdbthread.h"
 #include "target.h"
 #include "language.h"
@@ -116,7 +117,10 @@ static void create_sals_from_address_default (char **,
 static void create_breakpoints_sal_default (struct gdbarch *,
 					    struct linespec_result *,
 					    char *, char *, enum bptype,
-					    enum bpdisp, int, int,
+					    enum bpdisp,
+					    struct itset *trigger_set,
+					    struct itset *suspend_set,
+					    int, int,
 					    int,
 					    const struct breakpoint_ops *,
 					    int, int, int, unsigned);
@@ -4367,6 +4371,22 @@ hardware_watchpoint_inserted_in_range (struct address_space *aspace,
     }
   return 0;
 }
+
+/* Test whether this stopping thread is in the I/T set for this
+   breakpoint.  */
+
+static int
+bpstat_check_trigger_set (const struct breakpoint *b, struct thread_info *thread)
+{
+  if (b->trigger_set == NULL)
+    return 1;
+
+  if (itset_contains_thread (b->trigger_set, thread))
+    return 1;
+
+  return 0;
+}
+
 
 
 /* bpstat stuff.  External routines' interfaces are documented
@@ -5381,6 +5401,18 @@ bpstat_check_breakpoint_conditions (bpstat bs, ptid_t ptid)
       bs->stop = 0;
       return;
     }
+  /* Likewise if the breakpoint has a trigger set, and it doesn't
+     match.  */
+  else if (b->trigger_set != NULL)
+    {
+      struct thread_info *thread = find_thread_ptid (ptid);
+
+      if (!bpstat_check_trigger_set (b, thread))
+	{
+	  bs->stop = 0;
+	  return;
+	}
+    }
 
   /* Evaluate extension language breakpoints that have a "stop" method
      implemented.  */
@@ -5896,6 +5928,34 @@ bpstat_what (bpstat bs_head)
     }
 
   return retval;
+}
+
+/* Tell us what we should suspend.  Returns a union of the suspend
+   sets of all breakpoints that caused the stop.  */
+
+struct itset *
+bpstat_suspend_set (bpstat bs_head)
+{
+  bpstat bs;
+  struct itset *suspend_set = itset_create_empty ();
+
+  for (bs = bs_head; bs != NULL; bs = bs->next)
+    {
+      if (bs->breakpoint_at == NULL)
+	{
+	  /* I suspect this can happen if it was a momentary
+	     breakpoint which has since been deleted.  */
+	  continue;
+	}
+
+      if (!bs->stop)
+	continue;
+
+      if (bs->breakpoint_at->suspend_set != NULL)
+	itset_add_set (suspend_set, bs->breakpoint_at->suspend_set);
+    }
+
+  return suspend_set;
 }
 
 /* Nonzero if we should step constantly (e.g. watchpoints on machines
@@ -6421,6 +6481,26 @@ print_one_breakpoint_location (struct breakpoint *b,
       ui_out_text (uiout, "\n");
     }
   
+  if (!part_of_multiple && b->trigger_set != NULL)
+    {
+      ui_out_text (uiout, "\ttrigger only in: [");
+      if (itset_name (b->trigger_set) != NULL)
+	ui_out_field_string (uiout, "trigger-set", itset_name (b->trigger_set));
+      else
+	ui_out_field_string (uiout, "trigger-set", itset_spec (b->trigger_set));
+      ui_out_text (uiout, "]\n");
+    }
+
+  if (!part_of_multiple && b->suspend_set != NULL)
+    {
+      ui_out_text (uiout, "\tsuspend all of: [");
+      if (itset_name (b->suspend_set) != NULL)
+	ui_out_field_string (uiout, "suspend-set", itset_name (b->suspend_set));
+      else
+	ui_out_field_string (uiout, "suspend-set", itset_spec (b->suspend_set));
+      ui_out_text (uiout, "]\n");
+    }
+
   if (!part_of_multiple)
     {
       if (b->hit_count)
@@ -7297,6 +7377,8 @@ init_raw_breakpoint_without_location (struct breakpoint *b,
   b->language = current_language->la_language;
   b->input_radix = input_radix;
   b->thread = -1;
+  b->trigger_set = NULL;
+  b->suspend_set = NULL;
   b->enable_state = bp_enabled;
   b->next = 0;
   b->silent = 0;
@@ -8395,10 +8477,14 @@ add_solib_catchpoint (char *arg, int is_load, int is_temp, int enabled)
   struct solib_catchpoint *c;
   struct gdbarch *gdbarch = get_current_arch ();
   struct cleanup *cleanup;
+  struct itset *trigger_set, *suspend_set;
+  struct cleanup *old_chain;
 
-  if (!arg)
+  if (arg == NULL)
     arg = "";
   arg = skip_spaces (arg);
+
+  old_chain = parse_breakpoint_args (&arg, &trigger_set, &suspend_set);
 
   c = XCNEW (struct solib_catchpoint);
   cleanup = make_cleanup (xfree, c);
@@ -8419,13 +8505,15 @@ add_solib_catchpoint (char *arg, int is_load, int is_temp, int enabled)
     }
 
   c->is_load = is_load;
-  init_catchpoint (&c->base, gdbarch, is_temp, NULL,
+  init_catchpoint (&c->base, trigger_set, suspend_set,
+		   gdbarch, is_temp, NULL,
 		   &catch_solib_breakpoint_ops);
 
   c->base.enable_state = enabled ? bp_enabled : bp_disabled;
 
   discard_cleanups (cleanup);
   install_breakpoint (0, &c->base, 1);
+  discard_cleanups (old_chain);
 }
 
 /* A helper function that does all the work for "catch load" and
@@ -8464,6 +8552,8 @@ catch_unload_command_1 (char *arg, int from_tty,
 
 void
 init_catchpoint (struct breakpoint *b,
+		 struct itset *trigger_set,
+		 struct itset *suspend_set,
 		 struct gdbarch *gdbarch, int tempflag,
 		 char *cond_string,
 		 const struct breakpoint_ops *ops)
@@ -8474,6 +8564,9 @@ init_catchpoint (struct breakpoint *b,
   sal.pspace = current_program_space;
 
   init_raw_breakpoint (b, gdbarch, sal, bp_catchpoint, ops);
+
+  b->trigger_set = trigger_set;
+  b->suspend_set = suspend_set;
 
   b->cond_string = (cond_string == NULL) ? NULL : xstrdup (cond_string);
   b->disposition = tempflag ? disp_del : disp_donttouch;
@@ -8495,13 +8588,16 @@ install_breakpoint (int internal, struct breakpoint *b, int update_gll)
 }
 
 static void
-create_fork_vfork_event_catchpoint (struct gdbarch *gdbarch,
+create_fork_vfork_event_catchpoint (struct itset *trigger_set,
+				    struct itset *suspend_set,
+				    struct gdbarch *gdbarch,
 				    int tempflag, char *cond_string,
                                     const struct breakpoint_ops *ops)
 {
   struct fork_catchpoint *c = XNEW (struct fork_catchpoint);
 
-  init_catchpoint (&c->base, gdbarch, tempflag, cond_string, ops);
+  init_catchpoint (&c->base, trigger_set, suspend_set,
+		   gdbarch, tempflag, cond_string, ops);
 
   c->forked_inferior_pid = null_ptid;
 
@@ -9102,6 +9198,7 @@ init_breakpoint_sal (struct breakpoint *b, struct gdbarch *gdbarch,
 		     char *filter, char *cond_string,
 		     char *extra_string,
 		     enum bptype type, enum bpdisp disposition,
+		     struct itset *trigger_set, struct itset *suspend_set,
 		     int thread, int task, int ignore_count,
 		     const struct breakpoint_ops *ops, int from_tty,
 		     int enabled, int internal, unsigned flags,
@@ -9145,6 +9242,8 @@ init_breakpoint_sal (struct breakpoint *b, struct gdbarch *gdbarch,
 	  init_raw_breakpoint (b, gdbarch, sal, type, ops);
 	  b->thread = thread;
 	  b->task = task;
+	  b->trigger_set = trigger_set;
+	  b->suspend_set = suspend_set;
 
 	  b->cond_string = cond_string;
 	  b->extra_string = extra_string;
@@ -9242,6 +9341,7 @@ create_breakpoint_sal (struct gdbarch *gdbarch,
 		       char *filter, char *cond_string,
 		       char *extra_string,
 		       enum bptype type, enum bpdisp disposition,
+		       struct itset *trigger_set, struct itset *suspend_set,
 		       int thread, int task, int ignore_count,
 		       const struct breakpoint_ops *ops, int from_tty,
 		       int enabled, int internal, unsigned flags,
@@ -9266,6 +9366,7 @@ create_breakpoint_sal (struct gdbarch *gdbarch,
 		       sals, addr_string,
 		       filter, cond_string, extra_string,
 		       type, disposition,
+		       trigger_set, suspend_set,
 		       thread, task, ignore_count,
 		       ops, from_tty,
 		       enabled, internal, flags,
@@ -9295,6 +9396,7 @@ create_breakpoints_sal (struct gdbarch *gdbarch,
 			struct linespec_result *canonical,
 			char *cond_string, char *extra_string,
 			enum bptype type, enum bpdisp disposition,
+			struct itset *trigger_set, struct itset *suspend_set,
 			int thread, int task, int ignore_count,
 			const struct breakpoint_ops *ops, int from_tty,
 			int enabled, int internal, unsigned flags)
@@ -9321,6 +9423,7 @@ create_breakpoints_sal (struct gdbarch *gdbarch,
 			     filter_string,
 			     cond_string, extra_string,
 			     type, disposition,
+			     trigger_set, suspend_set,
 			     thread, task, ignore_count, ops,
 			     from_tty, enabled, internal, flags,
 			     canonical->special_display);
@@ -9594,6 +9697,73 @@ decode_static_tracepoint_spec (char **arg_p)
   return sals;
 }
 
+/* See breakpoint.h.  */
+
+struct cleanup *
+parse_breakpoint_args_const (const char **args,
+			     struct itset **trigger_set,
+			     struct itset **suspend_set)
+{
+  struct cleanup *old_chain;
+
+  *trigger_set = itset_reference (current_itset);
+  if (non_stop)
+    *suspend_set = itset_create_empty ();
+  else
+    *suspend_set = itset_reference (*trigger_set);
+
+  old_chain = make_cleanup_itset_free (*trigger_set);
+  make_cleanup_itset_free (*suspend_set);
+
+  if (*args != NULL)
+    {
+      const char *arg = *args;
+
+      while (*arg != '\0')
+	{
+	  const char *p;
+
+	  arg = skip_spaces_const (arg);
+	  p = skip_to_space_const (arg);
+
+	  if (strncmp (arg, "-suspend", p - arg) == 0)
+	    {
+	      p = skip_spaces_const (p);
+	      itset_free (*suspend_set);
+	      *suspend_set = itset_create_const (&p);
+	      arg = p;
+	    }
+	  else if (strcmp (arg, "--") == 0)
+	    {
+	      arg += 2;
+	      break;
+	    }
+	  else
+	    break;
+	}
+
+      *args = arg;
+    }
+
+  return old_chain;
+}
+
+struct cleanup *
+parse_breakpoint_args (char **args,
+		       struct itset **trigger_set,
+		       struct itset **suspend_set)
+{
+  const char *args_const;
+  struct cleanup *old_chain;
+
+  args_const = *args;
+  old_chain = parse_breakpoint_args_const (&args_const,
+					   trigger_set, suspend_set);
+  *args = (char *) args_const;
+
+  return old_chain;
+}
+
 /* Set a breakpoint.  This function is shared between CLI and MI
    functions for setting a breakpoint.  This function has two major
    modes of operations, selected by the PARSE_ARG parameter.  If
@@ -9622,13 +9792,18 @@ create_breakpoint (struct gdbarch *gdbarch,
   struct linespec_result canonical;
   struct cleanup *old_chain;
   struct cleanup *bkpt_chain = NULL;
+  struct cleanup *args_cleanup;
   int pending = 0;
   int task = 0;
   int prev_bkpt_count = breakpoint_count;
+  char *p;
+  struct itset *trigger_set, *suspend_set;
 
   gdb_assert (ops != NULL);
 
   init_linespec_result (&canonical);
+
+  args_cleanup = parse_breakpoint_args (&arg, &trigger_set, &suspend_set);
 
   TRY
     {
@@ -9680,6 +9855,8 @@ create_breakpoint (struct gdbarch *gdbarch,
   if (VEC_empty (linespec_sals, canonical.sals))
     return 0;
 
+  discard_cleanups (args_cleanup);
+
   /* Create a chain of things that always need to be cleaned up.  */
   old_chain = make_cleanup_destroy_linespec_result (&canonical);
 
@@ -9688,6 +9865,9 @@ create_breakpoint (struct gdbarch *gdbarch,
      to be part of a breakpoint.  If the breakpoint create succeeds
      then the memory is not reclaimed.  */
   bkpt_chain = make_cleanup (null_cleanup, 0);
+
+  make_cleanup_itset_free (trigger_set);
+  make_cleanup_itset_free (suspend_set);
 
   /* Resolve all line numbers to PC's and verify that the addresses
      are ok for the target.  */
@@ -9758,6 +9938,7 @@ create_breakpoint (struct gdbarch *gdbarch,
       ops->create_breakpoints_sal (gdbarch, &canonical,
 				   cond_string, extra_string, type_wanted,
 				   tempflag ? disp_del : disp_donttouch,
+				   trigger_set, suspend_set,
 				   thread, task, ignore_count, ops,
 				   from_tty, enabled, internal, flags);
     }
@@ -10971,6 +11152,10 @@ watch_command_1 (const char *arg, int accessflag, int from_tty,
   struct watchpoint *w;
   char *expression;
   struct cleanup *back_to;
+  struct itset *trigger_set, *suspend_set;
+  struct cleanup *old_chain;
+
+  old_chain = parse_breakpoint_args_const (&arg, &trigger_set, &suspend_set);
 
   /* Make sure that we actually have parameters to parse.  */
   if (arg != NULL && arg[0] != '\0')
@@ -11193,6 +11378,8 @@ watch_command_1 (const char *arg, int accessflag, int from_tty,
   else
     init_raw_breakpoint_without_location (b, NULL, bp_type,
 					  &watchpoint_breakpoint_ops);
+  b->trigger_set = trigger_set;
+  b->suspend_set = suspend_set;
   b->thread = thread;
   b->disposition = disp_donttouch;
   b->pspace = current_program_space;
@@ -11275,6 +11462,7 @@ watch_command_1 (const char *arg, int accessflag, int from_tty,
 
   install_breakpoint (internal, b, 1);
   do_cleanups (back_to);
+  discard_cleanups (old_chain);
 }
 
 /* Return count of debug registers needed to watch the given expression.
@@ -11604,6 +11792,8 @@ catch_fork_command_1 (char *arg, int from_tty,
   char *cond_string = NULL;
   catch_fork_kind fork_kind;
   int tempflag;
+  struct itset *trigger_set, *suspend_set;
+  struct cleanup *old_chain;
 
   fork_kind = (catch_fork_kind) (uintptr_t) get_cmd_context (command);
   tempflag = (fork_kind == catch_fork_temporary
@@ -11612,6 +11802,8 @@ catch_fork_command_1 (char *arg, int from_tty,
   if (!arg)
     arg = "";
   arg = skip_spaces (arg);
+
+  old_chain = parse_breakpoint_args (&arg, &trigger_set, &suspend_set);
 
   /* The allowed syntax is:
      catch [v]fork
@@ -11629,18 +11821,22 @@ catch_fork_command_1 (char *arg, int from_tty,
     {
     case catch_fork_temporary:
     case catch_fork_permanent:
-      create_fork_vfork_event_catchpoint (gdbarch, tempflag, cond_string,
+      create_fork_vfork_event_catchpoint (trigger_set, suspend_set,
+					  gdbarch, tempflag, cond_string,
                                           &catch_fork_breakpoint_ops);
       break;
     case catch_vfork_temporary:
     case catch_vfork_permanent:
-      create_fork_vfork_event_catchpoint (gdbarch, tempflag, cond_string,
+      create_fork_vfork_event_catchpoint (trigger_set, suspend_set,
+					  gdbarch, tempflag, cond_string,
                                           &catch_vfork_breakpoint_ops);
       break;
     default:
       error (_("unsupported or unknown fork kind; cannot catch it"));
       break;
     }
+
+  discard_cleanups (old_chain);
 }
 
 static void
@@ -11651,12 +11847,16 @@ catch_exec_command_1 (char *arg, int from_tty,
   struct gdbarch *gdbarch = get_current_arch ();
   int tempflag;
   char *cond_string = NULL;
+  struct itset *trigger_set, *suspend_set;
+  struct cleanup *old_chain;
 
   tempflag = get_cmd_context (command) == CATCH_TEMPORARY;
 
   if (!arg)
     arg = "";
   arg = skip_spaces (arg);
+
+  old_chain = parse_breakpoint_args (&arg, &trigger_set, &suspend_set);
 
   /* The allowed syntax is:
      catch exec
@@ -11669,15 +11869,20 @@ catch_exec_command_1 (char *arg, int from_tty,
     error (_("Junk at end of arguments."));
 
   c = XNEW (struct exec_catchpoint);
-  init_catchpoint (&c->base, gdbarch, tempflag, cond_string,
+  init_catchpoint (&c->base, trigger_set, suspend_set,
+		   gdbarch, tempflag, cond_string,
 		   &catch_exec_breakpoint_ops);
   c->exec_pathname = NULL;
+
+  discard_cleanups (old_chain);
 
   install_breakpoint (0, &c->base, 1);
 }
 
 void
 init_ada_exception_breakpoint (struct breakpoint *b,
+			       struct itset *trigger_set,
+			       struct itset *suspend_set,
 			       struct gdbarch *gdbarch,
 			       struct symtab_and_line sal,
 			       char *addr_string,
@@ -11707,6 +11912,8 @@ init_ada_exception_breakpoint (struct breakpoint *b,
   init_raw_breakpoint (b, gdbarch, sal, bp_breakpoint, ops);
 
   b->enable_state = enabled ? bp_enabled : bp_disabled;
+  b->trigger_set = trigger_set;
+  b->suspend_set = suspend_set;
   b->disposition = tempflag ? disp_del : disp_donttouch;
   b->addr_string = addr_string;
   b->language = language_ada;
@@ -12645,6 +12852,8 @@ base_breakpoint_dtor (struct breakpoint *self)
   xfree (self->addr_string);
   xfree (self->filter);
   xfree (self->addr_string_range_end);
+  itset_free (self->trigger_set);
+  itset_free (self->suspend_set);
 }
 
 static struct bp_location *
@@ -12753,6 +12962,8 @@ base_breakpoint_create_breakpoints_sal (struct gdbarch *gdbarch,
 					char *extra_string,
 					enum bptype type_wanted,
 					enum bpdisp disposition,
+					struct itset *trigger_set,
+					struct itset *suspend_set,
 					int thread,
 					int task, int ignore_count,
 					const struct breakpoint_ops *o,
@@ -12989,16 +13200,17 @@ bkpt_create_breakpoints_sal (struct gdbarch *gdbarch,
 			     char *extra_string,
 			     enum bptype type_wanted,
 			     enum bpdisp disposition,
-			     int thread,
-			     int task, int ignore_count,
+			     struct itset *trigger_set,
+			     struct itset *suspend_set,
+			     int thread, int task, int ignore_count,
 			     const struct breakpoint_ops *ops,
 			     int from_tty, int enabled,
 			     int internal, unsigned flags)
 {
   create_breakpoints_sal_default (gdbarch, canonical,
 				  cond_string, extra_string,
-				  type_wanted,
-				  disposition, thread, task,
+				  type_wanted, disposition,
+				  trigger_set, suspend_set, thread, task,
 				  ignore_count, ops, from_tty,
 				  enabled, internal, flags);
 }
@@ -13332,8 +13544,9 @@ tracepoint_create_breakpoints_sal (struct gdbarch *gdbarch,
 				   char *extra_string,
 				   enum bptype type_wanted,
 				   enum bpdisp disposition,
-				   int thread,
-				   int task, int ignore_count,
+				   struct itset *trigger_set,
+				   struct itset *suspend_set,
+				   int thread, int task, int ignore_count,
 				   const struct breakpoint_ops *ops,
 				   int from_tty, int enabled,
 				   int internal, unsigned flags)
@@ -13341,7 +13554,7 @@ tracepoint_create_breakpoints_sal (struct gdbarch *gdbarch,
   create_breakpoints_sal_default (gdbarch, canonical,
 				  cond_string, extra_string,
 				  type_wanted,
-				  disposition, thread, task,
+				  disposition, NULL, NULL, thread, task,
 				  ignore_count, ops, from_tty,
 				  enabled, internal, flags);
 }
@@ -13483,8 +13696,9 @@ strace_marker_create_breakpoints_sal (struct gdbarch *gdbarch,
 				      char *extra_string,
 				      enum bptype type_wanted,
 				      enum bpdisp disposition,
-				      int thread,
-				      int task, int ignore_count,
+				      struct itset *trigger_set,
+				      struct itset *suspend_set,
+				      int thread, int task, int ignore_count,
 				      const struct breakpoint_ops *ops,
 				      int from_tty, int enabled,
 				      int internal, unsigned flags)
@@ -13518,6 +13732,7 @@ strace_marker_create_breakpoints_sal (struct gdbarch *gdbarch,
 			   addr_string, NULL,
 			   cond_string, extra_string,
 			   type_wanted, disposition,
+			   NULL, NULL,
 			   thread, task, ignore_count, ops,
 			   from_tty, enabled, internal, flags,
 			   canonical->special_display);
@@ -14217,8 +14432,9 @@ create_breakpoints_sal_default (struct gdbarch *gdbarch,
 				char *extra_string,
 				enum bptype type_wanted,
 				enum bpdisp disposition,
-				int thread,
-				int task, int ignore_count,
+				struct itset *trigger_set,
+				struct itset *suspend_set,
+				int thread, int task, int ignore_count,
 				const struct breakpoint_ops *ops,
 				int from_tty, int enabled,
 				int internal, unsigned flags)
@@ -14226,6 +14442,7 @@ create_breakpoints_sal_default (struct gdbarch *gdbarch,
   create_breakpoints_sal (gdbarch, canonical, cond_string,
 			  extra_string,
 			  type_wanted, disposition,
+			  trigger_set, suspend_set,
 			  thread, task, ignore_count, ops, from_tty,
 			  enabled, internal, flags);
 }

@@ -383,7 +383,8 @@ extern char *ada_main_name (void);
 extern char *ada_name_for_lookup (const char *name);
 
 extern void create_ada_exception_catchpoint
-  (struct gdbarch *gdbarch, enum ada_exception_catchpoint_kind ex_kind,
+  (struct itset *trigger_set, struct itset *suspend_set,
+   struct gdbarch *gdbarch, enum ada_exception_catchpoint_kind ex_kind,
    char *excep_string, char *cond_string, int tempflag, int disabled,
    int from_tty);
 
