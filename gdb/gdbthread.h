@@ -421,6 +421,12 @@ extern struct thread_info *iterate_over_threads (thread_callback_func, void *);
        (T) != NULL ? ((TMP) = (T)->next, 1): 0;	\
        (T) = (TMP))
 
+/* Traverse all threads, including those that have THREAD_EXITED
+   state.  */
+
+#define ALL_THREADS(T)				\
+  for (T = thread_list; T; T = T->next) \
+
 extern int thread_count (void);
 
 /* Switch from one thread to another.  */
@@ -515,6 +521,9 @@ extern struct cleanup *make_cleanup_restore_current_thread (void);
 /* Returns a pointer into the thread_info corresponding to
    INFERIOR_PTID.  INFERIOR_PTID *must* be in the thread list.  */
 extern struct thread_info* inferior_thread (void);
+
+/* Return a pointer to the inferior of thread THR.  */
+extern struct inferior *get_thread_inferior (struct thread_info *thr);
 
 extern void update_thread_list (void);
 

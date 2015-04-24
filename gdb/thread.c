@@ -89,6 +89,15 @@ inferior_thread (void)
   return tp;
 }
 
+struct inferior *
+get_thread_inferior (struct thread_info *thr)
+{
+  int pid;
+
+  pid = ptid_get_pid (thr->ptid);
+  return find_inferior_pid (pid);
+}
+
 /* Delete the breakpoint pointed at by BP_P, if there's one.  */
 
 static void
