@@ -2863,16 +2863,14 @@ clear_proceed_status (int step)
   if (!non_stop)
     {
       struct thread_info *tp;
-      ptid_t resume_ptid;
-
-      resume_ptid = user_visible_resume_ptid (step);
 
       /* In all-stop mode, delete the per-thread status of all threads
 	 we're about to resume, implicitly and explicitly.  */
       ALL_NON_EXITED_THREADS (tp)
         {
-	  if (!ptid_match (tp->ptid, resume_ptid))
+	  if (!itset_contains_thread (current_itset, tp))
 	    continue;
+
 	  clear_proceed_status_thread (tp);
 	}
     }
@@ -3037,6 +3035,7 @@ proceed (CORE_ADDR addr, enum gdb_signal siggnal)
   /* If an exception is thrown from this point on, make sure to
      propagate GDB's knowledge of the executing state to the
      frontend/user running state.  */
+  /* XXX FIXME */
   old_chain = make_cleanup (finish_thread_state_cleanup, &resume_ptid);
 
   /* Even if RESUME_PTID is a wildcard, and we end up resuming fewer
@@ -3046,7 +3045,38 @@ proceed (CORE_ADDR addr, enum gdb_signal siggnal)
      inferior function, as in that case we pretend the inferior
      doesn't run at all.  */
   if (!tp->control.in_infcall)
-   set_running (resume_ptid, 1);
+    {
+      if (target_is_non_stop_p ())
+	{
+#if 0
+	  enum itset_width width = itset_get_width (current_itset);
+
+	  if (width == ITSET_WIDTH_ALL)
+	    set_running (minus_one_ptid, 1);
+	  else if (width == ITSET_WIDTH_INFERIOR)
+	    {
+	      resume_ptid = pid_to_ptid (ptid_get_pid (inferior_ptid));
+	      set_running (resume_ptid, 1);
+	    }
+	  else
+#endif
+	    {
+	      struct thread_info *current = tp;
+
+	      ALL_NON_EXITED_THREADS (tp)
+	        {
+		  if (!itset_contains_thread (current_itset, tp))
+		    continue;
+
+		  set_running (tp->ptid, 1);
+		}
+
+	      tp = current;
+	    }
+	}
+      else
+	set_running (resume_ptid, 1);
+    }
 
   if (debug_infrun)
     fprintf_unfiltered (gdb_stdlog,
@@ -3070,10 +3100,7 @@ proceed (CORE_ADDR addr, enum gdb_signal siggnal)
 
      Look for threads other than the current (TP) that reported a
      breakpoint hit and haven't been resumed yet since.  */
-
-  /* If scheduler locking applies, we can avoid iterating over all
-     threads.  */
-  if (!non_stop && !schedlock_applies (tp))
+  if (!non_stop)
     {
       struct thread_info *current = tp;
 
@@ -3085,7 +3112,7 @@ proceed (CORE_ADDR addr, enum gdb_signal siggnal)
 	    continue;
 
 	  /* Ignore threads of processes we're not resuming.  */
-	  if (!ptid_match (tp->ptid, resume_ptid))
+	  if (!itset_contains_thread (current_itset, tp))
 	    continue;
 
 	  if (!thread_still_needs_step_over (tp))
@@ -3136,7 +3163,7 @@ proceed (CORE_ADDR addr, enum gdb_signal siggnal)
       ALL_NON_EXITED_THREADS (tp)
         {
 	  /* Ignore threads of processes we're not resuming.  */
-	  if (!ptid_match (tp->ptid, resume_ptid))
+	  if (!itset_contains_thread (current_itset, tp))
 	    continue;
 
 	  if (tp->resumed)
