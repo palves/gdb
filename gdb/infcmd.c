@@ -58,6 +58,7 @@
 #include "thread-fsm.h"
 #include "top.h"
 #include "interps.h"
+#include "itset.h"
 
 /* Local functions: */
 
@@ -3021,7 +3022,25 @@ interrupt_target_1 (int all_threads)
   ptid_t ptid;
 
   if (all_threads)
-    ptid = minus_one_ptid;
+    {
+      ptid = minus_one_ptid;
+
+      if (target_is_non_stop_p ())
+	{
+	  struct thread_info *tp;
+
+	  ALL_NON_EXITED_THREADS (tp)
+	    {
+	      if (itset_contains_thread (current_itset, tp))
+		{
+		  target_interrupt (tp->ptid);
+		  set_stop_requested (tp->ptid, 1);
+		}
+	    }
+
+	  return;
+	}
+    }
   else
     ptid = inferior_ptid;
   target_interrupt (ptid);
@@ -3054,9 +3073,6 @@ interrupt_command (char *args, int from_tty)
       if (args != NULL
 	  && startswith (args, "-a"))
 	all_threads = 1;
-
-      if (!non_stop && all_threads)
-	error (_("-a is meaningless in all-stop mode."));
 
       interrupt_target_1 (all_threads);
     }
