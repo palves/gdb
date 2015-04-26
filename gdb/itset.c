@@ -1792,8 +1792,10 @@ itset_create_const (const char **specp)
       elt = parse_itset_one (&spec);
       VEC_safe_push (itset_elt_ptr, result->elements, elt);
 
+#if 0
       if (!valid_spec_end (spec))
 	error (_("Invalid I/T syntax at `%s'"), spec);
+#endif
     }
 
   result->spec = xstrndup (spec_start, spec - spec_start);
