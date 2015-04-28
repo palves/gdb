@@ -1331,7 +1331,7 @@ create_static_itset (VEC (itset_elt_ptr) *elements)
 
 
 static int
-looks_like_range (char *spec)
+looks_like_range (const char *spec)
 {
   return isdigit (spec[0]) || spec[0] == '*';
 }
@@ -1342,8 +1342,8 @@ looks_like_range (char *spec)
    an updated pointer into the spec.  Throws an exception on
    error.  */
 
-static char *
-parse_range (char *spec, int *first, int *last)
+static const char *
+parse_range (const char *spec, int *first, int *last)
 {
   struct itset_elt *elt;
 
@@ -1358,13 +1358,17 @@ parse_range (char *spec, int *first, int *last)
     }
   else
     {
-      *first = strtol (spec, &spec, 10);
+      char *end;
+
+      *first = strtol (spec, &end, 10);
+      spec = end;
       if (*spec == '-')
 	{
 	  ++spec;
 	  if (!isdigit (*spec))
 	    error (_("Expected digit in I/T set, at `%s'"), spec);
-	  *last = strtol (spec, &spec, 10);
+	  *last = strtol (spec, &end, 10);
+	  spec = end;
 	}
       else
 	*last = *first;
@@ -1373,7 +1377,7 @@ parse_range (char *spec, int *first, int *last)
 }
 
 static struct itset_elt *
-parse_inferior_range (char **spec)
+parse_inferior_range (const char **spec)
 {
   int first, last;
 
@@ -1386,7 +1390,7 @@ parse_inferior_range (char **spec)
 }
 
 static struct itset_elt *
-parse_thread_range (char **spec)
+parse_thread_range (const char **spec)
 {
   int first, last;
 
@@ -1399,7 +1403,7 @@ parse_thread_range (char **spec)
 }
 
 static struct itset_elt *
-parse_core_range (char **spec)
+parse_core_range (const char **spec)
 {
   int first, last;
 
@@ -1419,11 +1423,11 @@ parse_core_range (char **spec)
    spec.  Throws an exception on error.  */
 
 static struct itset_elt *
-parse_named_or_throw (char **textp)
+parse_named_or_throw (const char **textp)
 {
   struct itset_elt *elt;
-  char *text = *textp;
-  char *name = text;
+  const char *text = *textp;
+  const char *name = text;
 
   for (text = name + 1; isalnum (*text) || *text == '_'; ++text)
     ;
@@ -1445,7 +1449,7 @@ parse_named_or_throw (char **textp)
 
       if (*text != '(')
 	error (_("'(' expected in I/T set after `exec'"));
-      text = skip_spaces (text + 1);
+      text = skip_spaces_const (text + 1);
       tem = strchr (text, ')');
       if (!tem)
 	error (_("No closing ')' in I/T set for `exec'"));
@@ -1518,19 +1522,19 @@ make_cleanup_itset_free (struct itset *itset)
 */
 
 /* Forward declare.  The parser is recursive.  */
-static struct itset_elt *parse_neg (char **spec);
-static struct itset_elt *parse_parens_set (char **spec);
-static struct itset_elt *parse_itset_one (char **spec);
-static struct itset_elt *parse_current_focus (char **spec);
+static struct itset_elt *parse_neg (const char **spec);
+static struct itset_elt *parse_parens_set (const char **spec);
+static struct itset_elt *parse_itset_one (const char **spec);
+static struct itset_elt *parse_current_focus (const char **spec);
 
 static int
-valid_spec_end (char *spec)
+valid_spec_end (const char *spec)
 {
   return *spec == '\0' || isspace (*spec);
 }
 
 static struct itset_elt *
-parse_elem (char **spec)
+parse_elem (const char **spec)
 {
   struct itset_elt *elt;
 
@@ -1562,7 +1566,7 @@ parse_elem (char **spec)
 }
 
 static struct itset_elt *
-parse_neg (char **spec)
+parse_neg (const char **spec)
 {
   struct itset_elt_negated *neg_elt;
   struct itset_elt *elt;
@@ -1581,7 +1585,7 @@ parse_neg (char **spec)
 }
 
 static struct itset_elt *
-parse_current_focus (char **spec)
+parse_current_focus (const char **spec)
 {
   struct itset_elt_itset *itset_elt;
 
@@ -1595,7 +1599,7 @@ parse_current_focus (char **spec)
 }
 
 static struct itset_elt *
-parse_parens_set (char **spec)
+parse_parens_set (const char **spec)
 {
   struct itset_elt_negated *neg_elt;
   struct itset_elt *elt;
@@ -1622,7 +1626,7 @@ parse_parens_set (char **spec)
 }
 
 static struct itset_elt *
-parse_inters (char **spec)
+parse_inters (const char **spec)
 {
   struct itset_elt *elt1, *elt2 = NULL;
   struct itset_elt_intersect *intersect = NULL;
@@ -1662,7 +1666,7 @@ parse_inters (char **spec)
 }
 
 static struct itset_elt *
-parse_itset_one (char **spec)
+parse_itset_one (const char **spec)
 {
   struct itset_elt *inters1, *inters2 = NULL;
   struct itset_elt_itset *un = NULL;
@@ -1710,21 +1714,21 @@ parse_itset_one (char **spec)
    exception on error.  */
 
 struct itset *
-itset_create (char **specp)
+itset_create_const (const char **specp)
 {
   int is_static = 0;
   struct itset *result;
   struct itset_elt *elt;
   struct cleanup *cleanups;
-  char *spec = *specp;
-  char *spec_start;
+  const char *spec = *specp;
+  const char *spec_start;
 
   result = XCNEW (struct itset);
   result->refc = 1;
 
   cleanups = make_cleanup_itset_free (result);
 
-  spec = skip_spaces (spec);
+  spec = skip_spaces_const (spec);
   spec_start = spec;
 
   if (*spec == '!')
@@ -1760,11 +1764,22 @@ itset_create (char **specp)
 }
 
 struct itset *
+itset_create (char **specp)
+{
+  const char *spec_const = *specp;
+  struct itset *itset;
+
+  itset = itset_create_const (&spec_const);
+  *specp = (char *) spec_const;
+  return itset;
+}
+
+struct itset *
 itset_create_empty (void)
 {
-  char *spec = "";
+  const char *spec = "";
 
-  return itset_create (&spec);
+  return itset_create_const (&spec);
 }
 
 /* Create a new I/T set which represents the current inferior and all
@@ -1773,33 +1788,33 @@ itset_create_empty (void)
 static struct itset *
 itset_create_curinf (void)
 {
-  char *spec = "curinf";
+  const char *spec = "curinf";
 
-  return itset_create (&spec);
+  return itset_create_const (&spec);
 }
 
 static struct itset *
 itset_create_all (void)
 {
-  char *spec = "all";
+  const char *spec = "all";
 
-  return itset_create (&spec);
+  return itset_create_const (&spec);
 }
 
 static struct itset *
 itset_create_running (void)
 {
-  char *spec = "running";
+  const char *spec = "running";
 
-  return itset_create (&spec);
+  return itset_create_const (&spec);
 }
 
 static struct itset *
 itset_create_stopped (void)
 {
-  char *spec = "stopped";
+  const char *spec = "stopped";
 
-  return itset_create (&spec);
+  return itset_create_const (&spec);
 }
 
 /* Return 1 if SET contains INF, 0 otherwise.  */

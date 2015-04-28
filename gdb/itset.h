@@ -39,6 +39,10 @@ struct itset;
 
 struct itset *itset_create (char **spec);
 
+/* Const version of the above.  */
+
+struct itset *itset_create_const (const char **spec);
+
 /* Add ADDME to the I/T set TO.  In other words, after the call, TO
    will be the union set of TO at entry, and ADDME.  */
 
