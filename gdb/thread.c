@@ -44,6 +44,7 @@
 #include "cli/cli-utils.h"
 #include "thread-fsm.h"
 #include "tid-parse.h"
+#include "itset.h"
 
 /* Definition of struct thread_info exported to gdbthread.h.  */
 
@@ -1747,40 +1748,24 @@ tp_array_compar (const void *ap_voidp, const void *bp_voidp)
 	  * (tp_array_compar_ascending ? +1 : -1));
 }
 
-/* Apply a GDB command to a list of threads.  List syntax is a whitespace
-   seperated list of numbers, or ranges, or the keyword `all'.  Ranges consist
-   of two numbers seperated by a hyphen.  Examples:
-
-   thread apply 1 2 7 4 backtrace       Apply backtrace cmd to threads 1,2,7,4
-   thread apply 2-7 9 p foo(1)  Apply p foo(1) cmd to threads 2->7 & 9
-   thread apply all p x/i $pc   Apply x/i $pc cmd to all threads.  */
-
 static void
-thread_apply_all_command (char *cmd, int from_tty)
+thread_apply_set (const char *cmd, struct itset *set, int ascending,
+		  int from_tty)
 {
   struct cleanup *old_chain;
   char *saved_cmd;
   int tc;
   struct thread_array_cleanup ta_cleanup;
 
-  tp_array_compar_ascending = 0;
-  if (cmd != NULL
-      && check_for_argument (&cmd, "-ascending", strlen ("-ascending")))
-    {
-      cmd = skip_spaces (cmd);
-      tp_array_compar_ascending = 1;
-    }
-
-  if (cmd == NULL || *cmd == '\000')
-    error (_("Please specify a command following the thread ID list"));
+  tp_array_compar_ascending = ascending;
 
   update_thread_list ();
 
   old_chain = make_cleanup_restore_current_thread ();
 
-  /* Save a copy of the command in case it is clobbered by
+  /* Work with a copy of the command in case it is clobbered by
      execute_command.  */
-  saved_cmd = xstrdup (cmd);
+  saved_cmd = xmalloc (strlen (cmd) + 1);
   make_cleanup (xfree, saved_cmd);
 
   /* Note this includes exited threads.  */
@@ -1798,6 +1783,9 @@ thread_apply_all_command (char *cmd, int from_tty)
 
       ALL_NON_EXITED_THREADS (tp)
         {
+	  if (set != NULL && !itset_contains_thread (set, tp))
+	    continue;
+
           tp_array[i] = tp;
           tp->refcount++;
           i++;
@@ -1820,10 +1808,10 @@ thread_apply_all_command (char *cmd, int from_tty)
             printf_filtered (_("\nThread %s (%s):\n"),
 			     print_thread_id (tp_array[k]),
 			     target_pid_to_str (inferior_ptid));
-            execute_command (cmd, from_tty);
-
-            /* Restore exact command used previously.  */
-            strcpy (cmd, saved_cmd);
+	    /* Work with a copy of the command in case it is clobbered
+	       by execute_command.  */
+            strcpy (saved_cmd, cmd);
+            execute_command (saved_cmd, from_tty);
 	  }
     }
 
@@ -1831,6 +1819,69 @@ thread_apply_all_command (char *cmd, int from_tty)
 }
 
 /* Implementation of the "thread apply" command.  */
+
+/* Apply a GDB command to a list of threads.  List syntax is a whitespace
+   seperated list of numbers, or ranges, or the keyword `all'.  Ranges consist
+   of two numbers seperated by a hyphen.  Examples:
+
+   thread apply 1 2 7 4 backtrace       Apply backtrace cmd to threads 1,2,7,4
+   thread apply 2-7 9 p foo(1)  Apply p foo(1) cmd to threads 2->7 & 9
+   thread apply all p x/i $pc   Apply x/i $pc cmd to all threads.  */
+
+static void
+thread_apply_all_command (char *cmd, int from_tty)
+{
+  int ascending;
+
+  ascending = 0;
+  if (cmd != NULL
+      && check_for_argument (&cmd, "-ascending", strlen ("-ascending")))
+    {
+      cmd = skip_spaces (cmd);
+      ascending = 1;
+    }
+
+  if (cmd == NULL || *cmd == '\000')
+    error (_("Please specify a command following the thread ID list"));
+
+  thread_apply_set (cmd, NULL, ascending, from_tty);
+}
+
+/* Apply a GDB command to the threads that match a given I/T set.  Examples:
+
+   thread apply set i1,i2,t3 bt    Apply backtrace cmd to threads of
+                                   inferior 2, 3 and thread 3.
+   thread apply set t1-3 p foo(1)  Apply p foo(1) cmd to threads 1->3
+   thread apply set c0 p x/i $pc   Apply x/i $pc cmd to thread running in core 0.  */
+
+static void
+thread_apply_set_command (char *args, int from_tty)
+{
+  struct cleanup *old_chain;
+  struct itset *itset;
+  int ascending;
+
+  if (args == NULL || *args == '\000')
+    error (_("Please specify an I/T set spec"));
+
+  ascending = 0;
+  if (args != NULL
+      && check_for_argument (&args, "-ascending", strlen ("-ascending")))
+    {
+      args = skip_spaces (args);
+      ascending = 1;
+    }
+
+  itset = itset_create (&args);
+  old_chain = make_cleanup_itset_free (itset);
+
+  if (*args == '\000')
+    error (_("Please specify a command following the set spec"));
+
+  thread_apply_set (args, itset, ascending, from_tty);
+
+  do_cleanups (old_chain);
+}
 
 static void
 thread_apply_command (char *tidlist, int from_tty)
@@ -2222,6 +2273,16 @@ The new thread ID must be currently known."),
 Apply a command to all threads.\n\
 \n\
 Usage: thread apply all [-ascending] <command>\n\
+-ascending: Call <command> for all threads in ascending order.\n\
+            The default is descending order.\
+"),
+	   &thread_apply_list);
+
+  add_cmd ("set", class_run, thread_apply_set_command,
+	   _("\
+Apply a command to all threads in the specified set.\n\
+\n\
+Usage: thread apply set [-ascending] <command>\n\
 -ascending: Call <command> for all threads in ascending order.\n\
             The default is descending order.\
 "),
