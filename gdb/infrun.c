@@ -4404,8 +4404,12 @@ THREAD_STOPPED_BY (sw_breakpoint)
 THREAD_STOPPED_BY (hw_breakpoint)
 
 static int
-stop_set_match (struct itset *stop_set, struct thread_info *t)
+should_stop_thread (struct itset *stop_set, struct thread_info *t)
 {
+  /* If this event has no specific suspend set, default to the "set
+     non-stop" setting.  In all-stop, stop everything, in non-stop,
+     stop nothing.  XXX is the empty check here what we really
+     want?  */
   if (stop_set == NULL || itset_is_empty_set (stop_set))
     return !non_stop;
 
@@ -4554,7 +4558,7 @@ stop_all_threads (struct itset *stop_set)
 	  /* Go through all threads looking for threads that we need
 	     to tell the target to stop.  */
 	  ALL_NON_EXITED_THREADS (t)
-	    if (stop_set_match (stop_set, t))
+	    if (should_stop_thread (stop_set, t))
 	    {
 	      if (t->executing)
 		{
