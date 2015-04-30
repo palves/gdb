@@ -45,11 +45,12 @@ inferior_event_handler (enum inferior_event_type event_type,
       break;
 
     case INF_EXEC_COMPLETE:
-      if (!non_stop)
+      if (!threads_are_executing ())
 	{
-	  /* Unregister the inferior from the event loop.  This is done
-	     so that when the inferior is not running we don't get
-	     distracted by spurious inferior output.  */
+	  /* Unregister the target from the event loop.  This is done
+	     so that when nothing in the target is running we don't
+	     get distracting debug output caused by spurious/delayed
+	     target events.  */
 	  if (target_has_execution && target_can_async_p ())
 	    target_async (0);
 	}
