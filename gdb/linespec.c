@@ -43,6 +43,7 @@
 #include "filenames.h"
 #include "ada-lang.h"
 #include "stack.h"
+#include "itset.h"
 
 typedef struct symbol *symbolp;
 DEF_VEC_P (symbolp);
@@ -1037,6 +1038,8 @@ iterate_over_all_matching_symtabs (struct linespec_state *state,
     if (search_pspace != NULL && search_pspace != pspace)
       continue;
     if (pspace->executing_startup)
+      continue;
+    if (!itset_contains_program_space (current_itset, pspace))
       continue;
 
     set_current_program_space (pspace);
@@ -3031,6 +3034,8 @@ collect_symtabs_from_filename (const char *file)
   {
     if (pspace->executing_startup)
       continue;
+    if (!itset_contains_program_space (current_itset, pspace))
+      continue;
 
     set_current_program_space (pspace);
     iterate_over_symtabs (file, add_symtabs_to_list, &collector);
@@ -3608,6 +3613,8 @@ search_minsyms_for_name (struct collect_info *info, const char *name,
 	  continue;
 	if (pspace->executing_startup)
 	  continue;
+	if (!itset_contains_program_space (current_itset, pspace))
+	  continue;
 
 	set_current_program_space (pspace);
 
@@ -3620,7 +3627,8 @@ search_minsyms_for_name (struct collect_info *info, const char *name,
     }
   else
     {
-      if (search_pspace == NULL || SYMTAB_PSPACE (symtab) == search_pspace)
+      if ((search_pspace == NULL || SYMTAB_PSPACE (symtab) == search_pspace)
+	  && itset_contains_program_space (current_itset, SYMTAB_PSPACE (symtab)))
 	{
 	  set_current_program_space (SYMTAB_PSPACE (symtab));
 	  local.objfile = SYMTAB_OBJFILE(symtab);
@@ -3682,7 +3690,9 @@ add_matching_symbols_to_info (const char *name,
 					     pspace, 1);
 	  search_minsyms_for_name (info, name, pspace, NULL);
 	}
-      else if (pspace == NULL || pspace == SYMTAB_PSPACE (elt))
+      else if ((pspace == NULL || pspace == SYMTAB_PSPACE (elt))
+		&& itset_contains_program_space (current_itset,
+						 SYMTAB_PSPACE (elt)))
 	{
 	  int prev_len = VEC_length (symbolp, info->result.symbols);
 
