@@ -1927,6 +1927,7 @@ linux_handle_extended_wait (struct lwp_info *lp, int status)
 	     it next reports a stop.  */
 	  set_running (new_lp->ptid, 1);
 	  set_executing (new_lp->ptid, 1);
+	  set_resumed (new_lp->ptid, 1);
 
 	  if (WSTOPSIG (status) != SIGSTOP)
 	    {
