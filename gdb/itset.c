@@ -53,6 +53,12 @@ struct itset_elt_vtable
 
   void (*destroy) (struct itset_elt *);
 
+  /* Return true if the element contains the program space.  The
+     element and the program space are passed as arguments.  */
+
+  int (*contains_program_space) (struct itset_elt *elt,
+				 struct program_space *pspace);
+
   /* Return true if the element contains the inferior.  The element
      and the inferior are passed as arguments.  */
 
@@ -223,6 +229,25 @@ set_is_empty (VEC (itset_elt_ptr) *elements)
    contained by the set ELEMENTS.  */
 
 static int
+set_contains_program_space (VEC (itset_elt_ptr) *elements,
+			    struct program_space *pspace)
+{
+  int ix;
+  struct itset_elt *elt;
+
+  for (ix = 0; VEC_iterate (itset_elt_ptr, elements, ix, elt); ++ix)
+    {
+      if (elt->vtable->contains_program_space (elt, pspace))
+	return 1;
+    }
+
+  return 0;
+}
+
+/* A helper function that returns true if the inferior INF is
+   contained by the set ELEMENTS.  */
+
+static int
 set_contains_inferior (VEC (itset_elt_ptr) *elements, struct inferior *inf)
 {
   int ix;
@@ -338,6 +363,7 @@ exec_is_empty (struct itset_elt *base)
 static const struct itset_elt_vtable exec_vtable =
 {
   exec_destroy,
+  NULL, /* contains_program_space */
   exec_contains_inferior,
   exec_contains_thread,
   exec_is_empty
@@ -373,6 +399,29 @@ struct itset_elt_inferior_range
      WILDCARD, then LAST is unused.  */
   int inf_first, inf_last;
 };
+
+/* Implementation of `contains_inferior' method.  */
+
+static int
+inferior_range_contains_program_space (struct itset_elt *base,
+				       struct program_space *pspace)
+{
+  struct itset_elt_inferior_range *range
+    = (struct itset_elt_inferior_range *) base;
+  struct inferior *inf;
+
+  ALL_INFERIORS (inf)
+    {
+      if (range->inf_first == WILDCARD
+	  || (range->inf_first <= inf->num && inf->num <= range->inf_last))
+	{
+	  if (inf->pspace == pspace)
+	    return 1;
+	}
+    }
+
+  return 0;
+}
 
 /* Implementation of `contains_inferior' method.  */
 
@@ -433,6 +482,7 @@ inferior_range_is_empty (struct itset_elt *base)
 static const struct itset_elt_vtable inferior_range_vtable =
 {
   NULL,
+  inferior_range_contains_program_space,
   inferior_range_contains_inferior,
   inferior_range_contains_thread,
   inferior_range_is_empty
@@ -465,6 +515,31 @@ struct itset_elt_thread_range
      then LAST is unused.  */
   int thr_first, thr_last;
 };
+
+ /* Implementation of `contains_inferior' method.  */
+
+static int
+thread_range_contains_program_space (struct itset_elt *base,
+				     struct program_space *pspace)
+{
+  struct itset_elt_thread_range *range
+    = (struct itset_elt_thread_range *) base;
+  struct thread_info *thr;
+
+  ALL_THREADS (thr)
+    {
+      if (range->thr_first == WILDCARD
+	  || (range->thr_first <= thr->per_inf_num && thr->per_inf_num <= range->thr_last))
+	{
+	  struct inferior *inf = get_thread_inferior (thr);
+
+	  if (inf->pspace == pspace)
+	    return 1;
+	}
+    }
+
+  return 0;
+}
 
 /* Implementation of `contains_inferior' method.  */
 
@@ -525,6 +600,7 @@ thread_range_is_empty (struct itset_elt *base)
   struct inferior *inf;
   struct thread_info *thr;
 
+  // FIXME: why are we looking at inferiors here?
   ALL_INFERIORS (inf)
     {
       if (thread_range_contains_inferior (base, inf))
@@ -543,6 +619,7 @@ thread_range_is_empty (struct itset_elt *base)
 static const struct itset_elt_vtable thread_range_vtable =
 {
   NULL,
+  thread_range_contains_program_space,
   thread_range_contains_inferior,
   thread_range_contains_thread,
   thread_range_is_empty
@@ -575,6 +652,37 @@ struct itset_elt_core_range
      WILDCARD, then CORE_LAST is unused.  */
   int core_first, core_last;
 };
+
+static int core_range_contains_thread (struct itset_elt *base,
+				       struct thread_info *thr);
+
+ /* Implementation of `contains_inferior' method.  */
+
+static int
+core_range_contains_program_space (struct itset_elt *base,
+				   struct program_space *pspace)
+{
+  struct itset_elt_core_range *core_range = (struct itset_elt_core_range *) base;
+  struct thread_info *thr;
+
+  /* True if we find a thread of an inferior associated with PSPACE
+     that is running on our core range.  */
+  ALL_THREADS (thr)
+    {
+      /* It's cheaper to check the core range first, because looking
+	 up the a thread's inferior is O(n).  */
+      if (core_range_contains_thread (base, thr))
+	{
+	  struct inferior *thr_inf;
+
+	  thr_inf = get_thread_inferior (thr);
+	  if (thr_inf->pspace == pspace)
+	    return 1;
+	}
+    }
+
+  return 0;
+}
 
 /* Implementation of `contains_thread' method.  */
 
@@ -642,6 +750,7 @@ core_range_is_empty (struct itset_elt *base)
 static const struct itset_elt_vtable core_range_vtable =
 {
   NULL,
+  core_range_contains_program_space,
   core_range_contains_inferior,
   core_range_contains_thread,
   core_range_is_empty
@@ -751,6 +860,7 @@ intersect_is_empty (struct itset_elt *base)
 static const struct itset_elt_vtable intersect_vtable =
 {
   intersect_destroy,
+  NULL, /* contains_program_space */
   intersect_contains_inferior,
   intersect_contains_thread,
   intersect_is_empty
@@ -782,6 +892,15 @@ struct itset_elt_all
 /* Implementation of `contains_inferior' method.  */
 
 static int
+all_contains_program_space (struct itset_elt *base,
+			    struct program_space *pspace)
+{
+  return 1;
+}
+
+/* Implementation of `contains_inferior' method.  */
+
+static int
 all_contains_inferior (struct itset_elt *base, struct inferior *inf)
 {
   return 1;
@@ -807,6 +926,7 @@ all_is_empty (struct itset_elt *base)
 static const struct itset_elt_vtable all_vtable =
 {
   NULL,
+  all_contains_program_space,
   all_contains_inferior,
   all_contains_thread,
   all_is_empty
@@ -831,6 +951,15 @@ struct itset_elt_empty
 {
   struct itset_elt base;
 };
+
+/* Implementation of `contains_program_space' method.  */
+
+static int
+empty_contains_program_space (struct itset_elt *base,
+			      struct program_space *pspace)
+{
+  return 0;
+}
 
 /* Implementation of `contains_inferior' method.  */
 
@@ -860,6 +989,7 @@ empty_is_empty (struct itset_elt *base)
 static const struct itset_elt_vtable empty_vtable =
 {
   NULL,
+  empty_contains_program_space,
   empty_contains_inferior,
   empty_contains_thread,
   empty_is_empty
@@ -896,12 +1026,24 @@ itset_elt_itset_destroy (struct itset_elt *base)
   itset_free (iiset->set);
 }
 
+/* Implementation of `contains_program_space' method.  */
+
+static int
+itset_elt_itset_contains_program_space (struct itset_elt *base,
+					struct program_space *pspace)
+{
+  struct itset_elt_itset *iiset = (struct itset_elt_itset *) base;
+
+  return itset_contains_program_space (iiset->set, pspace);
+}
+
 /* Implementation of `contains_inferior' method.  */
 
 static int
 itset_elt_itset_contains_inferior (struct itset_elt *base, struct inferior *inf)
 {
   struct itset_elt_itset *iiset = (struct itset_elt_itset *) base;
+
   return itset_contains_inferior (iiset->set, inf);
 }
 
@@ -911,6 +1053,7 @@ static int
 itset_elt_itset_contains_thread (struct itset_elt *base, struct thread_info *thr)
 {
   struct itset_elt_itset *iiset = (struct itset_elt_itset *) base;
+
   return itset_contains_thread (iiset->set, thr);
 }
 
@@ -920,12 +1063,14 @@ static int
 itset_elt_itset_is_empty (struct itset_elt *base)
 {
   struct itset_elt_itset *iiset = (struct itset_elt_itset *) base;
+
   return itset_is_empty (iiset->set);
 }
 
 static const struct itset_elt_vtable itset_elt_itset_vtable =
 {
   itset_elt_itset_destroy,
+  itset_elt_itset_contains_program_space,
   itset_elt_itset_contains_inferior,
   itset_elt_itset_contains_thread,
   itset_elt_itset_is_empty
@@ -1019,6 +1164,7 @@ itset_elt_negated_is_empty (struct itset_elt *base)
 static const struct itset_elt_vtable itset_elt_negated_vtable =
 {
   itset_elt_negated_destroy,
+  NULL, /* contains_program_space */
   itset_elt_negated_contains_inferior,
   itset_elt_negated_contains_thread,
   itset_elt_negated_is_empty
@@ -1056,6 +1202,36 @@ state_contains_thread (struct itset_elt *base, struct thread_info *thr)
 
   return thr->state == state->state;
 }
+
+#if 0
+ /* Implementation of `contains_inferior' method.  */
+
+static int
+state_contains_program_space (struct itset_elt *base,
+			      struct program_space *pspace)
+{
+  struct itset_elt_state *state = (struct itset_elt_state *) base;
+  struct thread_info *thr;
+
+  /* True if we find a thread of this inferior that is in the state
+     we're interested in.  */
+  ALL_THREADS (thr)
+    {
+      /* It's cheaper to check the state first, because looking up the
+	 a thread's inferior is O(n).  */
+      if (state_contains_thread (base, thr))
+	{
+	  struct inferior *thr_inf;
+
+	  thr_inf = get_thread_inferior (thr);
+	  if (thr_inf == inf)
+	    return 1;
+	}
+    }
+
+  return 0;
+}
+#endif
 
 /* Implementation of `contains_inferior' method.  */
 
@@ -1101,6 +1277,7 @@ state_is_empty (struct itset_elt *base)
 static const struct itset_elt_vtable state_vtable =
 {
   NULL,
+  NULL, /* contains_program_space */
   state_contains_inferior,
   state_contains_thread,
   state_is_empty
@@ -1119,6 +1296,15 @@ create_state_itset (int thread_state)
 }
 
 
+
+/* Implementation of `contains_program_space' method.  */
+
+static int
+curinf_contains_program_space (struct itset_elt *base,
+			       struct program_space *pspace)
+{
+  return current_inferior ()->pspace == pspace;
+}
 
 /* Implementation of `contains_inferior' method.  */
 
@@ -1151,6 +1337,7 @@ curinf_is_empty (struct itset_elt *base)
 static const struct itset_elt_vtable curinf_vtable =
 {
   NULL,
+  curinf_contains_program_space,
   curinf_contains_inferior,
   curinf_contains_thread,
   curinf_is_empty
@@ -1171,6 +1358,15 @@ create_curinf_itset (void)
 }
 
 
+
+/* Implementation of `contains_program_space' method.  */
+
+static int
+curthr_contains_program_space (struct itset_elt *base,
+			       struct program_space *pspace)
+{
+  return current_inferior ()->pspace == pspace;
+}
 
 /* Implementation of `contains_inferior' method.  */
 
@@ -1199,6 +1395,7 @@ curthr_is_empty (struct itset_elt *base)
 static const struct itset_elt_vtable curthr_vtable =
 {
   NULL,
+  curthr_contains_program_space,
   curthr_contains_inferior,
   curthr_contains_thread,
   curthr_is_empty
@@ -1256,6 +1453,26 @@ static_lessthan (const int a, const int b)
 /* Implementation of `contains_inferior' method.  */
 
 static int
+static_contains_program_space (struct itset_elt *base,
+			       struct program_space *pspace)
+{
+  struct itset_elt_static *st = (struct itset_elt_static *) base;
+  int idx, inf_num;
+
+  for (idx = 0; VEC_iterate (int, st->inferiors, idx, inf_num); ++idx)
+    {
+      struct inferior *inf = find_inferior_id (inf_num);
+
+      if (inf->pspace == pspace)
+	return 1;
+    }
+
+  return 0;
+}
+
+/* Implementation of `contains_inferior' method.  */
+
+static int
 static_contains_inferior (struct itset_elt *base, struct inferior *inf)
 {
   struct itset_elt_static *st = (struct itset_elt_static *) base;
@@ -1297,6 +1514,7 @@ static_is_empty (struct itset_elt *base)
 static const struct itset_elt_vtable static_vtable =
 {
   static_destroy,
+  static_contains_program_space,
   static_contains_inferior,
   static_contains_thread,
   static_is_empty
@@ -1891,6 +2109,14 @@ int
 itset_is_empty (const struct itset *set)
 {
   return set_is_empty (set->elements);
+}
+
+/* Return 1 if SET contains INF, 0 otherwise.  */
+
+int
+itset_contains_program_space (struct itset *set, struct program_space *pspace)
+{
+  return set_contains_program_space (set->elements, pspace);
 }
 
 /* Return 1 if SET contains INF, 0 otherwise.  */
