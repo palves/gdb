@@ -14834,15 +14834,35 @@ decode_location_default (struct breakpoint *b,
   destroy_linespec_result (&canonical);
 }
 
+static void
+restore_current_itset_cleanup (void *itset)
+{
+  itset_free (current_itset);
+  current_itset = (struct itset *) itset;
+  itset_free (current_itset);
+}
+
 /* Prepare the global context for a re-set of breakpoint B.  */
 
 static struct cleanup *
 prepare_re_set_context (struct breakpoint *b)
 {
+  struct cleanup *old_chain = make_cleanup (null_cleanup, NULL);
+
   input_radix = b->input_radix;
+
+  /* Internal breakpoints don't have a specific trigger set.  */
+  if (b->trigger_set != NULL)
+    {
+      itset_reference (current_itset);
+      make_cleanup (restore_current_itset_cleanup, current_itset);
+      current_itset = b->trigger_set;
+      itset_reference (b->trigger_set);
+    }
+
   set_language (b->language);
 
-  return make_cleanup (null_cleanup, NULL);
+  return old_chain;
 }
 
 /* Reset a breakpoint given it's struct breakpoint * BINT.
