@@ -2116,6 +2116,7 @@ linux_handle_extended_wait (struct lwp_info *lp, int status,
 	  if (!stopping)
 	    {
 	      set_executing (new_lp->ptid, 1);
+	      set_resumed (new_lp->ptid, 1);
 	      /* thread_db_attach_lwp -> lin_lwp_attach_lwp forced
 		 resume_stop.  */
 	      new_lp->last_resume_kind = resume_continue;
