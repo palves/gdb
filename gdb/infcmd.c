@@ -79,11 +79,32 @@ current_thread_set (void)
   return itset_create (&b);
 }
 
+void do_proceed (void);
+void enqueue_step_overs_leaders (struct thread_info *tp);
+void enqueue_step_overs (struct thread_info *tp);
+void mark_threads_running (ptid_t resume_ptid);
+void prepare_proceed (CORE_ADDR addr, enum gdb_signal siggnal);
+
 void
 apply_execution_command (struct itset *apply_itset,
 			 struct itset *run_free_itset,
 			 aec_callback_func callback, void *callback_data)
 {
+  struct thread_info *tp = inferior_thread ();
+  ptid_t resume_ptid;
+  struct cleanup *old_chain;
+
+  resume_ptid = user_visible_resume_ptid (tp->control.stepping_command);
+
+  /* If an exception is thrown from this point on, make sure to
+     propagate GDB's knowledge of the executing state to the
+     frontend/user running state.  */
+  /* XXX FIXME */
+  old_chain = make_cleanup (finish_thread_state_cleanup, &resume_ptid);
+
+  if (!tp->control.in_infcall)
+    mark_threads_running (resume_ptid);
+
   if (target_is_non_stop_p ())
     {
       struct thread_info *t;
@@ -92,9 +113,9 @@ apply_execution_command (struct itset *apply_itset,
       /* See if there are threads we'd run free that are stopped at
 	 forks.  If so, follow the fork, and refuse to apply the
 	 execution command further.  */
-      ALL_THREADS (t)
+      ALL_NON_EXITED_THREADS (t)
         {
-	  if (t->state == THREAD_STOPPED
+	  if (!t->resumed
 	      && itset_contains_thread (run_free_itset, t)
 	      && !itset_contains_thread (apply_itset, t))
 	    {
@@ -113,34 +134,16 @@ apply_execution_command (struct itset *apply_itset,
 	  normal_stop ();
 	  if (target_can_async_p ())
 	    inferior_event_handler (INF_EXEC_COMPLETE, NULL);
+	  discard_cleanups (old_chain);
 	  return;
 	}
 
-      ALL_THREADS (t)
+      ALL_NON_EXITED_THREADS (t)
         {
-	  if (t->state == THREAD_STOPPED
-	      && itset_contains_thread (apply_itset, t))
+	  if (!t->resumed && itset_contains_thread (apply_itset, t))
 	    {
 	      switch_to_thread (t->ptid);
 	      (*callback) (t, callback_data);
-	    }
-	  else if (t->state == THREAD_STOPPED
-		   && itset_contains_thread (run_free_itset, t))
-	    {
-	      /* If T has reported an event before (rather than having
-		 been forced-suspended by GDB, then have it step over
-		 any breakpoint its stopped at.  Otherwise, resume it
-		 as is, and let it hit any breakpoint it may be
-		 stopped at (or report it's already pending event), so
-		 the event is reported.  */
-	      if (t->reported_event)
-		{
-		  switch_to_thread (t->ptid);
-		  clear_proceed_status_thread (t);
-		  proceed ((CORE_ADDR) -1, GDB_SIGNAL_DEFAULT);
-		}
-	      else
-		do_target_resume (t->ptid, 0, GDB_SIGNAL_0);
 	    }
 	}
     }
@@ -148,6 +151,24 @@ apply_execution_command (struct itset *apply_itset,
     {
       ERROR_NO_INFERIOR;
       (*callback) (inferior_thread (), callback_data);
+    }
+
+  enqueue_step_overs (tp);
+
+  enqueue_step_overs_leaders (tp);
+
+  do_proceed ();
+
+  discard_cleanups (old_chain);
+
+  /* Wait for it to stop (if not standalone)
+     and in any case decode why it stopped, and act accordingly.  */
+  /* Do this only if we are not using the event loop, or if the target
+     does not support asynchronous execution.  */
+  if (!target_can_async_p ())
+    {
+      wait_for_inferior ();
+      normal_stop ();
     }
 }
 
@@ -993,7 +1014,7 @@ static void
 continue_aec_callback (struct thread_info *thread, void *data)
 {
   clear_proceed_status (0);
-  proceed ((CORE_ADDR) -1, GDB_SIGNAL_DEFAULT);
+  prepare_proceed ((CORE_ADDR) -1, GDB_SIGNAL_DEFAULT);
 }
 
 /* continue [-a] [proceed-count] [&]  */
@@ -1013,9 +1034,9 @@ continue_command (char *args, int from_tty)
 
   /* Find out whether we must run in the background.  */
   args = strip_bg_char (args, &async_exec);
-  args_chain = make_cleanup (xfree, args);
+  old_chain = make_cleanup (xfree, args);
 
-  old_chain = make_cleanup (itset_free_p, &apply_itset);
+  make_cleanup (itset_free_p, &apply_itset);
   make_cleanup (itset_free_p, &run_free_itset);
 
   args = parse_execution_args (args, 0,
@@ -1087,9 +1108,6 @@ continue_command (char *args, int from_tty)
 	    ("Not stopped at any breakpoint; argument ignored.\n");
 	}
     }
-
-  /* Done with ARGS.  */
-  do_cleanups (args_chain);
 
   if (from_tty)
     printf_filtered (_("Continuing.\n"));
@@ -1432,7 +1450,7 @@ step_once (int skip_subroutines, int single_inst, int count, int thread)
 
       tp->step_multi = (count > 1);
       tp->control.stepping_command = 1;
-      proceed ((CORE_ADDR) -1, GDB_SIGNAL_DEFAULT);
+      prepare_proceed ((CORE_ADDR) -1, GDB_SIGNAL_DEFAULT);
 
       /* For async targets, register a continuation to do any
 	 additional steps.  For sync targets, the caller will handle
@@ -1481,7 +1499,7 @@ jump_aec_callback (struct thread_info *thread, void *data)
 		     paddress (gdbarch, addr));
 
   clear_proceed_status (0);
-  proceed (addr, GDB_SIGNAL_0);
+  prepare_proceed (addr, GDB_SIGNAL_0);
   return;
 }
 
@@ -1727,7 +1745,7 @@ signal_aec_callback (struct thread_info *thread, void *data)
   struct signal_aec_callback_data *d = data;
 
   clear_proceed_status (0);
-  proceed ((CORE_ADDR) -1, d->oursig);
+  prepare_proceed ((CORE_ADDR) -1, d->oursig);
 }
 
 /* Queue a signal to be delivered to the current thread.  */
@@ -1893,7 +1911,7 @@ until_next_aec_callback (struct thread_info *tp, void *data)
 
   tp->control.may_range_step = 1;
 
-  proceed ((CORE_ADDR) -1, GDB_SIGNAL_DEFAULT);
+  prepare_proceed ((CORE_ADDR) -1, GDB_SIGNAL_DEFAULT);
 
   if (target_can_async_p () && is_running (inferior_ptid))
     {
@@ -2171,14 +2189,14 @@ finish_backward (struct symbol *function)
       insert_step_resume_breakpoint_at_sal (gdbarch,
 					    sr_sal, null_frame_id);
 
-      proceed ((CORE_ADDR) -1, GDB_SIGNAL_DEFAULT);
+      prepare_proceed ((CORE_ADDR) -1, GDB_SIGNAL_DEFAULT);
     }
   else
     {
       /* We're almost there -- we just need to back up by one more
 	 single-step.  */
       tp->control.step_range_start = tp->control.step_range_end = 1;
-      proceed ((CORE_ADDR) -1, GDB_SIGNAL_DEFAULT);
+      prepare_proceed ((CORE_ADDR) -1, GDB_SIGNAL_DEFAULT);
     }
 }
 
@@ -2220,7 +2238,7 @@ finish_forward (struct symbol *function, struct frame_info *frame)
   cargs->function = function;
   add_continuation (tp, finish_command_continuation, cargs,
                     finish_command_continuation_free_arg);
-  proceed ((CORE_ADDR) -1, GDB_SIGNAL_DEFAULT);
+  prepare_proceed ((CORE_ADDR) -1, GDB_SIGNAL_DEFAULT);
 
   discard_cleanups (old_chain);
   if (!target_can_async_p ())
@@ -2359,7 +2377,7 @@ finish_aec_callback (struct thread_info *tp, void *data)
 	  print_stack_frame (frame, 1, LOCATION, 0);
 	}
 
-      proceed ((CORE_ADDR) -1, GDB_SIGNAL_DEFAULT);
+      prepare_proceed ((CORE_ADDR) -1, GDB_SIGNAL_DEFAULT);
       return;
     }
 

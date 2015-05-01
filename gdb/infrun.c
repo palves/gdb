@@ -2853,6 +2853,12 @@ schedlock_applies (struct thread_info *tp)
 	      && tp->control.stepping_command));
 }
 
+void do_proceed (void);
+void enqueue_step_overs_leaders (struct thread_info *tp);
+void enqueue_step_overs (struct thread_info *tp);
+void mark_threads_running (ptid_t resume_ptid);
+void prepare_proceed (CORE_ADDR addr, enum gdb_signal siggnal);
+
 /* Basic routine for continuing the program in various fashions.
 
    ADDR is the address to resume at, or -1 for resume where stopped.
@@ -2865,7 +2871,7 @@ schedlock_applies (struct thread_info *tp)
 
    You should call clear_proceed_status before calling proceed.  */
 
-static void
+void
 prepare_proceed (CORE_ADDR addr, enum gdb_signal siggnal)
 {
   struct regcache *regcache;
@@ -2874,18 +2880,6 @@ prepare_proceed (CORE_ADDR addr, enum gdb_signal siggnal)
   CORE_ADDR pc;
   struct address_space *aspace;
   ptid_t resume_ptid;
-
-  /* If we're stopped at a fork/vfork, follow the branch set by the
-     "set follow-fork-mode" command; otherwise, we'll just proceed
-     resuming the current thread.  */
-  if (!follow_fork (1))
-    {
-      /* The target for some reason decided not to resume.  */
-      normal_stop ();
-      if (target_can_async_p ())
-	inferior_event_handler (INF_EXEC_COMPLETE, NULL);
-      return;
-    }
 
   /* We'll update this if & when we switch to a new thread.  */
   previous_inferior_ptid = inferior_ptid;
@@ -2952,7 +2946,7 @@ prepare_proceed (CORE_ADDR addr, enum gdb_signal siggnal)
 			gdb_signal_to_symbol_string (siggnal));
 }
 
-static void
+void
 mark_threads_running (ptid_t resume_ptid)
 {
   /* Even if RESUME_PTID is a wildcard, and we end up resuming fewer
@@ -3003,7 +2997,7 @@ mark_threads_running (ptid_t resume_ptid)
    Look for threads other than the current (TP) that reported a
    breakpoint hit and haven't been resumed yet since.  */
 
-static void
+void
 enqueue_step_overs (struct thread_info *tp)
 {
   if (!non_stop)
@@ -3036,7 +3030,7 @@ enqueue_step_overs (struct thread_info *tp)
     }
 }
 
-static void
+void
 enqueue_step_overs_leaders (struct thread_info *tp)
 {
   /* Enqueue the current thread last, so that we move all other
@@ -3045,7 +3039,7 @@ enqueue_step_overs_leaders (struct thread_info *tp)
     thread_step_over_chain_enqueue (tp);
 }
 
-static void
+void
 do_proceed (void)
 {
   int started;
@@ -3150,6 +3144,18 @@ proceed (CORE_ADDR addr, enum gdb_signal siggnal)
 
   if (!tp->control.in_infcall)
     mark_threads_running (resume_ptid);
+
+  /* If we're stopped at a fork/vfork, follow the branch set by the
+     "set follow-fork-mode" command; otherwise, we'll just proceed
+     resuming the current thread.  */
+  if (!follow_fork (0))
+    {
+      /* The target for some reason decided not to resume.  */
+      normal_stop ();
+      if (target_can_async_p ())
+	inferior_event_handler (INF_EXEC_COMPLETE, NULL);
+      return;
+    }
 
   prepare_proceed (addr, siggnal);
 
