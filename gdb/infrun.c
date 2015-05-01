@@ -2863,8 +2863,8 @@ schedlock_applies (struct thread_info *tp)
 
    You should call clear_proceed_status before calling proceed.  */
 
-void
-proceed (CORE_ADDR addr, enum gdb_signal siggnal)
+static void
+prepare_proceed (CORE_ADDR addr, enum gdb_signal siggnal)
 {
   struct regcache *regcache;
   struct gdbarch *gdbarch;
@@ -2872,10 +2872,6 @@ proceed (CORE_ADDR addr, enum gdb_signal siggnal)
   CORE_ADDR pc;
   struct address_space *aspace;
   ptid_t resume_ptid;
-  struct execution_control_state ecss;
-  struct execution_control_state *ecs = &ecss;
-  struct cleanup *old_chain;
-  int started;
 
   /* If we're stopped at a fork/vfork, follow the branch set by the
      "set follow-fork-mode" command; otherwise, we'll just proceed
@@ -2940,76 +2936,74 @@ proceed (CORE_ADDR addr, enum gdb_signal siggnal)
      entered the execution command on a real GDB console.  */
   tp->control.command_interp = command_interp ();
 
-  resume_ptid = user_visible_resume_ptid (tp->control.stepping_command);
-
-  /* If an exception is thrown from this point on, make sure to
-     propagate GDB's knowledge of the executing state to the
-     frontend/user running state.  */
-  /* XXX FIXME */
-  old_chain = make_cleanup (finish_thread_state_cleanup, &resume_ptid);
-
-  /* Even if RESUME_PTID is a wildcard, and we end up resuming fewer
-     threads (e.g., we might need to set threads stepping over
-     breakpoints first), from the user/frontend's point of view, all
-     threads in RESUME_PTID are now running.  Unless we're calling an
-     inferior function, as in that case we pretend the inferior
-     doesn't run at all.  */
-  if (!tp->control.in_infcall)
-    {
-      if (target_is_non_stop_p ())
-	{
-#if 0
-	  enum itset_width width = itset_get_width (current_itset);
-
-	  if (width == ITSET_WIDTH_ALL)
-	    set_running (minus_one_ptid, 1);
-	  else if (width == ITSET_WIDTH_INFERIOR)
-	    {
-	      resume_ptid = pid_to_ptid (ptid_get_pid (inferior_ptid));
-	      set_running (resume_ptid, 1);
-	    }
-	  else
-#endif
-	    {
-	      struct thread_info *current = tp;
-
-	      ALL_NON_EXITED_THREADS (tp)
-	        {
-		  if (!itset_contains_thread (current_itset, tp))
-		    continue;
-
-		  set_running (tp->ptid, 1);
-		}
-
-	      tp = current;
-	    }
-	}
-      else
-	set_running (resume_ptid, 1);
-    }
+  /* If the thread isn't started, we'll still need to set its prev_pc,
+     so that switch_back_to_stepped_thread knows the thread hasn't
+     advanced.  Must do this before resuming any thread, as in
+     all-stop/remote, once we resume we can't send any other packet
+     until the target stops again.  */
+  tp->prev_pc = regcache_read_pc (regcache);
 
   if (debug_infrun)
     fprintf_unfiltered (gdb_stdlog,
 			"infrun: proceed (addr=%s, signal=%s)\n",
 			paddress (gdbarch, addr),
 			gdb_signal_to_symbol_string (siggnal));
+}
 
-  annotate_starting ();
+static void
+mark_threads_running (ptid_t resume_ptid)
+{
+  /* Even if RESUME_PTID is a wildcard, and we end up resuming fewer
+     threads (e.g., we might need to set threads stepping over
+     breakpoints first), from the user/frontend's point of view, all
+     threads in RESUME_PTID are now running.  Unless we're calling an
+     inferior function, as in that case we pretend the inferior
+     doesn't run at all.  */
+  if (target_is_non_stop_p ())
+    {
+#if 0
+      enum itset_width width = itset_get_width (current_itset);
 
-  /* Make sure that output from GDB appears before output from the
-     inferior.  */
-  gdb_flush (gdb_stdout);
+      if (width == ITSET_WIDTH_ALL)
+	set_running (minus_one_ptid, 1);
+      else if (width == ITSET_WIDTH_INFERIOR)
+	{
+	  resume_ptid = pid_to_ptid (ptid_get_pid (inferior_ptid));
+	  set_running (resume_ptid, 1);
+	}
+      else
+#endif
+	{
+	  struct thread_info *tp;
 
-  /* In a multi-threaded task we may select another thread and
-     then continue or step.
+	  ALL_NON_EXITED_THREADS (tp)
+	    {
+	      if (!itset_contains_thread (current_itset, tp))
+		continue;
 
-     But if a thread that we're resuming had stopped at a breakpoint,
-     it will immediately cause another breakpoint stop without any
-     execution (i.e. it will report a breakpoint hit incorrectly).  So
-     we must step over it first.
+	      set_running (tp->ptid, 1);
+	    }
+	}
+    }
+  else
+    set_running (resume_ptid, 1);
+}
 
-     Look for threads other than the current (TP) that reported a
-     breakpoint hit and haven't been resumed yet since.  */
+
+/* In a multi-threaded task we may select another thread and then
+   continue or step.
+
+   But if a thread that we're resuming had stopped at a breakpoint, it
+   will immediately cause another breakpoint stop without any
+   execution (i.e. it will report a breakpoint hit incorrectly).  So
+   we must step over it first.
+
+   Look for threads other than the current (TP) that reported a
+   breakpoint hit and haven't been resumed yet since.  */
+
+static void
+enqueue_step_overs (struct thread_info *tp)
+{
   if (!non_stop)
     {
       struct thread_info *current = tp;
@@ -3037,21 +3031,30 @@ proceed (CORE_ADDR addr, enum gdb_signal siggnal)
 
 	  thread_step_over_chain_enqueue (tp);
 	}
-
-      tp = current;
     }
+}
 
+static void
+enqueue_step_overs_leaders (struct thread_info *tp)
+{
   /* Enqueue the current thread last, so that we move all other
      threads over their breakpoints first.  */
   if (tp->stepping_over_breakpoint)
     thread_step_over_chain_enqueue (tp);
+}
 
-  /* If the thread isn't started, we'll still need to set its prev_pc,
-     so that switch_back_to_stepped_thread knows the thread hasn't
-     advanced.  Must do this before resuming any thread, as in
-     all-stop/remote, once we resume we can't send any other packet
-     until the target stops again.  */
-  tp->prev_pc = regcache_read_pc (regcache);
+static void
+do_proceed (void)
+{
+  int started;
+  struct execution_control_state ecss;
+  struct execution_control_state *ecs = &ecss;
+
+  annotate_starting ();
+
+  /* Make sure that output from GDB appears before output from the
+     inferior.  */
+  gdb_flush (gdb_stdout);
 
   started = start_step_over ();
 
@@ -3066,8 +3069,26 @@ proceed (CORE_ADDR addr, enum gdb_signal siggnal)
       /* A new displaced stepping sequence was started.  In all-stop,
 	 we can't talk to the target anymore until it next stops.  */
     }
+  else if (non_stop || !target_is_non_stop_p ())
+    {
+      /* XXX should walk over apply-set threads?  Maybe leave non-stop
+	 to the else branch below?  */
+      struct thread_info *tp = inferior_thread ();
+
+      if (!tp->resumed && !thread_is_in_step_over_chain (tp))
+	{
+	  /* The thread wasn't started, and isn't queued, run it now.  */
+	  reset_ecs (ecs, tp);
+	  switch_to_thread (tp->ptid);
+	  keep_going_pass_signal (ecs);
+	  if (!ecs->wait_some_more)
+	    error (_("Command aborted."));
+	}
+    }
   else if (!non_stop && target_is_non_stop_p ())
     {
+      struct thread_info *tp;
+
       /* Start all other threads that are implicitly resumed too.  */
       ALL_NON_EXITED_THREADS (tp)
         {
@@ -3106,15 +3127,35 @@ proceed (CORE_ADDR addr, enum gdb_signal siggnal)
 	    error ("Command aborted.");
 	}
     }
-  else if (!tp->resumed && !thread_is_in_step_over_chain (tp))
-    {
-      /* The thread wasn't started, and isn't queued, run it now.  */
-      reset_ecs (ecs, tp);
-      switch_to_thread (tp->ptid);
-      keep_going_pass_signal (ecs);
-      if (!ecs->wait_some_more)
-	error ("Command aborted.");
-    }
+  else
+    gdb_assert_not_reached ("unhandled scenario");
+}
+
+void
+proceed (CORE_ADDR addr, enum gdb_signal siggnal)
+{
+  struct thread_info *tp = inferior_thread ();
+  ptid_t resume_ptid;
+  struct cleanup *old_chain;
+
+  resume_ptid = user_visible_resume_ptid (tp->control.stepping_command);
+
+  /* If an exception is thrown from this point on, make sure to
+     propagate GDB's knowledge of the executing state to the
+     frontend/user running state.  */
+  /* XXX FIXME */
+  old_chain = make_cleanup (finish_thread_state_cleanup, &resume_ptid);
+
+  if (!tp->control.in_infcall)
+    mark_threads_running (resume_ptid);
+
+  prepare_proceed (addr, siggnal);
+
+  enqueue_step_overs (tp);
+
+  enqueue_step_overs_leaders (tp);
+
+  do_proceed ();
 
   discard_cleanups (old_chain);
 
