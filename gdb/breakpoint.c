@@ -11984,6 +11984,8 @@ until_break_command (char *arg, int from_tty, int anywhere)
   int thr_count = 0;
   struct until_break_aec_callback_data cb_data;
   struct event_location *location;
+  ptid_t current = inferior_ptid;
+  struct thread_info *leader = NULL;
 
   old_chain = make_cleanup (itset_free_p, &apply_itset);
   make_cleanup (itset_free_p, &run_free_itset);
@@ -12007,6 +12009,10 @@ until_break_command (char *arg, int from_tty, int anywhere)
 	++thr_count;
 
 	ensure_runnable (thr);
+
+	if (leader == NULL
+	    || ptid_equal (current, thr->ptid))
+	  leader = thr;
 
 	if (!ptid_equal (inferior_ptid, thr->ptid))
 	  switch_to_thread (thr->ptid);
@@ -12060,8 +12066,10 @@ until_break_command (char *arg, int from_tty, int anywhere)
 	error (_("The program is not being run."));
     }
 
+  gdb_assert (leader != NULL);
+
   cb_data.from_tty = from_tty;
-  apply_execution_command (apply_itset, run_free_itset, 1,
+  apply_execution_command (apply_itset, run_free_itset, leader,
 			   until_break_aec_callback, NULL);
 
   do_cleanups (old_chain);

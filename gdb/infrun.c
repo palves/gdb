@@ -2796,10 +2796,6 @@ new_stop_id (void)
 void
 clear_proceed_status_thread (struct thread_info *tp)
 {
-  itset_free (tp->apply_set);
-  tp->apply_set = NULL;
-  tp->waiting_for_apply_set_siblings = 0;
-
   if (debug_infrun)
     fprintf_unfiltered (gdb_stdlog,
 			"infrun: clear_proceed_status_thread (%s)\n",
@@ -2859,6 +2855,15 @@ clear_proceed_status_thread (struct thread_info *tp)
   tp->control.proceed_to_finish = 0;
 
   tp->control.stepping_command = 0;
+
+  itset_free (tp->apply_set);
+  tp->apply_set = NULL;
+  tp->goal_reached = 0;
+  if (tp->parallel_leader != NULL)
+    {
+      tp->parallel_leader->refcount--;
+      tp->parallel_leader = NULL;
+    }
 
   /* Discard any remaining commands or status from previous stop.  */
   bpstat_clear (&tp->control.stop_bpstat);
@@ -4965,6 +4970,7 @@ all_in_apply_set_done_p (struct execution_control_state *ecs)
     {
       struct itset *set;
       struct thread_info *thr;
+      struct thread_info *leader;
 
       if (debug_infrun)
 	fprintf_unfiltered (gdb_stdlog, "infrun: thread %s [%s] has an apply-set\n",
@@ -4973,17 +4979,22 @@ all_in_apply_set_done_p (struct execution_control_state *ecs)
 
       update_thread_list ();
 
-      ecs->event_thread->waiting_for_apply_set_siblings = 1;
+      ecs->event_thread->goal_reached = 1;
+
+      leader = ecs->event_thread->parallel_leader;
+      ecs->event_thread->parallel_leader = NULL;
+      leader->refcount--;
 
       ALL_THREADS (thr)
 	if (itset_contains_thread (ecs->event_thread->apply_set, thr))
 	  {
-	    if (!thr->waiting_for_apply_set_siblings)
+	    if (!thr->goal_reached)
 	      {
 		if (debug_infrun)
 		  fprintf_unfiltered (gdb_stdlog,
-				      "infrun: at least thread %s has not "
+				      "infrun: at least thread %s [%s] has not "
 				      "reached its goal yet\n",
+				      print_thread_id (thr),
 				      target_pid_to_str (thr->ptid));
 
 		prepare_to_wait (ecs);
@@ -4992,7 +5003,15 @@ all_in_apply_set_done_p (struct execution_control_state *ecs)
 	  }
 
       if (debug_infrun)
-	fprintf_unfiltered (gdb_stdlog, "infrun: all in apply-set are done\n");
+	fprintf_unfiltered (gdb_stdlog, "infrun: all in apply-set are done, "
+			    "switching to leader %s [%s]\n",
+			    print_thread_id (leader),
+			    target_pid_to_str (leader->ptid));
+      if (leader->state != THREAD_EXITED)
+	switch_to_thread (leader->ptid);
+      else
+	fprintf_filtered (gdb_stdout, "Command leader %s exited\n",
+			  target_pid_to_str (leader->ptid));
     }
 
   return 1;
@@ -7109,9 +7128,8 @@ process_event_stop_test (struct execution_control_state *ecs)
       /* It is stepi or nexti.  We always want to stop stepping after
          one instruction.  */
       if (debug_infrun)
-	 fprintf_unfiltered (gdb_stdlog, "infrun: stepi/nexti\n");
-      if (all_in_apply_set_done_p (ecs))
-	end_stepping_range (ecs);
+	fprintf_unfiltered (gdb_stdlog, "infrun: stepi/nexti\n");
+      end_stepping_range (ecs);
       return;
     }
 
@@ -7122,9 +7140,8 @@ process_event_stop_test (struct execution_control_state *ecs)
          when we do "s" in a function with no line numbers,
          or can this happen as a result of a return or longjmp?).  */
       if (debug_infrun)
-	 fprintf_unfiltered (gdb_stdlog, "infrun: no line number info\n");
-      if (all_in_apply_set_done_p (ecs))
-	end_stepping_range (ecs);
+	fprintf_unfiltered (gdb_stdlog, "infrun: no line number info\n");
+      end_stepping_range (ecs);
       return;
     }
 
@@ -7155,8 +7172,7 @@ process_event_stop_test (struct execution_control_state *ecs)
 	      && call_sal.symtab == ecs->event_thread->current_symtab)
 	    step_into_inline_frame (ecs->ptid);
 
-	  if (all_in_apply_set_done_p (ecs))
-	    end_stepping_range (ecs);
+	  end_stepping_range (ecs);
 	  return;
 	}
       else
@@ -7167,7 +7183,7 @@ process_event_stop_test (struct execution_control_state *ecs)
 	  if (call_sal.line == ecs->event_thread->current_line
 	      && call_sal.symtab == ecs->event_thread->current_symtab)
 	    keep_going (ecs);
-	  else if (all_in_apply_set_done_p (ecs))
+	  else
 	    end_stepping_range (ecs);
 	  return;
 	}
@@ -7190,7 +7206,7 @@ process_event_stop_test (struct execution_control_state *ecs)
 
       if (ecs->event_thread->control.step_over_calls == STEP_OVER_ALL)
 	keep_going (ecs);
-      else if (all_in_apply_set_done_p (ecs))
+      else
 	end_stepping_range (ecs);
       return;
     }
@@ -7206,8 +7222,7 @@ process_event_stop_test (struct execution_control_state *ecs)
       if (debug_infrun)
 	 fprintf_unfiltered (gdb_stdlog,
 			     "infrun: stepped to a different line\n");
-      if (all_in_apply_set_done_p (ecs))
-	end_stepping_range (ecs);
+      end_stepping_range (ecs);
       return;
     }
 
@@ -8095,7 +8110,8 @@ static void
 end_stepping_range (struct execution_control_state *ecs)
 {
   ecs->event_thread->control.stop_step = 1;
-  stop_waiting (ecs);
+  if (all_in_apply_set_done_p (ecs))
+    stop_waiting (ecs);
 }
 
 /* Several print_*_reason functions to print why the inferior has stopped.
