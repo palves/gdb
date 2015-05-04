@@ -2757,7 +2757,7 @@ clear_proceed_status_thread (struct thread_info *tp)
 void
 clear_proceed_status (int step)
 {
-  if (!non_stop)
+  if (!target_is_non_stop_p ())
     {
       struct thread_info *tp;
 
@@ -2782,7 +2782,7 @@ clear_proceed_status (int step)
     {
       struct inferior *inferior;
 
-      if (non_stop)
+      if (target_is_non_stop_p ())
 	{
 	  /* If in non-stop mode, only delete the per-thread status of
 	     the current thread.  */
@@ -4619,7 +4619,9 @@ all_in_apply_set_done_p (struct execution_control_state *ecs)
       struct thread_info *thr;
 
       if (debug_infrun)
-	fprintf_unfiltered (gdb_stdlog, "infrun: thread has an apply-set\n");
+	fprintf_unfiltered (gdb_stdlog, "infrun: thread %d [%s] has an apply-set\n",
+			    ecs->event_thread->num,
+			    target_pid_to_str (ecs->event_thread->ptid));
 
       update_thread_list ();
 
@@ -4632,7 +4634,8 @@ all_in_apply_set_done_p (struct execution_control_state *ecs)
 	      {
 		if (debug_infrun)
 		  fprintf_unfiltered (gdb_stdlog,
-				      "infrun: at least thread %s has not reached its goal yet\n",
+				      "infrun: at least thread %s has not "
+				      "reached its goal yet\n",
 				      target_pid_to_str (thr->ptid));
 
 		prepare_to_wait (ecs);

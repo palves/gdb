@@ -116,8 +116,10 @@ apply_execution_command (struct itset *apply_itset,
 	 execution command further.  */
       ALL_NON_EXITED_THREADS (t)
         {
-	  if (!t->resumed
-	      && itset_contains_thread (run_free_itset, t)
+	  if (t->resumed)
+	    continue;
+
+	  if (itset_contains_thread (run_free_itset, t)
 	      && !itset_contains_thread (apply_itset, t))
 	    {
 	      if (t->suspend.waitstatus.kind == TARGET_WAITKIND_FORKED
@@ -141,13 +143,20 @@ apply_execution_command (struct itset *apply_itset,
 
       ALL_NON_EXITED_THREADS (t)
         {
-	  if (!t->resumed && itset_contains_thread (apply_itset, t))
+	  if (t->resumed)
+	    continue;
+
+	  if (itset_contains_thread (apply_itset, t))
 	    {
 	      switch_to_thread (t->ptid);
 	      (*callback) (t, callback_data);
 	      gdb_assert (t->apply_set == NULL);
 	      if (want_parallel)
 		t->apply_set = itset_reference (apply_itset);
+	    }
+	  else if (itset_contains_thread (run_free_itset, t))
+	    {
+	      clear_proceed_status_thread (t);
 	    }
 	}
     }
@@ -1379,7 +1388,7 @@ step_once (int skip_subroutines, int single_inst, int count, int thread)
 	 THREAD is set.  */
       struct thread_info *tp = inferior_thread ();
 
-      clear_proceed_status (1);
+      clear_proceed_status_thread (tp);
       set_step_frame ();
 
       if (!single_inst)
