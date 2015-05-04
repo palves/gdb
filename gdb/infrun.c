@@ -2862,7 +2862,7 @@ clear_proceed_status (int step)
 				     execution_direction))
     target_record_stop_replaying ();
 
-  if (!target_is_non_stop_p ())
+  if (!non_stop)
     {
       struct thread_info *tp;
 
@@ -2887,7 +2887,7 @@ clear_proceed_status (int step)
     {
       struct inferior *inferior;
 
-      if (target_is_non_stop_p ())
+      if (non_stop)
 	{
 	  /* If in non-stop mode, only delete the per-thread status of
 	     the current thread.  */
