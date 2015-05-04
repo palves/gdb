@@ -92,7 +92,7 @@ void prepare_proceed (CORE_ADDR addr, enum gdb_signal siggnal);
 void
 apply_execution_command (struct itset *apply_itset,
 			 struct itset *run_free_itset,
-			 int want_parallel,
+			 struct thread_info *parallel_leader,
 			 aec_callback_func callback, void *callback_data)
 {
   struct thread_info *tp = inferior_thread ();
@@ -155,8 +155,12 @@ apply_execution_command (struct itset *apply_itset,
 	      switch_to_thread (t->ptid);
 	      (*callback) (t, callback_data);
 	      gdb_assert (t->apply_set == NULL);
-	      if (want_parallel)
-		t->apply_set = itset_reference (apply_itset);
+	      if (parallel_leader != NULL)
+		{
+		  t->apply_set = itset_reference (apply_itset);
+		  t->parallel_leader = parallel_leader;
+		  parallel_leader->refcount++;
+		}
 	    }
 	  else if (itset_contains_thread (run_free_itset, t))
 	    {
@@ -1295,6 +1299,7 @@ step_1 (int skip_subroutines, int single_inst, char *args)
   struct step_1_args step_args;
   struct thread_info *thr;
   int thr_count = 0;
+  struct thread_info *leader = NULL;
 
   ensure_not_tfind_mode ();
 
@@ -1320,6 +1325,13 @@ step_1 (int skip_subroutines, int single_inst, char *args)
       {
 	++thr_count;
 
+	/* If the apply set includes the current thread, always pick
+	   that as leader.  Otherwise pick the first.  */
+	if (leader == NULL)
+	  leader = thr;
+	else if (ptid_equal (thr->ptid, inferior_ptid))
+	  leader = thr;
+
 	ensure_runnable (thr);
       }
 
@@ -1338,7 +1350,7 @@ step_1 (int skip_subroutines, int single_inst, char *args)
   step_args.count = count;
   step_args.thread = -1;
 
-  apply_execution_command (apply_itset, run_free_itset, 1,
+  apply_execution_command (apply_itset, run_free_itset, leader,
 			   step_1_aec_callback, &step_args);
 
   do_cleanups (old_chain);
@@ -1562,6 +1574,8 @@ jump_command (char *arg, int from_tty)
   struct thread_info *thr;
   struct jump_aec_callback_data cb_data;
   struct cleanup *args_chain;
+  struct thread_info *leader = NULL;
+  ptid_t current_ptid = inferior_ptid;
 
   ensure_not_tfind_mode ();
 
@@ -1602,6 +1616,10 @@ jump_command (char *arg, int from_tty)
 	struct jump_cmd_data *cmd_data;
 
 	ensure_runnable (thr);
+
+	if (leader == NULL
+	    || ptid_equal (current_ptid, thr->ptid))
+	  leader = thr;
 
 	if (!ptid_equal (inferior_ptid, thr->ptid))
 	  switch_to_thread (thr->ptid);
@@ -1650,7 +1668,7 @@ jump_command (char *arg, int from_tty)
       }
 
   cb_data.from_tty = from_tty;
-  apply_execution_command (apply_itset, run_free_itset, 1,
+  apply_execution_command (apply_itset, run_free_itset, leader,
 			   jump_aec_callback, &cb_data);
 
   do_cleanups (old_chain);
@@ -1934,6 +1952,8 @@ until_next_command (char *arg, int from_tty)
   struct until_next_fsm *sm;
   struct thread_info *thr;
   int thr_count = 0;
+  struct thread_info *leader = NULL;
+  ptid_t current_ptid = inferior_ptid;
 
   old_chain = make_cleanup (itset_free_p, &apply_itset);
   make_cleanup (itset_free_p, &run_free_itset);
@@ -1953,6 +1973,10 @@ until_next_command (char *arg, int from_tty)
 	++thr_count;
 
 	ensure_runnable (thr);
+
+	if (leader == NULL
+	    || ptid_equal (current_ptid, thr->ptid))
+	  leader = thr;
 
 	if (!ptid_equal (inferior_ptid, thr->ptid))
 	  switch_to_thread (thr->ptid);
@@ -1997,7 +2021,9 @@ until_next_command (char *arg, int from_tty)
       else
 	error (_("The program is not being run."));
     }
-  apply_execution_command (apply_itset, run_free_itset, 1,
+
+  gdb_assert (leader != NULL);
+  apply_execution_command (apply_itset, run_free_itset, leader,
 			   until_next_aec_callback, NULL);
 
   do_cleanups (old_chain);
@@ -2447,18 +2473,18 @@ finish_command (char *arg, int from_tty)
   int thr_count = 0;
   struct finish_aec_callback_data cb_data;
   int async_exec;
-  struct cleanup *args_chain;
-  struct thread_info *tp;
+  struct thread_info *leader = NULL;
+  ptid_t current_ptid = inferior_ptid;
 
   ensure_not_tfind_mode ();
 
   /* Find out whether we must run in the background.  */
   arg = strip_bg_char (arg, &async_exec);
-  args_chain = make_cleanup (xfree, arg);
+  old_chain = make_cleanup (xfree, arg);
 
   prepare_execution_command (&current_target, async_exec);
 
-  old_chain = make_cleanup (itset_free_p, &apply_itset);
+  make_cleanup (itset_free_p, &apply_itset);
   make_cleanup (itset_free_p, &run_free_itset);
 
   arg = parse_execution_args (arg, 0,
@@ -2467,9 +2493,6 @@ finish_command (char *arg, int from_tty)
 
   if (arg)
     error (_("The \"finish\" command does not take any arguments."));
-
-  /* Done with ARGS.  */
-  do_cleanups (args_chain);
 
   ALL_THREADS (thr)
     if (itset_contains_thread (apply_itset, thr))
@@ -2481,6 +2504,10 @@ finish_command (char *arg, int from_tty)
 	++thr_count;
 
 	ensure_runnable (thr);
+
+	if (leader == NULL
+	    || ptid_equal (current_ptid, thr->ptid))
+	  leader = thr;
 
 	if (!ptid_equal (inferior_ptid, thr->ptid))
 	  switch_to_thread (thr->ptid);
@@ -2503,8 +2530,10 @@ finish_command (char *arg, int from_tty)
 	error (_("The program is not being run."));
     }
 
+  gdb_assert (leader != NULL);
+
   cb_data.from_tty = from_tty;
-  apply_execution_command (apply_itset, run_free_itset, 1,
+  apply_execution_command (apply_itset, run_free_itset, leader,
 			   finish_aec_callback, &cb_data);
 
   do_cleanups (old_chain);
