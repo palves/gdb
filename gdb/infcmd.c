@@ -120,8 +120,10 @@ apply_execution_command (struct itset *apply_itset,
 	 execution command further.  */
       ALL_NON_EXITED_THREADS (t)
         {
-	  if (!t->resumed
-	      && itset_contains_thread (run_free_itset, t)
+	  if (t->resumed)
+	    continue;
+
+	  if (itset_contains_thread (run_free_itset, t)
 	      && !itset_contains_thread (apply_itset, t))
 	    {
 	      if (t->suspend.waitstatus.kind == TARGET_WAITKIND_FORKED
@@ -145,13 +147,20 @@ apply_execution_command (struct itset *apply_itset,
 
       ALL_NON_EXITED_THREADS (t)
         {
-	  if (!t->resumed && itset_contains_thread (apply_itset, t))
+	  if (t->resumed)
+	    continue;
+
+	  if (itset_contains_thread (apply_itset, t))
 	    {
 	      switch_to_thread (t->ptid);
 	      (*callback) (t, callback_data);
 	      gdb_assert (t->apply_set == NULL);
 	      if (want_parallel)
 		t->apply_set = itset_reference (apply_itset);
+	    }
+	  else if (itset_contains_thread (run_free_itset, t))
+	    {
+	      clear_proceed_status_thread (t);
 	    }
 	}
     }
@@ -1343,11 +1352,10 @@ step_1_1 (int skip_subroutines, int single_inst, int count)
   int thread = -1;
   struct cleanup *cleanups = make_cleanup (null_cleanup, NULL);
 
-  clear_proceed_status (1);
-
   /* Setup the execution command state machine to handle all the COUNT
      steps.  */
   thr = inferior_thread ();
+  clear_proceed_status_thread (thr);
   step_sm = new_step_command_fsm (command_interp ());
   thr->thread_fsm = &step_sm->thread_fsm;
 
