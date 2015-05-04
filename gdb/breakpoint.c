@@ -11667,6 +11667,8 @@ until_break_command (char *arg, int from_tty, int anywhere)
   struct until_break_aec_callback_data cb_data;
   ptid_t current = inferior_ptid;
   struct thread_info *leader = NULL;
+  int first = 1;
+  struct symtab_and_line sal;
 
   old_chain = make_cleanup (itset_free_p, &apply_itset);
   make_cleanup (itset_free_p, &run_free_itset);
@@ -11678,8 +11680,6 @@ until_break_command (char *arg, int from_tty, int anywhere)
   ALL_THREADS (thr)
     if (itset_contains_thread (apply_itset, thr))
       {
-	struct symtabs_and_lines sals;
-	struct symtab_and_line sal;
 	struct frame_info *frame;
 	struct frame_id breakpoint_frame_id;
 	struct until_break_cmd_data *cmd_data;
@@ -11700,24 +11700,31 @@ until_break_command (char *arg, int from_tty, int anywhere)
 	/* Set a breakpoint where the user wants it and at return from
 	   this function.  */
 
-	if (last_displayed_sal_is_valid ())
-	  sals = decode_line_1 (&arg, DECODE_LINE_FUNFIRSTLINE,
-				get_last_displayed_symtab (),
-				get_last_displayed_line ());
-	else
-	  sals = decode_line_1 (&arg, DECODE_LINE_FUNFIRSTLINE,
-				(struct symtab *) NULL, 0);
+	if (first)
+	  {
+	    struct symtabs_and_lines sals;
 
-	if (sals.nelts != 1)
-	  error (_("Couldn't get information on specified line."));
+	    first = 0;
 
-	sal = sals.sals[0];
-	xfree (sals.sals);	/* malloc'd, so freed.  */
+	    if (last_displayed_sal_is_valid ())
+	      sals = decode_line_1 (&arg, DECODE_LINE_FUNFIRSTLINE,
+				    get_last_displayed_symtab (),
+				    get_last_displayed_line ());
+	    else
+	      sals = decode_line_1 (&arg, DECODE_LINE_FUNFIRSTLINE,
+				    (struct symtab *) NULL, 0);
 
-	if (*arg)
-	  error (_("Junk at end of arguments."));
+	    if (sals.nelts != 1)
+	      error (_("Couldn't get information on specified line."));
 
-	resolve_sal_pc (&sal);
+	    sal = sals.sals[0];
+	    xfree (sals.sals);	/* malloc'd, so freed.  */
+
+	    if (*arg)
+	      error (_("Junk at end of arguments."));
+
+	    resolve_sal_pc (&sal);
+	  }
 
 	if (anywhere)
 	  /* If the user told us to continue until a specified
