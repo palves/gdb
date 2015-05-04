@@ -303,7 +303,8 @@ struct thread_info
   void *cmd_data;
 
   struct itset *apply_set;
-  int waiting_for_apply_set_siblings;
+  int goal_reached;
+  struct thread_info *parallel_leader;
 
   /* Private data used by the target vector implementation.  */
   struct private_thread_info *priv;
