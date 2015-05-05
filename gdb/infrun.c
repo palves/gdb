@@ -6235,6 +6235,7 @@ process_event_stop_test (struct execution_control_state *ecs)
 	= bpstat_suspend_set (ecs->event_thread->control.stop_bpstat);
       stop_waiting (ecs);
       itset_free (ecs->stop_set);
+      ecs->stop_set = NULL;
       return;
 
     case BPSTAT_WHAT_STOP_SILENT:
