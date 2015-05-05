@@ -11957,7 +11957,7 @@ until_break_command (char *arg, int from_tty, int anywhere)
   int thr_count = 0;
   struct until_break_aec_callback_data cb_data;
   struct event_location *location;
-  ptid_t current = inferior_ptid;
+  ptid_t current_ptid = inferior_ptid;
   struct thread_info *leader = NULL;
   int first = 1;
   struct symtab_and_line sal;
@@ -11984,7 +11984,7 @@ until_break_command (char *arg, int from_tty, int anywhere)
 	ensure_runnable (thr);
 
 	if (leader == NULL
-	    || ptid_equal (current, thr->ptid))
+	    || ptid_equal (current_ptid, thr->ptid))
 	  leader = thr;
 
 	if (!ptid_equal (inferior_ptid, thr->ptid))
@@ -12055,6 +12055,8 @@ until_break_command (char *arg, int from_tty, int anywhere)
   do_cleanups (old_chain);
 }
 
+void prepare_proceed (CORE_ADDR addr, enum gdb_signal siggnal);
+
 static void
 until_break_aec_callback (struct thread_info *thread, void *data)
 {
@@ -12081,8 +12083,6 @@ until_break_aec_callback (struct thread_info *thread, void *data)
   old_chain = make_cleanup_delete_breakpoint (location_breakpoint);
 
   thread_num = thread->global_num;
-
-  old_chain = make_cleanup (null_cleanup, NULL);
 
   /* Note linespec handling above invalidates the frame chain.
      Installing a breakpoint also invalidates the frame chain (as it
@@ -12116,7 +12116,7 @@ until_break_aec_callback (struct thread_info *thread, void *data)
     }
 
   clear_proceed_status (0);
-  proceed (-1, GDB_SIGNAL_DEFAULT);
+  prepare_proceed (-1, GDB_SIGNAL_DEFAULT);
 
   sm = new_until_break_fsm (command_interp (), thread->global_num,
 			    location_breakpoint, caller_breakpoint);
