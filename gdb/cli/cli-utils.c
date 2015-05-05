@@ -32,7 +32,9 @@
    TRAILER is a character which can be found after the number; most
    commonly this is `-'.  If you don't want a trailer, use \0.  */
 
-static int
+int get_number_trailer (const char **pp, int trailer);
+
+int
 get_number_trailer (const char **pp, int trailer)
 {
   int retval = 0;	/* default */

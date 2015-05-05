@@ -528,7 +528,6 @@ struct itset_elt_thread_range
   int is_current;
   /* The first and last threads in this range.  If FIRST is WILDCARD,
      then LAST is unused.  */
-  int inf_num;
   int thr_first, thr_last;
 };
 
@@ -575,11 +574,9 @@ thread_range_contains_inferior (struct itset_elt *base, struct inferior *inf)
   if (range->is_current)
     {
       struct thread_info *tp = inferior_thread ();
-      struct inferior *inf = current_inferior ();
 
-      range->inf_num = inf->num;
-      range->thr_first = tp->num_inf;
-      range->thr_last = tp->num_inf;
+      range->thr_first = tp->num;
+      range->thr_last = tp->num;
     }
 
   /* If range is a wildcard, this inferior is part of the range, given
@@ -607,34 +604,42 @@ thread_range_contains_thread (struct itset_elt *base, struct thread_info *thr)
   struct itset_elt_thread_range *range
     = (struct itset_elt_thread_range *) base;
 
+  if (range->width == ITSET_WIDTH_ALL)
+    {
+      return 1;
+    }
+
   if (range->is_current)
     {
       struct thread_info *tp = inferior_thread ();
-      struct inferior *inf = current_inferior ();
 
-      range->inf_num = inf->num;
-      range->thr_first = tp->num_inf;
-      range->thr_last = tp->num_inf;
-    }
-
-  if (range->thr_first == thr->num)
-    return 1;
-
-  if (range->width == ITSET_WIDTH_INFERIOR)
-    {
-      struct inferior *inf = find_inferior_ptid (thr->ptid);
-
-      if (range->inf_num == inf->num)
-	return 1;
-    }
-  else if (range->width == ITSET_WIDTH_ALL)
-    {
-      return 1;
+      range->thr_first = tp->num;
+      range->thr_last = tp->num;
     }
 
   if (range->thr_first == WILDCARD
       || (range->thr_first <= thr->num && thr->num <= range->thr_last))
     return 1;
+
+  if (range->width == ITSET_WIDTH_INFERIOR)
+    {
+      int pid = ptid_get_pid (thr->ptid);
+      struct thread_info *iter;
+
+      ALL_THREADS (iter)
+        {
+	  if (range->thr_first == WILDCARD
+	      || (range->thr_first <= iter->num && iter->num <= range->thr_last))
+	    {
+	      if (ptid_get_pid (iter->ptid) == pid)
+		return 1;
+	    }
+	}
+    }
+  else if (range->width == ITSET_WIDTH_ALL)
+    {
+      return 1;
+    }
 
   return 0;
 }
@@ -691,7 +696,10 @@ thread_range_get_spec (struct itset_elt *base)
   if (range->is_current)
     return xstrprintf ("%cT", w);
 
-  return xstrprintf ("%c%d.%d", w, range->inf_num, range->thr_first);
+  if (range->thr_first != range->thr_last)
+    return xstrprintf ("%ct%d:%d", w, range->thr_first, range->thr_last);
+  else
+    return xstrprintf ("%ct%d", w, range->thr_first);
 }
 
 static enum itset_width
@@ -708,7 +716,6 @@ thread_range_get_toi (struct itset_elt *base)
 {
   struct itset_elt_thread_range *range
     = (struct itset_elt_thread_range *) base;
-  struct inferior *inf;
   struct thread_info *thr;
 
   if (range->is_current)
@@ -719,16 +726,11 @@ thread_range_get_toi (struct itset_elt *base)
 	return inferior_thread ();
     }
 
-  inf = find_inferior_id (range->inf_num);
-
   ALL_NON_EXITED_THREADS (thr)
     {
-      if (ptid_get_pid (thr->ptid) != inf->pid)
-	continue;
-
       if (range->thr_first == WILDCARD
-	  || (range->thr_first <= thr->num_inf
-	      && thr->num_inf <= range->thr_last))
+	  || (range->thr_first <= thr->num
+	      && thr->num <= range->thr_last))
 	return thr;
     }
 
@@ -761,7 +763,6 @@ static const struct itset_elt_vtable thread_range_vtable =
 
 static struct itset_elt *
 create_thread_range_itset (enum itset_width width,
-			   int inf_num,
 			   int thr_first, int thr_last)
 {
   struct itset_elt_thread_range *elt;
@@ -769,7 +770,6 @@ create_thread_range_itset (enum itset_width width,
   elt = XNEW (struct itset_elt_thread_range);
   elt->base.vtable = &thread_range_vtable;
   elt->is_current = 0;
-  elt->inf_num = inf_num;
   elt->thr_first = thr_first;
   elt->thr_last = thr_last;
   elt->width = width;
@@ -785,7 +785,6 @@ create_current_thread_itset (enum itset_width width)
   elt = XNEW (struct itset_elt_thread_range);
   elt->base.vtable = &thread_range_vtable;
   elt->is_current = 1;
-  elt->inf_num = 0;
   elt->thr_first = 0;
   elt->thr_last = 0;
   elt->width = width;
@@ -1529,7 +1528,7 @@ curinf_is_empty (struct itset_elt *base)
 }
 
 static char *
-current_get_spec (struct itset_elt *base)
+curinf_get_spec (struct itset_elt *base)
 {
   return xstrdup ("/current");
 }
@@ -1540,7 +1539,7 @@ static const struct itset_elt_vtable curinf_vtable =
   curinf_contains_program_space,
   curinf_contains_inferior,
   curinf_contains_thread,
-  curinf_is_empty
+  curinf_is_empty,
   curinf_get_spec
 };
 
@@ -1799,15 +1798,12 @@ create_static_itset (VEC (itset_elt_ptr) *elements)
 
 
 
-#if 0
 static int
 looks_like_range (const char *spec)
 {
   return isdigit (spec[0]) || spec[0] == '*' || spec[0] == ':';
 }
-#endif
 
-#if 0
 /* Parse an I/T set range.  A range has the form F[:L][.T], where F is
    the starting inferior, L is the ending inferior, and T is the
    thread.  Updates RESULT with the new I/T set elements, and returns
@@ -1863,8 +1859,6 @@ parse_range (const char *spec, int *first, int *last)
   return spec;
 }
 
-#endif
-
 #if 0
 static struct itset_elt *
 parse_inferior_range (const char **spec)
@@ -1881,7 +1875,7 @@ parse_inferior_range (const char **spec)
 #endif
 
 static enum itset_width
-parse_width (char **spec)
+parse_width (const char **spec)
 {
   enum itset_width width;
 
@@ -1908,10 +1902,11 @@ parse_width (char **spec)
   return width;
 }
 
+#if 0
 int get_number_trailer (const char **pp, int trailer);
 
 static struct thread_info *
-parse_thread (char **tidstr, int *inf_num, int *thr_num)
+parse_thread (const char **tidstr, int *inf_num, int *thr_num)
 {
   const char *number = *tidstr;
   const char *dot, *p1;
@@ -1976,18 +1971,15 @@ parse_thread (char **tidstr, int *inf_num, int *thr_num)
   //  return tp;
 }
 
+#endif
+
 static struct itset_elt *
 parse_thread_range (const char **spec)
 {
-  //  int first, last;
+  int first, last;
   enum itset_width width;
   struct thread_info *tp;
-  int inf_num, thr_num;
-
-#if 0
-  if ((*spec)[0] != 't' || !looks_like_range ((*spec) + 1))
-    return NULL;
-#endif
+  //  int inf_num, thr_num;
 
   width = parse_width (spec);
 
@@ -1997,11 +1989,16 @@ parse_thread_range (const char **spec)
       return create_current_thread_itset (width);
     }
 
-  tp = parse_thread (spec, &inf_num, &thr_num);
+  if ((*spec)[0] != 't' || !looks_like_range ((*spec) + 1))
+    return NULL;
 
-  //  *spec = parse_range (*spec, &first, &last);
-  return create_thread_range_itset (width, inf_num, thr_num, thr_num);
-  //  return create_thread_range_itset (first, last);
+  (*spec)++;
+
+  //  tp = parse_thread (spec, &first, &thr_num);
+
+  *spec = parse_range (*spec, &first, &last);
+  return create_thread_range_itset (width, first, last);
+  //  return create_thread_range_itset (width, inf_num, thr_num, thr_num);
 }
 
 #if 0
@@ -2853,9 +2850,8 @@ itfocus_from_thread_switch (void)
   enum itset_width width = itset_get_width (current_itset);
 
   elt = create_thread_range_itset (width,
-				   current_inferior ()->num,
-				   inferior_thread ()->num_inf,
-				   inferior_thread ()->num_inf);
+				   inferior_thread ()->num,
+				   inferior_thread ()->num);
 
   /* FIXME: factor this to a function.  */
   itset = XCNEW (struct itset);
@@ -2918,7 +2914,7 @@ itfocus_command (char *spec, int from_tty)
   /* Confirm the choice of focus.  */
   printf_filtered (_("Current inferior is %d.\n"), current_inferior ()->num);
   if (!ptid_equal (inferior_ptid, null_ptid))
-    printf_filtered (_("Current thread is %d.\n"), inferior_thread ()->num_inf);
+    printf_filtered (_("Current thread is %d.\n"), inferior_thread ()->num);
   else
     printf_filtered (_("No current thread.\n"));
 }
