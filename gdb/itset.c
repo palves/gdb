@@ -595,6 +595,21 @@ thread_range_contains_thread (struct itset_elt *base, struct thread_info *thr)
   struct itset_elt_thread_range *range
     = (struct itset_elt_thread_range *) base;
 
+  if (range->thr_first == thr->num)
+    return 1;
+
+  if (range->width == ITSET_WIDTH_INFERIOR)
+    {
+      struct inferior *inf = find_inferior_ptid (thr->ptid);
+
+      if (range->inf_num == inf->num)
+	return 1;
+    }
+  else if (range->width == ITSET_WIDTH_ALL)
+    {
+      return 1;
+    }
+
   if (range->thr_first == WILDCARD
       || (range->thr_first <= thr->num && thr->num <= range->thr_last))
     return 1;
