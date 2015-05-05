@@ -129,7 +129,7 @@ struct inferior *iterate_over_itset_inferiors (struct itset *itset,
 extern struct itset *current_itset;
 
 extern void itfocus_from_thread_switch (void);
-
+extern struct thread_info *itset_get_toi (struct itset *set);
 extern int itset_has_fixed_toi (struct itset *set);
 
 #endif /* ITSET_H */

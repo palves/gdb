@@ -2402,7 +2402,7 @@ set_get_toi (VEC (itset_elt_ptr) *elements)
   return NULL;
 }
 
-static struct thread_info *
+struct thread_info *
 itset_get_toi (struct itset *set)
 {
   return set_get_toi (set->elements);
@@ -2550,6 +2550,12 @@ static struct itset *
 itset_create_stopped (void)
 {
   return itset_create_spec ("/stopped");
+}
+
+static struct itset *
+itset_create_default (void)
+{
+  return itset_create_spec ("aT");
 }
 
 /* Return 1 if SET contains INF, 0 otherwise.  */
@@ -3317,7 +3323,8 @@ _initialize_itset (void)
   make_internal_itset (curinf_itset, "I");
   make_internal_itset (curthr_itset, "T");
 
-  current_itset = itset_reference (all_itset);
+  current_itset = itset_reference (itset_create_default ());
+  //  current_itset = itset_reference (all_itset);
 
   add_com ("itfocus", no_class, itfocus_command, _("\
 Change the set of current inferiors/threads."));
