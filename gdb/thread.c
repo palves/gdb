@@ -1899,6 +1899,8 @@ do_captured_thread_select (struct ui_out *uiout, void *tidstr)
 
   switch_to_thread (tp->ptid);
 
+  itfocus_from_thread_switch ();
+
   annotate_thread_changed ();
 
   ui_out_text (uiout, "[Switching to thread ");

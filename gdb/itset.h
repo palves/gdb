@@ -128,4 +128,6 @@ struct inferior *iterate_over_itset_inferiors (struct itset *itset,
 
 extern struct itset *current_itset;
 
+extern void itfocus_from_thread_switch (void);
+
 #endif /* ITSET_H */

@@ -40,10 +40,11 @@ static struct itset *curthr_itset;
 
 enum itset_width
 {
+  /* Sorted by increasing order.  Needed for itset_set_get_width.  */
   ITSET_WIDTH_DEFAULT,
-  ITSET_WIDTH_ALL,
-  ITSET_WIDTH_INFERIOR,
   ITSET_WIDTH_THREAD,
+  ITSET_WIDTH_INFERIOR,
+  ITSET_WIDTH_ALL,
 };
 
 /* Forward declaration of the base class.  */
@@ -84,6 +85,8 @@ struct itset_elt_vtable
   /* Return true if the element is empty.  */
 
   char *(*get_spec) (struct itset_elt *elt);
+
+  enum itset_width (*get_width) (struct itset_elt *elt);
 };
 
 /* The base class of all I/T set elements.  */
@@ -137,12 +140,6 @@ const char *
 itset_name (const struct itset *itset)
 {
   return itset->name;
-}
-
-const char *
-itset_spec (const struct itset *itset)
-{
-  return itset->spec;
 }
 
 int
@@ -657,6 +654,15 @@ thread_range_get_spec (struct itset_elt *base)
   return xstrprintf ("%c%d.%d", w, range->inf_num, range->thr_first);
 }
 
+static enum itset_width
+thread_range_get_width (struct itset_elt *base)
+{
+  struct itset_elt_thread_range *range
+    = (struct itset_elt_thread_range *) base;
+
+  return range->width;
+}
+
 static const struct itset_elt_vtable thread_range_vtable =
 {
   NULL,
@@ -664,7 +670,8 @@ static const struct itset_elt_vtable thread_range_vtable =
   thread_range_contains_inferior,
   thread_range_contains_thread,
   thread_range_is_empty,
-  thread_range_get_spec
+  thread_range_get_spec,
+  thread_range_get_width
 };
 
 /* Create a new `range' I/T set element.  */
@@ -977,6 +984,12 @@ all_get_spec (struct itset_elt *base)
   return xstrdup ("/all");
 }
 
+static enum itset_width
+all_get_width (struct itset_elt *base)
+{
+  return ITSET_WIDTH_ALL;
+}
+
 static const struct itset_elt_vtable all_vtable =
 {
   NULL,
@@ -984,7 +997,8 @@ static const struct itset_elt_vtable all_vtable =
   all_contains_inferior,
   all_contains_thread,
   all_is_empty,
-  all_get_spec
+  all_get_spec,
+  all_get_width
 };
 
 static struct itset_elt *
@@ -1758,6 +1772,8 @@ parse_inferior_range (const char **spec)
 }
 #endif
 
+static enum itset_width itset_get_width (struct itset *set);
+
 static enum itset_width
 parse_width (char **spec)
 {
@@ -1778,8 +1794,8 @@ parse_width (char **spec)
       width = ITSET_WIDTH_DEFAULT;
       break;
     default:
-      /* Should fallback to the width of the current focus?  */
-      return ITSET_WIDTH_ALL;
+      /* Should fallback to the width of the current focus.  */
+      return itset_get_width (current_itset);
     }
 
   (*spec)++;
@@ -2210,10 +2226,34 @@ set_get_spec (VEC (itset_elt_ptr) *elements)
   return ret;
 }
 
-static char *
-itset_get_spec (struct itset *set)
+const char *
+itset_spec (const struct itset *set)
 {
   return set_get_spec (set->elements);
+}
+
+static enum itset_width
+set_get_width (VEC (itset_elt_ptr) *elements)
+{
+  int ix;
+  struct itset_elt *elt;
+  enum itset_width width = ITSET_WIDTH_DEFAULT;
+
+  for (ix = 0; VEC_iterate (itset_elt_ptr, elements, ix, elt); ++ix)
+    {
+      enum itset_width elt_width = elt->vtable->get_width (elt);
+
+      if (elt_width > width)
+	width = elt_width;
+    }
+
+  return width;
+}
+
+static enum itset_width
+itset_get_width (struct itset *set)
+{
+  return set_get_width (set->elements);
 }
 
 /* Parse an I/T set specification and return a new I/T set.  Throws an
@@ -2256,7 +2296,6 @@ itset_create_const (const char **specp)
 
   result->spec = xstrndup (spec_start, spec - spec_start);
   *specp = spec;
-  result->spec = itset_get_spec (result);
 
   if (is_static)
     {
@@ -2618,6 +2657,28 @@ switch_to_itset (struct itset *itset)
     }
 }
 
+void
+itfocus_from_thread_switch (void)
+{
+  struct itset *itset;
+  struct itset_elt *elt;
+  enum itset_width width = itset_get_width (current_itset);
+
+  elt = create_thread_range_itset (width,
+				   current_inferior ()->num,
+				   inferior_thread ()->num_inf,
+				   inferior_thread ()->num_inf);
+
+  /* FIXME: factor this to a function.  */
+  itset = XCNEW (struct itset);
+  itset->refc = 1;
+
+  VEC_safe_push (itset_elt_ptr, itset->elements, elt);
+
+  itset_free (current_itset);
+  current_itset = itset;
+}
+
 static void
 itfocus_command (char *spec, int from_tty)
 {
@@ -2668,6 +2729,10 @@ itfocus_command (char *spec, int from_tty)
 
   /* Confirm the choice of focus.  */
   printf_filtered (_("Current inferior is %d.\n"), current_inferior ()->num);
+  if (!ptid_equal (inferior_ptid, null_ptid))
+    printf_filtered (_("Current thread is %d.\n"), inferior_thread ()->num_inf);
+  else
+    printf_filtered (_("No current thread.\n"));
 }
 
 static struct named_itset *

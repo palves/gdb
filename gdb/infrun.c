@@ -7992,6 +7992,7 @@ normal_stop (void)
       target_terminal_ours_for_output ();
       printf_filtered (_("[Switching to %s]\n"),
 		       target_pid_to_str (inferior_ptid));
+      itfocus_from_thread_switch ();
       annotate_thread_changed ();
       previous_inferior_ptid = inferior_ptid;
     }
