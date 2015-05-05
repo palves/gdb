@@ -38,15 +38,6 @@ static struct itset *stopped_itset;
 static struct itset *curinf_itset;
 static struct itset *curthr_itset;
 
-enum itset_width
-{
-  /* Sorted by increasing order.  Needed for itset_set_get_width.  */
-  ITSET_WIDTH_DEFAULT,
-  ITSET_WIDTH_THREAD,
-  ITSET_WIDTH_INFERIOR,
-  ITSET_WIDTH_ALL,
-};
-
 /* Forward declaration of the base class.  */
 
 struct itset_elt;
@@ -1889,8 +1880,6 @@ parse_inferior_range (const char **spec)
 }
 #endif
 
-static enum itset_width itset_get_width (struct itset *set);
-
 static enum itset_width
 parse_width (char **spec)
 {
@@ -2383,7 +2372,7 @@ set_get_width (VEC (itset_elt_ptr) *elements)
   return width;
 }
 
-static enum itset_width
+enum itset_width
 itset_get_width (struct itset *set)
 {
   return set_get_width (set->elements);
