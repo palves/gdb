@@ -80,6 +80,10 @@ struct itset_elt_vtable
   /* Return true if the element is empty.  */
 
   int (*is_empty) (struct itset_elt *elt);
+
+  /* Return true if the element is empty.  */
+
+  char *(*get_spec) (struct itset_elt *elt);
 };
 
 /* The base class of all I/T set elements.  */
@@ -374,7 +378,8 @@ static const struct itset_elt_vtable exec_vtable =
   NULL, /* contains_program_space */
   exec_contains_inferior,
   exec_contains_thread,
-  exec_is_empty
+  exec_is_empty,
+  NULL,
 };
 
 /* Create a new `exec' I/T set element.  */
@@ -524,6 +529,7 @@ struct itset_elt_thread_range
 
   /* The first and last threads in this range.  If FIRST is WILDCARD,
      then LAST is unused.  */
+  int inf_num;
   int thr_first, thr_last;
 };
 
@@ -604,8 +610,6 @@ thread_range_contains_thread (struct itset_elt *base, struct thread_info *thr)
 static int
 thread_range_is_empty (struct itset_elt *base)
 {
-  struct itset_elt_inferior_range *range
-    = (struct itset_elt_inferior_range *) base;
   struct inferior *inf;
   struct thread_info *thr;
 
@@ -625,25 +629,56 @@ thread_range_is_empty (struct itset_elt *base)
   return 1;
 }
 
+static char *
+thread_range_get_spec (struct itset_elt *base)
+{
+  struct itset_elt_thread_range *range
+    = (struct itset_elt_thread_range *) base;
+  struct inferior *inf;
+  struct thread_info *thr;
+  int w;
+
+  switch (range->width)
+    {
+    case ITSET_WIDTH_ALL:
+      w = 'a';
+      break;
+    case ITSET_WIDTH_DEFAULT:
+      w = 'd';
+      break;
+    case ITSET_WIDTH_INFERIOR:
+      w = 'i';
+      break;
+    case ITSET_WIDTH_THREAD:
+      w = 't';
+      break;
+    }
+
+  return xstrprintf ("%c%d.%d", w, range->inf_num, range->thr_first);
+}
+
 static const struct itset_elt_vtable thread_range_vtable =
 {
   NULL,
   thread_range_contains_program_space,
   thread_range_contains_inferior,
   thread_range_contains_thread,
-  thread_range_is_empty
+  thread_range_is_empty,
+  thread_range_get_spec
 };
 
 /* Create a new `range' I/T set element.  */
 
 static struct itset_elt *
 create_thread_range_itset (enum itset_width width,
+			   int inf_num,
 			   int thr_first, int thr_last)
 {
   struct itset_elt_thread_range *elt;
 
   elt = XNEW (struct itset_elt_thread_range);
   elt->base.vtable = &thread_range_vtable;
+  elt->inf_num = inf_num;
   elt->thr_first = thr_first;
   elt->thr_last = thr_last;
   elt->width = width;
@@ -936,13 +971,20 @@ all_is_empty (struct itset_elt *base)
   return 0;
 }
 
+static char *
+all_get_spec (struct itset_elt *base)
+{
+  return xstrdup ("/all");
+}
+
 static const struct itset_elt_vtable all_vtable =
 {
   NULL,
   all_contains_program_space,
   all_contains_inferior,
   all_contains_thread,
-  all_is_empty
+  all_is_empty,
+  all_get_spec
 };
 
 static struct itset_elt *
@@ -1203,7 +1245,7 @@ struct itset_elt_state
 {
   struct itset_elt base;
 
-  int state;
+  enum thread_state state;
 };
 
 /* Implementation of `contains_thread' method.  */
@@ -1287,17 +1329,34 @@ state_is_empty (struct itset_elt *base)
   return 1;
 }
 
+static char *
+state_get_spec (struct itset_elt *base)
+{
+  struct itset_elt_state *state = (struct itset_elt_state *) base;
+
+  switch (state->state)
+    {
+    case THREAD_RUNNING:
+      return xstrdup ("/running");
+    case THREAD_STOPPED:
+      return xstrdup ("/stopped");
+    }
+
+  gdb_assert_not_reached ("unhandled state");
+}
+
 static const struct itset_elt_vtable state_vtable =
 {
   NULL,
   NULL, /* contains_program_space */
   state_contains_inferior,
   state_contains_thread,
-  state_is_empty
+  state_is_empty,
+  state_get_spec
 };
 
 static struct itset_elt *
-create_state_itset (int thread_state)
+create_state_itset (enum thread_state thread_state)
 {
   struct itset_elt_state *elt;
 
@@ -1347,6 +1406,12 @@ curinf_is_empty (struct itset_elt *base)
   return 0;
 }
 
+static char *
+current_get_spec (struct itset_elt *base)
+{
+  return xstrdup ("/current");
+}
+
 static const struct itset_elt_vtable curinf_vtable =
 {
   NULL,
@@ -1354,6 +1419,7 @@ static const struct itset_elt_vtable curinf_vtable =
   curinf_contains_inferior,
   curinf_contains_thread,
   curinf_is_empty
+  curinf_get_spec
 };
 
 /* Create a new I/T set element representing just the current
@@ -1693,66 +1759,73 @@ parse_inferior_range (const char **spec)
 #endif
 
 static enum itset_width
-parse_width (char *spec)
+parse_width (char **spec)
 {
-  switch (*spec)
+  enum itset_width width;
+
+  switch (**spec)
     {
     case 'a':
-      return ITSET_WIDTH_ALL;
+      width = ITSET_WIDTH_ALL;
+      break;
     case 'i':
-      return ITSET_WIDTH_INFERIOR;
+      width = ITSET_WIDTH_INFERIOR;
+      break;
     case 't':
-      return ITSET_WIDTH_THREAD;
+      width = ITSET_WIDTH_THREAD;
+      break;
     case 'd':
-      return ITSET_WIDTH_DEFAULT;
+      width = ITSET_WIDTH_DEFAULT;
+      break;
     default:
       /* Should fallback to the width of the current focus?  */
       return ITSET_WIDTH_ALL;
     }
+
+  (*spec)++;
+  return width;
 }
 
 int get_number_trailer (const char **pp, int trailer);
 
 static struct thread_info *
-parse_thread (char **tidstr)
+parse_thread (char **tidstr, int *inf_num, int *thr_num)
 {
   const char *number = *tidstr;
   const char *dot, *p1;
-  int first_num;
   struct thread_info *tp;
 
   dot = strchr (number, '.');
 
   if (number[0] == '.')
     {
-      first_num = current_inferior ()->num;
+      *inf_num = current_inferior ()->num;
     }
   else
     {
       p1 = number;
-      first_num = get_number_trailer (&p1, '.');
-      if (first_num == 0)
+      *inf_num = get_number_trailer (&p1, '.');
+      if (*inf_num == 0)
 	error (_("Bad thread spec '%s'"), number);
     }
 
   if (dot != NULL)
     {
       struct inferior *inf;
-      int thr_num;
 
       p1 = dot + 1;
-      thr_num = get_number_const (&p1);
-      if (thr_num == 0)
+      *thr_num = get_number_const (&p1);
+      if (*thr_num == 0)
 	error (_("Bad thread spec '%s'"), number);
 
-      inf = find_inferior_id (first_num);
+      inf = find_inferior_id (*inf_num);
       if (inf == NULL)
-	error (_("No inferior number '%d'"), first_num);
+	error (_("No inferior number '%d'"), *inf_num);
 
       ALL_THREADS (tp)
         {
 	  if (ptid_get_pid (tp->ptid) == inf->pid
-	      && tp->num_inf == thr_num)
+	      && tp->num_inf == *thr_num)
 	    break;
 	}
     }
@@ -1760,7 +1833,7 @@ parse_thread (char **tidstr)
     {
       ALL_THREADS (tp)
         {
-	  if (tp->num == first_num)
+	  if (tp->num == *inf_num)
 	    break;
 	}
     }
@@ -1778,18 +1851,18 @@ parse_thread_range (const char **spec)
   //  int first, last;
   enum itset_width width;
   struct thread_info *tp;
+  int inf_num, thr_num;
 
 #if 0
   if ((*spec)[0] != 't' || !looks_like_range ((*spec) + 1))
     return NULL;
 #endif
 
-  width = parse_width (*spec);
-  (*spec)++;
-  tp = parse_thread (spec);
+  width = parse_width (spec);
+  tp = parse_thread (spec, &inf_num, &thr_num);
 
   //  *spec = parse_range (*spec, &first, &last);
-  return create_thread_range_itset (width, tp->num, tp->num);
+  return create_thread_range_itset (width, inf_num, thr_num, thr_num);
   //  return create_thread_range_itset (first, last);
 }
 
@@ -2117,6 +2190,32 @@ parse_itset_one (const char **spec)
   return inters1;
 }
 
+/* A helper function that returns true if the inferior INF is
+   contained by the set ELEMENTS.  */
+
+static char *
+set_get_spec (VEC (itset_elt_ptr) *elements)
+{
+  int ix;
+  struct itset_elt *elt;
+  char *ret = xstrdup ("");
+
+  for (ix = 0; VEC_iterate (itset_elt_ptr, elements, ix, elt); ++ix)
+    {
+      const char *elt_spec = elt->vtable->get_spec (elt);
+
+      ret = reconcat (ret, ret, elt_spec, (char *) NULL);
+    }
+
+  return ret;
+}
+
+static char *
+itset_get_spec (struct itset *set)
+{
+  return set_get_spec (set->elements);
+}
+
 /* Parse an I/T set specification and return a new I/T set.  Throws an
    exception on error.  */
 
@@ -2157,6 +2256,7 @@ itset_create_const (const char **specp)
 
   result->spec = xstrndup (spec_start, spec - spec_start);
   *specp = spec;
+  result->spec = itset_get_spec (result);
 
   if (is_static)
     {
