@@ -1599,7 +1599,7 @@ create_static_itset (VEC (itset_elt_ptr) *elements)
 static int
 looks_like_range (const char *spec)
 {
-  return isdigit (spec[0]) || spec[0] == '*';
+  return isdigit (spec[0]) || spec[0] == '*' || spec[0] == ':';
 }
 
 /* Parse an I/T set range.  A range has the form F[:L][.T], where F is
@@ -1614,9 +1614,20 @@ parse_range (const char *spec, int *first, int *last)
   struct itset_elt *elt;
 
   if (!looks_like_range (spec))
-    error (_("Invalid I/T syntax at `%s'.  Expected '*' or digit."), spec);
+    error (_("Invalid I/T syntax at `%s'.  Expected '*', ':' or digit."),
+	   spec);
 
-  if (*spec == '*')
+  /*
+      | *   | all                 |
+      | :   | all                 |
+      | 1:3 | 1 to 3              |
+      | 1:  | 1 till end          |
+      | :3  | 0 till 3            |
+      | 3:2 | empty               |
+  */
+
+  if (*spec == '*'
+      || (spec[0] == ':' && isspace (spec[1])))
     {
       *first = WILDCARD;
       *last = WILDCARD;
@@ -1628,13 +1639,17 @@ parse_range (const char *spec, int *first, int *last)
 
       *first = strtol (spec, &end, 10);
       spec = end;
-      if (*spec == '-')
+
+      if (*spec == ':')
 	{
 	  ++spec;
-	  if (!isdigit (*spec))
-	    error (_("Expected digit in I/T set, at `%s'"), spec);
-	  *last = strtol (spec, &end, 10);
-	  spec = end;
+	  if (isdigit (*spec))
+	    {
+	      *last = strtol (spec, &end, 10);
+	      spec = end;
+	    }
+	  else if (isspace (*spec))
+	    *last = INT_MAX;
 	}
       else
 	*last = *first;
