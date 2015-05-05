@@ -723,7 +723,12 @@ thread_range_get_toi (struct itset_elt *base)
   struct thread_info *thr;
 
   if (range->is_current)
-    return inferior_thread ();
+    {
+      if (ptid_equal (inferior_ptid, null_ptid))
+	return NULL;
+      else
+	return inferior_thread ();
+    }
 
   inf = find_inferior_id (range->inf_num);
 
