@@ -2118,6 +2118,8 @@ do_captured_thread_select (struct ui_out *uiout, void *tidstr_v)
 
   switch_to_thread (tp->ptid);
 
+  itfocus_from_thread_switch ();
+
   annotate_thread_changed ();
 
   if (ui_out_is_mi_like_p (uiout))
