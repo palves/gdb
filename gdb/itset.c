@@ -86,7 +86,13 @@ struct itset_elt_vtable
 
   char *(*get_spec) (struct itset_elt *elt);
 
+  /* Return true if the element is empty.  */
+
   enum itset_width (*get_width) (struct itset_elt *elt);
+
+  /* Return the element's TOI.  */
+
+  struct thread_info *(*get_toi) (struct itset_elt *elt);
 };
 
 /* The base class of all I/T set elements.  */
@@ -704,6 +710,33 @@ thread_range_get_width (struct itset_elt *base)
   return range->width;
 }
 
+static struct thread_info *
+thread_range_get_toi (struct itset_elt *base)
+{
+  struct itset_elt_thread_range *range
+    = (struct itset_elt_thread_range *) base;
+  struct inferior *inf;
+  struct thread_info *thr;
+
+  if (range->is_current)
+    return inferior_thread ();
+
+  inf = find_inferior_id (range->inf_num);
+
+  ALL_NON_EXITED_THREADS (thr)
+    {
+      if (ptid_get_pid (thr->ptid) != inf->pid)
+	continue;
+
+      if (range->thr_first == WILDCARD
+	  || (range->thr_first <= thr->per_inf_num
+	      && thr->per_inf_num <= range->thr_last))
+	return thr;
+    }
+
+  return NULL;
+}
+
 static const struct itset_elt_vtable thread_range_vtable =
 {
   NULL,
@@ -712,7 +745,8 @@ static const struct itset_elt_vtable thread_range_vtable =
   thread_range_contains_thread,
   thread_range_is_empty,
   thread_range_get_spec,
-  thread_range_get_width
+  thread_range_get_width,
+  thread_range_get_toi
 };
 
 /* Create a new `range' I/T set element.  */
@@ -2331,6 +2365,30 @@ itset_get_width (struct itset *set)
   return set_get_width (set->elements);
 }
 
+
+static struct thread_info *
+set_get_toi (VEC (itset_elt_ptr) *elements)
+{
+  int ix;
+  struct itset_elt *elt;
+
+  for (ix = 0; VEC_iterate (itset_elt_ptr, elements, ix, elt); ++ix)
+    {
+      struct thread_info *tp = elt->vtable->get_toi (elt);
+
+      if (tp != NULL)
+	return tp;
+    }
+
+  return NULL;
+}
+
+static struct thread_info *
+itset_get_toi (struct itset *set)
+{
+  return set_get_toi (set->elements);
+}
+
 /* Parse an I/T set specification and return a new I/T set.  Throws an
    exception on error.  */
 
@@ -2682,8 +2740,16 @@ static void
 switch_to_itset (struct itset *itset)
 {
   struct inferior *inf;
+  struct thread_info *tp;
   struct cleanup *old_chain;
   int inf_count;
+
+  tp = itset_get_toi (itset);
+  if (tp != NULL)
+    {
+      switch_to_thread (tp->ptid);
+      return;
+    }
 
   /* For now, set a current inferior from the first element of the
      focus set.  */
@@ -2698,6 +2764,12 @@ switch_to_itset (struct itset *itset)
       return;
     }
 
+  set_current_inferior (inf);
+  switch_to_thread (null_ptid);
+  set_current_program_space (inf->pspace);
+  return;
+
+#if 1
   inf_count = 0;
   iterate_over_itset_inferiors (itset, count_inferiors, &inf_count);
   if (inf_count > 1)
@@ -2730,6 +2802,7 @@ switch_to_itset (struct itset *itset)
       switch_to_thread (null_ptid);
       set_current_program_space (inf->pspace);
     }
+#endif
 }
 
 void
