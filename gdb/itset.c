@@ -38,6 +38,14 @@ static struct itset *stopped_itset;
 static struct itset *curinf_itset;
 static struct itset *curthr_itset;
 
+enum itset_width
+{
+  ITSET_WIDTH_DEFAULT,
+  ITSET_WIDTH_ALL,
+  ITSET_WIDTH_INFERIOR,
+  ITSET_WIDTH_THREAD,
+};
+
 /* Forward declaration of the base class.  */
 
 struct itset_elt;
@@ -488,6 +496,7 @@ static const struct itset_elt_vtable inferior_range_vtable =
   inferior_range_is_empty
 };
 
+#if 0
 /* Create a new `range' I/T set element.  */
 
 static struct itset_elt *
@@ -502,6 +511,7 @@ create_inferior_range_itset (int inf_first, int inf_last)
 
   return (struct itset_elt *) elt;
 }
+#endif
 
 
 
@@ -510,6 +520,7 @@ create_inferior_range_itset (int inf_first, int inf_last)
 struct itset_elt_thread_range
 {
   struct itset_elt base;
+  enum itset_width width;
 
   /* The first and last threads in this range.  If FIRST is WILDCARD,
      then LAST is unused.  */
@@ -626,7 +637,8 @@ static const struct itset_elt_vtable thread_range_vtable =
 /* Create a new `range' I/T set element.  */
 
 static struct itset_elt *
-create_thread_range_itset (int thr_first, int thr_last)
+create_thread_range_itset (enum itset_width width,
+			   int thr_first, int thr_last)
 {
   struct itset_elt_thread_range *elt;
 
@@ -634,6 +646,7 @@ create_thread_range_itset (int thr_first, int thr_last)
   elt->base.vtable = &thread_range_vtable;
   elt->thr_first = thr_first;
   elt->thr_last = thr_last;
+  elt->width = width;
 
   return (struct itset_elt *) elt;
 }
@@ -754,6 +767,7 @@ static const struct itset_elt_vtable core_range_vtable =
   core_range_is_empty
 };
 
+#if 0
 /* Create a new `core_range' I/T set element.  */
 
 static struct itset_elt *
@@ -768,6 +782,7 @@ create_core_range_itset (int core_first, int core_last)
 
   return (struct itset_elt *) elt;
 }
+#endif
 
 
 
@@ -1596,12 +1611,15 @@ create_static_itset (VEC (itset_elt_ptr) *elements)
 
 
 
+#if 0
 static int
 looks_like_range (const char *spec)
 {
   return isdigit (spec[0]) || spec[0] == '*' || spec[0] == ':';
 }
+#endif
 
+#if 0
 /* Parse an I/T set range.  A range has the form F[:L][.T], where F is
    the starting inferior, L is the ending inferior, and T is the
    thread.  Updates RESULT with the new I/T set elements, and returns
@@ -1657,6 +1675,9 @@ parse_range (const char *spec, int *first, int *last)
   return spec;
 }
 
+#endif
+
+#if 0
 static struct itset_elt *
 parse_inferior_range (const char **spec)
 {
@@ -1669,20 +1690,110 @@ parse_inferior_range (const char **spec)
   *spec = parse_range (*spec, &first, &last);
   return create_inferior_range_itset (first, last);
 }
+#endif
+
+static enum itset_width
+parse_width (char *spec)
+{
+  switch (*spec)
+    {
+    case 'a':
+      return ITSET_WIDTH_ALL;
+    case 'i':
+      return ITSET_WIDTH_INFERIOR;
+    case 't':
+      return ITSET_WIDTH_THREAD;
+    case 'd':
+      return ITSET_WIDTH_DEFAULT;
+    default:
+      /* Should fallback to the width of the current focus?  */
+      return ITSET_WIDTH_ALL;
+    }
+}
+
+int get_number_trailer (const char **pp, int trailer);
+
+static struct thread_info *
+parse_thread (char **tidstr)
+{
+  const char *number = *tidstr;
+  const char *dot, *p1;
+  int first_num;
+  struct thread_info *tp;
+
+  dot = strchr (number, '.');
+
+  if (number[0] == '.')
+    {
+      first_num = current_inferior ()->num;
+    }
+  else
+    {
+      p1 = number;
+      first_num = get_number_trailer (&p1, '.');
+      if (first_num == 0)
+	error (_("Bad thread spec '%s'"), number);
+    }
+
+  if (dot != NULL)
+    {
+      struct inferior *inf;
+      int thr_num;
+
+      p1 = dot + 1;
+      thr_num = get_number_const (&p1);
+      if (thr_num == 0)
+	error (_("Bad thread spec '%s'"), number);
+
+      inf = find_inferior_id (first_num);
+      if (inf == NULL)
+	error (_("No inferior number '%d'"), first_num);
+
+      ALL_THREADS (tp)
+        {
+	  if (ptid_get_pid (tp->ptid) == inf->pid
+	      && tp->num_inf == thr_num)
+	    break;
+	}
+    }
+  else
+    {
+      ALL_THREADS (tp)
+        {
+	  if (tp->num == first_num)
+	    break;
+	}
+    }
+
+  if (tp == NULL)
+    error (_("Thread ID %s not known."), number);
+
+  *tidstr = (char *) p1;
+  return tp;
+}
 
 static struct itset_elt *
 parse_thread_range (const char **spec)
 {
-  int first, last;
+  //  int first, last;
+  enum itset_width width;
+  struct thread_info *tp;
 
+#if 0
   if ((*spec)[0] != 't' || !looks_like_range ((*spec) + 1))
     return NULL;
+#endif
 
+  width = parse_width (*spec);
   (*spec)++;
-  *spec = parse_range (*spec, &first, &last);
-  return create_thread_range_itset (first, last);
+  tp = parse_thread (spec);
+
+  //  *spec = parse_range (*spec, &first, &last);
+  return create_thread_range_itset (width, tp->num, tp->num);
+  //  return create_thread_range_itset (first, last);
 }
 
+#if 0
 static struct itset_elt *
 parse_core_range (const char **spec)
 {
@@ -1695,6 +1806,7 @@ parse_core_range (const char **spec)
   *spec = parse_range (*spec, &first, &last);
   return create_core_range_itset (first, last);
 }
+#endif
 
 
 
@@ -1777,16 +1889,16 @@ make_cleanup_itset_free (struct itset *itset)
   return make_cleanup (itset_free_cleanup, itset);
 }
 
-/*
+/* Itset expressions:
 
   ',' (union) has precedence over '&' (intersect).
 
-  ELEM = RANGE | NEG | PARENS_SET | '$' | NAME
-  NEG = '~' ELEM
-  PARENS_SET = '(' ITSET_ONE ')'
-  INTERS = ELEM ('&' ELEM)*
-  ITSET_ONE = INTERS ('&' INTERS)*
   ITSET = | ('!' ITSET_ONE) | ITSET_ONE
+  ITSET_ONE = INTERS ('&' INTERS)*
+  INTERS = ELEM ('&' ELEM)*
+  ELEM = RANGE | NEG | PARENS_SET | '$' | NAME
+  PARENS_SET = '(' ITSET_ONE ')'
+  NEG = '~' ELEM
 
   E.g.,:
 
@@ -1820,18 +1932,29 @@ static struct itset_elt *
 parse_elem (const char **spec)
 {
   struct itset_elt *elt;
+  enum itset_width width;
 
+  if (**spec == '/')
+    {
+      (*spec)++;
+      return parse_named_or_throw (spec);
+    }
+
+#if 0
   elt = parse_inferior_range (spec);
   if (elt != NULL)
     return elt;
+#endif
 
   elt = parse_thread_range (spec);
   if (elt != NULL)
     return elt;
 
+#if 0
   elt = parse_core_range (spec);
   if (elt != NULL)
     return elt;
+#endif
 
   elt = parse_neg (spec);
   if (elt != NULL)
@@ -1845,7 +1968,8 @@ parse_elem (const char **spec)
   if (elt != NULL)
     return elt;
 
-  return parse_named_or_throw (spec);
+  error (_("Invalid I/T set spec: `%s'"), *spec);
+  //  return parse_named_or_throw (spec);
 }
 
 static struct itset_elt *
@@ -2087,7 +2211,7 @@ itset_create_empty (void)
 static struct itset *
 itset_create_curinf (void)
 {
-  return itset_create_spec ("I");
+  return itset_create_spec ("/I");
 }
 
 /* Create a new I/T set which represents the current thread.  */
@@ -2095,25 +2219,25 @@ itset_create_curinf (void)
 static struct itset *
 itset_create_curthr (void)
 {
-  return itset_create_spec ("T");
+  return itset_create_spec ("/T");
 }
 
 static struct itset *
 itset_create_all (void)
 {
-  return itset_create_spec ("all");
+  return itset_create_spec ("/all");
 }
 
 static struct itset *
 itset_create_running (void)
 {
-  return itset_create_spec ("running");
+  return itset_create_spec ("/running");
 }
 
 static struct itset *
 itset_create_stopped (void)
 {
-  return itset_create_spec ("stopped");
+  return itset_create_spec ("/stopped");
 }
 
 /* Return 1 if SET contains INF, 0 otherwise.  */
