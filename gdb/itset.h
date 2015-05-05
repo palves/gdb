@@ -128,6 +128,17 @@ struct inferior *iterate_over_itset_inferiors (struct itset *itset,
 
 extern struct itset *current_itset;
 
+enum itset_width
+{
+  /* Sorted by increasing order.  Needed for itset_set_get_width.  */
+  ITSET_WIDTH_DEFAULT,
+  ITSET_WIDTH_THREAD,
+  ITSET_WIDTH_INFERIOR,
+  ITSET_WIDTH_ALL,
+};
+
+extern enum itset_width itset_get_width (struct itset *set);
+
 extern void itfocus_from_thread_switch (void);
 extern struct thread_info *itset_get_toi (struct itset *set);
 extern int itset_has_fixed_toi (struct itset *set);
