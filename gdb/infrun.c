@@ -3092,6 +3092,7 @@ do_proceed (void)
     }
   else if (!non_stop && target_is_non_stop_p ())
     {
+      struct thread_info *current = inferior_thread ();
       struct thread_info *tp;
 
       /* Start all other threads that are implicitly resumed too.  */
@@ -3131,6 +3132,11 @@ do_proceed (void)
 	  if (!ecs->wait_some_more)
 	    error ("Command aborted.");
 	}
+
+      /* Make sure we leave with the leader thread selected, as
+	 fetch_inferior_event, etc. try to preserve the user-selected
+	 thread.  */
+      switch_to_thread (current->ptid);
     }
   else
     gdb_assert_not_reached ("unhandled scenario");
@@ -3859,12 +3865,14 @@ fetch_inferior_event (void *client_data)
       set_current_traceframe (-1);
     }
 
-  if (non_stop)
-    /* In non-stop mode, the user/frontend should not notice a thread
-       switch due to internal events.  Make sure we reverse to the
-       user selected thread and frame after handling the event and
-       running any breakpoint commands.  */
-    make_cleanup_restore_current_thread ();
+  if (non_stop || itset_has_fixed_toi (current_itset))
+    {
+      /* In non-stop mode, the user/frontend should not notice a thread
+	 switch due to internal events.  Make sure we reverse to the
+	 user selected thread and frame after handling the event and
+	 running any breakpoint commands.  */
+      make_cleanup_restore_current_thread ();
+    }
 
   overlay_cache_invalid = 1;
   /* Flush target cache before starting to handle each event.  Target

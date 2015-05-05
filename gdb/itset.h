@@ -130,4 +130,6 @@ extern struct itset *current_itset;
 
 extern void itfocus_from_thread_switch (void);
 
+extern int itset_has_fixed_toi (struct itset *set);
+
 #endif /* ITSET_H */

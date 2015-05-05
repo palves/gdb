@@ -93,6 +93,10 @@ struct itset_elt_vtable
   /* Return the element's TOI.  */
 
   struct thread_info *(*get_toi) (struct itset_elt *elt);
+
+  /* Return true if the element's TOI is fixed.  */
+
+  int (*has_fixed_toi) (struct itset_elt *elt);
 };
 
 /* The base class of all I/T set elements.  */
@@ -735,6 +739,15 @@ thread_range_get_toi (struct itset_elt *base)
   return NULL;
 }
 
+static int
+thread_range_has_fixed_toi (struct itset_elt *base)
+{
+  struct itset_elt_thread_range *range
+    = (struct itset_elt_thread_range *) base;
+
+  return !range->is_current;
+}
+
 static const struct itset_elt_vtable thread_range_vtable =
 {
   NULL,
@@ -744,7 +757,8 @@ static const struct itset_elt_vtable thread_range_vtable =
   thread_range_is_empty,
   thread_range_get_spec,
   thread_range_get_width,
-  thread_range_get_toi
+  thread_range_get_toi,
+  thread_range_has_fixed_toi
 };
 
 /* Create a new `range' I/T set element.  */
@@ -1080,6 +1094,12 @@ all_get_width (struct itset_elt *base)
   return ITSET_WIDTH_ALL;
 }
 
+static int
+has_fixed_toi_false (struct itset_elt *base)
+{
+  return 0;
+}
+
 static const struct itset_elt_vtable all_vtable =
 {
   NULL,
@@ -1088,7 +1108,9 @@ static const struct itset_elt_vtable all_vtable =
   all_contains_thread,
   all_is_empty,
   all_get_spec,
-  all_get_width
+  all_get_width,
+  NULL,
+  has_fixed_toi_false
 };
 
 static struct itset_elt *
@@ -2384,6 +2406,27 @@ static struct thread_info *
 itset_get_toi (struct itset *set)
 {
   return set_get_toi (set->elements);
+}
+
+static int
+set_has_fixed_toi (VEC (itset_elt_ptr) *elements)
+{
+  int ix;
+  struct itset_elt *elt;
+
+  for (ix = 0; VEC_iterate (itset_elt_ptr, elements, ix, elt); ++ix)
+    {
+      if (elt->vtable->has_fixed_toi (elt))
+	return 1;
+    }
+
+  return 0;
+}
+
+int
+itset_has_fixed_toi (struct itset *set)
+{
+  return set_has_fixed_toi (set->elements);
 }
 
 /* Parse an I/T set specification and return a new I/T set.  Throws an
