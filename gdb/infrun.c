@@ -2892,7 +2892,7 @@ clear_proceed_status (int step)
 	 we're about to resume, implicitly and explicitly.  */
       ALL_NON_EXITED_THREADS (tp)
         {
-	  if (!itset_contains_thread (current_itset, tp))
+	  if (!itset_contains_thread (current_itset, tp, 1))
 	    continue;
 
 	  if (tp->resumed)
@@ -3091,7 +3091,7 @@ mark_threads_running (ptid_t resume_ptid)
 
 	  ALL_NON_EXITED_THREADS (tp)
 	    {
-	      if (!itset_contains_thread (current_itset, tp))
+	      if (!itset_contains_thread (current_itset, tp, 1))
 		continue;
 
 	      set_running (tp->ptid, 1);
@@ -3129,7 +3129,7 @@ enqueue_step_overs (struct thread_info *tp)
 	    continue;
 
 	  /* Ignore threads of processes we're not resuming.  */
-	  if (!itset_contains_thread (current_itset, tp))
+	  if (!itset_contains_thread (current_itset, tp, 1))
 	    continue;
 
 	  if (!thread_still_needs_step_over (tp))
@@ -3208,7 +3208,7 @@ do_proceed (void)
       ALL_NON_EXITED_THREADS (tp)
         {
 	  /* Ignore threads of processes we're not resuming.  */
-	  if (!itset_contains_thread (current_itset, tp))
+	  if (!itset_contains_thread (current_itset, tp, 1))
 	    continue;
 
 	  if (tp->resumed)
@@ -4539,7 +4539,7 @@ should_stop_thread (struct itset *stop_set, struct thread_info *t)
   if (stop_set == NULL || itset_is_empty_set (stop_set))
     return !non_stop;
 
-  if (itset_contains_thread (stop_set, t))
+  if (itset_contains_thread (stop_set, t, 1))
     return 1;
 
   return 0;
@@ -4994,7 +4994,7 @@ all_in_apply_set_done_p (struct execution_control_state *ecs)
       leader->refcount--;
 
       ALL_THREADS (thr)
-	if (itset_contains_thread (ecs->event_thread->apply_set, thr))
+	if (itset_contains_thread (ecs->event_thread->apply_set, thr, 0))
 	  {
 	    if (!thr->goal_reached)
 	      {

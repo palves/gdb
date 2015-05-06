@@ -4460,7 +4460,7 @@ bpstat_check_trigger_set (const struct breakpoint *b, struct thread_info *thread
   if (b->trigger_set == NULL)
     return 1;
 
-  if (itset_contains_thread (b->trigger_set, thread))
+  if (itset_contains_thread (b->trigger_set, thread, 1))
     return 1;
 
   return 0;
@@ -12000,7 +12000,7 @@ until_break_command (char *arg, int from_tty, int anywhere)
   make_cleanup_delete_event_location (location);
 
   ALL_THREADS (thr)
-    if (itset_contains_thread (apply_itset, thr))
+    if (itset_contains_thread (apply_itset, thr, 0))
       {
 	struct frame_info *frame;
 	struct frame_id breakpoint_frame_id;
