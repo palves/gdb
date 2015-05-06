@@ -86,7 +86,8 @@ int itset_contains_inferior (struct itset *itset, struct inferior *inf);
 
 /* Return true if the thread is contained in the I/T set.  */
 
-int itset_contains_thread (struct itset *itset, struct thread_info *inf);
+int itset_contains_thread (struct itset *itset, struct thread_info *inf,
+			   int including_width);
 
 /* Return true if the inferior is contained in the I/T set.  */
 
