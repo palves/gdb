@@ -1618,7 +1618,7 @@ thread_apply_set (const char *cmd, struct itset *set, int ascending,
 
       ALL_NON_EXITED_THREADS (tp)
         {
-	  if (set != NULL && !itset_contains_thread (set, tp))
+	  if (set != NULL && !itset_contains_thread (set, tp, 1))
 	    continue;
 
           tp_array[i] = tp;

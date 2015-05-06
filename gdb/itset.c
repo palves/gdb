@@ -67,7 +67,8 @@ struct itset_elt_vtable
   /* Return true if the element contains the thread.  The element and
      the thread are passed as arguments.  */
 
-  int (*contains_thread) (struct itset_elt *elt, struct thread_info *thr);
+  int (*contains_thread) (struct itset_elt *elt, struct thread_info *thr,
+			  int include_width);
 
   /* Return true if the element is empty.  */
 
@@ -276,14 +277,15 @@ set_contains_inferior (VEC (itset_elt_ptr) *elements, struct inferior *inf)
    by the set ELEMENTS.  */
 
 static int
-set_contains_thread (VEC (itset_elt_ptr) *elements, struct thread_info *thr)
+set_contains_thread (VEC (itset_elt_ptr) *elements, struct thread_info *thr,
+		     int including_width)
 {
   int ix;
   struct itset_elt *elt;
 
   for (ix = 0; VEC_iterate (itset_elt_ptr, elements, ix, elt); ++ix)
     {
-      if (elt->vtable->contains_thread (elt, thr))
+      if (elt->vtable->contains_thread (elt, thr, including_width))
 	return 1;
     }
 
@@ -344,7 +346,8 @@ exec_contains_inferior (struct itset_elt *base, struct inferior *inf)
 /* Implementation of `contains_thread' method.  */
 
 static int
-exec_contains_thread (struct itset_elt *base, struct thread_info *thr)
+exec_contains_thread (struct itset_elt *base, struct thread_info *thr,
+			int including_width)
 {
   struct itset_elt_exec *exec = (struct itset_elt_exec *) base;
   struct inferior *inf = get_thread_inferior (thr);
@@ -452,7 +455,8 @@ inferior_range_contains_inferior (struct itset_elt *base, struct inferior *inf)
 /* Implementation of `contains_thread' method.  */
 
 static int
-inferior_range_contains_thread (struct itset_elt *base, struct thread_info *thr)
+inferior_range_contains_thread (struct itset_elt *base, struct thread_info *thr,
+				int including_width)
 {
   struct itset_elt_inferior_range *range
     = (struct itset_elt_inferior_range *) base;
@@ -483,7 +487,7 @@ inferior_range_is_empty (struct itset_elt *base)
 
   ALL_THREADS (thr)
     {
-      if (inferior_range_contains_thread (base, thr))
+      if (inferior_range_contains_thread (base, thr, 1))
 	return 0;
     }
 
@@ -599,12 +603,14 @@ thread_range_contains_inferior (struct itset_elt *base, struct inferior *inf)
 /* Implementation of `contains_thread' method.  */
 
 static int
-thread_range_contains_thread (struct itset_elt *base, struct thread_info *thr)
+thread_range_contains_thread (struct itset_elt *base, struct thread_info *thr,
+			      int including_width)
 {
   struct itset_elt_thread_range *range
     = (struct itset_elt_thread_range *) base;
 
-  if (range->width == ITSET_WIDTH_ALL)
+  if (including_width
+      && range->width == ITSET_WIDTH_ALL)
     {
       return 1;
     }
@@ -621,7 +627,8 @@ thread_range_contains_thread (struct itset_elt *base, struct thread_info *thr)
       || (range->thr_first <= thr->num && thr->num <= range->thr_last))
     return 1;
 
-  if (range->width == ITSET_WIDTH_INFERIOR)
+  if (including_width
+      && range->width == ITSET_WIDTH_INFERIOR)
     {
       int pid = ptid_get_pid (thr->ptid);
       struct thread_info *iter;
@@ -635,10 +642,6 @@ thread_range_contains_thread (struct itset_elt *base, struct thread_info *thr)
 		return 1;
 	    }
 	}
-    }
-  else if (range->width == ITSET_WIDTH_ALL)
-    {
-      return 1;
     }
 
   return 0;
@@ -661,7 +664,7 @@ thread_range_is_empty (struct itset_elt *base)
 
   ALL_THREADS (thr)
     {
-      if (thread_range_contains_thread (base, thr))
+      if (thread_range_contains_thread (base, thr, 1))
 	return 0;
     }
 
@@ -806,7 +809,8 @@ struct itset_elt_core_range
 };
 
 static int core_range_contains_thread (struct itset_elt *base,
-				       struct thread_info *thr);
+				       struct thread_info *thr,
+				       int including_width);
 
  /* Implementation of `contains_inferior' method.  */
 
@@ -823,7 +827,7 @@ core_range_contains_program_space (struct itset_elt *base,
     {
       /* It's cheaper to check the core range first, because looking
 	 up the a thread's inferior is O(n).  */
-      if (core_range_contains_thread (base, thr))
+      if (core_range_contains_thread (base, thr, 1))
 	{
 	  struct inferior *thr_inf;
 
@@ -839,7 +843,8 @@ core_range_contains_program_space (struct itset_elt *base,
 /* Implementation of `contains_thread' method.  */
 
 static int
-core_range_contains_thread (struct itset_elt *base, struct thread_info *thr)
+core_range_contains_thread (struct itset_elt *base, struct thread_info *thr,
+			    int including_width)
 {
   struct itset_elt_core_range *core_range = (struct itset_elt_core_range *) base;
   int core;
@@ -868,7 +873,7 @@ core_range_contains_inferior (struct itset_elt *base, struct inferior *inf)
     {
       /* It's cheaper to check the core range first, because looking
 	 up the a thread's inferior is O(n).  */
-      if (core_range_contains_thread (base, thr))
+      if (core_range_contains_thread (base, thr, 1))
 	{
 	  struct inferior *thr_inf;
 
@@ -892,7 +897,7 @@ core_range_is_empty (struct itset_elt *base)
 
   ALL_THREADS (thr)
     {
-      if (core_range_contains_thread (base, thr))
+      if (core_range_contains_thread (base, thr, 1))
 	return 0;
     }
 
@@ -970,7 +975,8 @@ intersect_contains_inferior (struct itset_elt *base, struct inferior *inf)
 /* Implementation of `contains_thread' method.  */
 
 static int
-intersect_contains_thread (struct itset_elt *base, struct thread_info *thr)
+intersect_contains_thread (struct itset_elt *base, struct thread_info *thr,
+			   int including_width)
 {
   struct itset_elt_intersect *intersect = (struct itset_elt_intersect *) base;
   struct itset_elt *elt;
@@ -980,7 +986,7 @@ intersect_contains_thread (struct itset_elt *base, struct thread_info *thr)
 
   for (ix = 0; VEC_iterate (itset_elt_ptr, intersect->elements, ix, elt); ++ix)
     {
-      if (!elt->vtable->contains_thread (elt, thr))
+      if (!elt->vtable->contains_thread (elt, thr, including_width))
 	return 0;
     }
 
@@ -1004,7 +1010,7 @@ intersect_is_empty (struct itset_elt *base)
 
   ALL_THREADS (thr)
     {
-      if (intersect_contains_thread (base, thr))
+      if (intersect_contains_thread (base, thr, 1))
 	return 0;
     }
 
@@ -1063,7 +1069,8 @@ all_contains_inferior (struct itset_elt *base, struct inferior *inf)
 /* Implementation of `contains_thread' method.  */
 
 static int
-all_contains_thread (struct itset_elt *base, struct thread_info *thr)
+all_contains_thread (struct itset_elt *base, struct thread_info *thr,
+		     int including_width)
 {
   return 1;
 }
@@ -1148,7 +1155,8 @@ empty_contains_inferior (struct itset_elt *base, struct inferior *inf)
 /* Implementation of `contains_thread' method.  */
 
 static int
-empty_contains_thread (struct itset_elt *base, struct thread_info *thr)
+empty_contains_thread (struct itset_elt *base, struct thread_info *thr,
+		       int including_width)
 {
   return 0;
 }
@@ -1226,11 +1234,12 @@ itset_elt_itset_contains_inferior (struct itset_elt *base, struct inferior *inf)
 /* Implementation of `contains_thread' method.  */
 
 static int
-itset_elt_itset_contains_thread (struct itset_elt *base, struct thread_info *thr)
+itset_elt_itset_contains_thread (struct itset_elt *base, struct thread_info *thr,
+				 int including_width)
 {
   struct itset_elt_itset *iiset = (struct itset_elt_itset *) base;
 
-  return itset_contains_thread (iiset->set, thr);
+  return itset_contains_thread (iiset->set, thr, including_width);
 }
 
 /* Implementation of `is_empty' method.  */
@@ -1307,10 +1316,11 @@ itset_elt_negated_contains_inferior (struct itset_elt *base, struct inferior *in
 /* Implementation of `contains_thread' method.  */
 
 static int
-itset_elt_negated_contains_thread (struct itset_elt *base, struct thread_info *thr)
+itset_elt_negated_contains_thread (struct itset_elt *base, struct thread_info *thr,
+				   int including_width)
 {
   struct itset_elt_negated *elt = (struct itset_elt_negated *) base;
-  return !elt->negated->vtable->contains_thread (elt->negated, thr);
+  return !elt->negated->vtable->contains_thread (elt->negated, thr, including_width);
 }
 
 /* Implementation of `is_empty' method.  */
@@ -1330,7 +1340,7 @@ itset_elt_negated_is_empty (struct itset_elt *base)
 
   ALL_THREADS (thr)
     {
-      if (itset_elt_negated_contains_thread (base, thr))
+      if (itset_elt_negated_contains_thread (base, thr, 1))
 	return 0;
     }
 
@@ -1372,7 +1382,8 @@ struct itset_elt_state
 /* Implementation of `contains_thread' method.  */
 
 static int
-state_contains_thread (struct itset_elt *base, struct thread_info *thr)
+state_contains_thread (struct itset_elt *base, struct thread_info *thr,
+		       int including_width)
 {
   struct itset_elt_state *state = (struct itset_elt_state *) base;
 
@@ -1423,7 +1434,7 @@ state_contains_inferior (struct itset_elt *base, struct inferior *inf)
     {
       /* It's cheaper to check the state first, because looking up the
 	 a thread's inferior is O(n).  */
-      if (state_contains_thread (base, thr))
+      if (state_contains_thread (base, thr, 1))
 	{
 	  struct inferior *thr_inf;
 
@@ -1444,7 +1455,7 @@ state_is_empty (struct itset_elt *base)
   struct thread_info *thr;
 
   ALL_THREADS (thr)
-    if (state_contains_thread (base, thr))
+    if (state_contains_thread (base, thr, 1))
       return 0;
 
   return 1;
@@ -1510,7 +1521,8 @@ curinf_contains_inferior (struct itset_elt *base, struct inferior *inf)
 /* Implementation of `contains_thread' method.  */
 
 static int
-curinf_contains_thread (struct itset_elt *base, struct thread_info *thr)
+curinf_contains_thread (struct itset_elt *base, struct thread_info *thr,
+			int including_width)
 {
   struct inferior *inf;
 
@@ -1579,7 +1591,8 @@ curthr_contains_inferior (struct itset_elt *base, struct inferior *inf)
 /* Implementation of `contains_thread' method.  */
 
 static int
-curthr_contains_thread (struct itset_elt *base, struct thread_info *thr)
+curthr_contains_thread (struct itset_elt *base, struct thread_info *thr,
+			int including_width)
 {
   return ptid_equal (inferior_ptid, thr->ptid);
 }
@@ -1688,7 +1701,8 @@ static_contains_inferior (struct itset_elt *base, struct inferior *inf)
 /* Implementation of `contains_thread' method.  */
 
 static int
-static_contains_thread (struct itset_elt *base, struct thread_info *thr)
+static_contains_thread (struct itset_elt *base, struct thread_info *thr,
+			int including_width)
 {
   struct itset_elt_static *st = (struct itset_elt_static *) base;
   int idx;
@@ -1758,7 +1772,7 @@ check_one_thread (struct thread_info *thr, void *datum)
 {
   struct iter_data *id = datum;
 
-  if (set_contains_thread (id->elements, thr))
+  if (set_contains_thread (id->elements, thr, 1))
     VEC_safe_push (int, id->st->threads, thr->num);
 
   /* Keep going.  */
@@ -2576,9 +2590,10 @@ itset_contains_inferior (struct itset *set, struct inferior *inf)
 /* Return 1 if SET contains THR, 0 otherwise.  */
 
 int
-itset_contains_thread (struct itset *set, struct thread_info *thr)
+itset_contains_thread (struct itset *set, struct thread_info *thr,
+		       int including_width)
 {
-  return set_contains_thread (set->elements, thr);
+  return set_contains_thread (set->elements, thr, including_width);
 }
 
 /* Acquire a new reference to an I/T set.  */
@@ -2676,7 +2691,7 @@ iter_thr_callback (struct thread_info *thr, void *d)
 {
   struct iterate_thr_data *data = d;
 
-  if (itset_contains_thread (data->itset, thr))
+  if (itset_contains_thread (data->itset, thr, 1))
     return data->callback (thr, data->client_data);
 
   /* Keep going.  */
@@ -3142,7 +3157,7 @@ whichsets_callback (struct thread_info *thr, void *data)
     {
       QUIT;
 
-      if (itset_contains_thread (named_itset->set, thr))
+      if (itset_contains_thread (named_itset->set, thr, 1))
 	{
 	  if (!printed)
 	    {
@@ -3217,7 +3232,7 @@ viewset (struct itset *itset)
   printed = 0;
   ALL_THREADS (thr)
     {
-      if (itset_contains_thread (itset, thr))
+      if (itset_contains_thread (itset, thr, 1))
 	{
 	  if (!printed)
 	    {
@@ -3234,7 +3249,7 @@ viewset (struct itset *itset)
   printed = 0;
   ALL_THREADS (thr)
     {
-      if (itset_contains_thread (itset, thr))
+      if (itset_contains_thread (itset, thr, 1))
 	{
 	  int core;
 

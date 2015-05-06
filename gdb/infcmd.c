@@ -68,6 +68,8 @@ current_thread_set (void)
   struct thread_info *tp;
   char *b;
 
+  return itset_reference (current_itset);
+
   if (ptid_equal (inferior_ptid, null_ptid))
     return itset_create_empty ();
 
@@ -119,8 +121,8 @@ apply_execution_command (struct itset *apply_itset,
 	  if (t->resumed)
 	    continue;
 
-	  if (itset_contains_thread (run_free_itset, t)
-	      && !itset_contains_thread (apply_itset, t))
+	  if (itset_contains_thread (run_free_itset, t, 1)
+	      && !itset_contains_thread (apply_itset, t, 0))
 	    {
 	      if (t->suspend.waitstatus.kind == TARGET_WAITKIND_FORKED
 		  || t->suspend.waitstatus.kind == TARGET_WAITKIND_VFORKED)
@@ -146,7 +148,7 @@ apply_execution_command (struct itset *apply_itset,
 	  if (t->resumed)
 	    continue;
 
-	  if (itset_contains_thread (apply_itset, t))
+	  if (itset_contains_thread (apply_itset, t, 0))
 	    {
 	      switch_to_thread (t->ptid);
 	      (*callback) (t, callback_data);
@@ -158,7 +160,7 @@ apply_execution_command (struct itset *apply_itset,
 		  parallel_leader->refcount++;
 		}
 	    }
-	  else if (itset_contains_thread (run_free_itset, t))
+	  else if (itset_contains_thread (run_free_itset, t, 1))
 	    {
 	      clear_proceed_status_thread (t);
 	    }
@@ -920,6 +922,7 @@ default_run_free_itset (struct itset *apply_itset, int step)
 	 resume.  */
       return itset_create_empty ();
     }
+#if 0
   else if (!sched_multi)
     {
       struct inferior *inf;
@@ -951,6 +954,7 @@ default_run_free_itset (struct itset *apply_itset, int step)
       xfree (set_spec);
       return set;
     }
+#endif
   else
     {
       /* By default, resume all threads in the current set.  */
@@ -1253,7 +1257,7 @@ step_1 (int skip_subroutines, int single_inst, char *args)
     }
 
   ALL_THREADS (thr)
-    if (itset_contains_thread (apply_itset, thr))
+    if (itset_contains_thread (apply_itset, thr, 0))
       {
 	++thr_count;
 
@@ -1574,7 +1578,7 @@ jump_command (char *arg, int from_tty)
   do_cleanups (args_chain);
 
   ALL_THREADS (thr)
-    if (itset_contains_thread (apply_itset, thr))
+    if (itset_contains_thread (apply_itset, thr, 0))
       {
 	struct symtabs_and_lines sals;
 	struct symtab_and_line sal;
@@ -1691,7 +1695,7 @@ signal_command (char *arg, int from_tty)
     error_no_arg (_("signal number"));
 
   ALL_THREADS (thr)
-    if (itset_contains_thread (apply_itset, thr))
+    if (itset_contains_thread (apply_itset, thr, 0))
       ensure_runnable (thr);
 
   /* It would be even slicker to make signal names be valid expressions,
@@ -1867,7 +1871,7 @@ until_next_command (char *arg, int from_tty)
 			      &run_free_itset);
 
   ALL_THREADS (thr)
-    if (itset_contains_thread (apply_itset, thr))
+    if (itset_contains_thread (apply_itset, thr, 0))
       {
 	struct frame_info *frame;
 	CORE_ADDR pc;
@@ -2332,7 +2336,7 @@ finish_command (char *arg, int from_tty)
     error (_("The \"finish\" command does not take any arguments."));
 
   ALL_THREADS (thr)
-    if (itset_contains_thread (apply_itset, thr))
+    if (itset_contains_thread (apply_itset, thr, 0))
       {
 	struct frame_info *frame;
 	struct frame_info *prev;
@@ -3389,7 +3393,7 @@ interrupt_target_1 (int all_threads)
 
 	  ALL_NON_EXITED_THREADS (tp)
 	    {
-	      if (itset_contains_thread (current_itset, tp))
+	      if (itset_contains_thread (current_itset, tp, 1))
 		{
 		  target_interrupt (tp->ptid);
 		  set_stop_requested (tp->ptid, 1);
