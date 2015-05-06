@@ -1202,6 +1202,8 @@ print_thread_info (struct ui_out *uiout, char *requested_threads, int pid)
 	{
 	  if (ptid_equal (tp->ptid, current_ptid))
 	    ui_out_field_string (uiout, "current", "*");
+	  else if (itset_contains_thread (current_itset, tp, 0))
+	    ui_out_field_string (uiout, "current", "+");
 	  else
 	    ui_out_field_skip (uiout, "current");
 	}
