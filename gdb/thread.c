@@ -946,6 +946,9 @@ set_running_thread (struct thread_info *tp, int running)
 	 it until the user wants it to.  */
       if (tp->step_over_next != NULL)
 	thread_step_over_chain_remove (tp);
+
+      tp->control.selected_frame_id = null_frame_id;
+      tp->control.selected_frame_level = -1;
     }
 
   return started;
@@ -1345,13 +1348,19 @@ print_thread_info_1 (struct ui_out *uiout, char *requested_threads,
 	ui_out_text (uiout, "(running)\n");
       else
 	{
-	  /* The switch below puts us at the top of the stack (leaf
-	     frame).  */
+	  int selected_frame_level = tp->control.selected_frame_level;
+	  struct frame_id selected_frame_id = tp->control.selected_frame_id;
+
+	  /* The puts us at the top of the stack (leaf frame).  */
+	  tp->control.selected_frame_level = -1;
 	  switch_to_thread (tp->ptid);
 	  print_stack_frame (get_selected_frame (NULL),
 			     /* For MI output, print frame level.  */
 			     ui_out_is_mi_like_p (uiout),
 			     LOCATION, 0);
+
+	  tp->control.selected_frame_level = selected_frame_level;
+	  tp->control.selected_frame_id = selected_frame_id;
 	}
 
       if (ui_out_is_mi_like_p (uiout))
@@ -1452,11 +1461,32 @@ switch_to_thread (ptid_t ptid)
   if (!ptid_equal (ptid, null_ptid))
     {
       struct inferior *inf;
+      struct thread_info *tp;
+      struct frame_info *frame;
 
       inf = find_inferior_ptid (ptid);
       gdb_assert (inf != NULL);
       set_current_program_space (inf->pspace);
       set_current_inferior (inf);
+
+      tp = inferior_thread ();
+      if (tp->state == THREAD_STOPPED
+	  && target_has_registers
+	  && target_has_stack
+	  && target_has_memory)
+	{
+	  /* When processing internal events, there might not be a
+	     selected frame.  If we naively call get_selected_frame
+	     here, then we can end up reading debuginfo for the
+	     current frame, but we don't generally need the debuginfo
+	     at this point.  */
+	  frame = get_selected_frame_if_set ();
+	}
+      else
+	frame = NULL;
+
+      tp->control.selected_frame_id = get_frame_id (frame);
+      tp->control.selected_frame_level = frame_relative_level (frame);
     }
 
   if (ptid_equal (ptid, inferior_ptid))
@@ -1482,7 +1512,9 @@ restore_current_thread (ptid_t ptid)
   switch_to_thread (ptid);
 }
 
-static void
+extern void restore_selected_frame (struct frame_id a_frame_id, int frame_level);
+
+void
 restore_selected_frame (struct frame_id a_frame_id, int frame_level)
 {
   struct frame_info *frame = NULL;
@@ -1804,6 +1836,10 @@ thread_apply_set (const char *cmd, struct itset *set, int ascending,
       for (k = 0; k != i; k++)
         if (thread_alive (tp_array[k]))
           {
+	    int selected_frame_level = tp_array[k]->control.selected_frame_level;
+	    struct frame_id selected_frame_id = tp_array[k]->control.selected_frame_id;
+
+	    tp_array[k]->control.selected_frame_level = -1;
             switch_to_thread (tp_array[k]->ptid);
             printf_filtered (_("\nThread %s (%s):\n"),
 			     print_thread_id (tp_array[k]),
@@ -1812,6 +1848,8 @@ thread_apply_set (const char *cmd, struct itset *set, int ascending,
 	       by execute_command.  */
             strcpy (saved_cmd, cmd);
             execute_command (saved_cmd, from_tty);
+	    tp_array[k]->control.selected_frame_level = selected_frame_level;
+	    tp_array[k]->control.selected_frame_id = selected_frame_id;
 	  }
     }
 
@@ -2118,6 +2156,8 @@ do_captured_thread_select (struct ui_out *uiout, void *tidstr_v)
   if (!thread_alive (tp))
     error (_("Thread ID %s has terminated."), tidstr);
 
+  tp->control.selected_frame_level = -1;
+  tp->control.selected_frame_id = null_frame_id;
   switch_to_thread (tp->ptid);
 
   // itfocus_from_thread_switch ();
