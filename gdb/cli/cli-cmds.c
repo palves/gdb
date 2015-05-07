@@ -1884,7 +1884,7 @@ Uses EDITOR environment variable contents as editor (or ex as default)."));
 
   c->completer = location_completer;
 
-  add_com ("list", class_files, list_command, _("\
+  c = add_com ("list", class_files, list_command, _("\
 List specified function or line.\n\
 With no argument, lists ten more lines after or around previous listing.\n\
 \"list -\" lists the ten lines before a previous ten-line listing.\n\
@@ -1902,6 +1902,7 @@ the other arg.\n\
 By default, when a single location is given, display ten lines.\n\
 This can be changed using \"set listsize\", and the current value\n\
 can be shown using \"show listsize\"."));
+  set_cmd_iterate_over_set (c);
 
   add_com_alias ("l", "list", class_files, 1);
 

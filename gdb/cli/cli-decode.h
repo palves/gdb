@@ -96,6 +96,10 @@ struct cmd_list_element
        otherwise wouldn't.  */
     unsigned int abbrev_flag : 1;
 
+    /* When 1 run the command callback once for each thread in the
+       current scope.  */
+    unsigned int iterate_over_set : 1;
+
     /* Type of "set" or "show" command (or SET_NOT_SET if not "set"
        or "show").  */
     ENUM_BITFIELD (cmd_types) type : 2;
