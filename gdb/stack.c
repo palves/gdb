@@ -51,6 +51,7 @@
 #include <ctype.h>
 #include "symfile.h"
 #include "extension.h"
+#include "itset.h"
 
 void (*deprecated_selected_frame_level_changed_hook) (int);
 
@@ -2614,67 +2615,86 @@ void _initialize_stack (void);
 void
 _initialize_stack (void)
 {
-  add_com ("return", class_stack, return_command, _("\
+  struct cmd_list_element *c;
+
+  c = add_com ("return", class_stack, return_command, _("\
 Make selected stack frame return to its caller.\n\
 Control remains in the debugger, but when you continue\n\
 execution will resume in the frame above the one now selected.\n\
 If an argument is given, it is an expression for the value to return."));
+  set_cmd_iterate_over_set (c);
 
-  add_com ("up", class_stack, up_command, _("\
+  c = add_com ("up", class_stack, up_command, _("\
 Select and print stack frame that called this one.\n\
 An argument says how many frames up to go."));
-  add_com ("up-silently", class_support, up_silently_command, _("\
+  set_cmd_iterate_over_set (c);
+
+  c = add_com ("up-silently", class_support, up_silently_command, _("\
 Same as the `up' command, but does not print anything.\n\
 This is useful in command scripts."));
+  set_cmd_iterate_over_set (c);
 
-  add_com ("down", class_stack, down_command, _("\
+  c = add_com ("down", class_stack, down_command, _("\
 Select and print stack frame called by this one.\n\
 An argument says how many frames down to go."));
+  set_cmd_iterate_over_set (c);
   add_com_alias ("do", "down", class_stack, 1);
   add_com_alias ("dow", "down", class_stack, 1);
-  add_com ("down-silently", class_support, down_silently_command, _("\
+c = add_com ("down-silently", class_support, down_silently_command, _("\
 Same as the `down' command, but does not print anything.\n\
 This is useful in command scripts."));
 
-  add_com ("frame", class_stack, frame_command, _("\
+  c = add_com ("frame", class_stack, frame_command, _("\
 Select and print a stack frame.\nWith no argument, \
 print the selected stack frame.  (See also \"info frame\").\n\
 An argument specifies the frame to select.\n\
 It can be a stack frame number or the address of the frame.\n\
 With argument, nothing is printed if input is coming from\n\
 a command file or a user-defined command."));
-
+  set_cmd_iterate_over_set (c);
   add_com_alias ("f", "frame", class_stack, 1);
 
-  add_com ("select-frame", class_stack, select_frame_command, _("\
+  c = add_com ("select-frame", class_stack, select_frame_command, _("\
 Select a stack frame without printing anything.\n\
 An argument specifies the frame to select.\n\
 It can be a stack frame number or the address of the frame.\n"));
+  set_cmd_iterate_over_set (c);
 
-  add_com ("backtrace", class_stack, backtrace_command, _("\
+  c = add_com ("backtrace", class_stack, backtrace_command, _("\
 Print backtrace of all stack frames, or innermost COUNT frames.\n\
 With a negative argument, print outermost -COUNT frames.\nUse of the \
 'full' qualifier also prints the values of the local variables.\n\
 Use of the 'no-filters' qualifier prohibits frame filters from executing\n\
 on this backtrace.\n"));
+  set_cmd_iterate_over_set (c);
   add_com_alias ("bt", "backtrace", class_stack, 0);
-
   add_com_alias ("where", "backtrace", class_alias, 0);
-  add_info ("stack", backtrace_command,
-	    _("Backtrace of the stack, or innermost COUNT frames."));
+
+  c = add_info ("stack", backtrace_command,
+		_("Backtrace of the stack, or innermost COUNT frames."));
+  set_cmd_iterate_over_set (c);
   add_info_alias ("s", "stack", 1);
-  add_info ("frame", frame_info,
-	    _("All about selected stack frame, or frame at ADDR."));
+
+  c = add_info ("frame", frame_info,
+		_("All about selected stack frame, or frame at ADDR."));
+  set_cmd_iterate_over_set (c);
   add_info_alias ("f", "frame", 1);
-  add_info ("locals", locals_info,
-	    _("Local variables of current stack frame."));
-  add_info ("args", args_info,
-	    _("Argument variables of current stack frame."));
+
+  c = add_info ("locals", locals_info,
+		_("Local variables of current stack frame."));
+  set_cmd_iterate_over_set (c);
+
+  c = add_info ("args", args_info,
+		_("Argument variables of current stack frame."));
+  set_cmd_iterate_over_set (c);
 
   if (dbx_commands)
-    add_com ("func", class_stack, func_command, _("\
+    {
+      c = add_com ("func", class_stack, func_command, _("\
 Select the stack frame that contains <func>.\n\
 Usage: func <name>\n"));
+      set_cmd_iterate_over_set (c);
+    }
 
   add_setshow_enum_cmd ("frame-arguments", class_stack,
 			print_frame_arguments_choices, &print_frame_arguments,

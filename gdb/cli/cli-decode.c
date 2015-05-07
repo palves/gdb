@@ -95,6 +95,10 @@ print_help_for_command (struct cmd_list_element *c, const char *prefix,
 			int recurse, struct ui_file *stream);
 
 
+
+extern void for_each_selected_thread_cmd (cmd_cfunc_ftype cmd,
+					  char *args, int from_tty);
+
 /* Set the callback function for the specified command.  For each both
    the commands callback and func() are set.  The latter set to a
    bounce function (unless cfunc / sfunc is NULL that is).  */
@@ -102,7 +106,10 @@ print_help_for_command (struct cmd_list_element *c, const char *prefix,
 static void
 do_cfunc (struct cmd_list_element *c, char *args, int from_tty)
 {
-  c->function.cfunc (args, from_tty); /* Ok.  */
+  if (c->iterate_over_set)
+    for_each_selected_thread_cmd (c->function.cfunc, args, from_tty);
+  else
+    c->function.cfunc (args, from_tty);
 }
 
 void
@@ -168,6 +175,15 @@ set_cmd_completer_handle_brkchars (struct cmd_list_element *cmd,
 			       completer_ftype_void *completer_handle_brkchars)
 {
   cmd->completer_handle_brkchars = completer_handle_brkchars;
+}
+
+/* See definition in commands.h.  */
+
+struct cmd_list_element *
+set_cmd_iterate_over_set (struct cmd_list_element *cmd)
+{
+  cmd->iterate_over_set = 1;
+  return cmd;
 }
 
 /* Add element named NAME.

@@ -3568,6 +3568,64 @@ make_internal_itset (struct itset *itset, const char *name)
   add_to_named_itset_chain (named_itset);
 }
 
+extern void for_each_selected_thread_cmd (cmd_cfunc_ftype cmd,
+					  char *args, int from_tty);
+
+void
+for_each_selected_thread_cmd (cmd_cfunc_ftype cmd,
+			      char *args, int from_tty)
+{
+  struct cleanup *old_chain;
+  struct thread_info *tp;
+  int count = 0;
+
+  old_chain = make_cleanup_restore_current_thread ();
+
+  /* Don't print anything about threads if only printing one
+     thread.  */
+  ALL_NON_EXITED_THREADS (tp)
+    {
+      if (!itset_contains_thread (current_itset, tp, 0))
+	continue;
+      count++;
+      if (count > 1)
+	break;
+    }
+
+  ALL_NON_EXITED_THREADS (tp)
+    {
+      if (!itset_contains_thread (current_itset, tp, 0))
+	continue;
+
+      switch_to_thread (tp->ptid);
+      if (count > 1)
+	{
+	  printf_filtered (_("\nThread %d (%s):\n"),
+			   tp->num, target_pid_to_str (inferior_ptid));
+	  if (tp->state == THREAD_RUNNING)
+	    {
+	      printf_filtered (_("\t(running)\n"));
+	      continue;
+	    }
+	}
+
+      TRY
+	{
+	  (*cmd) (args, from_tty);
+	}
+      CATCH (ex, RETURN_MASK_ERROR)
+	{
+	  if (count > 1)
+	    exception_print (gdb_stderr, ex);
+	  else
+	    throw_exception (ex);
+	}
+      END_CATCH
+    }
+
+  do_cleanups (old_chain);
+}
+
 /* Provide a prototype to silence -Wmissing-prototypes.  */
 extern initialize_file_ftype _initialize_itset;
 

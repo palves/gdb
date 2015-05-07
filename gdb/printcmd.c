@@ -2555,15 +2555,17 @@ Arguments are the code numbers of the expressions to stop displaying.\n\
 No argument means cancel all automatic-display expressions.\n\
 Do \"info display\" to see current list of code numbers."), &deletelist);
 
-  add_com ("printf", class_vars, printf_command, _("\
+  c = add_com ("printf", class_vars, printf_command, _("\
 printf \"printf format string\", arg1, arg2, arg3, ..., argn\n\
 This is useful for formatted output in user-defined commands."));
+  set_cmd_iterate_over_set (c);
 
-  add_com ("output", class_vars, output_command, _("\
+  c = add_com ("output", class_vars, output_command, _("\
 Like \"print\" but don't put in value history and don't print newline.\n\
 This is useful in user-defined commands."));
+  set_cmd_iterate_over_set (c);
 
-  add_prefix_cmd ("set", class_vars, set_command, _("\
+  c = add_prefix_cmd ("set", class_vars, set_command, _("\
 Evaluate expression EXP and assign result to variable VAR, using assignment\n\
 syntax appropriate for the current language (VAR = EXP or VAR := EXP for\n\
 example).  VAR may be a debugger \"convenience\" variable (names starting\n\
@@ -2574,8 +2576,11 @@ Use \"set variable\" for variables with names identical to set subcommands.\n\
 With a subcommand, this command modifies parts of the gdb environment.\n\
 You can see these environment settings with the \"show\" command."),
 		  &setlist, "set ", 1, &cmdlist);
+  set_cmd_iterate_over_set (c);
+
   if (dbx_commands)
-    add_com ("assign", class_vars, set_command, _("\
+    {
+      c = add_com ("assign", class_vars, set_command, _("\
 Evaluate expression EXP and assign result to variable VAR, using assignment\n\
 syntax appropriate for the current language (VAR = EXP or VAR := EXP for\n\
 example).  VAR may be a debugger \"convenience\" variable (names starting\n\
@@ -2584,6 +2589,8 @@ variable in the program being debugged.  EXP is any valid expression.\n\
 Use \"set variable\" for variables with names identical to set subcommands.\n\
 \nWith a subcommand, this command modifies parts of the gdb environment.\n\
 You can see these environment settings with the \"show\" command."));
+      set_cmd_iterate_over_set (c);
+    }
 
   /* "call" is the same as "set", but handy for dbx users to call fns.  */
   c = add_com ("call", class_vars, call_command, _("\
@@ -2592,8 +2599,9 @@ The argument is the function name and arguments, in the notation of the\n\
 current working language.  The result is printed and saved in the value\n\
 history, if it is not void."));
   set_cmd_completer (c, expression_completer);
+  set_cmd_iterate_over_set (c);
 
-  add_cmd ("variable", class_vars, set_command, _("\
+  c = add_cmd ("variable", class_vars, set_command, _("\
 Evaluate expression EXP and assign result to variable VAR, using assignment\n\
 syntax appropriate for the current language (VAR = EXP or VAR := EXP for\n\
 example).  VAR may be a debugger \"convenience\" variable (names starting\n\
@@ -2601,6 +2609,7 @@ with $), a register (a few standard names starting with $), or an actual\n\
 variable in the program being debugged.  EXP is any valid expression.\n\
 This may usually be abbreviated to simply \"set\"."),
 	   &setlist);
+  set_cmd_iterate_over_set (c);
 
   c = add_com ("print", class_vars, print_command, _("\
 Print value of expression EXP.\n\
@@ -2625,6 +2634,8 @@ resides in memory.\n\
 EXP may be preceded with /FMT, where FMT is a format letter\n\
 but no count or size letter (see \"x\" command)."));
   set_cmd_completer (c, expression_completer);
+  set_cmd_iterate_over_set (c);
+
   add_com_alias ("p", "print", class_vars, 1);
   add_com_alias ("inspect", "print", class_vars, 1);
 
@@ -2648,7 +2659,8 @@ Show printing of source filename and line number with <symbol>."), NULL,
 			   show_print_symbol_filename,
 			   &setprintlist, &showprintlist);
 
-  add_com ("eval", no_class, eval_command, _("\
+  c = add_com ("eval", no_class, eval_command, _("\
 Convert \"printf format string\", arg1, arg2, arg3, ..., argn to\n\
 a command line, and call it."));
+  set_cmd_iterate_over_set (c);
 }
