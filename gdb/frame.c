@@ -1527,6 +1527,8 @@ has_stack_frames (void)
   return 1;
 }
 
+extern void restore_selected_frame (struct frame_id a_frame_id, int frame_level);
+
 /* Return the selected frame.  Always non-NULL (unless there isn't an
    inferior sufficient for creating a frame) in which case an error is
    thrown.  */
@@ -1536,12 +1538,16 @@ get_selected_frame (const char *message)
 {
   if (selected_frame == NULL)
     {
+      struct thread_info *tp = inferior_thread ();
+
       if (message != NULL && !has_stack_frames ())
 	error (("%s"), message);
-      /* Hey!  Don't trust this.  It should really be re-finding the
-	 last selected frame of the currently selected thread.  This,
-	 though, is better than nothing.  */
-      select_frame (get_current_frame ());
+
+      if (tp->control.selected_frame_level == -1)
+	select_frame (get_current_frame ());
+      else
+	restore_selected_frame (tp->control.selected_frame_id,
+				tp->control.selected_frame_level);
     }
   /* There is always a frame.  */
   gdb_assert (selected_frame != NULL);
