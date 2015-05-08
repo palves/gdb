@@ -1330,25 +1330,12 @@ info_threads_command (char *arg, int from_tty)
 void
 switch_to_thread (ptid_t ptid)
 {
-  /* Switch the program space as well, if we can infer it from the now
-     current thread.  Otherwise, it's up to the caller to select the
-     space it wants.  */
-  if (!ptid_equal (ptid, null_ptid))
+  if (!ptid_equal (null_ptid, inferior_ptid))
     {
-      struct inferior *inf;
-      struct thread_info *tp;
       struct frame_info *frame;
+      struct thread_info *tp = inferior_thread ();
 
-      inf = find_inferior_ptid (ptid);
-      gdb_assert (inf != NULL);
-      set_current_program_space (inf->pspace);
-      set_current_inferior (inf);
-
-      tp = inferior_thread ();
-      if (tp->state == THREAD_STOPPED
-	  && target_has_registers
-	  && target_has_stack
-	  && target_has_memory)
+      if (tp->state == THREAD_STOPPED)
 	{
 	  /* When processing internal events, there might not be a
 	     selected frame.  If we naively call get_selected_frame
@@ -1362,6 +1349,19 @@ switch_to_thread (ptid_t ptid)
 
       tp->control.selected_frame_id = get_frame_id (frame);
       tp->control.selected_frame_level = frame_relative_level (frame);
+    }
+
+  /* Switch the program space as well, if we can infer it from the now
+     current thread.  Otherwise, it's up to the caller to select the
+     space it wants.  */
+  if (!ptid_equal (ptid, null_ptid))
+    {
+      struct inferior *inf;
+
+      inf = find_inferior_ptid (ptid);
+      gdb_assert (inf != NULL);
+      set_current_program_space (inf->pspace);
+      set_current_inferior (inf);
     }
 
   if (ptid_equal (ptid, inferior_ptid))
