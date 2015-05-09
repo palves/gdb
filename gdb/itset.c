@@ -2154,6 +2154,11 @@ parse_width (const char **spec)
   enum itset_width width;
   const char *width_str = *spec;
 
+  /* FIXME: should probably error out if the current set has mixed
+     width.  If we do that, then probably the "current width" cases
+     here should probably return an ITSET_WIDTH_UNSPECIFIED, in order
+     to delay that error until the end of parsing, in order to show
+     parsing errors first.  */
   if (!isalpha (width_str[0])
       || width_str[1] == ':'
       || width_str[1] == '*'
