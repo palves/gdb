@@ -2152,8 +2152,15 @@ static enum itset_width
 parse_width (const char **spec)
 {
   enum itset_width width;
+  const char *width_str = *spec;
 
-  switch (**spec)
+  if (!isalpha (width_str[0])
+      || width_str[1] == ':'
+      || width_str[1] == '*'
+      || isdigit (width_str[1]))
+    return itset_get_width (current_itset);
+
+  switch (width_str[0])
     {
     case 'a':
       width = ITSET_WIDTH_ALL;
@@ -2168,7 +2175,6 @@ parse_width (const char **spec)
       width = ITSET_WIDTH_DEFAULT;
       break;
     default:
-      /* Should fallback to the width of the current focus.  */
       return itset_get_width (current_itset);
     }
 
@@ -2297,8 +2303,7 @@ valid_spec_end (const char *spec)
 }
 
 static struct itset_elt *
-parse_elem_1 (const char **spec, int range_type_char,
-	      create_range_itset_func create_func)
+parse_elem_1 (const char **spec)
 {
   struct itset_elt *elt;
   enum itset_width width;
@@ -2312,7 +2317,15 @@ parse_elem_1 (const char **spec, int range_type_char,
       return parse_named_or_throw (spec);
     }
 
-  elt = parse_range_itset (spec, width, range_type_char, create_func);
+  elt = parse_range_itset (spec, width, 'i', create_inferior_range_itset);
+  if (elt != NULL)
+    return elt;
+
+  elt = parse_range_itset (spec, width, 't', create_thread_range_itset);
+  if (elt != NULL)
+    return elt;
+
+  elt = parse_range_itset (spec, width, 'c', create_core_range_itset);
   if (elt != NULL)
     return elt;
 
@@ -2337,15 +2350,7 @@ parse_elem (const char **spec)
   if (elt != NULL)
     return elt;
 
-  elt = parse_elem_1 (spec, 'i', create_inferior_range_itset);
-  if (elt != NULL)
-    return elt;
-
-  elt = parse_elem_1 (spec, 't', create_thread_range_itset);
-  if (elt != NULL)
-    return elt;
-
-  elt = parse_elem_1 (spec, 'c', create_core_range_itset);
+  elt = parse_elem_1 (spec);
   if (elt != NULL)
     return elt;
 
