@@ -2129,8 +2129,8 @@ typedef struct itset_elt *(*create_range_itset_func)
   (enum itset_width, int, int, int );
 
 static struct itset_elt *
-parse_range_itset (enum itset_width width, int range_type_char, const char **spec,
-		   create_range_itset_func create_func)
+parse_range_itset (const char **spec, enum itset_width width,
+		   int range_type_char, create_range_itset_func create_func)
 {
   int first, last;
 
@@ -2146,24 +2146,6 @@ parse_range_itset (enum itset_width width, int range_type_char, const char **spe
   (*spec)++;
   *spec = parse_range (*spec, &first, &last);
   return create_func (width, 0, first, last);
-}
-
-static struct itset_elt *
-parse_inferior_range (enum itset_width width, const char **spec)
-{
-  return parse_range_itset (width, 'i', spec, create_inferior_range_itset);
-}
-
-static struct itset_elt *
-parse_thread_range (enum itset_width width, const char **spec)
-{
-  return parse_range_itset (width, 't', spec, create_thread_range_itset);
-}
-
-static struct itset_elt *
-parse_core_range (enum itset_width width, const char **spec)
-{
-  return parse_range_itset (width, 'c', spec, create_core_range_itset);
 }
 
 static enum itset_width
@@ -2315,10 +2297,12 @@ valid_spec_end (const char *spec)
 }
 
 static struct itset_elt *
-parse_elem_1 (const char **spec)
+parse_elem_1 (const char **spec, int range_type_char,
+	      create_range_itset_func create_func)
 {
   struct itset_elt *elt;
   enum itset_width width;
+  const char *save_spec = *spec;
 
   width = parse_width (spec);
 
@@ -2328,18 +2312,11 @@ parse_elem_1 (const char **spec)
       return parse_named_or_throw (spec);
     }
 
-  elt = parse_inferior_range (width, spec);
+  elt = parse_range_itset (spec, width, range_type_char, create_func);
   if (elt != NULL)
     return elt;
 
-  elt = parse_thread_range (width, spec);
-  if (elt != NULL)
-    return elt;
-
-  elt = parse_core_range (width, spec);
-  if (elt != NULL)
-    return elt;
-
+  *spec = save_spec;
   return NULL;
 }
 
@@ -2360,7 +2337,15 @@ parse_elem (const char **spec)
   if (elt != NULL)
     return elt;
 
-  elt = parse_elem_1 (spec);
+  elt = parse_elem_1 (spec, 'i', create_inferior_range_itset);
+  if (elt != NULL)
+    return elt;
+
+  elt = parse_elem_1 (spec, 't', create_thread_range_itset);
+  if (elt != NULL)
+    return elt;
+
+  elt = parse_elem_1 (spec, 'c', create_core_range_itset);
   if (elt != NULL)
     return elt;
 
