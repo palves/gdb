@@ -465,7 +465,7 @@ struct itset_elt_inferior_range
   struct itset_elt_range base;
 };
 
-/* Implementation of `contains_inferior' method.  */
+/* Implementation of `contains_program_space' method.  */
 
 static int
 inferior_range_contains_program_space (struct itset_elt *base,
@@ -652,6 +652,9 @@ thread_range_contains_program_space (struct itset_elt *base,
 {
   struct itset_elt_range *range = (struct itset_elt_range *) base;
   struct thread_info *thr;
+
+  if (range->is_current)
+    return (current_inferior ()->pspace == pspace);
 
   ALL_THREADS (thr)
     {
