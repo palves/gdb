@@ -28,6 +28,7 @@
 #include "command.h"
 #include <ctype.h>
 #include "gdbcmd.h"
+#include "ada-lang.h"
 
 /* Rather than creating/destroying these dynamic itsets when
    necessary, keep global copies around (itsets are refcounted).  */
@@ -422,31 +423,33 @@ range_get_width (struct itset_elt *base)
   return range->width;
 }
 
+static int
+range_width_char (enum itset_width width)
+{
+  switch (width)
+    {
+    case ITSET_WIDTH_ALL:
+      return 'a';
+    case ITSET_WIDTH_DEFAULT:
+      return 'd';
+    case ITSET_WIDTH_INFERIOR:
+      return 'i';
+    case ITSET_WIDTH_THREAD:
+      return 't';
+    case ITSET_WIDTH_ADA_TASK:
+      return 'k';
+    default:
+      gdb_assert_not_reached ("unhandled width");
+    }
+}
+
 static char *
 range_get_spec (struct itset_elt *base, int range_type_char)
 {
   struct itset_elt_range *range = (struct itset_elt_range *) base;
-  struct inferior *inf;
-  struct thread_info *thr;
   int w;
 
-  switch (range->width)
-    {
-    case ITSET_WIDTH_ALL:
-      w = 'a';
-      break;
-    case ITSET_WIDTH_DEFAULT:
-      w = 'd';
-      break;
-    case ITSET_WIDTH_INFERIOR:
-      w = 'i';
-      break;
-    case ITSET_WIDTH_THREAD:
-      w = 't';
-      break;
-    default:
-      gdb_assert_not_reached ("unhandled width");
-    }
+  w = range_width_char (range->width);
 
   if (range->is_current)
     return xstrprintf ("%c%c", w, toupper (range_type_char));
@@ -1031,6 +1034,274 @@ create_core_range_itset (enum itset_width width, int is_current,
   elt->vtable = &core_range_vtable;
 
   return elt;
+}
+
+
+/* An I/T set element representing a range of Ada tasks.  */
+
+struct itset_elt_ada_task_range
+{
+  struct itset_elt_range base;
+  int inferior_num;
+};
+
+ /* Implementation of `contains_program_space' method.  */
+
+static int
+ada_task_range_contains_program_space (struct itset_elt *base,
+				       struct program_space *pspace)
+{
+  struct itset_elt_range *range = (struct itset_elt_range *) base;
+  struct itset_elt_ada_task_range *ada_task_range
+    = (struct itset_elt_ada_task_range *) base;
+  struct inferior *inf;
+
+  if (range->is_current)
+    return (current_inferior ()->pspace == pspace);
+
+  inf = find_inferior_id (ada_task_range->inferior_num);
+  return (inf != NULL && inf->pspace == pspace);
+}
+
+/* Implementation of `contains_inferior' method.  */
+
+static int
+ada_task_range_contains_inferior (struct itset_elt *base, struct inferior *inf)
+{
+  struct itset_elt_range *range = (struct itset_elt_range *) base;
+  struct itset_elt_ada_task_range *ada_task_range
+    = (struct itset_elt_ada_task_range *) base;
+
+  if (range->width == ITSET_WIDTH_ALL)
+    return 1;
+
+  if (range->is_current)
+    return (inf == current_inferior ());
+
+  return ada_task_range->inferior_num == inf->num;
+}
+
+/* Implementation of `contains_thread' method.  */
+
+static int
+ada_task_range_contains_thread (struct itset_elt *base, struct thread_info *thr,
+			      int including_width)
+{
+  struct itset_elt_range *range = (struct itset_elt_range *) base;
+  struct itset_elt_ada_task_range *ada_task_range
+    = (struct itset_elt_ada_task_range *) base;
+  struct inferior *inf;
+  int thr_task;
+
+  if (including_width
+      && range->width == ITSET_WIDTH_ALL)
+    return 1;
+
+  if (range->is_current)
+    ada_task_range->inferior_num = current_inferior ()->num;
+
+  if (including_width
+      && range->width == ITSET_WIDTH_INFERIOR)
+    {
+      inf = get_thread_inferior (thr);
+      return (inf->num == ada_task_range->inferior_num);
+    }
+
+  if (range->is_current)
+    {
+      int task;
+
+      if (ptid_equal (inferior_ptid, null_ptid))
+	return 0;
+
+      task = ada_get_task_number (inferior_ptid);
+      if (task == 0)
+	return 0;
+
+      range->first = task;
+      range->last = task;
+    }
+
+  inf = find_inferior_id (ada_task_range->inferior_num);
+  if (inf == NULL
+      || inf->pid == 0
+      || inf->pid != ptid_get_pid (thr->ptid))
+    return 0;
+
+  if (range->first == WILDCARD)
+    return 1;
+
+  thr_task = ada_get_task_number (thr->ptid);
+  if (thr_task != 0
+      && range->first <= thr_task && thr_task <= range->last)
+    return 1;
+
+  return 0;
+}
+
+/* Implementation of `is_empty' method.  */
+
+static int
+ada_task_range_is_empty (struct itset_elt *base)
+{
+  struct inferior *inf;
+  struct thread_info *thr;
+
+  // FIXME: why are we looking at inferiors here?
+  ALL_INFERIORS (inf)
+    {
+      if (ada_task_range_contains_inferior (base, inf))
+	return 0;
+    }
+
+  ALL_THREADS (thr)
+    {
+      if (ada_task_range_contains_thread (base, thr, 1))
+	return 0;
+    }
+
+  return 1;
+}
+
+static char *
+ada_task_range_get_spec (struct itset_elt *base)
+{
+  struct itset_elt_range *range = (struct itset_elt_range *) base;
+  struct itset_elt_ada_task_range *ada_task_range
+    = (struct itset_elt_ada_task_range *) base;
+  int w;
+
+  w = range_width_char (range->width);
+
+  if (range->is_current)
+    return xstrprintf ("%cK", w);
+
+  if (range->first != range->last)
+    return xstrprintf ("%ck%d.%d:%d", w,
+		       ada_task_range->inferior_num,
+		       range->first, range->last);
+  else
+    return xstrprintf ("%ck%d.%d", w,
+		       ada_task_range->inferior_num,
+		       range->first);
+}
+
+static struct thread_info *
+ada_task_range_get_toi (struct itset_elt *base)
+{
+  struct itset_elt_range *range = (struct itset_elt_range *) base;
+  struct itset_elt_ada_task_range *ada_task_range
+    = (struct itset_elt_ada_task_range *) base;
+  struct inferior *inf;
+  struct ada_task_info *task_info;
+  VEC(ada_task_info_s) *task_list;
+
+  if (range->is_current)
+    {
+      if (ptid_equal (inferior_ptid, null_ptid))
+	return NULL;
+      else
+	return inferior_thread ();
+    }
+
+  inf = find_inferior_id (ada_task_range->inferior_num);
+  if (inf == NULL || inf->pid == 0)
+    return NULL;
+
+  task_list = get_ada_tasks (inf);
+
+  if (range->first == WILDCARD)
+    task_info = VEC_index (ada_task_info_s, task_list, 0);
+  else
+    {
+      if (range->first > VEC_length (ada_task_info_s, task_list))
+	return NULL;
+
+      task_info = VEC_index (ada_task_info_s, task_list, range->first - 1);
+    }
+  return find_thread_ptid (task_info->ptid);
+}
+
+static int
+ada_task_range_has_fixed_toi (struct itset_elt *base)
+{
+  struct itset_elt_range *range = (struct itset_elt_range *) base;
+
+  return !range->is_current;
+}
+
+static const struct itset_elt_vtable ada_task_range_vtable =
+{
+  NULL,
+  ada_task_range_contains_program_space,
+  ada_task_range_contains_inferior,
+  ada_task_range_contains_thread,
+  ada_task_range_is_empty,
+  ada_task_range_get_spec,
+  range_get_width,
+  ada_task_range_get_toi,
+  ada_task_range_has_fixed_toi
+};
+
+/* Create a new `range' I/T set element.  */
+
+static struct itset_elt *
+create_ada_task_range_itset (enum itset_width width, int is_current,
+			     int inf_num, int thr_first, int thr_last)
+{
+  struct itset_elt_ada_task_range *ada_range;
+  struct itset_elt_range *range;
+  struct itset_elt *elt;
+
+  ada_range = XNEW (struct itset_elt_ada_task_range);
+  ada_range->inferior_num = inf_num;
+
+  range = &ada_range->base;
+  range->first = thr_first;
+  range->last = thr_last;
+  range->width = width;
+  range->is_current = is_current;
+
+  elt = &range->base;
+  elt->vtable = &ada_task_range_vtable;
+
+  return elt;
+}
+
+static const char *parse_range (const char *spec, int *first, int *last);
+
+static struct itset_elt *
+parse_ada_range_itset (const char **spec, enum itset_width width)
+{
+  int first, last;
+  const char *save_spec = *spec;
+  char *end;
+  int inf_num;
+
+  if (**spec == 'K')
+    {
+      (*spec)++;
+      return create_ada_task_range_itset (width, 1, 0, 0, 0);
+    }
+
+  if ((*spec)[0] != 'k')
+    {
+      return NULL;
+    }
+
+  (*spec)++;
+  inf_num = strtol (*spec, &end, 10);
+  *spec = end;
+
+  if ((*spec)[0] != '.')
+    {
+      *spec = save_spec;
+      return NULL;
+    }
+
+  (*spec)++;
+  *spec = parse_range (*spec, &first, &last);
+  return create_ada_task_range_itset (width, 0, inf_num, first, last);
 }
 
 
@@ -2169,6 +2440,9 @@ parse_width (const char **spec)
     case 't':
       width = ITSET_WIDTH_THREAD;
       break;
+    case 'k':
+      width = ITSET_WIDTH_ADA_TASK;
+      break;
     case 'd':
       width = ITSET_WIDTH_DEFAULT;
       break;
@@ -2324,6 +2598,10 @@ parse_elem_1 (const char **spec)
     return elt;
 
   elt = parse_range_itset (spec, width, 'c', create_core_range_itset);
+  if (elt != NULL)
+    return elt;
+
+  elt = parse_ada_range_itset (spec, width);
   if (elt != NULL)
     return elt;
 

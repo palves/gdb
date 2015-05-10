@@ -134,6 +134,7 @@ enum itset_width
   /* Sorted by increasing order.  Needed for itset_set_get_width.  */
   ITSET_WIDTH_DEFAULT,
   ITSET_WIDTH_THREAD,
+  ITSET_WIDTH_ADA_TASK,
   ITSET_WIDTH_INFERIOR,
   ITSET_WIDTH_ALL,
 };

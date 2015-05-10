@@ -160,9 +160,6 @@ struct ada_tasks_pspace_data
 /* Key to our per-program-space data.  */
 static const struct program_space_data *ada_tasks_pspace_data_handle;
 
-typedef struct ada_task_info ada_task_info_s;
-DEF_VEC_O(ada_task_info_s);
-
 /* The kind of data structure used by the runtime to store the list
    of Ada tasks.  */
 
@@ -295,6 +292,8 @@ ada_get_task_number (ptid_t ptid)
   struct inferior *inf = find_inferior_ptid (ptid);
   struct ada_tasks_inferior_data *data;
 
+  ada_build_task_list ();
+
   gdb_assert (inf != NULL);
   data = get_ada_tasks_inferior_data (inf);
 
@@ -348,6 +347,18 @@ static int
 ada_task_is_alive (struct ada_task_info *task_info)
 {
   return (task_info->state != Terminated);
+}
+
+/* See ada-lang.h.  */
+
+VEC(ada_task_info_s) *
+get_ada_tasks (struct inferior *inf)
+{
+  struct ada_tasks_inferior_data *data;
+
+  ada_build_task_list ();
+  data = get_ada_tasks_inferior_data (current_inferior ());
+  return data->task_list;
 }
 
 /* Call the ITERATOR function once for each Ada task that hasn't been

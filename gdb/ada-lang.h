@@ -154,6 +154,9 @@ struct ada_task_info
   CORE_ADDR caller_task;
 };
 
+typedef struct ada_task_info ada_task_info_s;
+DEF_VEC_O(ada_task_info_s);
+
 /* Assuming V points to an array of S objects,  make sure that it contains at
    least M objects, updating V and S as necessary.  */
 
@@ -412,6 +415,9 @@ extern int ada_get_task_number (ptid_t);
 typedef void (ada_task_list_iterator_ftype) (struct ada_task_info *task);
 extern void iterate_over_live_ada_tasks
   (ada_task_list_iterator_ftype *iterator);
+
+/* Get inferior INF's task list.  */
+extern VEC(ada_task_info_s) *get_ada_tasks (struct inferior *inf);
 
 extern int ada_build_task_list (void);
 
