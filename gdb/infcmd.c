@@ -771,9 +771,85 @@ run_command_1 (char *args, int from_tty, int tbreak_at_main)
 }
 
 static void
-run_command (char *args, int from_tty)
+do_run_command (char *args, int from_tty)
 {
   run_command_1 (args, from_tty, 0);
+}
+
+extern void for_each_selected_inferior_cmd (cmd_cfunc_ftype cmd,
+					    char *args, int from_tty);
+
+void
+for_each_selected_inferior_cmd (cmd_cfunc_ftype cmd,
+				char *args, int from_tty)
+{
+  struct cleanup *old_chain;
+  struct inferior *inf;
+  int count = 0;
+
+  old_chain = make_cleanup_restore_current_thread ();
+
+  /* Don't print anything about threads if only printing one
+     thread.  */
+  ALL_INFERIORS (inf)
+    {
+      if (!itset_contains_inferior (current_itset, inf))
+	continue;
+      count++;
+      if (count > 1)
+	break;
+    }
+
+  ALL_INFERIORS (inf)
+    {
+      if (!itset_contains_inferior (current_itset, inf))
+	continue;
+
+      if (inf->pid != 0)
+	{
+	  if (inf->pid != ptid_get_pid (inferior_ptid))
+	    {
+	      struct thread_info *tp;
+
+	      tp = any_thread_of_process (inf->pid);
+	      if (!tp)
+		error (_("Inferior %d has no threads."), inf->num);
+
+	      switch_to_thread (tp->ptid);
+	    }
+	}
+      else
+	{
+	  set_current_inferior (inf);
+	  switch_to_thread (null_ptid);
+	  set_current_program_space (inf->pspace);
+	}
+
+      if (count > 1)
+	printf_filtered (_("\nInferior %d:\n"), inf->num);
+
+      TRY
+	{
+	  (*cmd) (args, from_tty);
+	}
+      CATCH (ex, RETURN_MASK_ERROR)
+	{
+	  if (count > 1)
+	    exception_print (gdb_stderr, ex);
+	  else
+	    throw_exception (ex);
+	}
+      END_CATCH
+    }
+
+  do_cleanups (old_chain);
+}
+
+static void
+run_command (char *args, int from_tty)
+{
+  for_each_selected_inferior_cmd (do_run_command,
+				  args,  from_tty);
 }
 
 /* Start the execution of the program up until the beginning of the main
@@ -2965,7 +3041,7 @@ vector_info (char *args, int from_tty)
 /* Kill the inferior process.  Make us have no inferior.  */
 
 static void
-kill_command (char *arg, int from_tty)
+do_kill_command (char *arg, int from_tty)
 {
   /* FIXME:  This should not really be inferior_ptid (or target_has_execution).
      It should be a distinct flag that indicates that a target is active, cuz
@@ -2992,6 +3068,13 @@ kill_command (char *arg, int from_tty)
 	}
     }
   bfd_cache_close_all ();
+}
+
+static void
+kill_command (char *args, int from_tty)
+{
+  for_each_selected_inferior_cmd (do_kill_command,
+				  args,  from_tty);
 }
 
 /* Used in `attach&' command.  ARG is a point to an integer

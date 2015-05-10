@@ -680,23 +680,16 @@ thread_range_contains_inferior (struct itset_elt *base, struct inferior *inf)
   struct thread_info *thr;
   int pid;
 
+  if (range->width == ITSET_WIDTH_ALL)
+    return 1;
+
+  if (range->is_current)
+    return (inf == current_inferior ());
+
   /* If there are no threads in the inferior, INF can't be part of any
      thread range.  */
   if (inf->pid == 0)
     return 0;
-
-  if (range->is_current)
-    {
-      struct thread_info *tp;
-
-      if (ptid_equal (inferior_ptid, null_ptid))
-	return 0;
-
-      tp = inferior_thread ();
-
-      range->first = tp->num;
-      range->last = tp->num;
-    }
 
   /* If range is a wildcard, this inferior is part of the range, given
      that it must have at least one thread.  */
@@ -751,7 +744,7 @@ thread_range_contains_thread (struct itset_elt *base, struct thread_info *thr,
       struct thread_info *iter;
 
       ALL_THREADS (iter)
-        {
+	{
 	  if (range->first == WILDCARD
 	      || (range->first <= iter->num && iter->num <= range->last))
 	    {
