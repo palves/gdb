@@ -1231,7 +1231,7 @@ ada_task_range_get_toi (struct itset_elt *base)
   if (inf == NULL || inf->pid == 0)
     return NULL;
 
-  task_list = get_ada_tasks (inf);
+  task_list = get_ada_tasks (inf, 0);
 
   if (range->first == WILDCARD)
     task_info = VEC_index (ada_task_info_s, task_list, 0);
@@ -3072,6 +3072,21 @@ itset_contains_thread (struct itset *set, struct thread_info *thr,
   return set_contains_thread (set->elements, thr, including_width);
 }
 
+/* Return 1 if SET contains TASK, 0 otherwise.  */
+
+int
+itset_contains_ada_task (struct itset *set, const struct ada_task_info *task,
+			 int including_width)
+{
+  struct thread_info *thr;
+
+  thr = find_thread_ptid (task->ptid);
+  if (thr == NULL)
+    return 0;
+
+  return itset_contains_thread (set, thr, including_width);
+}
+
 /* Acquire a new reference to an I/T set.  */
 
 struct itset *
@@ -3793,9 +3808,9 @@ switch_to_thread_cleanup (void *arg)
 extern void for_each_selected_thread_cmd (cmd_cfunc_ftype cmd,
 					  char *args, int from_tty);
 
-void
-for_each_selected_thread_cmd (cmd_cfunc_ftype cmd,
-			      char *args, int from_tty)
+static void
+for_each_selected_thread_cmd_1 (cmd_cfunc_ftype cmd,
+				char *args, int from_tty)
 {
   struct cleanup *old_chain;
   struct thread_info *tp;
@@ -3850,6 +3865,96 @@ for_each_selected_thread_cmd (cmd_cfunc_ftype cmd,
 
   do_cleanups (old_chain);
 }
+
+static void
+for_each_selected_ada_task_cmd (cmd_cfunc_ftype cmd,
+				char *args, int from_tty)
+{
+  struct cleanup *old_chain;
+  int count = 0;
+  struct inferior *inf;
+  ptid_t current_ptid = inferior_ptid;
+
+  /* Don't use make_cleanup_restore_current_thread as CMD may want to
+     change the user selected frame, e.g., up/down/frame, etc.  */
+  old_chain = make_cleanup (switch_to_thread_cleanup, &current_ptid);
+
+  /* Don't print anything about tasks if only focused on one task.  */
+  ALL_INFERIORS (inf)
+    {
+      VEC(ada_task_info_s) *task_list;
+      struct ada_task_info *task;
+      int ix;
+
+      task_list = get_ada_tasks (inf, 1);
+
+      if (count > 1)
+	break;
+
+      for (ix = 0; VEC_iterate (ada_task_info_s, task_list, ix, task); ++ix)
+	{
+	  if (!itset_contains_ada_task (current_itset, task, 0))
+	    continue;
+	  count++;
+	  if (count > 1)
+	    break;
+	}
+    }
+
+  ALL_INFERIORS (inf)
+    {
+      VEC(ada_task_info_s) *task_list;
+      struct ada_task_info *task;
+      int ix;
+
+      task_list = get_ada_tasks (inf, 0);
+
+      for (ix = 0; VEC_iterate (ada_task_info_s, task_list, ix, task); ++ix)
+	{
+	  /* Switch back on each iteration because the current itset
+	     may refer to the current thread.  */
+	  switch_to_thread (current_ptid);
+	  if (!itset_contains_ada_task (current_itset, task, 0))
+	    continue;
+
+	  switch_to_thread (task->ptid);
+
+	  if (count > 1)
+	    printf_filtered (_("\nTask %d.%d:\n"), inf->num, ix + 1);
+
+	  TRY
+	    {
+	      (*cmd) (args, from_tty);
+	    }
+	  CATCH (ex, RETURN_MASK_ERROR)
+	    {
+	      if (count > 1)
+		exception_print (gdb_stderr, ex);
+	      else
+		throw_exception (ex);
+	    }
+	  END_CATCH
+	}
+    }
+
+  do_cleanups (old_chain);
+}
+
+extern void for_each_selected_thread_cmd (cmd_cfunc_ftype cmd,
+					  char *args, int from_tty);
+
+static int focus_mode;
+
+void
+for_each_selected_thread_cmd (cmd_cfunc_ftype cmd,
+			      char *args, int from_tty)
+{
+  if (focus_mode == 0)
+    for_each_selected_thread_cmd_1 (cmd, args, from_tty);
+  else
+    for_each_selected_ada_task_cmd (cmd, args, from_tty);
+}
+
 
 /* Provide a prototype to silence -Wmissing-prototypes.  */
 extern initialize_file_ftype _initialize_itset;

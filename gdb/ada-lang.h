@@ -417,7 +417,7 @@ extern void iterate_over_live_ada_tasks
   (ada_task_list_iterator_ftype *iterator);
 
 /* Get inferior INF's task list.  */
-extern VEC(ada_task_info_s) *get_ada_tasks (struct inferior *inf);
+extern VEC(ada_task_info_s) *get_ada_tasks (struct inferior *inf, int update);
 
 extern int ada_build_task_list (void);
 

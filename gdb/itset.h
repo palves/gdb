@@ -21,6 +21,7 @@
 
 struct inferior;
 struct thread_info;
+struct ada_task_info;
 struct cleanup;
 
 /* This is an opaque type representing an I/T set.  An I/T set is
@@ -88,6 +89,12 @@ int itset_contains_inferior (struct itset *itset, struct inferior *inf);
 
 int itset_contains_thread (struct itset *itset, struct thread_info *inf,
 			   int including_width);
+
+/* Return true if the Ada task is contained in the I/T set.  */
+
+int itset_contains_ada_task (struct itset *set,
+			     const struct ada_task_info *task,
+			     int including_width);
 
 /* Return true if the inferior is contained in the I/T set.  */
 
