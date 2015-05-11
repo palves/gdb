@@ -3752,6 +3752,14 @@ make_internal_itset (struct itset *itset, const char *name)
   add_to_named_itset_chain (named_itset);
 }
 
+static void
+switch_to_thread_cleanup (void *arg)
+{
+  ptid_t ptid = *(ptid_t *) arg;
+
+  switch_to_thread (ptid);
+}
+
 extern void for_each_selected_thread_cmd (cmd_cfunc_ftype cmd,
 					  char *args, int from_tty);
 
@@ -3762,8 +3770,11 @@ for_each_selected_thread_cmd (cmd_cfunc_ftype cmd,
   struct cleanup *old_chain;
   struct thread_info *tp;
   int count = 0;
+  ptid_t selected_ptid = inferior_ptid;
 
-  old_chain = make_cleanup_restore_current_thread ();
+  /* Don't use make_cleanup_restore_current_thread as CMD may want to
+     change the user selected frame, e.g., up/down/frame, etc.  */
+  old_chain = make_cleanup (switch_to_thread_cleanup, &selected_ptid);
 
   /* Don't print anything about threads if only printing one
      thread.  */
