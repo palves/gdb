@@ -25,6 +25,7 @@
 #include "gdbthread.h"
 #include "progspace.h"
 #include "objfiles.h"
+#include "itset.h"
 
 /* The name of the array in the GNAT runtime where the Ada Task Control
    Block of each task is stored.  */
@@ -1083,6 +1084,7 @@ print_ada_task_info (struct ui_out *uiout,
 	VEC_index (ada_task_info_s, data->task_list, taskno - 1);
       int parent_id;
       struct cleanup *chain2;
+      struct thread_info *tp;
 
       gdb_assert (task_info != NULL);
 
@@ -1094,10 +1096,15 @@ print_ada_task_info (struct ui_out *uiout,
 
       chain2 = make_cleanup_ui_out_tuple_begin_end (uiout, NULL);
 
+      tp = find_thread_ptid (task_info->ptid);
+
       /* Print a star if this task is the current task (or the task
          currently selected).  */
       if (ptid_equal (task_info->ptid, inferior_ptid))
 	ui_out_field_string (uiout, "current", "*");
+      /* Should really call a itset_contains_ada_task.  */
+      else if (tp != NULL && itset_contains_thread (current_itset, tp, 0))
+	ui_out_field_string (uiout, "current", "+");
       else
 	ui_out_field_skip (uiout, "current");
 
