@@ -444,21 +444,44 @@ range_width_char (enum itset_width width)
 }
 
 static char *
+concat_printf (char *spec, const char *string, ...)
+{
+  const char *res;
+  va_list ap;
+
+  va_start (ap, string);
+  res = xstrvprintf (string, ap);
+  va_end (ap);
+
+  return reconcat (spec, spec == NULL ? "" : spec, res, NULL);
+}
+
+static char *
 range_get_spec (struct itset_elt *base, int range_type_char)
 {
   struct itset_elt_range *range = (struct itset_elt_range *) base;
   int w;
+  char *res = NULL;
 
   w = range_width_char (range->width);
 
   if (range->is_current)
     return xstrprintf ("%c%c", w, toupper (range_type_char));
 
-  if (range->first != range->last)
-    return xstrprintf ("%c%c%d:%d", w, range_type_char,
-		       range->first, range->last);
+  res = concat_printf (res, "%c%c", w, range_type_char);
+
+  if (range->first == WILDCARD && range->last == WILDCARD)
+    res = concat_printf (res, "*");
+  else if (range->first == INT_MIN)
+    res = concat_printf (res, ":%d", range->last);
+  else if (range->last == INT_MAX)
+    res = concat_printf (res, "%d:", range->first);
+  else if (range->first != range->last)
+    res = concat_printf (res, "%d:%d", range->first, range->last);
   else
-    return xstrprintf ("%c%c%d", w, range_type_char, range->first);
+    res = concat_printf (res, "%d", range->first);
+
+  return res;
 }
 
 /* An I/T set element representing a range of inferiors.  */
@@ -1397,7 +1420,7 @@ intersect_get_spec (struct itset_elt *base)
   struct itset_elt_intersect *intersect = (struct itset_elt_intersect *) base;
   struct itset_elt *elt;
   int ix;
-  char *ret = xstrdup ("");
+  char *ret = NULL;
 
   gdb_assert (!VEC_empty (itset_elt_ptr, intersect->elements));
 
@@ -1405,7 +1428,8 @@ intersect_get_spec (struct itset_elt *base)
     {
       const char *elt_spec = elt->vtable->get_spec (elt);
 
-      ret = reconcat (ret, ret, ix == 0 ? "" : "&", elt_spec, (char *) NULL);
+      ret = reconcat (ret, ret == NULL ? "" : ret,
+		      ix == 0 ? "" : "&", elt_spec, (char *) NULL);
     }
 
   return ret;
@@ -2358,8 +2382,9 @@ parse_range (const char *spec, int *first, int *last)
       | 3:2 | empty               |
   */
 
-  if (*spec == '*'
-      || (spec[0] == ':' && isspace (spec[1])))
+  if (spec[0] == '*'
+      || (spec[0] == ':'
+	  && (spec[1] == '\0' || isspace (spec[1]))))
     {
       *first = WILDCARD;
       *last = WILDCARD;
@@ -2369,8 +2394,13 @@ parse_range (const char *spec, int *first, int *last)
     {
       char *end;
 
-      *first = strtol (spec, &end, 10);
-      spec = end;
+      if (spec[0] == ':')
+	*first = INT_MIN;
+      else
+	{
+	  *first = strtol (spec, &end, 10);
+	  spec = end;
+	}
 
       if (*spec == ':')
 	{
@@ -2380,7 +2410,7 @@ parse_range (const char *spec, int *first, int *last)
 	      *last = strtol (spec, &end, 10);
 	      spec = end;
 	    }
-	  else if (isspace (*spec))
+	  else if (spec[0] == '\0' || isspace (spec[0]))
 	    *last = INT_MAX;
 	}
       else
