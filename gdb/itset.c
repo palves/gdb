@@ -484,6 +484,37 @@ range_get_spec (struct itset_elt *base, int range_type_char)
   return res;
 }
 
+static char *
+double_range_get_spec (struct itset_elt *base, int range_type_char,
+		       int inf_num)
+{
+  struct itset_elt_range *range = (struct itset_elt_range *) base;
+  int w;
+  char *res = NULL;
+
+  w = range_width_char (range->width);
+
+  if (range->is_current)
+    return xstrprintf ("%c%c", w, toupper (range_type_char));
+
+  res = concat_printf (res, "%c%c", w, range_type_char);
+
+  res = concat_printf (res, "%d.", inf_num);
+
+  if (range->first == WILDCARD && range->last == WILDCARD)
+    res = concat_printf (res, "*");
+  else if (range->first == INT_MIN)
+    res = concat_printf (res, ":%d", range->last);
+  else if (range->last == INT_MAX)
+    res = concat_printf (res, "%d:", range->first);
+  else if (range->first != range->last)
+    res = concat_printf (res, "%d:%d", range->first, range->last);
+  else
+    res = concat_printf (res, "%d", range->first);
+
+  return res;
+}
+
 /* An I/T set element representing a range of inferiors.  */
 
 struct itset_elt_inferior_range
@@ -668,6 +699,7 @@ create_inferior_range_itset (enum itset_width width,
 struct itset_elt_thread_range
 {
   struct itset_elt_range base;
+  int inferior_num;
 };
 
  /* Implementation of `contains_inferior' method.  */
@@ -676,25 +708,17 @@ static int
 thread_range_contains_program_space (struct itset_elt *base,
 				     struct program_space *pspace)
 {
+  struct itset_elt_thread_range *thread_range
+    = (struct itset_elt_thread_range *) base;
   struct itset_elt_range *range = (struct itset_elt_range *) base;
+  struct inferior *inf;
   struct thread_info *thr;
 
   if (range->is_current)
     return (current_inferior ()->pspace == pspace);
 
-  ALL_THREADS (thr)
-    {
-      if (range->first == WILDCARD
-	  || (range->first <= thr->num && thr->num <= range->last))
-	{
-	  struct inferior *inf = get_thread_inferior (thr);
-
-	  if (inf->pspace == pspace)
-	    return 1;
-	}
-    }
-
-  return 0;
+  inf = find_inferior_id (thread_range->inferior_num);
+  return (inf != NULL && inf->pspace == pspace);
 }
 
 /* Implementation of `contains_inferior' method.  */
@@ -702,6 +726,8 @@ thread_range_contains_program_space (struct itset_elt *base,
 static int
 thread_range_contains_inferior (struct itset_elt *base, struct inferior *inf)
 {
+  struct itset_elt_thread_range *thread_range
+    = (struct itset_elt_thread_range *) base;
   struct itset_elt_range *range = (struct itset_elt_range *) base;
   struct thread_info *thr;
   int pid;
@@ -712,26 +738,7 @@ thread_range_contains_inferior (struct itset_elt *base, struct inferior *inf)
   if (range->is_current)
     return (inf == current_inferior ());
 
-  /* If there are no threads in the inferior, INF can't be part of any
-     thread range.  */
-  if (inf->pid == 0)
-    return 0;
-
-  /* If range is a wildcard, this inferior is part of the range, given
-     that it must have at least one thread.  */
-  if (range->first == WILDCARD)
-    return 1;
-
-  /* Walk threads of INF, check if the range contains any of those.
-     If so, then the range contains the inferior.  */
-  ALL_THREADS (thr)
-    if (ptid_get_pid (thr->ptid) == inf->pid)
-      {
-	if (range->first <= thr->num && thr->num <= range->last)
-	  return 1;
-      }
-
-  return 0;
+  return thread_range->inferior_num == inf->num;
 }
 
 /* Implementation of `contains_thread' method.  */
@@ -741,10 +748,23 @@ thread_range_contains_thread (struct itset_elt *base, struct thread_info *thr,
 			      int including_width)
 {
   struct itset_elt_range *range = (struct itset_elt_range *) base;
+  struct itset_elt_thread_range *thread_range
+    = (struct itset_elt_thread_range *) base;
+  struct inferior *inf;
 
   if (including_width
       && range->width == ITSET_WIDTH_ALL)
     return 1;
+
+  if (range->is_current)
+    thread_range->inferior_num = current_inferior ()->num;
+
+  if (including_width
+      && range->width == ITSET_WIDTH_INFERIOR)
+    {
+      inf = get_thread_inferior (thr);
+      return (inf->num == thread_range->inferior_num);
+    }
 
   if (range->is_current)
     {
@@ -759,26 +779,15 @@ thread_range_contains_thread (struct itset_elt *base, struct thread_info *thr,
       range->last = tp->num;
     }
 
+  inf = find_inferior_id (thread_range->inferior_num);
+  if (inf == NULL
+      || inf->pid == 0
+      || inf->pid != ptid_get_pid (thr->ptid))
+    return 0;
+
   if (range->first == WILDCARD
       || (range->first <= thr->num && thr->num <= range->last))
     return 1;
-
-  if (including_width
-      && range->width == ITSET_WIDTH_INFERIOR)
-    {
-      int pid = ptid_get_pid (thr->ptid);
-      struct thread_info *iter;
-
-      ALL_THREADS (iter)
-	{
-	  if (range->first == WILDCARD
-	      || (range->first <= iter->num && iter->num <= range->last))
-	    {
-	      if (ptid_get_pid (iter->ptid) == pid)
-		return 1;
-	    }
-	}
-    }
 
   return 0;
 }
@@ -810,7 +819,10 @@ thread_range_is_empty (struct itset_elt *base)
 static char *
 thread_range_get_spec (struct itset_elt *base)
 {
-  return range_get_spec (base, 't');
+  struct itset_elt_thread_range *thread_range
+    = (struct itset_elt_thread_range *) base;
+
+  return double_range_get_spec (base, 't', thread_range->inferior_num);
 }
 
 static struct thread_info *
@@ -861,15 +873,15 @@ static const struct itset_elt_vtable thread_range_vtable =
 /* Create a new `range' I/T set element.  */
 
 static struct itset_elt *
-create_thread_range_itset (enum itset_width width,
-			   int is_current,
-			   int thr_first, int thr_last)
+create_thread_range_itset (enum itset_width width, int is_current,
+			   int inf_num, int thr_first, int thr_last)
 {
   struct itset_elt_thread_range *thr_range;
   struct itset_elt_range *range;
   struct itset_elt *elt;
 
   thr_range = XNEW (struct itset_elt_thread_range);
+  thr_range->inferior_num = inf_num;
 
   range = &thr_range->base;
   range->first = thr_first;
@@ -1189,24 +1201,10 @@ ada_task_range_is_empty (struct itset_elt *base)
 static char *
 ada_task_range_get_spec (struct itset_elt *base)
 {
-  struct itset_elt_range *range = (struct itset_elt_range *) base;
   struct itset_elt_ada_task_range *ada_task_range
     = (struct itset_elt_ada_task_range *) base;
-  int w;
 
-  w = range_width_char (range->width);
-
-  if (range->is_current)
-    return xstrprintf ("%cK", w);
-
-  if (range->first != range->last)
-    return xstrprintf ("%ck%d.%d:%d", w,
-		       ada_task_range->inferior_num,
-		       range->first, range->last);
-  else
-    return xstrprintf ("%ck%d.%d", w,
-		       ada_task_range->inferior_num,
-		       range->first);
+  return double_range_get_spec (base, 'k', ada_task_range->inferior_num);
 }
 
 static struct thread_info *
@@ -1293,27 +1291,30 @@ create_ada_task_range_itset (enum itset_width width, int is_current,
 
 static const char *parse_range (const char *spec, int *first, int *last);
 
+typedef struct itset_elt *(*create_double_range_itset_func)
+  (enum itset_width, int, int, int, int );
+
 static struct itset_elt *
-parse_ada_range_itset (const char **spec, enum itset_width width)
+parse_double_range_itset (const char **spec, enum itset_width width,
+			  int range_type_char,
+			  create_double_range_itset_func create_func)
 {
   int first, last;
   const char *save_spec = *spec;
   char *end;
-  int inf_num;
+  int first_num;
 
-  if (**spec == 'K')
+  if (**spec == toupper (range_type_char))
     {
       (*spec)++;
-      return create_ada_task_range_itset (width, 1, 0, 0, 0);
+      return create_func (width, 1, 0, 0, 0);
     }
 
-  if ((*spec)[0] != 'k')
-    {
-      return NULL;
-    }
+  if ((*spec)[0] != range_type_char)
+    return NULL;
 
   (*spec)++;
-  inf_num = strtol (*spec, &end, 10);
+  first_num = strtol (*spec, &end, 10);
   *spec = end;
 
   if ((*spec)[0] != '.')
@@ -1324,7 +1325,7 @@ parse_ada_range_itset (const char **spec, enum itset_width width)
 
   (*spec)++;
   *spec = parse_range (*spec, &first, &last);
-  return create_ada_task_range_itset (width, 0, inf_num, first, last);
+  return create_func (width, 0, first_num, first, last);
 }
 
 
@@ -2623,15 +2624,16 @@ parse_elem_1 (const char **spec)
   if (elt != NULL)
     return elt;
 
-  elt = parse_range_itset (spec, width, 't', create_thread_range_itset);
-  if (elt != NULL)
-    return elt;
-
   elt = parse_range_itset (spec, width, 'c', create_core_range_itset);
   if (elt != NULL)
     return elt;
 
-  elt = parse_ada_range_itset (spec, width);
+  elt = parse_double_range_itset (spec, width, 't', create_thread_range_itset);
+  if (elt != NULL)
+    return elt;
+
+  elt = parse_double_range_itset (spec, width, 'k',
+				  create_ada_task_range_itset);
   if (elt != NULL)
     return elt;
 
@@ -3356,6 +3358,7 @@ itfocus_from_thread_switch (void)
   enum itset_width width = itset_get_width (current_itset);
 
   elt = create_thread_range_itset (width, 0,
+				   current_inferior ()->num,
 				   inferior_thread ()->num,
 				   inferior_thread ()->num);
 
