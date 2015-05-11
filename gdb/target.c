@@ -2115,6 +2115,7 @@ target_pre_inferior (int from_tty)
       target_clear_description ();
     }
 
+  current_inferior ()->highest_thread_num = 0;
   agent_capability_invalidate ();
 }
 

@@ -233,11 +233,15 @@ static struct thread_info *
 new_thread (ptid_t ptid)
 {
   struct thread_info *tp;
+  struct inferior *inf = find_inferior_pid (ptid_get_pid (ptid));
+
+  gdb_assert (inf != NULL);
 
   tp = xcalloc (1, sizeof (*tp));
 
   tp->ptid = ptid;
   tp->num = ++highest_thread_num;
+  tp->num_inf = ++inf->highest_thread_num;
   tp->next = thread_list;
   thread_list = tp;
 
@@ -1161,10 +1165,11 @@ print_thread_info (struct ui_out *uiout, char *requested_threads, int pid)
 	  return;
 	}
 
-      make_cleanup_ui_out_table_begin_end (uiout, 4, n_threads, "threads");
+      make_cleanup_ui_out_table_begin_end (uiout, 5, n_threads, "threads");
 
       ui_out_table_header (uiout, 1, ui_left, "current", "");
-      ui_out_table_header (uiout, 4, ui_left, "id", "Id");
+      ui_out_table_header (uiout, 4, ui_left, "id", "GId");
+      ui_out_table_header (uiout, 4, ui_left, "id_inf", "Id");
       ui_out_table_header (uiout, 17, ui_left, "target-id", "Target Id");
       ui_out_table_header (uiout, 1, ui_left, "frame", "Frame");
       ui_out_table_body (uiout);
@@ -1174,6 +1179,7 @@ print_thread_info (struct ui_out *uiout, char *requested_threads, int pid)
     {
       struct cleanup *chain2;
       int core;
+      struct inferior *inf;
 
       if (!number_is_in_list (requested_threads, tp->num))
 	continue;
@@ -1212,6 +1218,17 @@ print_thread_info (struct ui_out *uiout, char *requested_threads, int pid)
 	}
 
       ui_out_field_int (uiout, "id", tp->num);
+
+      {
+	struct cleanup *str_cleanup;
+	char *contents;
+
+	inf = find_inferior_pid (ptid_get_pid (tp->ptid));
+	contents = xstrprintf ("%d.%d", inf->num, tp->num_inf);
+	str_cleanup = make_cleanup (xfree, contents);
+	ui_out_field_string (uiout, "id_inf", contents);
+	do_cleanups (str_cleanup);
+      }
 
       /* For the CLI, we stuff everything into the target-id field.
 	 This is a gross hack to make the output come out looking
@@ -1822,13 +1839,16 @@ thread_command (char *tidstr, int from_tty)
 
       if (target_has_stack)
 	{
+	  struct thread_info *tp = inferior_thread ();
+	  struct inferior *inf = find_inferior_pid (ptid_get_pid (tp->ptid));
+
 	  if (is_exited (inferior_ptid))
-	    printf_filtered (_("[Current thread is %d (%s) (exited)]\n"),
-			     pid_to_thread_id (inferior_ptid),
+	    printf_filtered (_("[Current thread is %d (%d.%d) (%s) (exited)]\n"),
+			     tp->num, inf->num, tp->num_inf,
 			     target_pid_to_str (inferior_ptid));
 	  else
-	    printf_filtered (_("[Current thread is %d (%s)]\n"),
-			     pid_to_thread_id (inferior_ptid),
+	    printf_filtered (_("[Current thread is %d (%d.%d) (%s)]\n"),
+			     tp->num, inf->num, tp->num_inf,
 			     target_pid_to_str (inferior_ptid));
 	}
       else
@@ -1921,21 +1941,65 @@ show_print_thread_events (struct ui_file *file, int from_tty,
                     value);
 }
 
+int get_number_trailer (const char **pp, int trailer);
+
 static int
 do_captured_thread_select (struct ui_out *uiout, void *tidstr)
 {
-  int num;
+  const char *number = tidstr;
+  const char *dot, *p1;
+  int first_num;
   struct thread_info *tp;
 
-  num = value_as_long (parse_and_eval (tidstr));
+  dot = strchr (number, '.');
 
-  tp = find_thread_id (num);
+  if (number[0] == '.')
+    {
+      first_num = current_inferior ()->num;
+    }
+  else
+    {
+      p1 = number;
+      first_num = get_number_trailer (&p1, '.');
+      if (first_num == 0)
+	error (_("Bad thread spec '%s'"), number);
+    }
 
-  if (!tp)
-    error (_("Thread ID %d not known."), num);
+  if (dot != NULL)
+    {
+      struct inferior *inf;
+      int thr_num;
+
+      p1 = dot + 1;
+      thr_num = get_number_const (&p1);
+      if (thr_num == 0)
+	error (_("Bad thread spec '%s'"), number);
+
+      inf = find_inferior_id (first_num);
+      if (inf == NULL)
+	error (_("No inferior number '%d'"), first_num);
+
+      ALL_THREADS (tp)
+        {
+	  if (ptid_get_pid (tp->ptid) == inf->pid
+	      && tp->num_inf == thr_num)
+	    break;
+	}
+    }
+  else
+    {
+      ALL_THREADS (tp)
+        {
+	  if (tp->num == first_num)
+	    break;
+	}
+    }
+
+  if (tp == NULL)
+    error (_("Thread ID %s not known."), number);
 
   if (!thread_alive (tp))
-    error (_("Thread ID %d has terminated."), num);
+    error (_("Thread ID %s has terminated."), number);
 
   tp->control.selected_frame_level = -1;
   tp->control.selected_frame_id = null_frame_id;

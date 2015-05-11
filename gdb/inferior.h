@@ -308,6 +308,8 @@ struct inferior
   /* True if the PID was actually faked by GDB.  */
   int fake_pid_p;
 
+  int highest_thread_num;
+
   /* State of GDB control of inferior process execution.
      See `struct inferior_control_state'.  */
   struct inferior_control_state control;

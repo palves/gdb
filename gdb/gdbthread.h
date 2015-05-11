@@ -195,6 +195,8 @@ struct thread_info
 				    kernel thread id, etc.  */
   int num;			/* Convenient handle (GDB thread id) */
 
+  int num_inf;			/* Convenient handle (GDB thread id) */
+
   /* The name of the thread, as specified by the user.  This is NULL
      if the thread does not have a user-given name.  */
   char *name;
@@ -426,6 +428,9 @@ extern struct thread_info *iterate_over_threads (thread_callback_func, void *);
 #define ALL_NON_EXITED_THREADS(T)				\
   for (T = thread_list; T; T = T->next) \
     if ((T)->state != THREAD_EXITED)
+
+#define ALL_THREADS(T)				\
+  for (T = thread_list; T; T = T->next) \
 
 /* Traverse all threads, including those that have THREAD_EXITED
    state.  Allows deleting the currently iterated thread.  */
