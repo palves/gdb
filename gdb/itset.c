@@ -1309,7 +1309,6 @@ parse_double_range_itset (const char **spec, enum itset_width width,
 			  int range_type_char,
 			  create_double_range_itset_func create_func)
 {
-  int i;
   struct spec_range
   {
     int first;
@@ -1331,19 +1330,18 @@ parse_double_range_itset (const char **spec, enum itset_width width,
 
   (*spec)++;
 
-  for (i = 0; i < ARRAY_SIZE (ranges) - 1; i++)
+  *spec = parse_range (*spec, &ranges[0].first, &ranges[0].last);
+
+  if ((*spec)[0] == '.')
     {
-      *spec = parse_range (*spec, &ranges[i].first, &ranges[i].last);
-
-      if ((*spec)[0] != '.')
-	{
-	  *spec = save_spec;
-	  return NULL;
-	}
-
       (*spec)++;
+      *spec = parse_range (*spec, &ranges[1].first, &ranges[1].last);
     }
-  *spec = parse_range (*spec, &ranges[i].first, &ranges[i].last);
+  else
+    {
+      ranges[1] = ranges[0];
+      ranges[0].first = ranges[0].last = current_inferior ()->num;
+    }
 
   return create_func (width, 0, ranges[0].first,
 		      ranges[1].first, ranges[1].last);
