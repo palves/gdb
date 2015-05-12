@@ -2001,8 +2001,9 @@ print_variable_and_value (const char *name, struct symbol *var,
     }
   CATCH (except, RETURN_MASK_ERROR)
     {
-      fprintf_filtered(stream, "<error reading variable %s (%s)>", name,
-		       except.message);
+      fprintf_filtered (stream, "%s<error reading variable %s (%s)>",
+			n_spaces (2 * indent),
+			name, except.message);
     }
   END_CATCH
 
