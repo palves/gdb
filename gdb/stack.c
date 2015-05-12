@@ -1829,6 +1829,9 @@ backtrace_command_1 (char *count_exp, int show_locals, int no_filters,
      "no-filters" has been specified from the command.  */
   if (no_filters ||  result == EXT_LANG_BT_NO_FILTERS)
     {
+      struct thread_info *thr = inferior_thread ();
+      struct frame_info *selected = get_selected_frame (NULL);
+
       for (i = 0, fi = trailing; fi && count--; i++, fi = get_prev_frame (fi))
 	{
 	  QUIT;
@@ -1837,6 +1840,11 @@ backtrace_command_1 (char *count_exp, int show_locals, int no_filters,
 	     means further attempts to backtrace would fail (on the other
 	     hand, perhaps the code does or could be fixed to make sure
 	     the frame->prev field gets set to NULL in that case).  */
+
+	  if (fi == selected)
+	    ui_out_text (current_uiout, "* ");
+	  else
+	    ui_out_text (current_uiout, "  ");
 
 	  print_frame_info (fi, 1, LOCATION, 1, 0);
 	  if (show_locals)
@@ -2093,22 +2101,26 @@ print_frame_local_vars (struct frame_info *frame, int num_tabs,
   const struct block *block;
   CORE_ADDR pc;
 
+  num_tabs *= 4;
+
   if (!get_frame_pc_if_available (frame, &pc))
     {
       fprintf_filtered (stream,
-			_("PC unavailable, cannot determine locals.\n"));
+			_("%sPC unavailable, cannot determine locals.\n"),
+			n_spaces (2 * num_tabs));
       return;
     }
 
   block = get_frame_block (frame, 0);
   if (block == 0)
     {
-      fprintf_filtered (stream, "No symbol table info available.\n");
+      fprintf_filtered (stream, _("%sNo symbol table info available.\n"),
+			n_spaces (2 * num_tabs));
       return;
     }
 
   cb_data.frame_id = get_frame_id (frame);
-  cb_data.num_tabs = 4 * num_tabs;
+  cb_data.num_tabs = num_tabs;
   cb_data.stream = stream;
   cb_data.values_printed = 0;
 
@@ -2120,7 +2132,7 @@ print_frame_local_vars (struct frame_info *frame, int num_tabs,
   frame = NULL;
 
   if (!cb_data.values_printed)
-    fprintf_filtered (stream, _("No locals.\n"));
+    fprintf_filtered (stream, _("%sNo locals.\n"), n_spaces (2 * num_tabs));
 }
 
 void
