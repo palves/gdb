@@ -4007,6 +4007,7 @@ _initialize_itset (void)
 
   add_com ("itfocus", no_class, itfocus_command, _("\
 Change the set of current inferiors/threads."));
+  add_com_alias ("a", "itfocus", class_alias, 0);
 
   add_com ("defset", no_class, defset_command, _("\
 Define a new named set.\n\
