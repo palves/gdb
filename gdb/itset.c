@@ -2432,7 +2432,7 @@ parse_range (const char *spec, int *first, int *last)
 	      *last = strtol (spec, &end, 10);
 	      spec = end;
 	    }
-	  else if (spec[0] == '\0' || isspace (spec[0]))
+	  else
 	    *last = INT_MAX;
 	}
       else
