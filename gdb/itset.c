@@ -828,7 +828,10 @@ thread_range_get_spec (struct itset_elt *base)
 static struct thread_info *
 thread_range_get_toi (struct itset_elt *base)
 {
+  struct itset_elt_thread_range *thread_range
+    = (struct itset_elt_thread_range *) base;
   struct itset_elt_range *range = (struct itset_elt_range *) base;
+  struct inferior *inf;
   struct thread_info *thr;
 
   if (range->is_current)
@@ -839,8 +842,15 @@ thread_range_get_toi (struct itset_elt *base)
 	return inferior_thread ();
     }
 
+  inf = find_inferior_id (thread_range->inferior_num);
+  if (inf == NULL || inf->pid == 0)
+    return NULL;
+
   ALL_NON_EXITED_THREADS (thr)
     {
+      if (ptid_get_pid (thr->ptid) != inf->pid)
+	continue;
+
       if (range->first == WILDCARD
 	  || (range->first <= thr->num && thr->num <= range->last))
 	return thr;
@@ -1299,7 +1309,13 @@ parse_double_range_itset (const char **spec, enum itset_width width,
 			  int range_type_char,
 			  create_double_range_itset_func create_func)
 {
-  int first, last;
+  int i;
+  struct spec_range
+  {
+    int first;
+    int last;
+  };
+  struct spec_range ranges[2];
   const char *save_spec = *spec;
   char *end;
   int first_num;
@@ -1314,18 +1330,23 @@ parse_double_range_itset (const char **spec, enum itset_width width,
     return NULL;
 
   (*spec)++;
-  first_num = strtol (*spec, &end, 10);
-  *spec = end;
 
-  if ((*spec)[0] != '.')
+  for (i = 0; i < ARRAY_SIZE (ranges) - 1; i++)
     {
-      *spec = save_spec;
-      return NULL;
-    }
+      *spec = parse_range (*spec, &ranges[i].first, &ranges[i].last);
 
-  (*spec)++;
-  *spec = parse_range (*spec, &first, &last);
-  return create_func (width, 0, first_num, first, last);
+      if ((*spec)[0] != '.')
+	{
+	  *spec = save_spec;
+	  return NULL;
+	}
+
+      (*spec)++;
+    }
+  *spec = parse_range (*spec, &ranges[i].first, &ranges[i].last);
+
+  return create_func (width, 0, ranges[0].first,
+		      ranges[1].first, ranges[1].last);
 }
 
 
