@@ -1579,6 +1579,16 @@ deprecated_safe_get_selected_frame (void)
 void
 select_frame (struct frame_info *fi)
 {
+  if (!ptid_equal (inferior_ptid, null_ptid))
+    {
+      struct thread_info *tp = inferior_thread ();
+
+      tp->control.selected_frame_id = get_frame_id (fi);
+      tp->control.selected_frame_level = frame_relative_level (fi);
+    }
+  else
+    gdb_assert (fi == NULL);
+
   selected_frame = fi;
   /* NOTE: cagney/2002-05-04: FI can be NULL.  This occurs when the
      frame is being invalidated.  */
@@ -1712,9 +1722,10 @@ reinit_frame_cache (void)
   if (current_frame != NULL)
     annotate_frames_invalid ();
 
-  current_frame = NULL;		/* Invalidate cache */
-  select_frame (NULL);
+  current_frame = NULL;
+  selected_frame = NULL;
   frame_stash_invalidate ();
+
   if (frame_debug)
     fprintf_unfiltered (gdb_stdlog, "{ reinit_frame_cache () }\n");
 }

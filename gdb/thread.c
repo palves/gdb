@@ -1349,27 +1349,6 @@ info_threads_command (char *arg, int from_tty)
 void
 switch_to_thread (ptid_t ptid)
 {
-  if (!ptid_equal (null_ptid, inferior_ptid))
-    {
-      struct frame_info *frame;
-      struct thread_info *tp = inferior_thread ();
-
-      if (tp->state == THREAD_STOPPED)
-	{
-	  /* When processing internal events, there might not be a
-	     selected frame.  If we naively call get_selected_frame
-	     here, then we can end up reading debuginfo for the
-	     current frame, but we don't generally need the debuginfo
-	     at this point.  */
-	  frame = get_selected_frame_if_set ();
-	}
-      else
-	frame = NULL;
-
-      tp->control.selected_frame_id = get_frame_id (frame);
-      tp->control.selected_frame_level = frame_relative_level (frame);
-    }
-
   /* Switch the program space as well, if we can infer it from the now
      current thread.  Otherwise, it's up to the caller to select the
      space it wants.  */
@@ -1696,6 +1675,7 @@ thread_apply_set (const char *cmd, struct itset *set, int ascending,
 	    struct frame_id selected_frame_id = tp_array[k]->control.selected_frame_id;
 
 	    tp_array[k]->control.selected_frame_level = -1;
+
             switch_to_thread (tp_array[k]->ptid);
             printf_filtered (_("\nThread %d (%s):\n"), 
 			     tp_array[k]->num,
@@ -1704,6 +1684,7 @@ thread_apply_set (const char *cmd, struct itset *set, int ascending,
 	       by execute_command.  */
             strcpy (saved_cmd, cmd);
             execute_command (saved_cmd, from_tty);
+
 	    tp_array[k]->control.selected_frame_level = selected_frame_level;
 	    tp_array[k]->control.selected_frame_id = selected_frame_id;
 	  }
