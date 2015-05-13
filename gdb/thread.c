@@ -1120,13 +1120,11 @@ void
 print_thread_info (struct ui_out *uiout, char *requested_threads, int pid)
 {
   struct thread_info *tp;
-  ptid_t current_ptid;
   struct cleanup *old_chain;
   char *extra_info, *name, *target_id;
   int current_thread = -1;
 
   update_thread_list ();
-  current_ptid = inferior_ptid;
 
   /* We'll be switching threads temporarily.  */
   old_chain = make_cleanup_restore_current_thread ();
@@ -1191,7 +1189,7 @@ print_thread_info (struct ui_out *uiout, char *requested_threads, int pid)
 	  continue;
 	}
 
-      if (ptid_equal (tp->ptid, current_ptid))
+      if (ptid_equal (tp->ptid, get_current_context ()->ptid))
 	current_thread = tp->num;
 
       if (tp->state == THREAD_EXITED)
@@ -1202,16 +1200,14 @@ print_thread_info (struct ui_out *uiout, char *requested_threads, int pid)
       if (ui_out_is_mi_like_p (uiout))
 	{
 	  /* Compatibility.  */
-	  if (ptid_equal (tp->ptid, current_ptid))
+	  if (ptid_equal (tp->ptid, get_current_context ()->ptid))
 	    ui_out_text (uiout, "* ");
 	  else
 	    ui_out_text (uiout, "  ");
 	}
       else
 	{
-	  switch_to_thread (current_ptid);
-
-	  if (ptid_equal (tp->ptid, current_ptid))
+	  if (ptid_equal (tp->ptid, get_current_context ()->ptid))
 	    ui_out_field_string (uiout, "current", "*");
 	  else if (itset_contains_thread (current_itset, tp, 0))
 	    ui_out_field_string (uiout, "current", "+");
@@ -1318,13 +1314,13 @@ print_thread_info (struct ui_out *uiout, char *requested_threads, int pid)
       if (current_thread != -1 && ui_out_is_mi_like_p (uiout))
 	ui_out_field_int (uiout, "current-thread-id", current_thread);
 
-      if (current_thread != -1 && is_exited (current_ptid))
+      if (current_thread != -1 && is_exited (get_current_context ()->ptid))
 	ui_out_message (uiout, 0, "\n\
 The current thread <Thread ID %d> has terminated.  See `help thread'.\n",
 			current_thread);
       else if (thread_list
 	       && current_thread == -1
-	       && ptid_equal (current_ptid, null_ptid))
+	       && ptid_equal (get_current_context ()->ptid, null_ptid))
 	ui_out_message (uiout, 0, "\n\
 No selected thread.  See `help thread'.\n");
     }
@@ -1616,6 +1612,14 @@ tp_array_compar (const void *ap_voidp, const void *bp_voidp)
 }
 
 static void
+restore_current_context_cleanup (void *data)
+{
+  struct execution_context *ctx = data;
+
+  *get_current_context () = *ctx;
+}
+
+static void
 thread_apply_set (const char *cmd, struct itset *set, int ascending,
 		  int from_tty)
 {
@@ -1623,11 +1627,14 @@ thread_apply_set (const char *cmd, struct itset *set, int ascending,
   char *saved_cmd;
   int tc;
   struct thread_array_cleanup ta_cleanup;
+  struct execution_context saved_ctx;
 
   tp_array_compar_ascending = ascending;
 
   update_thread_list ();
 
+  saved_ctx = *get_current_context ();
+  make_cleanup (restore_current_context_cleanup, &saved_ctx);
   old_chain = make_cleanup_restore_current_thread ();
 
   /* Work with a copy of the command in case it is clobbered by
@@ -1677,6 +1684,8 @@ thread_apply_set (const char *cmd, struct itset *set, int ascending,
 	    tp_array[k]->control.selected_frame_level = -1;
 
             switch_to_thread (tp_array[k]->ptid);
+            set_current_context ();
+
             printf_filtered (_("\nThread %d (%s):\n"), 
 			     tp_array[k]->num,
 			     target_pid_to_str (inferior_ptid));
@@ -1763,6 +1772,7 @@ thread_apply_command (char *tidlist, int from_tty)
   struct cleanup *old_chain;
   char *saved_cmd;
   struct get_number_or_range_state state;
+  struct execution_context saved_ctx;
 
   if (tidlist == NULL || *tidlist == '\000')
     error (_("Please specify a thread ID list"));
@@ -1777,6 +1787,10 @@ thread_apply_command (char *tidlist, int from_tty)
   saved_cmd = xstrdup (cmd);
   old_chain = make_cleanup (xfree, saved_cmd);
 
+  saved_ctx = *get_current_context ();
+  make_cleanup (restore_current_context_cleanup, &saved_ctx);
+  make_cleanup_restore_current_thread ();
+
   init_number_or_range (&state, tidlist);
   while (!state.finished && state.string < cmd)
     {
@@ -1784,8 +1798,6 @@ thread_apply_command (char *tidlist, int from_tty)
       int start;
 
       start = get_number_or_range (&state);
-
-      make_cleanup_restore_current_thread ();
 
       tp = find_thread_id (start);
 
@@ -1796,6 +1808,7 @@ thread_apply_command (char *tidlist, int from_tty)
       else
 	{
 	  switch_to_thread (tp->ptid);
+	  set_current_context ();
 
 	  printf_filtered (_("\nThread %d (%s):\n"), tp->num,
 			   target_pid_to_str (inferior_ptid));
@@ -1987,6 +2000,7 @@ do_captured_thread_select (struct ui_out *uiout, void *tidstr)
   tp->control.selected_frame_level = -1;
   tp->control.selected_frame_id = null_frame_id;
   switch_to_thread (tp->ptid);
+  set_current_context ();
 
   // itfocus_from_thread_switch ();
 

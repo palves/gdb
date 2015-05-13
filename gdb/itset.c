@@ -600,7 +600,7 @@ inferior_range_elt_contains_thread (struct itset_elt *base, struct thread_info *
     {
       inf = get_thread_inferior (thr);
 
-      return (inf == current_inferior ());
+      return (inf == get_current_context ()->inf);
     }
 
   inf = get_thread_inferior (thr);
@@ -645,12 +645,7 @@ inferior_range_elt_get_toi (struct itset_elt *base)
   struct inferior *inf;
 
   if (range_elt->is_current)
-    {
-      if (ptid_equal (inferior_ptid, null_ptid))
-	return NULL;
-      else
-	return inferior_thread ();
-    }
+    return get_current_context_thread ();
 
   ALL_INFERIORS (inf)
     {
@@ -738,7 +733,7 @@ thread_range_contains_program_space (struct itset_elt *base,
   struct thread_info *thr;
 
   if (range->is_current)
-    return (current_inferior ()->pspace == pspace);
+    return (get_current_context ()->inf->pspace == pspace);
 
   return inferior_range_contains_program_space (&thread_range->inf_range, pspace);
 }
@@ -756,7 +751,7 @@ thread_range_contains_inferior (struct itset_elt *base, struct inferior *inf)
     return 1;
 
   if (range->is_current)
-    return (inf == current_inferior ());
+    return (get_current_context ()->inf == inf);
 
   return inferior_range_contains_inferior (&thread_range->inf_range, inf);
 }
@@ -779,8 +774,10 @@ thread_range_contains_thread (struct itset_elt *base, struct thread_info *thr,
 
   if (range_elt->is_current)
     {
-      thread_range_elt->inf_range.first = current_inferior ()->num;
-      thread_range_elt->inf_range.last = current_inferior ()->num;
+      struct inferior *inf = get_current_context ()->inf;
+
+      thread_range_elt->inf_range.first = inf->num;
+      thread_range_elt->inf_range.last = inf->num;
     }
 
   if (including_width
@@ -794,10 +791,9 @@ thread_range_contains_thread (struct itset_elt *base, struct thread_info *thr,
     {
       struct thread_info *tp;
 
-      if (ptid_equal (inferior_ptid, null_ptid))
+      tp = get_current_context_thread ();
+      if (tp == NULL)
 	return 0;
-
-      tp = inferior_thread ();
 
       range->first = tp->num;
       range->last = tp->num;
@@ -857,12 +853,7 @@ thread_range_get_toi (struct itset_elt *base)
   struct thread_info *thr;
 
   if (range_elt->is_current)
-    {
-      if (ptid_equal (inferior_ptid, null_ptid))
-	return NULL;
-      else
-	return inferior_thread ();
-    }
+    return get_current_context_thread ();
 
   ALL_NON_EXITED_THREADS (thr)
     {
@@ -1042,12 +1033,7 @@ core_range_get_toi (struct itset_elt *base)
   struct thread_info *thr;
 
   if (range->is_current)
-    {
-      if (ptid_equal (inferior_ptid, null_ptid))
-	return NULL;
-      else
-	return inferior_thread ();
-    }
+    return get_current_context_thread ();
 
   ALL_NON_EXITED_THREADS (thr)
     {
@@ -1123,7 +1109,7 @@ ada_task_range_contains_program_space (struct itset_elt *base,
     = (struct itset_elt_ada_task_range *) base;
 
   if (range_elt->is_current)
-    return (current_inferior ()->pspace == pspace);
+    return (get_current_context ()->inf->pspace == pspace);
 
   return inferior_range_contains_program_space (&ada_task_range_elt->inf_range,
 						pspace);
@@ -1142,7 +1128,7 @@ ada_task_range_contains_inferior (struct itset_elt *base, struct inferior *inf)
     return 1;
 
   if (range_elt->is_current)
-    return (inf == current_inferior ());
+    return (get_current_context ()->inf == inf);
 
   return inferior_range_contains_inferior (&ada_task_range_elt->inf_range, inf);
 }
@@ -1166,8 +1152,10 @@ ada_task_range_contains_thread (struct itset_elt *base, struct thread_info *thr,
 
   if (range_elt->is_current)
     {
-      ada_task_range_elt->inf_range.first = current_inferior ()->num;
-      ada_task_range_elt->inf_range.last = current_inferior ()->num;
+      struct execution_context *ctx = get_current_context ();
+
+      ada_task_range_elt->inf_range.first = ctx->inf->num;
+      ada_task_range_elt->inf_range.last = ctx->inf->num;
     }
 
   if (including_width
@@ -1251,12 +1239,7 @@ ada_task_range_get_toi (struct itset_elt *base)
   struct inferior *inf;
 
   if (range_elt->is_current)
-    {
-      if (ptid_equal (inferior_ptid, null_ptid))
-	return NULL;
-      else
-	return inferior_thread ();
-    }
+    return get_current_context_thread ();
 
   ALL_INFERIORS (inf)
     {
@@ -1367,7 +1350,7 @@ parse_double_range_itset (const char **spec, enum itset_width width,
   else
     {
       ranges[1] = ranges[0];
-      ranges[0].first = ranges[0].last = current_inferior ()->num;
+      ranges[0].first = ranges[0].last = get_current_context ()->inf->num;
     }
 
   return create_func (width, 0, &ranges[0], &ranges[1]);
@@ -3336,6 +3319,7 @@ switch_to_itset (struct itset *itset)
   if (tp != NULL)
     {
       switch_to_thread (tp->ptid);
+      set_current_context ();
       return;
     }
 
@@ -3349,12 +3333,14 @@ switch_to_itset (struct itset *itset)
 	 selected.  */
       switch_to_thread (null_ptid);
       set_current_program_space (current_inferior ()->pspace);
+      set_current_context ();
       return;
     }
 
   set_current_inferior (inf);
   switch_to_thread (null_ptid);
   set_current_program_space (inf->pspace);
+  set_current_context ();
   return;
 
 #if 1
@@ -3423,6 +3409,14 @@ itfocus_from_thread_switch (void)
 }
 
 static void
+restore_current_context_cleanup (void *data)
+{
+  struct execution_context *ctx = data;
+
+  *get_current_context () = *ctx;
+}
+
+static void
 itfocus_command (char *spec, int from_tty)
 {
   struct itset *itset;
@@ -3447,8 +3441,13 @@ itfocus_command (char *spec, int from_tty)
   spec = skip_spaces (spec);
   if (*spec != '\0')
     {
+      struct execution_context saved_ctx;
+
       save_current_itset ();
       current_itset = itset;
+
+      saved_ctx = *get_current_context ();
+      make_cleanup (restore_current_context_cleanup, &saved_ctx);
 
       old_chain = make_cleanup_restore_current_thread ();
 
@@ -3926,11 +3925,11 @@ for_each_selected_ada_task_cmd (cmd_cfunc_ftype cmd,
   struct cleanup *old_chain;
   int count = 0;
   struct inferior *inf;
-  ptid_t current_ptid = inferior_ptid;
+  ptid_t saved_inferior_ptid = inferior_ptid;
 
   /* Don't use make_cleanup_restore_current_thread as CMD may want to
      change the user selected frame, e.g., up/down/frame, etc.  */
-  old_chain = make_cleanup (switch_to_thread_cleanup, &current_ptid);
+  old_chain = make_cleanup (switch_to_thread_cleanup, &saved_inferior_ptid);
 
   /* Don't print anything about tasks if only focused on one task.  */
   ALL_INFERIORS (inf)
@@ -3964,9 +3963,6 @@ for_each_selected_ada_task_cmd (cmd_cfunc_ftype cmd,
 
       for (ix = 0; VEC_iterate (ada_task_info_s, task_list, ix, task); ++ix)
 	{
-	  /* Switch back on each iteration because the current itset
-	     may refer to the current thread.  */
-	  switch_to_thread (current_ptid);
 	  if (!itset_contains_ada_task (current_itset, task, 0))
 	    continue;
 

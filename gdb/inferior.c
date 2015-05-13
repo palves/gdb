@@ -657,6 +657,7 @@ detach_inferior_command (char *args, int from_tty)
       switch_to_thread (tp->ptid);
 
       detach_command (NULL, from_tty);
+      set_current_context ();
     }
 }
 
@@ -693,6 +694,7 @@ kill_inferior_command (char *args, int from_tty)
       switch_to_thread (tp->ptid);
 
       target_kill ();
+      set_current_context ();
     }
 
   bfd_cache_close_all ();
@@ -743,6 +745,8 @@ inferior_command (char *args, int from_tty)
       switch_to_thread (null_ptid);
       set_current_program_space (inf->pspace);
     }
+
+  set_current_context ();
 
   if (inf->pid != 0 && is_running (inferior_ptid))
     ui_out_text (current_uiout, "(running)\n");
@@ -1010,6 +1014,7 @@ initialize_inferiors (void)
   current_inferior_->aspace = current_program_space->aspace;
   /* The architecture will be initialized shortly, by
      initialize_current_architecture.  */
+  set_current_context ();
 
   add_info ("inferiors", info_inferiors_command, 
 	    _("IDs of specified inferiors (all inferiors if no argument)."));

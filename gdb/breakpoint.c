@@ -11665,7 +11665,6 @@ until_break_command (char *arg, int from_tty, int anywhere)
   struct cleanup *old_chain;
   int thr_count = 0;
   struct until_break_aec_callback_data cb_data;
-  ptid_t current_ptid = inferior_ptid;
   struct thread_info *leader = NULL;
   int first = 1;
   struct symtab_and_line sal;
@@ -11689,7 +11688,7 @@ until_break_command (char *arg, int from_tty, int anywhere)
 	ensure_runnable (thr);
 
 	if (leader == NULL
-	    || ptid_equal (current_ptid, thr->ptid))
+	    || ptid_equal (get_current_context ()->ptid, thr->ptid))
 	  leader = thr;
 
 	if (!ptid_equal (inferior_ptid, thr->ptid))

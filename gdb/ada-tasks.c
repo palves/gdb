@@ -361,13 +361,13 @@ get_ada_tasks (struct inferior *inf, int update)
   if (update)
     {
       struct thread_info *thr;
-      ptid_t current_ptid = inferior_ptid;
+      ptid_t saved_inferior_ptid = inferior_ptid;
 
       thr = any_live_thread_of_process (inf->pid);
       switch_to_thread (thr->ptid);
       ada_build_task_list ();
 
-      switch_to_thread (current_ptid);
+      switch_to_thread (saved_inferior_ptid);
     }
   data = get_ada_tasks_inferior_data (inf);
   return data->task_list;
@@ -1037,9 +1037,9 @@ print_ada_task_info (struct ui_out *uiout, char *arg_str,
   struct cleanup *old_chain;
   int nb_columns;
   struct inferior *inf;
-  ptid_t current_ptid = inferior_ptid;
+  ptid_t saved_inferior_ptid = inferior_ptid;
 
-  old_chain = make_cleanup (switch_to_thread_cleanup, &current_ptid);
+  old_chain = make_cleanup (switch_to_thread_cleanup, &saved_inferior_ptid);
 
   if (ui_out_is_mi_like_p (uiout))
     {
@@ -1131,10 +1131,6 @@ print_ada_task_info (struct ui_out *uiout, char *arg_str,
 
       data = get_ada_tasks_inferior_data (inf);
 
-      /* Switch back so that the current_itset check below works if
-	 the current i/t set refers to the current thread/task.  */
-      switch_to_thread (current_ptid);
-
   for (taskno = 1;
        taskno <= VEC_length (ada_task_info_s, data->task_list);
        taskno++)
@@ -1159,7 +1155,7 @@ print_ada_task_info (struct ui_out *uiout, char *arg_str,
 
       /* Print a star if this task is the current task (or the task
          currently selected).  */
-      if (ptid_equal (task_info->ptid, current_ptid))
+      if (ptid_equal (task_info->ptid, get_current_context ()->ptid))
 	ui_out_field_string (uiout, "current", "*");
       else if (thr != NULL && itset_contains_ada_task (current_itset,
 						       task_info, 0))
@@ -1385,6 +1381,7 @@ task_command_1 (char *taskno_str, int from_tty, struct inferior *inf)
            taskno);
 
   switch_to_thread (task_info->ptid);
+  set_current_context ();
   ada_find_printable_frame (get_selected_frame (NULL));
   printf_filtered (_("[Switching to task %d]\n"), taskno);
   print_stack_frame (get_selected_frame (NULL),

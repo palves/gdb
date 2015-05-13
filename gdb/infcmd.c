@@ -60,6 +60,32 @@
 #define ERROR_NO_INFERIOR \
    if (!target_has_execution) error (_("The program is not being run."));
 
+static struct execution_context current_context;
+
+struct execution_context *
+get_current_context (void)
+{
+  return &current_context;
+}
+
+void
+set_current_context (void)
+{
+  current_context.ptid = inferior_ptid;
+  current_context.inf = current_inferior ();
+}
+
+struct thread_info *
+get_current_context_thread (void)
+{
+  struct execution_context *ctx = get_current_context ();
+
+  if (ptid_equal (ctx->ptid, null_ptid))
+    return NULL;
+  else
+    return find_thread_ptid (ctx->ptid);
+}
+
 static struct itset *
 current_thread_set (void)
 {
@@ -1622,7 +1648,6 @@ jump_command (char *arg, int from_tty)
   struct jump_aec_callback_data cb_data;
   struct cleanup *args_chain;
   struct thread_info *leader = NULL;
-  ptid_t current_ptid = inferior_ptid;
 
   ensure_not_tfind_mode ();
 
@@ -1665,7 +1690,7 @@ jump_command (char *arg, int from_tty)
 	ensure_runnable (thr);
 
 	if (leader == NULL
-	    || ptid_equal (current_ptid, thr->ptid))
+	    || ptid_equal (get_current_context ()->ptid, thr->ptid))
 	  leader = thr;
 
 	if (!ptid_equal (inferior_ptid, thr->ptid))
@@ -1937,7 +1962,6 @@ until_next_command (char *arg, int from_tty)
   struct thread_info *thr;
   int thr_count = 0;
   struct thread_info *leader = NULL;
-  ptid_t current_ptid = inferior_ptid;
 
   old_chain = make_cleanup (itset_free_p, &apply_itset);
   make_cleanup (itset_free_p, &run_free_itset);
@@ -1959,7 +1983,7 @@ until_next_command (char *arg, int from_tty)
 	ensure_runnable (thr);
 
 	if (leader == NULL
-	    || ptid_equal (current_ptid, thr->ptid))
+	    || ptid_equal (get_current_context ()->ptid, thr->ptid))
 	  leader = thr;
 
 	if (!ptid_equal (inferior_ptid, thr->ptid))
@@ -2391,7 +2415,6 @@ finish_command (char *arg, int from_tty)
   struct finish_aec_callback_data cb_data;
   int async_exec;
   struct thread_info *leader = NULL;
-  ptid_t current_ptid = inferior_ptid;
 
   ensure_not_tfind_mode ();
 
@@ -2423,7 +2446,7 @@ finish_command (char *arg, int from_tty)
 	ensure_runnable (thr);
 
 	if (leader == NULL
-	    || ptid_equal (current_ptid, thr->ptid))
+	    || ptid_equal (get_current_context ()->ptid, thr->ptid))
 	  leader = thr;
 
 	if (!ptid_equal (inferior_ptid, thr->ptid))

@@ -587,4 +587,16 @@ extern int thread_is_in_step_over_chain (struct thread_info *tp);
 
 extern struct thread_info *thread_list;
 
+struct execution_context
+{
+  ptid_t ptid;
+  struct inferior *inf;
+};
+
+extern struct execution_context *get_current_context (void);
+struct thread_info *get_current_context_thread (void);
+
+extern void set_current_context (void);
+
+
 #endif /* GDBTHREAD_H */
