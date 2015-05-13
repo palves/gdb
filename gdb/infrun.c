@@ -151,12 +151,6 @@ show_step_stop_if_no_debug (struct ui_file *file, int from_tty,
   fprintf_filtered (file, _("Mode of the step operation is %s.\n"), value);
 }
 
-/* proceed and normal_stop use this to notify the user when the
-   inferior stopped in a different thread than it had been running
-   in.  */
-
-static ptid_t previous_inferior_ptid;
-
 /* If set (default for legacy reasons), when following a fork, GDB
    will detach from one of the fork branches, child or parent.
    Exactly which branch is detached depends on 'set follow-fork-mode'
@@ -3006,9 +3000,6 @@ prepare_proceed (CORE_ADDR addr, enum gdb_signal siggnal)
   struct address_space *aspace;
   ptid_t resume_ptid;
 
-  /* We'll update this if & when we switch to a new thread.  */
-  previous_inferior_ptid = inferior_ptid;
-
   regcache = get_current_regcache ();
   gdbarch = get_regcache_arch (regcache);
   aspace = get_regcache_aspace (regcache);
@@ -3345,8 +3336,6 @@ init_wait_for_inferior (void)
   clear_proceed_status (0);
 
   target_last_wait_ptid = minus_one_ptid;
-
-  previous_inferior_ptid = inferior_ptid;
 
   /* Discard any skipped inlined frames.  */
   clear_inline_frame_state (minus_one_ptid);
@@ -8524,7 +8513,7 @@ normal_stop (void)
      after this event is handled, so we're not really switching, only
      informing of a stop.  */
   if (!non_stop
-      && !ptid_equal (previous_inferior_ptid, inferior_ptid)
+      && !ptid_equal (get_current_context ()->ptid, inferior_ptid)
       && target_has_execution
       && last.kind != TARGET_WAITKIND_SIGNALLED
       && last.kind != TARGET_WAITKIND_EXITED
@@ -8538,7 +8527,7 @@ normal_stop (void)
 	  //	  itfocus_from_thread_switch ();
 	  annotate_thread_changed ();
 	}
-      previous_inferior_ptid = inferior_ptid;
+      set_current_context ();
     }
 
   if (last.kind == TARGET_WAITKIND_NO_RESUMED)

@@ -654,4 +654,16 @@ extern int show_thread_that_caused_stop (void);
 
 extern struct thread_info *thread_list;
 
+struct execution_context
+{
+  ptid_t ptid;
+  struct inferior *inf;
+};
+
+extern struct execution_context *get_current_context (void);
+struct thread_info *get_current_context_thread (void);
+
+extern void set_current_context (void);
+
+
 #endif /* GDBTHREAD_H */
