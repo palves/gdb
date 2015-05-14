@@ -557,6 +557,9 @@ inferior_range_elt_contains_program_space (struct itset_elt *base,
 {
   struct itset_elt_range *elt_range = (struct itset_elt_range *) base;
 
+  if (elt_range->width == ITSET_WIDTH_ALL)
+    return 1;
+
   return inferior_range_contains_program_space (&elt_range->range, pspace);
 }
 
@@ -576,6 +579,9 @@ static int
 inferior_range_elt_contains_inferior (struct itset_elt *base, struct inferior *inf)
 {
   struct itset_elt_range *elt_range = (struct itset_elt_range *) base;
+
+  if (elt_range->width == ITSET_WIDTH_ALL)
+    return 1;
 
   return inferior_range_contains_inferior (&elt_range->range, inf);
 }
@@ -732,6 +738,9 @@ thread_range_contains_program_space (struct itset_elt *base,
   struct inferior *inf;
   struct thread_info *thr;
 
+  if (range->width == ITSET_WIDTH_ALL)
+    return 1;
+
   if (range->is_current)
     return (get_current_context ()->inf->pspace == pspace);
 
@@ -784,7 +793,8 @@ thread_range_contains_thread (struct itset_elt *base, struct thread_info *thr,
       && range_elt->width == ITSET_WIDTH_INFERIOR)
     {
       inf = get_thread_inferior (thr);
-      return inferior_range_contains_inferior (&thread_range_elt->inf_range, inf);
+      return inferior_range_contains_inferior (&thread_range_elt->inf_range,
+					       inf);
     }
 
   if (range_elt->is_current)
@@ -1108,6 +1118,9 @@ ada_task_range_contains_program_space (struct itset_elt *base,
   struct itset_elt_ada_task_range *ada_task_range_elt
     = (struct itset_elt_ada_task_range *) base;
 
+  if (range_elt->width == ITSET_WIDTH_ALL)
+    return 1;
+
   if (range_elt->is_current)
     return (get_current_context ()->inf->pspace == pspace);
 
@@ -1130,7 +1143,8 @@ ada_task_range_contains_inferior (struct itset_elt *base, struct inferior *inf)
   if (range_elt->is_current)
     return (get_current_context ()->inf == inf);
 
-  return inferior_range_contains_inferior (&ada_task_range_elt->inf_range, inf);
+  return inferior_range_contains_inferior (&ada_task_range_elt->inf_range,
+					   inf);
 }
 
 /* Implementation of `contains_thread' method.  */
