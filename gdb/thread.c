@@ -94,10 +94,14 @@ inferior_thread (void)
 struct inferior *
 get_thread_inferior (struct thread_info *thr)
 {
+  struct inferior *inf;
   int pid;
 
   pid = ptid_get_pid (thr->ptid);
-  return find_inferior_pid (pid);
+  inf = find_inferior_pid (pid);
+  gdb_assert (inf);
+
+  return inf;
 }
 
 /* Delete the breakpoint pointed at by BP_P, if there's one.  */
@@ -1200,6 +1204,9 @@ should_print_thread (const char *requested_threads, int default_inf_num,
   if (thr->state == THREAD_EXITED)
     return 0;
 
+  if (!itset_contains_thread (current_itset, thr, 1))
+    return 0;
+
   return 1;
 }
 
@@ -1804,7 +1811,7 @@ thread_apply_set (const char *cmd, struct itset *set, int ascending,
 
       ALL_NON_EXITED_THREADS (tp)
         {
-	  if (set != NULL && !itset_contains_thread (set, tp, 1))
+	  if (!itset_contains_thread (set, tp, 1))
 	    continue;
 
           tp_array[i] = tp;
@@ -1875,7 +1882,7 @@ thread_apply_all_command (char *cmd, int from_tty)
   if (cmd == NULL || *cmd == '\000')
     error (_("Please specify a command following the thread ID list"));
 
-  thread_apply_set (cmd, NULL, ascending, from_tty);
+  thread_apply_set (cmd, current_itset, ascending, from_tty);
 }
 
 /* Apply a GDB command to the threads that match a given I/T set.  Examples:
