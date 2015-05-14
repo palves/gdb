@@ -60,19 +60,19 @@
 #define ERROR_NO_INFERIOR \
    if (!target_has_execution) error (_("The program is not being run."));
 
-static struct execution_context current_context;
+static struct execution_context current_execution_context;
 
 struct execution_context *
 get_current_context (void)
 {
-  return &current_context;
+  return &current_execution_context;
 }
 
 void
 set_current_context (void)
 {
-  current_context.ptid = inferior_ptid;
-  current_context.inf = current_inferior ();
+  current_execution_context.ptid = inferior_ptid;
+  current_execution_context.inf = current_inferior ();
 }
 
 struct thread_info *
