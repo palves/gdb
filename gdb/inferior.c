@@ -35,6 +35,7 @@
 #include "arch-utils.h"
 #include "target-descriptions.h"
 #include "readline/tilde.h"
+#include "itset.h"
 
 void _initialize_inferiors (void);
 
@@ -542,6 +543,15 @@ inferior_pid_to_str (int pid)
     return _("<null>");
 }
 
+static int
+should_print_inferior (const char *requested_inferiors, struct inferior *inf)
+{
+  if (requested_inferiors != NULL && *requested_inferiors != '\0')
+    return number_is_in_list (requested_inferiors, inf->num);
+  else
+    return itset_contains_inferior (current_itset, inf);
+}
+
 /* Prints the list of inferiors and their details on UIOUT.  This is a
    version of 'info_inferior_command' suitable for use from MI.
 
@@ -559,7 +569,7 @@ print_inferior (struct ui_out *uiout, char *requested_inferiors)
   /* Compute number of inferiors we will print.  */
   for (inf = inferior_list; inf; inf = inf->next)
     {
-      if (!number_is_in_list (requested_inferiors, inf->num))
+      if (!should_print_inferior (requested_inferiors, inf))
 	continue;
 
       ++inf_count;
@@ -583,7 +593,7 @@ print_inferior (struct ui_out *uiout, char *requested_inferiors)
     {
       struct cleanup *chain2;
 
-      if (!number_is_in_list (requested_inferiors, inf->num))
+      if (!should_print_inferior (requested_inferiors, inf))
 	continue;
 
       chain2 = make_cleanup_ui_out_tuple_begin_end (uiout, NULL);
