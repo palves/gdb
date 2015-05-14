@@ -1164,6 +1164,7 @@ print_thread_info (struct ui_out *uiout, char *requested_threads, int pid)
   struct cleanup *old_chain;
   char *extra_info, *name, *target_id;
   int current_thread = -1;
+  struct inferior *inf;
 
   update_thread_list ();
 
@@ -1208,11 +1209,16 @@ print_thread_info (struct ui_out *uiout, char *requested_threads, int pid)
       ui_out_table_body (uiout);
     }
 
+  ALL_INFERIORS (inf)
+    {
+
   for (tp = thread_list; tp; tp = tp->next)
     {
       struct cleanup *chain2;
       int core;
-      struct inferior *inf;
+
+      if (inf->pid != ptid_get_pid (tp->ptid))
+	continue;
 
       if (ptid_equal (tp->ptid, get_current_context ()->ptid))
 	current_thread = tp->num;
@@ -1246,7 +1252,6 @@ print_thread_info (struct ui_out *uiout, char *requested_threads, int pid)
 	struct cleanup *str_cleanup;
 	char *contents;
 
-	inf = find_inferior_pid (ptid_get_pid (tp->ptid));
 	contents = xstrprintf ("%d.%d", inf->num, tp->num_inf);
 	str_cleanup = make_cleanup (xfree, contents);
 	ui_out_field_string (uiout, "id_inf", contents);
@@ -1326,6 +1331,7 @@ print_thread_info (struct ui_out *uiout, char *requested_threads, int pid)
 
       do_cleanups (chain2);
     }
+    }
 
   /* Restores the current thread and the frame selected before
      the "info threads" command.  */
@@ -1333,18 +1339,20 @@ print_thread_info (struct ui_out *uiout, char *requested_threads, int pid)
 
   if (pid == -1 && requested_threads == NULL)
     {
-      gdb_assert (current_thread != -1
-		  || !thread_list
-		  || ptid_equal (inferior_ptid, null_ptid));
-      if (current_thread != -1 && ui_out_is_mi_like_p (uiout))
-	ui_out_field_int (uiout, "current-thread-id", current_thread);
+      if (ui_out_is_mi_like_p (uiout)
+	  && !ptid_equal (inferior_ptid, null_ptid))
+	{
+	  int num = pid_to_thread_id (inferior_ptid);
 
-      if (current_thread != -1 && is_exited (get_current_context ()->ptid))
+	  gdb_assert (num != 0);
+	  ui_out_field_int (uiout, "current-thread-id", num);
+	}
+
+      if (!ptid_equal (inferior_ptid, null_ptid) && is_exited (inferior_ptid))
 	ui_out_message (uiout, 0, "\n\
 The current thread <Thread ID %d> has terminated.  See `help thread'.\n",
 			current_thread);
-      else if (thread_list
-	       && current_thread == -1
+      else if (thread_list != NULL
 	       && ptid_equal (get_current_context ()->ptid, null_ptid))
 	ui_out_message (uiout, 0, "\n\
 No selected thread.  See `help thread'.\n");
