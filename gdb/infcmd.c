@@ -770,6 +770,7 @@ run_command_1 (char *args, int from_tty, int tbreak_at_main)
   /* to_create_inferior should push the target, so after this point we
      shouldn't refer to run_target again.  */
   run_target = NULL;
+  set_current_context ();
 
   /* We're starting off a new process.  When we get out of here, in
      non-stop mode, finish the state of all threads of that process,
