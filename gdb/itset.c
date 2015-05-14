@@ -2621,11 +2621,44 @@ make_cleanup_itset_free (struct itset *itset)
 
 */
 
+/* An itset parser's state.  */
+
+struct itset_parser
+{
+  int parens_level;
+};
+
+/* Skip spaces if parenthesis level is > 0.  That is, spaces are only
+   allowed with parens:
+
+     itfocus (t2 t3 & c0) print 1
+        spec -----------/ \------ command
+
+   but not without:
+
+     itfocus t2 t3 & c0 print 1
+        spec -/ \-------------- command
+
+     itfocus t2,t3&c0 print 1
+        spec -------/ \------ command
+*/
+
+static void
+maybe_skip_spaces (struct itset_parser *self, const char **spec)
+{
+  if (self->parens_level > 0)
+    *spec = skip_spaces_const (*spec);
+}
+
 /* Forward declare.  The parser is recursive.  */
-static struct itset_elt *parse_neg (const char **spec);
-static struct itset_elt *parse_parens_set (const char **spec);
-static struct itset_elt *parse_itset_one (const char **spec);
-static struct itset_elt *parse_current_focus (const char **spec);
+static struct itset_elt *parse_neg (struct itset_parser *self,
+				    const char **spec);
+static struct itset_elt *parse_parens_set (struct itset_parser *self,
+					   const char **spec);
+static struct itset_elt *parse_itset_one (struct itset_parser *self,
+					  const char **spec);
+static struct itset_elt *parse_current_focus (struct itset_parser *self,
+					      const char **spec);
 
 static int
 valid_spec_end (const char *spec)
@@ -2634,11 +2667,13 @@ valid_spec_end (const char *spec)
 }
 
 static struct itset_elt *
-parse_elem_1 (const char **spec)
+parse_elem_1 (struct itset_parser *self, const char **spec)
 {
   struct itset_elt *elt;
   enum itset_width width;
   const char *save_spec = *spec;
+
+  maybe_skip_spaces (self, spec);
 
   width = parse_width (spec);
 
@@ -2656,7 +2691,8 @@ parse_elem_1 (const char **spec)
   if (elt != NULL)
     return elt;
 
-  elt = parse_double_range_itset (spec, width, 't', create_thread_range_itset);
+  elt = parse_double_range_itset (spec, width, 't',
+				  create_thread_range_itset);
   if (elt != NULL)
     return elt;
 
@@ -2670,23 +2706,25 @@ parse_elem_1 (const char **spec)
 }
 
 static struct itset_elt *
-parse_elem (const char **spec)
+parse_elem (struct itset_parser *self, const char **spec)
 {
   struct itset_elt *elt;
 
-  elt = parse_neg (spec);
+  maybe_skip_spaces (self, spec);
+
+  elt = parse_neg (self, spec);
   if (elt != NULL)
     return elt;
 
-  elt = parse_parens_set (spec);
+  elt = parse_parens_set (self, spec);
   if (elt != NULL)
     return elt;
 
-  elt = parse_current_focus (spec);
+  elt = parse_current_focus (self, spec);
   if (elt != NULL)
     return elt;
 
-  elt = parse_elem_1 (spec);
+  elt = parse_elem_1 (self, spec);
   if (elt != NULL)
     return elt;
 
@@ -2695,7 +2733,7 @@ parse_elem (const char **spec)
 }
 
 static struct itset_elt *
-parse_neg (const char **spec)
+parse_neg (struct itset_parser *self, const char **spec)
 {
   struct itset_elt_negated *neg_elt;
   struct itset_elt *elt;
@@ -2705,7 +2743,7 @@ parse_neg (const char **spec)
 
   (*spec)++;
 
-  elt = parse_elem (spec);
+  elt = parse_elem (self, spec);
 
   neg_elt = create_itset_elt_negated ();
   neg_elt->negated = elt;
@@ -2714,7 +2752,7 @@ parse_neg (const char **spec)
 }
 
 static struct itset_elt *
-parse_current_focus (const char **spec)
+parse_current_focus (struct itset_parser *self, const char **spec)
 {
   struct itset_elt_itset *itset_elt;
 
@@ -2728,17 +2766,18 @@ parse_current_focus (const char **spec)
 }
 
 static struct itset_elt *
-parse_parens_set (const char **spec)
+parse_parens_set (struct itset_parser *self, const char **spec)
 {
-  struct itset_elt_negated *neg_elt;
-  struct itset_elt *elt;
   struct cleanup *old_chain;
+  struct itset_elt *elt;
 
   if (**spec != '(')
     return NULL;
   (*spec)++;
 
-  elt = parse_itset_one (spec);
+  self->parens_level++;
+
+  elt = parse_itset_one (self, spec);
   if (elt == NULL)
     error (_("Invalid I/T syntax at `%s'"), *spec);
 
@@ -2746,26 +2785,29 @@ parse_parens_set (const char **spec)
   if (**spec != ')')
     error (_("Invalid I/T syntax at `%s'"), *spec);
 
-  neg_elt = create_itset_elt_negated ();
-  neg_elt->negated = elt;
+  (*spec)++;
+  self->parens_level--;
+  gdb_assert (self->parens_level >= 0);
 
   discard_cleanups (old_chain);
 
-  return (struct itset_elt *) neg_elt;
+  return (struct itset_elt *) elt;
 }
 
 static struct itset_elt *
-parse_inters (const char **spec)
+parse_inters (struct itset_parser *self, const char **spec)
 {
   struct itset_elt *elt1, *elt2 = NULL;
   struct itset_elt_intersect *intersect = NULL;
   struct cleanup *old_chain;
 
-  elt1 = parse_elem (spec);
+  elt1 = parse_elem (self, spec);
   if (elt1 == NULL)
     return NULL;
 
   old_chain = make_cleanup_itset_elt_free (elt1);
+
+  maybe_skip_spaces (self, spec);
 
   if (**spec == '&')
     {
@@ -2781,7 +2823,7 @@ parse_inters (const char **spec)
     {
       (*spec)++;
 
-      elt2 = parse_elem (spec);
+      elt2 = parse_elem (self, spec);
       if (elt2 == NULL)
 	{
 	  do_cleanups (old_chain);
@@ -2795,18 +2837,20 @@ parse_inters (const char **spec)
 }
 
 static struct itset_elt *
-parse_itset_one (const char **spec)
+parse_itset_one (struct itset_parser *self, const char **spec)
 {
   struct itset_elt *inters1, *inters2 = NULL;
   struct itset_elt_itset *un = NULL;
   struct cleanup *old_chain;
 
-  inters1 = parse_inters (spec);
+  inters1 = parse_inters (self, spec);
   if (inters1 == NULL)
     return NULL;
   old_chain = make_cleanup_itset_elt_free (inters1);
 
-  if (**spec == ',')
+  maybe_skip_spaces (self, spec);
+
+  if (**spec == ',' || (self->parens_level > 0 && **spec != ')'))
     {
       struct itset *set;
 
@@ -2822,17 +2866,22 @@ parse_itset_one (const char **spec)
       old_chain = make_cleanup_itset_elt_free (inters1);
     }
 
-  while (**spec == ',')
+  while (**spec == ',' || (self->parens_level > 0 && **spec != ')'))
     {
-      (*spec)++;
+      if (**spec == ',')
+	(*spec)++;
 
-      inters2 = parse_inters (spec);
+      maybe_skip_spaces (self, spec);
+
+      inters2 = parse_inters (self, spec);
       if (inters2 == NULL)
 	{
 	  do_cleanups (old_chain);
 	  return NULL;
 	}
       VEC_safe_push (itset_elt_ptr, un->set->elements, inters2);
+
+      maybe_skip_spaces (self, spec);
     }
 
   discard_cleanups (old_chain);
@@ -2952,6 +3001,7 @@ itset_create_const (const char **specp)
   struct cleanup *cleanups;
   const char *spec = *specp;
   const char *spec_start;
+  struct itset_parser parser = {0};
 
   result = XCNEW (struct itset);
   result->refc = 1;
@@ -2969,7 +3019,7 @@ itset_create_const (const char **specp)
 
   if (!valid_spec_end (spec))
     {
-      elt = parse_itset_one (&spec);
+      elt = parse_itset_one (&parser, &spec);
       VEC_safe_push (itset_elt_ptr, result->elements, elt);
 
       if (!valid_spec_end (spec))
