@@ -1431,6 +1431,143 @@ switch_to_thread_no_regs (struct thread_info *thread)
   stop_pc = ~(CORE_ADDR) 0;
 }
 
+/* Print status information about execution objects in current
+   focus.  */
+
+static void
+status_command (char *arg, int from_tty)
+{
+  struct cleanup *old_chain;
+  struct inferior *inf;
+  struct thread_info *tp;
+  int n_threads = 0;
+  struct ui_out *uiout = current_uiout;
+  ptid_t current_ptid = inferior_ptid;
+
+  update_thread_list ();
+
+  /* We'll be switching threads temporarily.  */
+  old_chain = make_cleanup_restore_current_thread ();
+
+  ALL_THREADS (tp)
+    ++n_threads;
+
+  if (n_threads == 0)
+    n_threads++;
+
+  make_cleanup_ui_out_table_begin_end (uiout, 4, n_threads, "threads");
+
+  ui_out_table_header (uiout, 3, ui_left, "current", "");
+  ui_out_table_header (uiout, 4, ui_left, "id_inf", "Id");
+  ui_out_table_header (uiout, 17, ui_left, "target-id", "Target Id");
+  ui_out_table_header (uiout, 1, ui_left, "status", "Status");
+  ui_out_table_body (uiout);
+
+  ALL_INFERIORS (inf)
+    {
+      ui_out_message (uiout, 0, "  %d (%s)\t[%s]\n",
+		      inf->num, target_pid_to_str (pid_to_ptid (inf->pid)),
+		      inf->pspace->pspace_exec_filename != NULL
+		      ? inf->pspace->pspace_exec_filename : "");
+
+      ALL_THREADS (tp)
+        {
+	  struct cleanup *chain2;
+	  const char *extra_info, *name, *target_id;
+	  int core;
+
+	  if (inf->pid != ptid_get_pid (tp->ptid))
+	    continue;
+
+	  chain2 = make_cleanup_ui_out_tuple_begin_end (uiout, NULL);
+
+	  if (ptid_equal (tp->ptid, current_ptid))
+	    ui_out_field_string (uiout, "current", "*");
+	  else
+	    ui_out_field_skip (uiout, "current");
+
+	  {
+	    struct cleanup *str_cleanup;
+	    char *contents;
+
+	    contents = xstrprintf ("%s", print_thread_id (tp));
+	    str_cleanup = make_cleanup (xfree, contents);
+	    ui_out_field_string (uiout, "id_inf", contents);
+	    do_cleanups (str_cleanup);
+	  }
+
+	  /* For the CLI, we stuff everything into the target-id field.
+	     This is a gross hack to make the output come out looking
+	     correct.  The underlying problem here is that ui-out has no
+	     way to specify that a field's space allocation should be
+	     shared by several fields.  For MI, we do the right thing
+	     instead.  */
+
+	  target_id = target_pid_to_str (tp->ptid);
+	  extra_info = target_extra_thread_info (tp);
+	  name = tp->name ? tp->name : target_thread_name (tp);
+
+	  if (ui_out_is_mi_like_p (uiout))
+	    {
+	      ui_out_field_string (uiout, "target-id", target_id);
+	      if (extra_info)
+		ui_out_field_string (uiout, "details", extra_info);
+	      if (name)
+		ui_out_field_string (uiout, "name", name);
+	    }
+	  else
+	    {
+	      struct cleanup *str_cleanup;
+	      char *contents;
+
+	      if (extra_info && name)
+		contents = xstrprintf ("%s \"%s\" (%s)", target_id,
+				       name, extra_info);
+	      else if (extra_info)
+		contents = xstrprintf ("%s (%s)", target_id, extra_info);
+	      else if (name)
+		contents = xstrprintf ("%s \"%s\"", target_id, name);
+	      else
+		contents = xstrdup (target_id);
+	      str_cleanup = make_cleanup (xfree, contents);
+
+	      ui_out_field_string (uiout, "target-id", contents);
+	      do_cleanups (str_cleanup);
+	    }
+
+	  if (tp->state == THREAD_RUNNING)
+	    ui_out_text (uiout, "(running)\n");
+	  else
+	    {
+	      switch_to_thread (tp->ptid);
+	      print_stack_frame (get_current_frame (),
+				 /* For MI output, print frame level.  */
+				 ui_out_is_mi_like_p (uiout),
+				 LOCATION, 0);
+	    }
+
+	  if (ui_out_is_mi_like_p (uiout))
+	    {
+	      char *state = "stopped";
+
+	      if (tp->state == THREAD_RUNNING)
+		state = "running";
+	      ui_out_field_string (uiout, "state", state);
+	    }
+
+	  core = target_core_of_thread (tp->ptid);
+	  if (ui_out_is_mi_like_p (uiout) && core != -1)
+	    ui_out_field_int (uiout, "core", core);
+
+	  do_cleanups (chain2);
+	}
+    }
+
+  /* Restores the current thread and the frame selected before
+     the "info threads" command.  */
+  do_cleanups (old_chain);
+}
+
 /* Switch from one thread to another.  */
 
 void
@@ -2198,6 +2335,12 @@ Usage: info threads [-gid] [ID]...\n\
 -gid: Show global thread IDs.\n\
 If ID is given, it is a space-separated list of IDs of threads to display.\n\
 Otherwise, all threads are displayed."));
+
+  add_com ("status", class_run, status_command,
+	   _("Display currently known threads.\n\
+Usage: info threads [ID]...\n\
+Optional arguments are thread IDs with spaces between.\n\
+If no arguments, all threads are displayed."));
 
   add_prefix_cmd ("thread", class_run, thread_command, _("\
 Use this command to switch between threads.\n\
