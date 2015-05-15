@@ -1677,7 +1677,8 @@ The commands in this class are those defined by the user.\n\
 Use the \"define\" command to define a command."), &cmdlist);
   add_cmd ("support", class_support, NULL, _("Support facilities."), &cmdlist);
   if (!dbx_commands)
-    add_cmd ("status", class_info, NULL, _("Status inquiries."), &cmdlist);
+    add_cmd ("status-inquiries", class_info, NULL, _("Status inquiries."),
+	     &cmdlist);
   add_cmd ("files", class_files, NULL, _("Specifying and examining files."),
 	   &cmdlist);
   add_cmd ("breakpoints", class_breakpoint, NULL,
