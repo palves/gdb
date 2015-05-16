@@ -415,6 +415,9 @@ struct itset_elt_range
   struct itset_elt base;
   enum itset_width width;
 
+  /* If WIDTH is group, this is the group, otherwise NULL.  */
+  struct itset_elt *group;
+
   int is_current;
   /* The first and last in this range.  If FIRST is WILDCARD, then
      LAST is unused.  */
@@ -436,6 +439,8 @@ range_width_char (enum itset_width width)
     {
     case ITSET_WIDTH_ALL:
       return 'a';
+    case ITSET_WIDTH_GROUP:
+      return 'g';
     case ITSET_WIDTH_DEFAULT:
       return 'd';
     case ITSET_WIDTH_INFERIOR:
@@ -694,7 +699,7 @@ static const struct itset_elt_vtable inferior_range_vtable =
 
 /* Create a new `range' I/T set element.  */
 
-static struct itset_elt *
+static struct itset_elt_range *
 create_inferior_range_itset (enum itset_width width,
 			     int is_current,
 			     struct spec_range *inf_range)
@@ -713,7 +718,7 @@ create_inferior_range_itset (enum itset_width width,
   elt = &range_elt->base;
   elt->vtable = &inferior_range_vtable;
 
-  return elt;
+  return range_elt;
 }
 
 
@@ -741,6 +746,12 @@ thread_range_contains_program_space (struct itset_elt *base,
   if (range->width == ITSET_WIDTH_ALL)
     return 1;
 
+  if (range->width == ITSET_WIDTH_GROUP)
+    {
+      if (range->group->vtable->contains_program_space (range->group, pspace))
+	return 1;
+    }
+
   if (range->is_current)
     return (get_current_context ()->inf->pspace == pspace);
 
@@ -758,6 +769,12 @@ thread_range_contains_inferior (struct itset_elt *base, struct inferior *inf)
 
   if (range->width == ITSET_WIDTH_ALL)
     return 1;
+
+  if (range->width == ITSET_WIDTH_GROUP)
+    {
+      if (range->group->vtable->contains_inferior (range->group, inf))
+	return 1;
+    }
 
   if (range->is_current)
     return (get_current_context ()->inf == inf);
@@ -780,6 +797,12 @@ thread_range_contains_thread (struct itset_elt *base, struct thread_info *thr,
   if (including_width
       && range_elt->width == ITSET_WIDTH_ALL)
     return 1;
+
+  if (including_width && range_elt->width == ITSET_WIDTH_GROUP)
+    {
+      if (range_elt->group->vtable->contains_thread (range_elt->group, thr, 0))
+	return 1;
+    }
 
   if (range_elt->is_current)
     {
@@ -905,7 +928,7 @@ static const struct itset_elt_vtable thread_range_vtable =
 
 /* Create a new `range' I/T set element.  */
 
-static struct itset_elt *
+static struct itset_elt_range *
 create_thread_range_itset (enum itset_width width, int is_current,
 			   struct spec_range *inf_range,
 			   struct spec_range *thr_range)
@@ -925,7 +948,7 @@ create_thread_range_itset (enum itset_width width, int is_current,
   elt = &range_elt->base;
   elt->vtable = &thread_range_vtable;
 
-  return elt;
+  return range_elt;
 }
 
 
@@ -1078,7 +1101,7 @@ static const struct itset_elt_vtable core_range_vtable =
 
 /* Create a new `core_range' I/T set element.  */
 
-static struct itset_elt *
+static struct itset_elt_range *
 create_core_range_itset (enum itset_width width, int is_current,
 			 struct spec_range *core_range)
 {
@@ -1096,7 +1119,7 @@ create_core_range_itset (enum itset_width width, int is_current,
   elt = &range_elt->base;
   elt->vtable = &core_range_vtable;
 
-  return elt;
+  return range_elt;
 }
 
 
@@ -1305,7 +1328,7 @@ static const struct itset_elt_vtable ada_task_range_vtable =
 
 /* Create a new `range' I/T set element.  */
 
-static struct itset_elt *
+static struct itset_elt_range *
 create_ada_task_range_itset (enum itset_width width, int is_current,
 			     struct spec_range *inf_range,
 			     struct spec_range *ada_range)
@@ -1325,15 +1348,15 @@ create_ada_task_range_itset (enum itset_width width, int is_current,
   elt = &range_elt->base;
   elt->vtable = &ada_task_range_vtable;
 
-  return elt;
+  return range_elt;
 }
 
 static const char *parse_range (const char *spec, struct spec_range *range);
 
-typedef struct itset_elt *(*create_double_range_itset_func)
+typedef struct itset_elt_range *(*create_double_range_itset_func)
   (enum itset_width, int, struct spec_range *, struct spec_range *);
 
-static struct itset_elt *
+static struct itset_elt_range *
 parse_double_range_itset (const char **spec, enum itset_width width,
 			  int range_type_char,
 			  create_double_range_itset_func create_func)
@@ -2462,10 +2485,10 @@ parse_range (const char *spec, struct spec_range *range)
   return spec;
 }
 
-typedef struct itset_elt *(*create_range_itset_func)
+typedef struct itset_elt_range *(*create_range_itset_func)
   (enum itset_width, int, struct spec_range *range);
 
-static struct itset_elt *
+static struct itset_elt_range *
 parse_range_itset (const char **spec, enum itset_width width,
 		   int range_type_char, create_range_itset_func create_func)
 {
@@ -2507,6 +2530,9 @@ parse_width (const char **spec)
     case 'a':
       width = ITSET_WIDTH_ALL;
       break;
+    case 'g':
+      width = ITSET_WIDTH_GROUP;
+      break;
     case 'i':
       width = ITSET_WIDTH_INFERIOR;
       break;
@@ -2529,10 +2555,20 @@ parse_width (const char **spec)
 
 
 
-/* Parse a named I/T set.  Currently the only named sets which are
-   recognized are `exec (NAME)', and `current'.  Updates RESULT with
-   the new I/T set elements, and returns an updated pointer into the
-   spec.  Throws an exception on error.  */
+static int
+is_internal_set (const char **text, const char *pattern)
+{
+  if (startswith (*text, pattern))
+    {
+      *text += strlen (pattern);
+      return 1;
+    }
+  return 0;
+}
+
+/* Parse a named I/T set.  Return an I/T set element, and advances the
+   in/out parameter past the named set.  Throws an exception on
+   error.  */
 
 static struct itset_elt *
 parse_named_or_throw (const char **textp)
@@ -2541,22 +2577,19 @@ parse_named_or_throw (const char **textp)
   const char *text = *textp;
   const char *name = text;
 
-  for (text = name + 1; isalnum (*text) || *text == '_'; ++text)
-    ;
-
-  if (strncmp ("all", name, text - name) == 0)
+  if (is_internal_set (&text, "all"))
     elt = create_all_itset ();
-  else if (strncmp ("empty", name, text - name) == 0)
+  else if (is_internal_set (&text, "empty"))
     elt = create_empty_itset ();
-  else if (strncmp ("stopped", name, text - name) == 0)
+  else if (is_internal_set (&text, "stopped"))
     elt = create_state_itset (THREAD_STOPPED);
-  else if (strncmp ("running", name, text - name) == 0)
+  else if (is_internal_set (&text, "running"))
     elt = create_state_itset (THREAD_RUNNING);
-  else if (strncmp ("I", name, text - name) == 0)
+  else if (is_internal_set (&text, "I"))
     elt = create_curinf_itset ();
-  else if (strncmp ("T", name, text - name) == 0)
+  else if (is_internal_set (&text, "T"))
     elt = create_curthr_itset ();
-  else if (strncmp ("exec", name, text - name) == 0)
+  else if (is_internal_set (&text, "exec"))
     {
       char *tem;
       char *arg;
@@ -2577,6 +2610,12 @@ parse_named_or_throw (const char **textp)
     {
       struct named_itset *named_itset;
       char *tem;
+
+      for (text = name; isalnum (*text) || *text == '_'; ++text)
+	;
+
+      if (text == name)
+	error (_("Doesn't look like a valid spec."));
 
       tem = alloca (text - name + 1);
 
@@ -2677,22 +2716,10 @@ valid_spec_end (const char *spec)
   return *spec == '\0' || isspace (*spec);
 }
 
-static struct itset_elt *
-parse_elem_1 (struct itset_parser *self)
+static struct itset_elt_range *
+parse_range_elem (struct itset_parser *self, enum itset_width width)
 {
-  struct itset_elt *elt;
-  enum itset_width width;
-  const char *save_spec = self->spec;
-
-  maybe_skip_spaces (self);
-
-  width = parse_width (&self->spec);
-
-  if (*self->spec == '/')
-    {
-      self->spec++;
-      return parse_named_or_throw (&self->spec);
-    }
+  struct itset_elt_range *elt;
 
   elt = parse_range_itset (&self->spec, width, 'i',
 			   create_inferior_range_itset);
@@ -2713,6 +2740,44 @@ parse_elem_1 (struct itset_parser *self)
 				  create_ada_task_range_itset);
   if (elt != NULL)
     return elt;
+
+  return NULL;
+}
+
+static struct itset_elt *
+parse_elem_1 (struct itset_parser *self)
+{
+  struct itset_elt_range *elt_range;
+  enum itset_width width;
+  const char *save_spec = self->spec;
+  struct itset_elt *group = NULL;
+
+  maybe_skip_spaces (self);
+
+  width = parse_width (&self->spec);
+
+  if (width == ITSET_WIDTH_GROUP && *self->spec == '/')
+    {
+      self->spec++;
+      /* FIXME: leak on error.  */
+      group = parse_named_or_throw (&self->spec);
+
+      if (*self->spec == '/')
+	self->spec++;
+    }
+
+  /* For now, an unspecified group name defaults to everything.  */
+  if (width == ITSET_WIDTH_GROUP && group == NULL)
+    group = create_all_itset ();
+
+  elt_range = parse_range_elem (self, width);
+  if (elt_range != NULL)
+    {
+      elt_range->group = group;
+      return &elt_range->base;
+    }
+
+  return parse_named_or_throw (&self->spec);
 
   self->spec = save_spec;
   return NULL;
@@ -3098,7 +3163,7 @@ itset_create_empty (void)
 static struct itset *
 itset_create_curinf (void)
 {
-  return itset_create_spec ("a/I");
+  return itset_create_spec ("iI");
 }
 
 /* Create a new I/T set which represents the current thread.  */
@@ -3106,25 +3171,25 @@ itset_create_curinf (void)
 static struct itset *
 itset_create_curthr (void)
 {
-  return itset_create_spec ("a/T");
+  return itset_create_spec ("tT");
 }
 
 static struct itset *
 itset_create_all (void)
 {
-  return itset_create_spec ("a/all");
+  return itset_create_spec ("g/all/t1.1");
 }
 
 static struct itset *
 itset_create_running (void)
 {
-  return itset_create_spec ("a/running");
+  return itset_create_spec ("g/running/t1.1");
 }
 
 static struct itset *
 itset_create_stopped (void)
 {
-  return itset_create_spec ("a/stopped");
+  return itset_create_spec ("g/stopped/t1.1");
 }
 
 static struct itset *
@@ -3449,7 +3514,7 @@ void
 itfocus_from_thread_switch (void)
 {
   struct itset *itset;
-  struct itset_elt *elt;
+  struct itset_elt_range *elt_range;
   enum itset_width width = itset_get_width (current_itset);
   struct spec_range inf_range;
   struct spec_range thr_range;
@@ -3460,15 +3525,15 @@ itfocus_from_thread_switch (void)
   thr_range.first = inferior_thread ()->num;
   thr_range.last = thr_range.first;
 
-  elt = create_thread_range_itset (width, 0,
-				   &inf_range,
-				   &thr_range);
+  elt_range = create_thread_range_itset (width, 0,
+					 &inf_range,
+					 &thr_range);
 
   /* FIXME: factor this to a function.  */
   itset = XCNEW (struct itset);
   itset->refc = 1;
 
-  VEC_safe_push (itset_elt_ptr, itset->elements, elt);
+  VEC_safe_push (itset_elt_ptr, itset->elements, &elt_range->base);
 
   itset_free (current_itset);
   current_itset = itset;
