@@ -30,6 +30,9 @@
 #include "gdbcmd.h"
 #include "ada-lang.h"
 
+/* FIXME */
+char itset_get_focus_object_type (struct itset *set);
+
 /* Rather than creating/destroying these dynamic itsets when
    necessary, keep global copies around (itsets are refcounted).  */
 static struct itset *all_itset;
@@ -90,6 +93,10 @@ struct itset_elt_vtable
   /* Return true if the element's TOI is fixed.  */
 
   int (*has_fixed_toi) (struct itset_elt *elt);
+
+  /* Return the element's execution object type.  */
+
+  char (*get_focus_object_type) (struct itset_elt *elt);
 };
 
 /* The base class of all I/T set elements.  */
@@ -413,6 +420,7 @@ struct spec_range
 struct itset_elt_range
 {
   struct itset_elt base;
+  char object_type;
   enum itset_width width;
 
   /* If WIDTH is group, this is the group, otherwise NULL.  */
@@ -430,6 +438,14 @@ range_get_width (struct itset_elt *base)
   struct itset_elt_range *range = (struct itset_elt_range *) base;
 
   return range->width;
+}
+
+static char
+range_get_focus_object_type (struct itset_elt *base)
+{
+  struct itset_elt_range *range = (struct itset_elt_range *) base;
+
+  return range->object_type;
 }
 
 static int
@@ -694,7 +710,8 @@ static const struct itset_elt_vtable inferior_range_vtable =
   inferior_range_elt_get_spec,
   range_get_width,
   inferior_range_elt_get_toi,
-  inferior_range_elt_has_fixed_toi
+  inferior_range_elt_has_fixed_toi,
+  range_get_focus_object_type,
 };
 
 /* Create a new `range' I/T set element.  */
@@ -714,6 +731,7 @@ create_inferior_range_itset (enum itset_width width,
   range_elt->range = *inf_range;
   range_elt->width = width;
   range_elt->is_current = is_current;
+  range_elt->object_type = 'i';
 
   elt = &range_elt->base;
   elt->vtable = &inferior_range_vtable;
@@ -837,7 +855,7 @@ thread_range_contains_thread (struct itset_elt *base, struct thread_info *thr,
     return 0;
 
   if (range->first == WILDCARD
-      || (range->first <= thr->num && thr->num <= range->last))
+      || (range->first <= thr->num_inf && thr->num_inf <= range->last))
     return 1;
 
   return 0;
@@ -923,7 +941,8 @@ static const struct itset_elt_vtable thread_range_vtable =
   thread_range_get_spec,
   range_get_width,
   thread_range_get_toi,
-  thread_range_has_fixed_toi
+  thread_range_has_fixed_toi,
+  range_get_focus_object_type,
 };
 
 /* Create a new `range' I/T set element.  */
@@ -944,6 +963,7 @@ create_thread_range_itset (enum itset_width width, int is_current,
   range_elt->range = *thr_range;
   range_elt->width = width;
   range_elt->is_current = is_current;
+  range_elt->object_type = 't';
 
   elt = &range_elt->base;
   elt->vtable = &thread_range_vtable;
@@ -1097,6 +1117,7 @@ static const struct itset_elt_vtable core_range_vtable =
   range_get_width,
   core_range_get_toi,
   core_range_has_fixed_toi,
+  range_get_focus_object_type,
 };
 
 /* Create a new `core_range' I/T set element.  */
@@ -1115,6 +1136,7 @@ create_core_range_itset (enum itset_width width, int is_current,
   range_elt->range = *core_range;
   range_elt->width = width;
   range_elt->is_current = is_current;
+  range_elt->object_type = 'c';
 
   elt = &range_elt->base;
   elt->vtable = &core_range_vtable;
@@ -1323,7 +1345,8 @@ static const struct itset_elt_vtable ada_task_range_vtable =
   ada_task_range_get_spec,
   range_get_width,
   ada_task_range_get_toi,
-  ada_task_range_has_fixed_toi
+  ada_task_range_has_fixed_toi,
+  range_get_focus_object_type,
 };
 
 /* Create a new `range' I/T set element.  */
@@ -1344,6 +1367,7 @@ create_ada_task_range_itset (enum itset_width width, int is_current,
   range_elt->range = *ada_range;
   range_elt->width = width;
   range_elt->is_current = is_current;
+  range_elt->object_type = 'k';
 
   elt = &range_elt->base;
   elt->vtable = &ada_task_range_vtable;
@@ -1359,6 +1383,7 @@ typedef struct itset_elt_range *(*create_double_range_itset_func)
 static struct itset_elt_range *
 parse_double_range_itset (const char **spec, enum itset_width width,
 			  int range_type_char,
+			  int default_type_char,
 			  create_double_range_itset_func create_func)
 {
   struct spec_range ranges[2];
@@ -1366,16 +1391,21 @@ parse_double_range_itset (const char **spec, enum itset_width width,
   char *end;
   int first_num;
 
-  if (**spec == toupper (range_type_char))
+  if (!default_type_char)
     {
+      if (**spec == toupper (range_type_char))
+	{
+	  (*spec)++;
+	  return create_func (width, 1, &ranges[0], &ranges[1]);
+	}
+
+      if ((*spec)[0] != range_type_char)
+	return NULL;
+
       (*spec)++;
-      return create_func (width, 1, &ranges[0], &ranges[1]);
     }
-
-  if ((*spec)[0] != range_type_char)
+  else if (default_type_char != range_type_char)
     return NULL;
-
-  (*spec)++;
 
   *spec = parse_range (*spec, &ranges[0]);
 
@@ -2490,20 +2520,27 @@ typedef struct itset_elt_range *(*create_range_itset_func)
 
 static struct itset_elt_range *
 parse_range_itset (const char **spec, enum itset_width width,
-		   int range_type_char, create_range_itset_func create_func)
+		   int range_type_char, int default_type_char,
+		   create_range_itset_func create_func)
 {
   struct spec_range range = {0};
 
-  if (**spec == toupper (range_type_char))
+  if (!default_type_char)
     {
-      (*spec)++;
-      return create_func (width, range_type_char, &range);
-    }
+      if (**spec == toupper (range_type_char))
+	{
+	  (*spec)++;
+	  return create_func (width, range_type_char, &range);
+	}
 
-  if ((*spec)[0] != range_type_char || !looks_like_range ((*spec) + 1))
+      if ((*spec)[0] != range_type_char || !looks_like_range ((*spec) + 1))
+	return NULL;
+
+      (*spec)++;
+    }
+  else if (default_type_char != range_type_char)
     return NULL;
 
-  (*spec)++;
   *spec = parse_range (*spec, &range);
   return create_func (width, 0, &range);
 }
@@ -2717,27 +2754,51 @@ valid_spec_end (const char *spec)
 }
 
 static struct itset_elt_range *
-parse_range_elem (struct itset_parser *self, enum itset_width width)
+parse_range_elem_1 (struct itset_parser *self, enum itset_width width,
+		    int default_object_type)
 {
   struct itset_elt_range *elt;
 
   elt = parse_range_itset (&self->spec, width, 'i',
+			   default_object_type,
 			   create_inferior_range_itset);
   if (elt != NULL)
     return elt;
 
   elt = parse_range_itset (&self->spec, width, 'c',
+			   default_object_type,
 			   create_core_range_itset);
   if (elt != NULL)
     return elt;
 
   elt = parse_double_range_itset (&self->spec, width, 't',
+				  default_object_type,
 				  create_thread_range_itset);
   if (elt != NULL)
     return elt;
 
   elt = parse_double_range_itset (&self->spec, width, 'k',
+				  default_object_type,
 				  create_ada_task_range_itset);
+  if (elt != NULL)
+    return elt;
+
+  return NULL;
+}
+
+static struct itset_elt_range *
+parse_range_elem (struct itset_parser *self, enum itset_width width)
+{
+  struct itset_elt_range *elt;
+  int object_type;
+
+  elt = parse_range_elem_1 (self, width, 0);
+  if (elt != NULL)
+    return elt;
+
+  object_type = itset_get_focus_object_type (current_itset);
+
+  elt = parse_range_elem_1 (self, width, object_type);
   if (elt != NULL)
     return elt;
 
@@ -3065,6 +3126,30 @@ int
 itset_has_fixed_toi (struct itset *set)
 {
   return set_has_fixed_toi (set->elements);
+}
+
+static char
+set_get_focus_object_type (VEC (itset_elt_ptr) *elements)
+{
+  int ix;
+  struct itset_elt *elt;
+
+  for (ix = 0; VEC_iterate (itset_elt_ptr, elements, ix, elt); ++ix)
+    {
+      char object_type_char;
+
+      object_type_char = elt->vtable->get_focus_object_type (elt);
+      if (object_type_char != '\0')
+	return object_type_char;
+    }
+
+  gdb_assert_not_reached ("set has no object type");
+}
+
+char
+itset_get_focus_object_type (struct itset *set)
+{
+  return set_get_focus_object_type (set->elements);
 }
 
 /* Parse an I/T set specification and return a new I/T set.  Throws an
@@ -3445,6 +3530,52 @@ switch_to_itset (struct itset *itset)
   struct thread_info *tp;
   struct cleanup *old_chain;
   int inf_count;
+
+#if 0
+  char focus_type;
+  focus_type = itset_get_focus_object_type (itset);
+  /* FIXME: Focusing on a goroutine for example should walk
+     goroutines, not threads.  */
+  if (focus_type == 't' || focus_type == 'i')
+#endif
+    {
+      struct thread_info *thr;
+
+      ALL_THREADS (thr)
+        {
+	  if (itset_contains_thread (itset, thr, 0))
+	    {
+	      switch_to_thread (thr->ptid);
+	      set_current_context ();
+	      return;
+	    }
+	}
+    }
+
+  ALL_INFERIORS (inf)
+    {
+      if (itset_contains_inferior (itset, inf))
+	{
+	  struct thread_info *thr = NULL;
+
+	  if (inf->pid != 0)
+	    thr = first_thread_of_process (inf->pid);
+
+	  if (thr != NULL)
+	    {
+	      switch_to_thread (thr->ptid);
+	    }
+	  else
+	    {
+	      switch_to_thread (null_ptid);
+	      set_current_inferior (inf);
+	      set_current_program_space (inf->pspace);
+	    }
+	  set_current_context ();
+	  return;
+	}
+    }
+  return;
 
   tp = itset_get_toi (itset);
   if (tp != NULL)
