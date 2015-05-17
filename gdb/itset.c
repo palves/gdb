@@ -97,6 +97,10 @@ struct itset_elt_vtable
   /* Return the element's execution object type.  */
 
   char (*get_focus_object_type) (struct itset_elt *elt);
+
+  /* Return the element's execution object type.  */
+
+  struct itset_elt *(*clone) (struct itset_elt *elt);
 };
 
 /* The base class of all I/T set elements.  */
@@ -529,14 +533,19 @@ double_range_get_spec (struct itset_elt *base, int range_type_char,
   struct spec_range *range = &range_elt->range;
   int w;
   char *res = NULL;
+  char *group_spec;
 
   w = range_width_char (range_elt->width);
+  res = concat_printf (res, "%c", w);
+
+  group_spec = range_elt->group->vtable->get_spec (range_elt->group);
+  res = concat_printf (res, "/%s/", group_spec);
+  xfree (group_spec);
 
   if (range_elt->is_current)
-    return xstrprintf ("%c%c", w, toupper (range_type_char));
+    return concat_printf (res, "%c", toupper (range_type_char));
 
-  res = concat_printf (res, "%c%c", w, range_type_char);
-
+  res = concat_printf (res, "%c", range_type_char);
   res = range_concat_spec (res, inf_range);
   res = concat_printf (res, ".");
   res = range_concat_spec (res, range);
@@ -931,6 +940,31 @@ thread_range_has_fixed_toi (struct itset_elt *base)
   return !range->is_current;
 }
 
+static struct itset_elt_range *
+  create_thread_range_itset (enum itset_width width,
+			     int is_current,
+			     struct spec_range *inf_range,
+			     struct spec_range *thr_range);
+static struct itset_elt *create_all_itset (void);
+
+static struct itset_elt *
+thread_range_clone (struct itset_elt *base)
+{
+  struct itset_elt_thread_range *thread_range_elt
+    = (struct itset_elt_thread_range *) base;
+  struct itset_elt_range *range = (struct itset_elt_range *) base;
+  struct itset_elt_range *clone;
+
+  clone = create_thread_range_itset (range->width,
+				     range->is_current,
+				     &thread_range_elt->inf_range,
+				     &range->range);
+
+  /* FIXME */
+  clone->group = create_all_itset ();
+  return &clone->base;
+}
+
 static const struct itset_elt_vtable thread_range_vtable =
 {
   NULL,
@@ -943,6 +977,7 @@ static const struct itset_elt_vtable thread_range_vtable =
   thread_range_get_toi,
   thread_range_has_fixed_toi,
   range_get_focus_object_type,
+  thread_range_clone,
 };
 
 /* Create a new `range' I/T set element.  */
@@ -1633,7 +1668,7 @@ all_is_empty (struct itset_elt *base)
 static char *
 all_get_spec (struct itset_elt *base)
 {
-  return xstrdup ("/all");
+  return xstrdup ("all");
 }
 
 static enum itset_width
@@ -1804,6 +1839,9 @@ static char *
 itset_elt_itset_get_spec (struct itset_elt *base)
 {
   struct itset_elt_itset *iiset = (struct itset_elt_itset *) base;
+
+  if (iiset->set->name != NULL)
+    return xstrdup (iiset->set->name);
 
   return itset_get_spec (iiset->set);
 }
@@ -2105,9 +2143,9 @@ state_get_spec (struct itset_elt *base)
   switch (state->state)
     {
     case THREAD_RUNNING:
-      return xstrdup ("/running");
+      return xstrdup ("running");
     case THREAD_STOPPED:
-      return xstrdup ("/stopped");
+      return xstrdup ("stopped");
     }
 
   gdb_assert_not_reached ("unhandled state");
@@ -2178,7 +2216,7 @@ curinf_is_empty (struct itset_elt *base)
 static char *
 curinf_get_spec (struct itset_elt *base)
 {
-  return xstrdup ("/current");
+  return xstrdup ("current");
 }
 
 static const struct itset_elt_vtable curinf_vtable =
@@ -2647,6 +2685,7 @@ parse_named_or_throw (const char **textp)
     {
       struct named_itset *named_itset;
       char *tem;
+      struct itset_elt_itset *itset_elt;
 
       for (text = name; isalnum (*text) || *text == '_'; ++text)
 	;
@@ -2662,6 +2701,7 @@ parse_named_or_throw (const char **textp)
       named_itset = get_named_itset (tem);
       if (named_itset == NULL)
 	error (_("Unknown named I/T set: `%s'"), tem);
+      itset_elt = create_itset_elt_itset (named_itset->set);
       elt = (struct itset_elt *) create_itset_elt_itset (named_itset->set);
     }
 
@@ -2817,7 +2857,7 @@ parse_elem_1 (struct itset_parser *self)
 
   width = parse_width (&self->spec);
 
-  if (width == ITSET_WIDTH_GROUP && *self->spec == '/')
+  if (*self->spec == '/')
     {
       self->spec++;
       /* FIXME: leak on error.  */
@@ -2827,14 +2867,45 @@ parse_elem_1 (struct itset_parser *self)
 	self->spec++;
     }
 
-  /* For now, an unspecified group name defaults to everything.  */
-  if (width == ITSET_WIDTH_GROUP && group == NULL)
-    group = create_all_itset ();
+  if (*self->spec == ' '
+      || *self->spec == '\0'
+      || *self->spec == '&'
+      || *self->spec == '|'
+      || *self->spec == ','
+      || *self->spec == '('
+      || *self->spec == ')')
+    {
+      int ix;
+
+      if (VEC_length (itset_elt_ptr, current_itset->elements) == 1)
+	{
+	  struct itset_elt *elt;
+
+	  elt = VEC_index (itset_elt_ptr, current_itset->elements, 0);
+
+	  if (elt->vtable->clone != NULL)
+	    {
+	      struct itset_elt *clone_elt = elt->vtable->clone (elt);
+	      struct itset_elt_range *range_elt = (struct itset_elt_range *) clone_elt;
+
+	      range_elt->width = width;
+	      if (group != NULL)
+		range_elt->group = group;
+	      return (struct itset_elt *) range_elt;
+	    }
+	}
+
+      error (_("Current focus is a complex set, and no ID specified."));
+    }
 
   elt_range = parse_range_elem (self, width);
   if (elt_range != NULL)
     {
-      elt_range->group = group;
+      /* For now, an unspecified group name defaults to everything.  */
+      if (group == NULL)
+	elt_range->group = create_all_itset ();
+      else
+	elt_range->group = group;
       return &elt_range->base;
     }
 
