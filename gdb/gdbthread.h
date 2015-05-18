@@ -240,6 +240,8 @@ struct thread_info
   int current_line;
   struct symtab *current_symtab;
 
+  CORE_ADDR reported_stop_pc;
+
   /* Internal stepping state.  */
 
   /* Record the pc of the thread the last time it was resumed.  (It

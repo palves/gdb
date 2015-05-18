@@ -4608,6 +4608,20 @@ stop_all_threads (struct itset *stop_set)
 	}
     }
 
+  /* Record the PC the threads are last seen stopped at.  This is used
+     by the lockset itset expander.  */
+  {
+    struct thread_info *t;
+
+    ALL_NON_EXITED_THREADS (t)
+      if (should_stop_thread (stop_set, t))
+	{
+	  struct regcache *regcache = get_thread_regcache (t->ptid);
+
+	  t->reported_stop_pc = regcache_read_pc (regcache);
+	}
+  }
+
   do_cleanups (old_chain);
 
   if (debug_infrun)

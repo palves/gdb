@@ -2453,19 +2453,39 @@ lockstep_contains_thread (struct itset_elt *base,
 			  struct itset_elt_range *expanding,
 			  struct thread_info *thr, int including_width)
 {
-  struct regcache *regcache = get_thread_regcache (thr->ptid);
-  CORE_ADDR pc = regcache_read_pc (regcache);
   struct thread_info *iter;
+  CORE_ADDR pc;
 
   gdb_assert (expanding != NULL);
+
+  if (thr->state == THREAD_RUNNING)
+    {
+      pc = thr->reported_stop_pc;
+    }
+  else
+    {
+      struct regcache *regcache;
+
+      regcache = get_thread_regcache (thr->ptid);
+      pc = regcache_read_pc (regcache);
+    }
 
   ALL_THREADS (iter)
     {
       if (expanding->base.vtable->contains_thread (&expanding->base,
 						   expanding, iter, 0))
 	{
-	  struct regcache *iter_regcache = get_thread_regcache (iter->ptid);
-	  CORE_ADDR iter_pc = regcache_read_pc (iter_regcache);
+	  CORE_ADDR iter_pc;
+
+	  if (iter->state == THREAD_RUNNING)
+	    {
+	      iter_pc = iter->reported_stop_pc;
+	    }
+	  else
+	    {
+	      struct regcache *iter_regcache = get_thread_regcache (iter->ptid);
+	      iter_pc = regcache_read_pc (iter_regcache);
+	    }
 
 	  if (iter_pc == pc)
 	    return 1;
