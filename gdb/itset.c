@@ -1005,13 +1005,10 @@ thread_range_clone (struct itset_elt *base)
 				     &thread_range_elt->inf_range,
 				     &range->range);
 
-#if 0
-  /* FIXME */
   if (range->explicit_width != NULL)
     clone->explicit_width
-      = range->explicit_width->clone (range->explicit_width);
+      = itset_reference (range->explicit_width);
   else
-#endif
     clone->explicit_width = NULL;
 
   /* FIXME */
@@ -2959,7 +2956,6 @@ parse_elem_1 (struct itset_parser *self)
 
 	  elt = VEC_index (itset_elt_ptr, current_itset->elements, 0);
 
-#if 0
 	  if (elt->vtable->clone != NULL)
 	    {
 	      struct itset_elt *clone_elt = elt->vtable->clone (elt);
@@ -2972,7 +2968,6 @@ parse_elem_1 (struct itset_parser *self)
 		range_elt->group = group;
 	      return (struct itset_elt *) range_elt;
 	    }
-#endif
 	}
 
       error (_("Current focus is a complex set, and no ID specified."));
