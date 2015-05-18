@@ -444,6 +444,14 @@ struct itset_elt_range
   struct spec_range range;
 };
 
+static void
+range_elt_destroy (struct itset_elt *elt)
+{
+  struct itset_elt_range *range_elt = (struct itset_elt_range *) elt;
+
+  itset_free (range_elt->explicit_width);
+}
+
 static int
 range_elt_is_range_type (struct itset_elt *elt)
 {
@@ -741,7 +749,7 @@ inferior_range_elt_has_fixed_toi (struct itset_elt *base)
 
 static const struct itset_elt_vtable inferior_range_vtable =
 {
-  NULL,
+  range_elt_destroy,
   range_elt_is_range_type,
   inferior_range_elt_contains_program_space,
   inferior_range_elt_contains_inferior,
@@ -1988,9 +1996,7 @@ itset_elt_negated_destroy (struct itset_elt *base)
 {
   struct itset_elt_negated *elt = (struct itset_elt_negated *) base;
 
-  if (elt->negated->vtable->destroy != NULL)
-    elt->negated->vtable->destroy (elt->negated);
-  xfree (elt->negated);
+  itset_elt_free (elt->negated);
 }
 
 /* Implementation of `contains_inferior' method.  */
