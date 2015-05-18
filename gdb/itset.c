@@ -57,6 +57,10 @@ struct itset_elt_vtable
 
   void (*destroy) (struct itset_elt *);
 
+  /* Returns true if this is an itset_elt_range.  */
+
+  int (*is_range_type) (struct itset_elt *);
+
   /* Return true if the element contains the program space.  The
      element and the program space are passed as arguments.  */
 
@@ -98,7 +102,7 @@ struct itset_elt_vtable
 
   char (*get_focus_object_type) (struct itset_elt *elt);
 
-  /* Return the element's execution object type.  */
+  /* Return a clone of ELT.  */
 
   struct itset_elt *(*clone) (struct itset_elt *elt);
 };
@@ -388,6 +392,7 @@ exec_is_empty (struct itset_elt *base)
 static const struct itset_elt_vtable exec_vtable =
 {
   exec_destroy,
+  NULL, /* is_range_type */
   NULL, /* contains_program_space */
   exec_contains_inferior,
   exec_contains_thread,
@@ -438,6 +443,12 @@ struct itset_elt_range
      LAST is unused.  */
   struct spec_range range;
 };
+
+static int
+range_elt_is_range_type (struct itset_elt *elt)
+{
+  return 1;
+}
 
 static enum itset_width
 range_get_width (struct itset_elt *base)
@@ -508,7 +519,6 @@ range_concat_spec (char *res, struct spec_range *range)
 
   return res;
 }
-
 
 static char *
 range_elt_get_spec (struct itset_elt *base, int range_type_char)
@@ -732,6 +742,7 @@ inferior_range_elt_has_fixed_toi (struct itset_elt *base)
 static const struct itset_elt_vtable inferior_range_vtable =
 {
   NULL,
+  range_elt_is_range_type,
   inferior_range_elt_contains_program_space,
   inferior_range_elt_contains_inferior,
   inferior_range_elt_contains_thread,
@@ -1019,6 +1030,7 @@ thread_range_clone (struct itset_elt *base)
 static const struct itset_elt_vtable thread_range_vtable =
 {
   NULL,
+  range_elt_is_range_type,
   thread_range_contains_program_space,
   thread_range_contains_inferior,
   thread_range_contains_thread,
@@ -1195,6 +1207,7 @@ core_range_has_fixed_toi (struct itset_elt *base)
 static const struct itset_elt_vtable core_range_vtable =
 {
   NULL,
+  range_elt_is_range_type,
   core_range_contains_program_space,
   core_range_contains_inferior,
   core_range_contains_thread,
@@ -1424,6 +1437,7 @@ ada_task_range_has_fixed_toi (struct itset_elt *base)
 static const struct itset_elt_vtable ada_task_range_vtable =
 {
   NULL,
+  range_elt_is_range_type,
   ada_task_range_contains_program_space,
   ada_task_range_contains_inferior,
   ada_task_range_contains_thread,
@@ -1648,6 +1662,7 @@ intersect_has_fixed_toi (struct itset_elt *base)
 static const struct itset_elt_vtable intersect_vtable =
 {
   intersect_destroy,
+  NULL, /* is_range_type */
   NULL, /* contains_program_space */
   intersect_contains_inferior,
   intersect_contains_thread,
@@ -1737,6 +1752,7 @@ has_fixed_toi_false (struct itset_elt *base)
 static const struct itset_elt_vtable all_vtable =
 {
   NULL,
+  NULL, /* is_range_type */
   all_contains_program_space,
   all_contains_inferior,
   all_contains_thread,
@@ -1805,6 +1821,7 @@ empty_is_empty (struct itset_elt *base)
 static const struct itset_elt_vtable empty_vtable =
 {
   NULL,
+  NULL, /* is_range_type */
   empty_contains_program_space,
   empty_contains_inferior,
   empty_contains_thread,
@@ -1922,6 +1939,7 @@ itset_elt_itset_has_fixed_toi (struct itset_elt *base)
 static const struct itset_elt_vtable itset_elt_itset_vtable =
 {
   itset_elt_itset_destroy,
+  NULL, /* is_range_type */
   itset_elt_itset_contains_program_space,
   itset_elt_itset_contains_inferior,
   itset_elt_itset_contains_thread,
@@ -2069,6 +2087,7 @@ itset_elt_negated_has_fixed_toi (struct itset_elt *base)
 static const struct itset_elt_vtable itset_elt_negated_vtable =
 {
   itset_elt_negated_destroy,
+  NULL, /* is_range_type */
   NULL, /* contains_program_space */
   itset_elt_negated_contains_inferior,
   itset_elt_negated_contains_thread,
@@ -2203,6 +2222,7 @@ state_get_spec (struct itset_elt *base)
 static const struct itset_elt_vtable state_vtable =
 {
   NULL,
+  NULL, /* is_range_type */
   NULL, /* contains_program_space */
   state_contains_inferior,
   state_contains_thread,
@@ -2271,6 +2291,7 @@ curinf_get_spec (struct itset_elt *base)
 static const struct itset_elt_vtable curinf_vtable =
 {
   NULL,
+  NULL, /* is_range_type */
   curinf_contains_program_space,
   curinf_contains_inferior,
   curinf_contains_thread,
@@ -2331,6 +2352,7 @@ curthr_is_empty (struct itset_elt *base)
 static const struct itset_elt_vtable curthr_vtable =
 {
   NULL,
+  NULL, /* is_range_type */
   curthr_contains_program_space,
   curthr_contains_inferior,
   curthr_contains_thread,
@@ -2451,6 +2473,7 @@ static_is_empty (struct itset_elt *base)
 static const struct itset_elt_vtable static_vtable =
 {
   static_destroy,
+  NULL, /* is_range_type */
   static_contains_program_space,
   static_contains_inferior,
   static_contains_thread,
@@ -2632,56 +2655,51 @@ parse_range_itset (const char **spec, enum itset_width width,
   return create_func (width, 0, &range);
 }
 
-static enum itset_width
-parse_width (const char **spec)
+static int
+parse_width (const char **spec, enum itset_width *width)
 {
-  enum itset_width width;
   const char *width_str = *spec;
 
-  /* FIXME: should probably error out if the current set has mixed
-     width.  If we do that, then probably the "current width" cases
-     here should probably return an ITSET_WIDTH_UNSPECIFIED, in order
-     to delay that error until the end of parsing, in order to show
-     parsing errors first.  */
   if (!isalpha (width_str[0])
       || width_str[1] == ':'
       || width_str[1] == '*'
       || isdigit (width_str[1]))
-    return itset_get_width (current_itset);
+    return 0;
 
   if (width_str[0] == 'e' && width_str[1] == '(')
     {
       /* Leave the '(' in place, to be consumed by the caller.  */
       (*spec)++;
-      return ITSET_WIDTH_EXPLICIT;
+      *width = ITSET_WIDTH_EXPLICIT;
+      return 1;
     }
 
   switch (width_str[0])
     {
     case 'a':
-      width = ITSET_WIDTH_ALL;
+      *width = ITSET_WIDTH_ALL;
       break;
     case 'g':
-      width = ITSET_WIDTH_GROUP;
+      *width = ITSET_WIDTH_GROUP;
       break;
     case 'i':
-      width = ITSET_WIDTH_INFERIOR;
+      *width = ITSET_WIDTH_INFERIOR;
       break;
     case 't':
-      width = ITSET_WIDTH_THREAD;
+      *width = ITSET_WIDTH_THREAD;
       break;
     case 'k':
-      width = ITSET_WIDTH_ADA_TASK;
+      *width = ITSET_WIDTH_ADA_TASK;
       break;
     case 'd':
-      width = ITSET_WIDTH_DEFAULT;
+      *width = ITSET_WIDTH_DEFAULT;
       break;
     default:
-      return itset_get_width (current_itset);
+      return 0;
     }
 
   (*spec)++;
-  return width;
+  return 1;
 }
 
 
@@ -2916,12 +2934,43 @@ parse_elem_1 (struct itset_parser *self)
 
   maybe_skip_spaces (self);
 
-  width = parse_width (&self->spec);
-
-  if (width == ITSET_WIDTH_EXPLICIT)
+  if (parse_width (&self->spec, &width))
     {
-      /* FIXME: leak on error.  */
-      explicit_width = itset_create_const_1 (&self->spec);
+      if (width == ITSET_WIDTH_EXPLICIT)
+	{
+	  /* FIXME: leak on error.  */
+	  explicit_width = itset_create_const_1 (&self->spec);
+	}
+    }
+  else
+    {
+      /* FIXME: should probably error out if the current set has mixed
+	 width.  If we do that, then probably the "current width"
+	 cases here should probably return an ITSET_WIDTH_UNSPECIFIED,
+	 in order to delay that error until the end of parsing, in
+	 order to show parsing errors first.  */
+      width = itset_get_width (current_itset);
+
+      if (width == ITSET_WIDTH_EXPLICIT)
+	{
+	  if (VEC_length (itset_elt_ptr, current_itset->elements) == 1)
+	    {
+	      struct itset_elt *elt;
+
+	      elt = VEC_index (itset_elt_ptr, current_itset->elements, 0);
+
+	      if (elt->vtable->is_range_type != NULL
+		  && elt->vtable->is_range_type (elt))
+		{
+		  struct itset_elt_range *range_elt = (struct itset_elt_range *) elt;
+
+		  explicit_width = itset_reference (range_elt->explicit_width);
+		}
+	    }
+
+	  if (explicit_width == NULL)
+	    error (_("Current focus is a complex set, and no width specified."));
+	}
     }
 
   if (!saw_slash && *self->spec == '/')
@@ -2947,15 +2996,14 @@ parse_elem_1 (struct itset_parser *self)
       || *self->spec == '('
       || *self->spec == ')')
     {
-      int ix;
-
       if (VEC_length (itset_elt_ptr, current_itset->elements) == 1)
 	{
 	  struct itset_elt *elt;
 
 	  elt = VEC_index (itset_elt_ptr, current_itset->elements, 0);
 
-	  if (elt->vtable->clone != NULL)
+	  if (elt->vtable->is_range_type != NULL
+	      && elt->vtable->is_range_type (elt))
 	    {
 	      struct itset_elt *clone_elt = elt->vtable->clone (elt);
 	      struct itset_elt_range *range_elt = (struct itset_elt_range *) clone_elt;
