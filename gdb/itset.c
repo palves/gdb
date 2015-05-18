@@ -3942,6 +3942,7 @@ switch_to_itset (struct itset *itset)
 	{
 	  struct thread_info *thr = NULL;
 
+#if 0
 	  if (inf->pid != 0)
 	    thr = first_thread_of_process (inf->pid);
 
@@ -3950,6 +3951,7 @@ switch_to_itset (struct itset *itset)
 	      switch_to_thread (thr->ptid);
 	    }
 	  else
+#endif
 	    {
 	      switch_to_thread (null_ptid);
 	      set_current_inferior (inf);
