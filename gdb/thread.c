@@ -2192,7 +2192,7 @@ do_captured_thread_select (struct ui_out *uiout, void *tidstr)
   switch_to_thread (tp->ptid);
   set_current_context ();
 
-  // itfocus_from_thread_switch ();
+  itfocus_from_thread_switch ();
 
   annotate_thread_changed ();
 

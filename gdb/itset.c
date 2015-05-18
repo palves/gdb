@@ -1068,6 +1068,8 @@ create_thread_range_itset (enum itset_width width, int is_current,
   range_elt = &thr_range_elt->base;
   range_elt->range = *thr_range;
   range_elt->width = width;
+  range_elt->explicit_width = NULL;
+  range_elt->group = NULL;
   range_elt->is_current = is_current;
   range_elt->object_type = 't';
 
@@ -2928,6 +2930,22 @@ parse_range_elem (struct itset_parser *self, enum itset_width width)
 static struct itset *
 itset_create_const_1 (const char **specp);
 
+static struct itset_elt_range *
+itset_get_range_elt_if_simple (struct itset *itset)
+{
+  if (VEC_length (itset_elt_ptr, itset->elements) == 1)
+    {
+      struct itset_elt *elt;
+
+      elt = VEC_index (itset_elt_ptr, current_itset->elements, 0);
+      if (elt->vtable->is_range_type != NULL
+	  && elt->vtable->is_range_type (elt))
+	return (struct itset_elt_range *) elt;
+    }
+
+  return NULL;
+}
+
 static struct itset_elt *
 parse_elem_1 (struct itset_parser *self)
 {
@@ -3499,7 +3517,7 @@ itset_create_stopped (void)
 static struct itset *
 itset_create_default (void)
 {
-  return itset_create_spec ("aT");
+  return itset_create_spec ("at1.1");
 }
 
 /* Return 1 if SET contains INF, 0 otherwise.  */
@@ -3860,33 +3878,52 @@ switch_to_itset (struct itset *itset)
 #endif
 }
 
+int itfocus_should_follow_stop_event (void);
+
+int
+itfocus_should_follow_stop_event (void)
+{
+  struct itset_elt_range *cur_elt_range
+    = itset_get_range_elt_if_simple (current_itset);
+
+  return (cur_elt_range != NULL);
+}
+
 void
 itfocus_from_thread_switch (void)
 {
-  struct itset *itset;
-  struct itset_elt_range *elt_range;
+  struct itset_elt_range *new_elt_range;
+  struct itset_elt_range *cur_elt_range
+    = itset_get_range_elt_if_simple (current_itset);
   enum itset_width width = itset_get_width (current_itset);
+  struct itset *new_itset;
   struct spec_range inf_range;
   struct spec_range thr_range;
 
   inf_range.first = current_inferior ()->num;
   inf_range.last = inf_range.first;
 
-  thr_range.first = inferior_thread ()->num;
+  thr_range.first = inferior_thread ()->num_inf;
   thr_range.last = thr_range.first;
 
-  elt_range = create_thread_range_itset (width, 0,
-					 &inf_range,
-					 &thr_range);
+  new_elt_range = create_thread_range_itset (width, 0,
+					     &inf_range,
+					     &thr_range);
+
+  if (cur_elt_range != NULL && cur_elt_range->explicit_width != NULL)
+    {
+      new_elt_range->explicit_width
+	= itset_reference (cur_elt_range->explicit_width);
+    }
 
   /* FIXME: factor this to a function.  */
-  itset = XCNEW (struct itset);
-  itset->refc = 1;
+  new_itset = XCNEW (struct itset);
+  new_itset->refc = 1;
 
-  VEC_safe_push (itset_elt_ptr, itset->elements, &elt_range->base);
+  VEC_safe_push (itset_elt_ptr, new_itset->elements, &new_elt_range->base);
 
   itset_free (current_itset);
-  current_itset = itset;
+  current_itset = new_itset;
 }
 
 static void

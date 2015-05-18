@@ -3817,6 +3817,8 @@ reinstall_readline_callback_handler_cleanup (void *arg)
     gdb_rl_callback_handler_reinstall ();
 }
 
+int itfocus_should_follow_stop_event (void);
+
 /* Asynchronous version of wait_for_inferior.  It is called by the
    event loop whenever a change of state is detected on the file
    descriptor corresponding to the target.  It can be called more than
@@ -3848,7 +3850,7 @@ fetch_inferior_event (void *client_data)
      debugging.  If we're looking at traceframes while the target is
      running, we're going to need to get back to that mode after
      handling the event.  */
-  if (non_stop)
+  if (non_stop || !itfocus_should_follow_stop_event ())
     {
       make_cleanup_restore_current_traceframe ();
       set_current_traceframe (-1);
@@ -7981,6 +7983,7 @@ normal_stop (void)
      informing of a stop.  */
   if (!non_stop
       && !ptid_equal (get_current_context ()->ptid, inferior_ptid)
+      && itfocus_should_follow_stop_event ()
       && target_has_execution
       && last.kind != TARGET_WAITKIND_SIGNALLED
       && last.kind != TARGET_WAITKIND_EXITED
@@ -7989,9 +7992,9 @@ normal_stop (void)
       target_terminal_ours_for_output ();
       printf_filtered (_("[Switching to %s]\n"),
 		       target_pid_to_str (inferior_ptid));
-      // itfocus_from_thread_switch ();
       annotate_thread_changed ();
       set_current_context ();
+      itfocus_from_thread_switch ();
     }
 
   if (last.kind == TARGET_WAITKIND_NO_RESUMED)
