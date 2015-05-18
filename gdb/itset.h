@@ -144,7 +144,10 @@ enum itset_width
   ITSET_WIDTH_ADA_TASK,
   ITSET_WIDTH_INFERIOR,
   ITSET_WIDTH_GROUP,
+  ITSET_WIDTH_EXPLICIT,
   ITSET_WIDTH_ALL,
+
+  ITSET_WIDTH_MIXED,
 };
 
 extern enum itset_width itset_get_width (struct itset *set);
