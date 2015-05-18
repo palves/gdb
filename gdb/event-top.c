@@ -297,12 +297,17 @@ expand_gdb_prompt (char *prompt)
 	{
 	  char buf[100];
 
-	  sprintf (buf, "i%d", current_inferior ()->num);
+	  sprintf (buf, "t%d", current_inferior ()->num);
 	  obstack_grow_str (&obstack, buf);
 
 	  if (!ptid_equal (inferior_ptid, null_ptid))
 	    {
-	      sprintf (buf, ".t%d", inferior_thread ()->num);
+	      sprintf (buf, ".%d", inferior_thread ()->num_inf);
+	      obstack_grow_str (&obstack, buf);
+	    }
+	  else
+	    {
+	      sprintf (buf, ".%d", 0);
 	      obstack_grow_str (&obstack, buf);
 	    }
 
