@@ -427,7 +427,10 @@ struct itset_elt_range
   char object_type;
   enum itset_width width;
 
-  /* If WIDTH is group, this is the group, otherwise NULL.  */
+  /* If WIDTH is explicit, this is the width set, otherwise NULL.  */
+  struct itset_elt *explicit_width;
+
+  /* The selected group, otherwise NULL.  */
   struct itset_elt *group;
 
   int is_current;
@@ -459,6 +462,8 @@ range_width_char (enum itset_width width)
     {
     case ITSET_WIDTH_ALL:
       return 'a';
+    case ITSET_WIDTH_EXPLICIT:
+      return 'e';
     case ITSET_WIDTH_GROUP:
       return 'g';
     case ITSET_WIDTH_DEFAULT:
@@ -533,14 +538,31 @@ double_range_get_spec (struct itset_elt *base, int range_type_char,
   struct spec_range *range = &range_elt->range;
   int w;
   char *res = NULL;
-  char *group_spec;
 
   w = range_width_char (range_elt->width);
-  res = concat_printf (res, "%c", w);
 
-  group_spec = range_elt->group->vtable->get_spec (range_elt->group);
-  res = concat_printf (res, "/%s/", group_spec);
-  xfree (group_spec);
+  if (range_elt->width == ITSET_WIDTH_EXPLICIT)
+    {
+      char *explicit_spec;
+      struct itset_elt *ew = range_elt->explicit_width;
+
+      explicit_spec = ew->vtable->get_spec (ew);
+      res = concat_printf (res, "%c/%s/", w, explicit_spec);
+    }
+  else
+    res = concat_printf (res, "%c", w);
+
+  if (range_elt->group != NULL)
+    {
+      char *group_spec;
+
+      group_spec = range_elt->group->vtable->get_spec (range_elt->group);
+      if (range_elt->width == ITSET_WIDTH_EXPLICIT)
+	res = concat_printf (res, "%s/", group_spec);
+      else
+	res = concat_printf (res, "/%s/", group_spec);
+      xfree (group_spec);
+    }
 
   if (range_elt->is_current)
     return concat_printf (res, "%c", toupper (range_type_char));
@@ -773,6 +795,14 @@ thread_range_contains_program_space (struct itset_elt *base,
   if (range->width == ITSET_WIDTH_ALL)
     return 1;
 
+  if (range->width == ITSET_WIDTH_EXPLICIT)
+    {
+      struct itset_elt *ew = range->explicit_width;
+
+      if (ew->vtable->contains_program_space (ew, pspace))
+	return 1;
+    }
+
   if (range->width == ITSET_WIDTH_GROUP)
     {
       if (range->group->vtable->contains_program_space (range->group, pspace))
@@ -796,6 +826,14 @@ thread_range_contains_inferior (struct itset_elt *base, struct inferior *inf)
 
   if (range->width == ITSET_WIDTH_ALL)
     return 1;
+
+  if (range->width == ITSET_WIDTH_EXPLICIT)
+    {
+      struct itset_elt *ew = range->explicit_width;
+
+      if (ew->vtable->contains_inferior (ew, inf))
+	return 1;
+    }
 
   if (range->width == ITSET_WIDTH_GROUP)
     {
@@ -824,6 +862,14 @@ thread_range_contains_thread (struct itset_elt *base, struct thread_info *thr,
   if (including_width
       && range_elt->width == ITSET_WIDTH_ALL)
     return 1;
+
+  if (including_width && range_elt->width == ITSET_WIDTH_EXPLICIT)
+    {
+      struct itset_elt *ew = range_elt->explicit_width;
+
+      if (ew->vtable->contains_thread (ew, thr, 0))
+	return 1;
+    }
 
   if (including_width && range_elt->width == ITSET_WIDTH_GROUP)
     {
@@ -960,8 +1006,18 @@ thread_range_clone (struct itset_elt *base)
 				     &thread_range_elt->inf_range,
 				     &range->range);
 
+#if 0
   /* FIXME */
-  clone->group = create_all_itset ();
+  if (range->explicit_width != NULL)
+    clone->explicit_width
+      = range->explicit_width->clone (range->explicit_width);
+  else
+#endif
+    clone->explicit_width = NULL;
+
+  /* FIXME */
+  clone->group = NULL;
+
   return &clone->base;
 }
 
@@ -2600,6 +2656,12 @@ parse_width (const char **spec)
       || isdigit (width_str[1]))
     return itset_get_width (current_itset);
 
+  if (width_str[0] == 'e' && width_str[1] == '/')
+    {
+      (*spec) += 2;
+      return ITSET_WIDTH_EXPLICIT;
+    }
+
   switch (width_str[0])
     {
     case 'a':
@@ -2852,19 +2914,38 @@ parse_elem_1 (struct itset_parser *self)
   enum itset_width width;
   const char *save_spec = self->spec;
   struct itset_elt *group = NULL;
+  struct itset_elt *explicit_width = NULL;
+  int saw_slash = 0;
 
   maybe_skip_spaces (self);
 
   width = parse_width (&self->spec);
 
-  if (*self->spec == '/')
+  if (width == ITSET_WIDTH_EXPLICIT)
     {
+      /* FIXME: leak on error.  */
+      explicit_width = parse_named_or_throw (&self->spec);
+
+      if (*self->spec == '/')
+	{
+	  self->spec++;
+	  saw_slash = 1;
+	}
+    }
+
+  if (!saw_slash && *self->spec == '/')
+    {
+      saw_slash = 0;
+
       self->spec++;
       /* FIXME: leak on error.  */
       group = parse_named_or_throw (&self->spec);
 
       if (*self->spec == '/')
-	self->spec++;
+	{
+	  self->spec++;
+	  saw_slash = 1;
+	}
     }
 
   if (*self->spec == ' '
@@ -2889,6 +2970,8 @@ parse_elem_1 (struct itset_parser *self)
 	      struct itset_elt_range *range_elt = (struct itset_elt_range *) clone_elt;
 
 	      range_elt->width = width;
+	      if (explicit_width != NULL)
+		range_elt->explicit_width = explicit_width;
 	      if (group != NULL)
 		range_elt->group = group;
 	      return (struct itset_elt *) range_elt;
@@ -2901,10 +2984,14 @@ parse_elem_1 (struct itset_parser *self)
   elt_range = parse_range_elem (self, width);
   if (elt_range != NULL)
     {
-      /* For now, an unspecified group name defaults to everything.  */
+      elt_range->explicit_width = explicit_width;
+
+#if 0
+      /* For now, an unspecified group name defaults to nothing.  */
       if (group == NULL)
-	elt_range->group = create_all_itset ();
+	elt_range->group = create_empty_itset ();
       else
+#endif
 	elt_range->group = group;
       return &elt_range->base;
     }
