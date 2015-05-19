@@ -1733,10 +1733,11 @@ Exit gdb.\n\
 Usage: quit [EXPR]\n\
 The optional expression EXPR, if present, is evaluated and the result\n\
 used as GDB's exit code.  The default is zero."));
+  add_com_alias ("q", "quit", class_support, 1);
+
   c = add_com ("help", class_support, help_command,
 	       _("Print list of commands."));
-  set_cmd_completer (c, command_completer);
-  add_com_alias ("q", "quit", class_support, 1);
+  set_cmd_completer (c, help_completer);
   add_com_alias ("h", "help", class_support, 1);
 
   add_setshow_boolean_cmd ("verbose", class_support, &info_verbose, _("\

@@ -930,13 +930,25 @@ complete_line (const char *text, const char *line_buffer, int point)
   return result;
 }
 
-/* Complete on command names.  Used by "help".  */
+/* Complete on command names and help topics.  Used by "help".  */
+
 VEC (char_ptr) *
-command_completer (struct cmd_list_element *ignore, 
+help_completer (struct cmd_list_element *ignore,
 		   const char *text, const char *word)
 {
-  return complete_line_internal (word, text, 
+  return complete_line_internal (word, text,
 				 strlen (text), handle_help);
+}
+
+/* Complete on command names.  Used by prefix commands that take a
+   command as argument.  E.g. "thread apply all".  */
+
+VEC (char_ptr) *
+command_completer (struct cmd_list_element *ignore,
+		   const char *text, const char *word)
+{
+  return complete_line_internal (word, text,
+				 strlen (text), handle_completions);
 }
 
 /* Complete on signals.  */

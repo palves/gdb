@@ -29,6 +29,7 @@
 #include <ctype.h>
 #include "gdbcmd.h"
 #include "ada-lang.h"
+#include "completer.h"
 
 /* FIXME */
 char itset_get_focus_object_type (struct itset *set);
@@ -3390,6 +3391,9 @@ parse_itset_one (struct itset_parser *self)
 
       maybe_skip_spaces (self);
 
+      if (*self->spec == '\0')
+	error (_("Invalid I/T syntax: premature end"));
+
       inters2 = parse_inters (self);
       if (inters2 == NULL)
 	{
@@ -4689,6 +4693,34 @@ for_each_selected_thread_cmd (cmd_cfunc_ftype cmd,
     for_each_selected_ada_task_cmd (cmd, args, from_tty);
 }
 
+/* The "itfocus" completer.  Skips the itset, and if valid, completes
+   on command names.  If invalid, completes nothing, which is a useful
+   hint that tells that you need to go back and fix the itset
+   spec.  */
+
+static VEC (char_ptr) *
+itfocus_completer (struct cmd_list_element *ignore,
+		   const char *text, const char *word)
+{
+  TRY
+    {
+      struct itset *itset;
+
+      itset = itset_create_const (&text);
+      itset_free (itset);
+    }
+  CATCH (e, RETURN_MASK_ERROR)
+    {
+      return NULL;
+    }
+  END_CATCH
+
+  if (*text != ' ')
+    return NULL;
+  text++;
+
+  return command_completer (ignore, text, word);
+}
 
 /* Provide a prototype to silence -Wmissing-prototypes.  */
 extern initialize_file_ftype _initialize_itset;
@@ -4717,8 +4749,9 @@ _initialize_itset (void)
   current_itset = itset_reference (itset_create_default ());
   //  current_itset = itset_reference (all_itset);
 
-  add_com ("itfocus", no_class, itfocus_command, _("\
+  c = add_com ("itfocus", no_class, itfocus_command, _("\
 Change the set of current inferiors/threads."));
+  set_cmd_completer (c, itfocus_completer);
   add_com_alias ("a", "itfocus", class_alias, 0);
 
   add_com ("defset", no_class, defset_command, _("\
