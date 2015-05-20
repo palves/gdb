@@ -6619,22 +6619,22 @@ print_one_breakpoint_location (struct breakpoint *b,
   
   if (!part_of_multiple && b->trigger_set != NULL)
     {
-      ui_out_text (uiout, "\ttrigger only in: [");
+      ui_out_text (uiout, "\ttrigger only in: ");
       if (itset_name (b->trigger_set) != NULL)
 	ui_out_field_string (uiout, "trigger-set", itset_name (b->trigger_set));
       else
 	ui_out_field_string (uiout, "trigger-set", itset_spec (b->trigger_set));
-      ui_out_text (uiout, "]\n");
+      ui_out_text (uiout, "\n");
     }
 
   if (!part_of_multiple && b->suspend_set != NULL)
     {
-      ui_out_text (uiout, "\tsuspend all of: [");
+      ui_out_text (uiout, "\tsuspend all of: ");
       if (itset_name (b->suspend_set) != NULL)
 	ui_out_field_string (uiout, "suspend-set", itset_name (b->suspend_set));
       else
 	ui_out_field_string (uiout, "suspend-set", itset_spec (b->suspend_set));
-      ui_out_text (uiout, "]\n");
+      ui_out_text (uiout, "\n");
     }
 
   if (!part_of_multiple)
@@ -9848,20 +9848,28 @@ decode_static_tracepoint_spec (const char **arg_p)
   return sals;
 }
 
+static void
+cleanup_itset_p_free (void *arg)
+{
+  struct itset *itset = *(struct itset **) arg;
+
+  itset_free (itset);
+}
+
+/* See breakpoint.h.  */
+
 struct cleanup *
 default_breakpoint_itsets (struct itset **trigger_set,
 			   struct itset **suspend_set)
 {
   struct cleanup *old_chain;
 
-  *trigger_set = itset_reference (current_itset);
-  if (non_stop)
-    *suspend_set = itset_create_empty ();
-  else
-    *suspend_set = itset_create_spec ("at*.*");
-
+  *trigger_set = itset_clone_replace_default_width (current_itset,
+						    ITSET_WIDTH_ALL);
   old_chain = make_cleanup_itset_free (*trigger_set);
-  make_cleanup_itset_free (*suspend_set);
+
+  *suspend_set = NULL;
+  make_cleanup (cleanup_itset_p_free, suspend_set);
 
   return old_chain;
 }
@@ -9892,7 +9900,11 @@ parse_breakpoint_args_const (const char **args,
 	    {
 	      p = skip_spaces_const (p);
 	      itset_free (*suspend_set);
-	      *suspend_set = itset_create_const (&p);
+	      *suspend_set = NULL;
+	      if (non_stop)
+		*suspend_set = itset_create_const (&p, ITSET_WIDTH_THREAD);
+	      else
+		*suspend_set = itset_create_const (&p, ITSET_WIDTH_ALL);
 	      arg = p;
 	    }
 	  else if (strcmp (arg, "--") == 0)
@@ -9905,6 +9917,14 @@ parse_breakpoint_args_const (const char **args,
 	}
 
       *args = arg;
+    }
+
+  if (*suspend_set == NULL)
+    {
+      if (non_stop)
+	*suspend_set = itset_create_empty ();
+      else
+	*suspend_set = itset_create_spec ("at*.*");
     }
 
   return old_chain;
