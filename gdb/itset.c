@@ -3124,6 +3124,9 @@ struct itset_parser
 {
   int parens_level;
   const char *spec;
+
+  /* The default width.  */
+  enum itset_width default_width;
 };
 
 /* Skip spaces if parenthesis level is > 0.  That is, spaces are only
@@ -3213,7 +3216,7 @@ parse_range_elem (struct itset_parser *self, enum itset_width width)
 }
 
 static struct itset *
-itset_create_const_1 (const char **specp);
+  itset_create_const_1 (const char **specp, enum itset_width default_width);
 
 static struct itset_elt_range *
 itset_get_range_elt_if_simple (struct itset *itset)
@@ -3244,10 +3247,13 @@ parse_elem_1 (struct itset_parser *self)
 
   if (parse_width (&self->spec, &width))
     {
-      if (width == ITSET_WIDTH_EXPLICIT)
+      if (width == ITSET_WIDTH_DEFAULT)
+	width = self->default_width;
+      else if (width == ITSET_WIDTH_EXPLICIT)
 	{
 	  /* FIXME: leak on error.  */
-	  explicit_width = itset_create_const_1 (&self->spec);
+	  explicit_width = itset_create_const_1 (&self->spec,
+						 self->default_width);
 	}
     }
   else
@@ -3259,7 +3265,9 @@ parse_elem_1 (struct itset_parser *self)
 	 order to show parsing errors first.  */
       width = itset_get_width (current_itset);
 
-      if (width == ITSET_WIDTH_EXPLICIT)
+      if (width == ITSET_WIDTH_DEFAULT)
+	width = self->default_width;
+      else if (width == ITSET_WIDTH_EXPLICIT)
 	{
 	  if (VEC_length (itset_elt_ptr, current_itset->elements) == 1)
 	    {
@@ -3270,14 +3278,16 @@ parse_elem_1 (struct itset_parser *self)
 	      if (elt->vtable->is_range_type != NULL
 		  && elt->vtable->is_range_type (elt))
 		{
-		  struct itset_elt_range *range_elt = (struct itset_elt_range *) elt;
+		  struct itset_elt_range *range_elt
+		    = (struct itset_elt_range *) elt;
 
 		  explicit_width = itset_reference (range_elt->explicit_width);
 		}
 	    }
 
 	  if (explicit_width == NULL)
-	    error (_("Current focus is a complex set, and no width specified."));
+	    error (_("Current focus is a complex set, "
+		     "and no width specified."));
 	}
     }
 
@@ -3556,6 +3566,9 @@ itset_get_spec (const struct itset *set)
   return set_get_spec (set->elements);
 }
 
+/* FIXME: This only exists to cast result to const.  But then again,
+   all callers are leaking the result.  */
+
 const char *
 itset_spec (const struct itset *set)
 {
@@ -3659,7 +3672,7 @@ itset_get_focus_object_type (struct itset *set)
    exception on error.  */
 
 static struct itset *
-itset_create_const_1 (const char **specp)
+itset_create_const_1 (const char **specp, enum itset_width default_width)
 {
   int is_static = 0;
   struct itset *result;
@@ -3686,6 +3699,7 @@ itset_create_const_1 (const char **specp)
     {
       struct itset_parser parser = {0};
 
+      parser.default_width = default_width;
       parser.spec = spec;
       elt = parse_itset_one (&parser);
       VEC_safe_push (itset_elt_ptr, result->elements, elt);
@@ -3715,11 +3729,11 @@ itset_create_const_1 (const char **specp)
 }
 
 struct itset *
-itset_create_const (const char **specp)
+itset_create_const (const char **specp, enum itset_width default_width)
 {
   struct itset *set;
 
-  set = itset_create_const_1 (specp);
+  set = itset_create_const_1 (specp, default_width);
   if (!valid_spec_end (*specp))
     {
       itset_free (set);
@@ -3728,20 +3742,17 @@ itset_create_const (const char **specp)
   return set;
 }
 
+static struct itset *
+itset_create_spec_default_width (const char *spec,
+				 enum itset_width default_width)
+{
+   return itset_create_const (&spec, default_width);
+}
+
 struct itset *
 itset_create_spec (const char *spec)
 {
-  struct itset *itset;
-
-  itset = itset_create_const (&spec);
-
-  if (!valid_spec_end (spec))
-    {
-      itset_free (itset);
-      error (_("Invalid I/T syntax at `%s'"), spec);
-    }
-
-  return itset;
+  return itset_create_spec_default_width (spec, ITSET_WIDTH_DEFAULT);
 }
 
 struct itset *
@@ -3750,9 +3761,26 @@ itset_create (char **specp)
   const char *spec_const = *specp;
   struct itset *itset;
 
-  itset = itset_create_const (&spec_const);
+  itset = itset_create_const (&spec_const, ITSET_WIDTH_DEFAULT);
   *specp = (char *) spec_const;
   return itset;
+}
+
+struct itset *
+itset_clone_replace_default_width (const struct itset *itset_template,
+				   enum itset_width default_width)
+{
+  struct itset *result;
+  char *spec;
+
+  spec = itset_get_spec (itset_template);
+
+  /* We're reparsing a spec we had previously parsed successfully, so
+     this should never error out.  */
+  result = itset_create_spec_default_width (spec, default_width);
+  xfree (spec);
+
+  return result;
 }
 
 struct itset *
@@ -4879,7 +4907,7 @@ itfocus_completer (struct cmd_list_element *ignore,
     {
       struct itset *itset;
 
-      itset = itset_create_const (&text);
+      itset = itset_create_const (&text, ITSET_WIDTH_DEFAULT);
       itset_free (itset);
     }
   CATCH (e, RETURN_MASK_ERROR)
