@@ -270,6 +270,7 @@ add_cmd (const char *name, enum command_class theclass, cmd_cfunc_ftype *fun,
   c->user_commands = NULL;
   c->cmd_pointer = NULL;
   c->alias_chain = NULL;
+  c->iterate_over_set = 0;
 
   return c;
 }

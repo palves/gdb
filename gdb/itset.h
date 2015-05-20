@@ -56,9 +56,17 @@ struct itset *itset_create (char **spec);
 
 /* Const version of the above.  */
 
-struct itset *itset_create_const (const char **spec);
+struct itset *itset_create_const (const char **spec,
+				  enum itset_width default_width);
 
-extern struct itset *itset_create_spec (const char *spec);
+struct itset *itset_create_spec (const char *spec);
+
+/* Create a new I/T set based on TEMPLATE with ITSET_DEFAULT_WIDTH
+   width replaced by DEFAULT_WIDTH.  */
+
+struct itset *itset_clone_replace_default_width
+  (const struct itset *template,
+   enum itset_width default_width);
 
 /* Add ADDME to the I/T set TO.  In other words, after the call, TO
    will be the union set of TO at entry, and ADDME.  */
