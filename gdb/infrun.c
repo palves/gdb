@@ -5136,7 +5136,7 @@ Cannot fill $_exitsignal with the correct signal number.\n"));
 
 	  ecs->event_thread->suspend.stop_signal = GDB_SIGNAL_0;
 
-	  should_resume = follow_fork (1);
+	  should_resume = follow_fork (0);
 
 	  parent = ecs->ptid;
 	  child = ecs->ws.value.related_pid;
