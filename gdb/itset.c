@@ -4133,7 +4133,7 @@ switch_to_itset (struct itset *itset)
 
       ALL_THREADS (thr)
 	{
-	  if (itset_width_contains_thread (itset, ITSET_WIDTH_ALL, thr))
+	  if (itset_contains_thread (itset, thr))
 	    {
 	      switch_to_thread (thr->ptid);
 	      set_current_context ();

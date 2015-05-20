@@ -681,6 +681,8 @@ prepare_execution_command (struct target_ops *target, int background)
     }
 }
 
+int itfocus_should_follow_stop_event (void);
+
 /* Implement the "run" command.  If TBREAK_AT_MAIN is set, then insert
    a temporary breakpoint at the begining of the main program before
    running the program.  */
@@ -775,7 +777,11 @@ run_command_1 (char *args, int from_tty, int tbreak_at_main)
   /* to_create_inferior should push the target, so after this point we
      shouldn't refer to run_target again.  */
   run_target = NULL;
-  set_current_context ();
+  if (itfocus_should_follow_stop_event ())
+    {
+      set_current_context ();
+      itfocus_from_thread_switch ();
+    }
 
   /* We're starting off a new process.  When we get out of here, in
      non-stop mode, finish the state of all threads of that process,
@@ -809,6 +815,12 @@ do_run_command (char *args, int from_tty)
 }
 
 static void
+restore_execution_context_thread (void *arg)
+{
+  switch_to_thread (get_current_context ()->ptid);
+}
+
+static void
 for_each_selected_inferior_cmd (enum itset_width default_width,
 				cmd_cfunc_ftype cmd,
 				char *args, int from_tty)
@@ -817,7 +829,9 @@ for_each_selected_inferior_cmd (enum itset_width default_width,
   struct inferior *inf;
   int count = 0;
 
-  old_chain = make_cleanup_restore_current_thread ();
+  /* Don't use make_cleanup_restore_current_thread as CMD may want to
+     change the user selected thread or frame.  E.g., run, etc.  */
+  old_chain = make_cleanup (restore_execution_context_thread, NULL);
 
   /* Don't print anything about threads if only printing one
      thread.  */
