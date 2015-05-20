@@ -1038,6 +1038,7 @@ print_ada_task_info (struct ui_out *uiout, char *arg_str,
   int nb_columns;
   struct inferior *inf;
   ptid_t saved_inferior_ptid = inferior_ptid;
+  enum itset_width default_width = ITSET_WIDTH_INFERIOR;
 
   old_chain = make_cleanup (switch_to_thread_cleanup, &saved_inferior_ptid);
 
@@ -1158,6 +1159,7 @@ print_ada_task_info (struct ui_out *uiout, char *arg_str,
       if (ptid_equal (task_info->ptid, get_current_context ()->ptid))
 	ui_out_field_string (uiout, "current", "*");
       else if (thr != NULL && itset_contains_ada_task (current_itset,
+						       default_width,
 						       task_info, 0))
 	ui_out_field_string (uiout, "current", "+");
       else

@@ -33,6 +33,20 @@ struct cleanup;
 
 struct itset;
 
+enum itset_width
+{
+  /* Sorted by increasing order.  Needed for itset_set_get_width.  */
+  ITSET_WIDTH_DEFAULT,
+  ITSET_WIDTH_THREAD,
+  ITSET_WIDTH_ADA_TASK,
+  ITSET_WIDTH_INFERIOR,
+  ITSET_WIDTH_GROUP,
+  ITSET_WIDTH_EXPLICIT,
+  ITSET_WIDTH_ALL,
+
+  ITSET_WIDTH_MIXED,
+};
+
 /* Create a new I/T set from a user specification.  The valid forms of
    a specification are documented in the manual.  *SPEC is the input
    specification, and it is updated to point to the first non-space
@@ -63,7 +77,7 @@ int itset_is_empty_set (struct itset *set);
 /* Returns true if ITSET is empty.  That is, the set contains no
    inferiors, threads, etc.  */
 
-int itset_is_empty (const struct itset *itset);
+int itset_is_empty (const struct itset *itset, enum itset_width default_width);
 
 /* Create a new dynamic I/T set which represents the current inferior,
    at the time the I/T set if consulted.  */
@@ -79,26 +93,32 @@ struct itset *itset_create_or_default (char **spec);
 /* Return true if PSPACE is contained in the I/T set.  */
 
 int itset_contains_program_space (struct itset *itset,
+				  enum itset_width default_width,
 				  struct program_space *pspace);
 
 /* Return true if the inferior is contained in the I/T set.  */
 
-int itset_contains_inferior (struct itset *itset, struct inferior *inf);
+int itset_contains_inferior (struct itset *itset,
+			     enum itset_width default_width,
+			     struct inferior *inf);
 
 /* Return true if the thread is contained in the I/T set.  */
 
-int itset_contains_thread (struct itset *itset, struct thread_info *inf,
-			   int including_width);
+int itset_width_contains_thread (struct itset *itset,
+				 enum itset_width default_width,
+				 struct thread_info *thr);
+
+/* Return true if the thread is contained in the I/T set.  */
+
+int itset_contains_thread (struct itset *itset,
+			   struct thread_info *thr);
 
 /* Return true if the Ada task is contained in the I/T set.  */
 
 int itset_contains_ada_task (struct itset *set,
+			     enum itset_width default_width,
 			     const struct ada_task_info *task,
 			     int including_width);
-
-/* Return true if the inferior is contained in the I/T set.  */
-
-int itset_member (struct itset *itset, int inf_id, int thread_id);
 
 /* Return a pointer to the I/T set's name.  Unnamed I/T sets have a
    NULL name.  */
@@ -129,26 +149,13 @@ void itset_cleanup (void *itset);
 
 typedef int (itset_inf_callback_func) (struct inferior *, void *);
 struct inferior *iterate_over_itset_inferiors (struct itset *itset,
+					       enum itset_width default_width,
 					       itset_inf_callback_func *callback,
 					       void *data);
 
 /* The current I/T set.  */
 
 extern struct itset *current_itset;
-
-enum itset_width
-{
-  /* Sorted by increasing order.  Needed for itset_set_get_width.  */
-  ITSET_WIDTH_DEFAULT,
-  ITSET_WIDTH_THREAD,
-  ITSET_WIDTH_ADA_TASK,
-  ITSET_WIDTH_INFERIOR,
-  ITSET_WIDTH_GROUP,
-  ITSET_WIDTH_EXPLICIT,
-  ITSET_WIDTH_ALL,
-
-  ITSET_WIDTH_MIXED,
-};
 
 extern enum itset_width itset_get_width (struct itset *set);
 

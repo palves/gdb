@@ -1143,7 +1143,8 @@ should_print_thread (const char *requested_threads, int pid,
   else if (thr->state == THREAD_EXITED)
     return 0;
   else
-    return itset_contains_thread (current_itset, thr, 1);
+    return itset_width_contains_thread (current_itset, ITSET_WIDTH_ALL,
+					thr);
 }
 
 /* Prints the list of threads and their details on UIOUT.
@@ -1240,7 +1241,7 @@ print_thread_info (struct ui_out *uiout, char *requested_threads, int pid)
 	{
 	  if (ptid_equal (tp->ptid, get_current_context ()->ptid))
 	    ui_out_field_string (uiout, "current", "*");
-	  else if (itset_contains_thread (current_itset, tp, 0))
+	  else if (itset_contains_thread (current_itset, tp))
 	    ui_out_field_string (uiout, "current", "+");
 	  else
 	    ui_out_field_skip (uiout, "current");
@@ -1384,6 +1385,7 @@ status_command (char *arg, int from_tty)
   struct thread_info *tp;
   int n_threads = 0;
   struct ui_out *uiout = current_uiout;
+  enum itset_width default_width = ITSET_WIDTH_INFERIOR;
 
   update_thread_list ();
 
@@ -1392,7 +1394,7 @@ status_command (char *arg, int from_tty)
 
   ALL_THREADS (tp)
     {
-      if (!itset_contains_thread (current_itset, tp, 1))
+      if (!itset_width_contains_thread (current_itset, default_width, tp))
 	continue;
 
       ++n_threads;
@@ -1411,7 +1413,7 @@ status_command (char *arg, int from_tty)
 
   ALL_INFERIORS (inf)
     {
-      if (!itset_contains_inferior (current_itset, inf))
+      if (!itset_contains_inferior (current_itset, default_width, inf))
 	continue;
 
       ui_out_message (uiout, 0, "  %d (%s)\t[%s]\n",
@@ -1428,14 +1430,14 @@ status_command (char *arg, int from_tty)
 	  if (inf->pid != ptid_get_pid (tp->ptid))
 	    continue;
 
-	  if (!itset_contains_thread (current_itset, tp, 1))
+	  if (!itset_width_contains_thread (current_itset, default_width, tp))
 	    continue;
 
 	  chain2 = make_cleanup_ui_out_tuple_begin_end (uiout, NULL);
 
 	  if (ptid_equal (tp->ptid, get_current_context ()->ptid))
 	    ui_out_field_string (uiout, "current", "*");
-	  else if (itset_contains_thread (current_itset, tp, 0))
+	  else if (itset_contains_thread (current_itset, tp))
 	    ui_out_field_string (uiout, "current", "+");
 	  else
 	    ui_out_field_skip (uiout, "current");
@@ -1847,7 +1849,7 @@ thread_apply_set (const char *cmd, struct itset *set, int ascending,
 
       ALL_NON_EXITED_THREADS (tp)
         {
-	  if (!itset_contains_thread (set, tp, 1))
+	  if (!itset_width_contains_thread (set, ITSET_WIDTH_ALL, tp))
 	    continue;
 
           tp_array[i] = tp;

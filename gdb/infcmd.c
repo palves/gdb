@@ -113,6 +113,8 @@ void enqueue_step_overs (struct thread_info *tp);
 void mark_threads_running (ptid_t resume_ptid);
 void prepare_proceed (CORE_ADDR addr, enum gdb_signal siggnal);
 
+enum itset_width default_run_control_width (void);
+
 void
 apply_execution_command (struct itset *apply_itset,
 			 struct itset *run_free_itset,
@@ -122,6 +124,7 @@ apply_execution_command (struct itset *apply_itset,
   struct thread_info *tp = inferior_thread ();
   ptid_t resume_ptid;
   struct cleanup *old_chain;
+  enum itset_width default_width = default_run_control_width ();
 
   resume_ptid = user_visible_resume_ptid (tp->control.stepping_command);
 
@@ -147,8 +150,8 @@ apply_execution_command (struct itset *apply_itset,
 	  if (t->resumed)
 	    continue;
 
-	  if (itset_contains_thread (run_free_itset, t, 1)
-	      && !itset_contains_thread (apply_itset, t, 0))
+	  if (itset_width_contains_thread (run_free_itset, default_width, t)
+	      && !itset_contains_thread (apply_itset, t))
 	    {
 	      if (t->suspend.waitstatus.kind == TARGET_WAITKIND_FORKED
 		  || t->suspend.waitstatus.kind == TARGET_WAITKIND_VFORKED)
@@ -174,7 +177,7 @@ apply_execution_command (struct itset *apply_itset,
 	  if (t->resumed)
 	    continue;
 
-	  if (itset_contains_thread (apply_itset, t, 0))
+	  if (itset_contains_thread (apply_itset, t))
 	    {
 	      switch_to_thread (t->ptid);
 	      (*callback) (t, callback_data);
@@ -186,7 +189,9 @@ apply_execution_command (struct itset *apply_itset,
 		  parallel_leader->refcount++;
 		}
 	    }
-	  else if (itset_contains_thread (run_free_itset, t, 1))
+	  else if (itset_width_contains_thread (run_free_itset,
+						default_run_control_width (),
+						t))
 	    {
 	      clear_proceed_status_thread (t);
 	    }
@@ -803,11 +808,9 @@ do_run_command (char *args, int from_tty)
   run_command_1 (args, from_tty, 0);
 }
 
-extern void for_each_selected_inferior_cmd (cmd_cfunc_ftype cmd,
-					    char *args, int from_tty);
-
-void
-for_each_selected_inferior_cmd (cmd_cfunc_ftype cmd,
+static void
+for_each_selected_inferior_cmd (enum itset_width default_width,
+				cmd_cfunc_ftype cmd,
 				char *args, int from_tty)
 {
   struct cleanup *old_chain;
@@ -820,7 +823,8 @@ for_each_selected_inferior_cmd (cmd_cfunc_ftype cmd,
      thread.  */
   ALL_INFERIORS (inf)
     {
-      if (!itset_contains_inferior (current_itset, inf))
+      if (!itset_contains_inferior (current_itset, default_width,
+				    inf))
 	continue;
       count++;
       if (count > 1)
@@ -829,7 +833,8 @@ for_each_selected_inferior_cmd (cmd_cfunc_ftype cmd,
 
   ALL_INFERIORS (inf)
     {
-      if (!itset_contains_inferior (current_itset, inf))
+      if (!itset_contains_inferior (current_itset, default_width,
+				    inf))
 	continue;
 
       if (inf->pid != 0)
@@ -875,7 +880,8 @@ for_each_selected_inferior_cmd (cmd_cfunc_ftype cmd,
 static void
 run_command (char *args, int from_tty)
 {
-  for_each_selected_inferior_cmd (do_run_command,
+  for_each_selected_inferior_cmd (ITSET_WIDTH_INFERIOR,
+				  do_run_command,
 				  args,  from_tty);
 }
 
@@ -1176,7 +1182,7 @@ continue_command (char *args, int from_tty)
 	}
     }
 
-  if (itset_is_empty (apply_itset))
+  if (itset_is_empty (apply_itset, default_run_control_width ()))
     {
       if (apply_itset_explicit)
 	error (_("Set of threads to continue is empty."));
@@ -1360,7 +1366,7 @@ step_1 (int skip_subroutines, int single_inst, char *args)
     }
 
   ALL_THREADS (thr)
-    if (itset_contains_thread (apply_itset, thr, 0))
+    if (itset_contains_thread (apply_itset, thr))
       {
 	++thr_count;
 
@@ -1665,7 +1671,7 @@ jump_command (char *arg, int from_tty)
 			      &apply_itset, &apply_itset_explicit,
 			      &run_free_itset);
 
-  if (itset_is_empty (apply_itset))
+  if (itset_is_empty (apply_itset, default_run_control_width ()))
     {
       if (apply_itset_explicit)
 	error (_("Set of threads to jump is empty."));
@@ -1680,7 +1686,8 @@ jump_command (char *arg, int from_tty)
   do_cleanups (args_chain);
 
   ALL_THREADS (thr)
-    if (itset_contains_thread (apply_itset, thr, 0))
+    if (itset_width_contains_thread (apply_itset, default_run_control_width (),
+				     thr))
       {
 	struct symtabs_and_lines sals;
 	struct symtab_and_line sal;
@@ -1785,7 +1792,7 @@ signal_command (char *arg, int from_tty)
 			      &apply_itset, &apply_itset_explicit,
 			      &run_free_itset);
 
-  if (itset_is_empty (apply_itset))
+  if (itset_is_empty (apply_itset, default_run_control_width ()))
     {
       if (apply_itset_explicit)
 	error (_("Set of threads to signal is empty."));
@@ -1797,7 +1804,7 @@ signal_command (char *arg, int from_tty)
     error_no_arg (_("signal number"));
 
   ALL_THREADS (thr)
-    if (itset_contains_thread (apply_itset, thr, 0))
+    if (itset_contains_thread (apply_itset, thr))
       ensure_runnable (thr);
 
   /* It would be even slicker to make signal names be valid expressions,
@@ -1972,7 +1979,7 @@ until_next_command (char *arg, int from_tty)
 			      &run_free_itset);
 
   ALL_THREADS (thr)
-    if (itset_contains_thread (apply_itset, thr, 0))
+    if (itset_contains_thread (apply_itset, thr))
       {
 	struct frame_info *frame;
 	CORE_ADDR pc;
@@ -2436,7 +2443,7 @@ finish_command (char *arg, int from_tty)
     error (_("The \"finish\" command does not take any arguments."));
 
   ALL_THREADS (thr)
-    if (itset_contains_thread (apply_itset, thr, 0))
+    if (itset_contains_thread (apply_itset, thr))
       {
 	struct frame_info *frame;
 	struct frame_info *prev;
@@ -3097,7 +3104,8 @@ do_kill_command (char *arg, int from_tty)
 static void
 kill_command (char *args, int from_tty)
 {
-  for_each_selected_inferior_cmd (do_kill_command,
+  for_each_selected_inferior_cmd (ITSET_WIDTH_INFERIOR,
+				  do_kill_command,
 				  args,  from_tty);
 }
 
@@ -3500,7 +3508,9 @@ interrupt_target_1 (int all_threads)
 
 	  ALL_NON_EXITED_THREADS (tp)
 	    {
-	      if (itset_contains_thread (current_itset, tp, 1))
+	      if (itset_width_contains_thread (current_itset,
+					       default_run_control_width (),
+					       tp))
 		{
 		  target_interrupt (tp->ptid);
 		  set_stop_requested (tp->ptid, 1);

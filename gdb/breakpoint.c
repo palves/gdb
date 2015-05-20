@@ -4374,6 +4374,8 @@ hardware_watchpoint_inserted_in_range (struct address_space *aspace,
   return 0;
 }
 
+enum itset_width default_run_control_width (void);
+
 /* Test whether this stopping thread is in the I/T set for this
    breakpoint.  */
 
@@ -4383,7 +4385,9 @@ bpstat_check_trigger_set (const struct breakpoint *b, struct thread_info *thread
   if (b->trigger_set == NULL)
     return 1;
 
-  if (itset_contains_thread (b->trigger_set, thread, 1))
+  if (itset_width_contains_thread (b->trigger_set,
+				   default_run_control_width (),
+				   thread))
     return 1;
 
   return 0;
@@ -11668,6 +11672,7 @@ until_break_command (char *arg, int from_tty, int anywhere)
   struct thread_info *leader = NULL;
   int first = 1;
   struct symtab_and_line sal;
+  enum itset_width default_width = default_run_control_width ();
 
   old_chain = make_cleanup (itset_free_p, &apply_itset);
   make_cleanup (itset_free_p, &run_free_itset);
@@ -11677,7 +11682,7 @@ until_break_command (char *arg, int from_tty, int anywhere)
 			      &run_free_itset);
 
   ALL_THREADS (thr)
-    if (itset_contains_thread (apply_itset, thr, 0))
+    if (itset_contains_thread (apply_itset, thr))
       {
 	struct frame_info *frame;
 	struct frame_id breakpoint_frame_id;

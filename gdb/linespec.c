@@ -1008,6 +1008,12 @@ iterate_name_matcher (const char *name, void *d)
   return 0; /* Skip this symbol.  */
 }
 
+static enum itset_width
+bp_default_width (void)
+{
+  return ITSET_WIDTH_ALL;
+}
+
 /* A helper that walks over all matching symtabs in all objfiles and
    calls CALLBACK for each symbol matching NAME.  If SEARCH_PSPACE is
    not NULL, then the search is restricted to just that program
@@ -1039,7 +1045,8 @@ iterate_over_all_matching_symtabs (struct linespec_state *state,
       continue;
     if (pspace->executing_startup)
       continue;
-    if (!itset_contains_program_space (current_itset, pspace))
+    if (!itset_contains_program_space (current_itset, bp_default_width (),
+				       pspace))
       continue;
 
     set_current_program_space (pspace);
@@ -3034,7 +3041,9 @@ collect_symtabs_from_filename (const char *file)
   {
     if (pspace->executing_startup)
       continue;
-    if (!itset_contains_program_space (current_itset, pspace))
+    if (!itset_contains_program_space (current_itset,
+				       bp_default_width (),
+				       pspace))
       continue;
 
     set_current_program_space (pspace);
@@ -3613,7 +3622,9 @@ search_minsyms_for_name (struct collect_info *info, const char *name,
 	  continue;
 	if (pspace->executing_startup)
 	  continue;
-	if (!itset_contains_program_space (current_itset, pspace))
+	if (!itset_contains_program_space (current_itset,
+					   bp_default_width (),
+					   pspace))
 	  continue;
 
 	set_current_program_space (pspace);
@@ -3628,7 +3639,9 @@ search_minsyms_for_name (struct collect_info *info, const char *name,
   else
     {
       if ((search_pspace == NULL || SYMTAB_PSPACE (symtab) == search_pspace)
-	  && itset_contains_program_space (current_itset, SYMTAB_PSPACE (symtab)))
+	  && itset_contains_program_space (current_itset,
+					   bp_default_width (),
+					   SYMTAB_PSPACE (symtab)))
 	{
 	  set_current_program_space (SYMTAB_PSPACE (symtab));
 	  local.objfile = SYMTAB_OBJFILE(symtab);
@@ -3692,6 +3705,7 @@ add_matching_symbols_to_info (const char *name,
 	}
       else if ((pspace == NULL || pspace == SYMTAB_PSPACE (elt))
 		&& itset_contains_program_space (current_itset,
+						 bp_default_width (),
 						 SYMTAB_PSPACE (elt)))
 	{
 	  int prev_len = VEC_length (symbolp, info->result.symbols);

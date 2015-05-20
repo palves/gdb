@@ -2753,6 +2753,21 @@ clear_proceed_status_thread (struct thread_info *tp)
   bpstat_clear (&tp->control.stop_bpstat);
 }
 
+enum itset_width default_run_control_width (void);
+
+enum itset_width
+default_run_control_width (void)
+{
+  if (non_stop)
+    return ITSET_WIDTH_THREAD;
+  else if (scheduler_mode == schedlock_on)
+    return ITSET_WIDTH_THREAD;
+  else if (!sched_multi)
+    return ITSET_WIDTH_INFERIOR;
+  else
+    return ITSET_WIDTH_ALL;
+}
+
 void
 clear_proceed_status (int step)
 {
@@ -2764,7 +2779,9 @@ clear_proceed_status (int step)
 	 we're about to resume, implicitly and explicitly.  */
       ALL_NON_EXITED_THREADS (tp)
         {
-	  if (!itset_contains_thread (current_itset, tp, 1))
+	  if (!itset_width_contains_thread (current_itset,
+					    default_run_control_width (),
+					    tp))
 	    continue;
 
 	  if (tp->resumed)
@@ -2970,11 +2987,14 @@ mark_threads_running (ptid_t resume_ptid)
       else
 #endif
 	{
+	  enum itset_width default_width = default_run_control_width ();
 	  struct thread_info *tp;
 
 	  ALL_NON_EXITED_THREADS (tp)
 	    {
-	      if (!itset_contains_thread (current_itset, tp, 1))
+	      if (!itset_width_contains_thread (current_itset,
+						default_width,
+						tp))
 		continue;
 
 	      set_running (tp->ptid, 1);
@@ -3002,6 +3022,7 @@ enqueue_step_overs (struct thread_info *tp)
 {
   if (!non_stop)
     {
+      enum itset_width default_width = default_run_control_width ();
       struct thread_info *current = tp;
 
       ALL_NON_EXITED_THREADS (tp)
@@ -3012,7 +3033,7 @@ enqueue_step_overs (struct thread_info *tp)
 	    continue;
 
 	  /* Ignore threads of processes we're not resuming.  */
-	  if (!itset_contains_thread (current_itset, tp, 1))
+	  if (!itset_width_contains_thread (current_itset, default_width, tp))
 	    continue;
 
 	  if (!thread_still_needs_step_over (tp))
@@ -3083,6 +3104,7 @@ do_proceed (void)
     }
   else if (!non_stop && target_is_non_stop_p ())
     {
+      enum itset_width default_width = default_run_control_width ();
       struct thread_info *current = inferior_thread ();
       struct thread_info *tp;
 
@@ -3090,7 +3112,7 @@ do_proceed (void)
       ALL_NON_EXITED_THREADS (tp)
         {
 	  /* Ignore threads of processes we're not resuming.  */
-	  if (!itset_contains_thread (current_itset, tp, 1))
+	  if (!itset_width_contains_thread (current_itset, default_width, tp))
 	    continue;
 
 	  if (tp->resumed)
@@ -4317,7 +4339,7 @@ should_stop_thread (struct itset *stop_set, struct thread_info *t)
   if (stop_set == NULL || itset_is_empty_set (stop_set))
     return !non_stop;
 
-  if (itset_contains_thread (stop_set, t, 1))
+  if (itset_width_contains_thread (stop_set, default_run_control_width (), t))
     return 1;
 
   return 0;
@@ -4651,7 +4673,8 @@ all_in_apply_set_done_p (struct execution_control_state *ecs)
       leader->refcount--;
 
       ALL_THREADS (thr)
-	if (itset_contains_thread (ecs->event_thread->apply_set, thr, 0))
+	if (itset_contains_thread (ecs->event_thread->apply_set,
+				   thr))
 	  {
 	    if (!thr->goal_reached)
 	      {
