@@ -9716,7 +9716,7 @@ parse_breakpoint_args_const (const char **args,
   if (non_stop)
     *suspend_set = itset_create_empty ();
   else
-    *suspend_set = itset_reference (*trigger_set);
+    *suspend_set = itset_create_spec ("at*.*");
 
   old_chain = make_cleanup_itset_free (*trigger_set);
   make_cleanup_itset_free (*suspend_set);

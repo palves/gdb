@@ -1082,7 +1082,6 @@ static struct itset_elt_range *
 			     int is_current,
 			     struct spec_range *inf_range,
 			     struct spec_range *thr_range);
-static struct itset_elt *create_all_itset (void);
 
 static struct itset_elt *
 thread_range_clone (struct itset_elt *base)
@@ -3726,7 +3725,7 @@ itset_create_const (const char **specp)
   return set;
 }
 
-static struct itset *
+struct itset *
 itset_create_spec (const char *spec)
 {
   struct itset *itset;
@@ -4221,6 +4220,18 @@ itfocus_should_follow_stop_event (void)
   return (cur_elt_range != NULL);
 }
 
+static struct itset *
+itset_from_elt (struct itset_elt *elt)
+{
+  struct itset *itset;
+
+  itset = XCNEW (struct itset);
+  itset->refc = 1;
+
+  VEC_safe_push (itset_elt_ptr, itset->elements, elt);
+  return itset;
+}
+
 void
 itfocus_from_thread_switch (void)
 {
@@ -4248,12 +4259,7 @@ itfocus_from_thread_switch (void)
 	= itset_reference (cur_elt_range->explicit_width);
     }
 
-  /* FIXME: factor this to a function.  */
-  new_itset = XCNEW (struct itset);
-  new_itset->refc = 1;
-
-  VEC_safe_push (itset_elt_ptr, new_itset->elements, &new_elt_range->base);
-
+  new_itset = itset_from_elt (&new_elt_range->base);
   itset_free (current_itset);
   current_itset = new_itset;
 }
