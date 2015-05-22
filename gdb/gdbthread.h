@@ -593,6 +593,7 @@ struct execution_context
 {
   ptid_t ptid;
   struct inferior *inf;
+  int thread_gnum;
 };
 
 extern struct execution_context *get_current_context (void);

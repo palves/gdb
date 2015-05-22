@@ -71,8 +71,16 @@ get_current_context (void)
 void
 set_current_context (void)
 {
+  struct thread_info *thr;
+
   current_execution_context.ptid = inferior_ptid;
   current_execution_context.inf = current_inferior ();
+
+  thr = find_thread_ptid (inferior_ptid);
+  if (thr != NULL)
+    current_execution_context.thread_gnum = thr->num;
+  else
+    current_execution_context.thread_gnum = 0;
 }
 
 struct thread_info *
@@ -817,7 +825,22 @@ do_run_command (char *args, int from_tty)
 static void
 restore_execution_context_thread (void *arg)
 {
-  switch_to_thread (get_current_context ()->ptid);
+  struct execution_context *ctx = get_current_context ();
+  struct thread_info *thr;
+
+  thr = find_thread_id (ctx->thread_gnum);
+
+  if (thr != NULL)
+    {
+      switch_to_thread (thr->ptid);
+      ctx->thread_gnum = 0;
+    }
+  else
+    {
+      set_current_program_space (ctx->inf->pspace);
+      set_current_inferior (ctx->inf);
+      switch_to_thread (null_ptid);
+    }
 }
 
 static void
