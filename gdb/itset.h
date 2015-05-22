@@ -89,6 +89,10 @@ int itset_is_empty_set (struct itset *set);
 
 int itset_is_empty (const struct itset *itset, enum itset_width default_width);
 
+/* Returns true if ITSET contains any thread.  */
+
+int itset_contains_any_thread (struct itset *itset);
+
 /* Create a new dynamic I/T set which represents the current inferior,
    at the time the I/T set if consulted.  */
 

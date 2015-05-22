@@ -1198,7 +1198,7 @@ continue_command (char *args, int from_tty)
 	}
     }
 
-  if (itset_is_empty (apply_itset, default_run_control_width ()))
+  if (!itset_contains_any_thread (apply_itset))
     {
       if (apply_itset_explicit)
 	error (_("Set of threads to continue is empty."));
@@ -1722,7 +1722,7 @@ jump_command (char *arg, int from_tty)
 			      &apply_itset, &apply_itset_explicit,
 			      &run_free_itset);
 
-  if (itset_is_empty (apply_itset, default_run_control_width ()))
+  if (!itset_contains_any_thread (apply_itset))
     {
       if (apply_itset_explicit)
 	error (_("Set of threads to jump is empty."));
@@ -1843,7 +1843,7 @@ signal_command (char *arg, int from_tty)
 			      &apply_itset, &apply_itset_explicit,
 			      &run_free_itset);
 
-  if (itset_is_empty (apply_itset, default_run_control_width ()))
+  if (!itset_contains_any_thread (apply_itset))
     {
       if (apply_itset_explicit)
 	error (_("Set of threads to signal is empty."));
