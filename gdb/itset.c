@@ -4056,8 +4056,16 @@ itfocus_from_thread_switch (void)
   inf_range.first = current_inferior ()->num;
   inf_range.last = inf_range.first;
 
-  thr_range.first = inferior_thread ()->num_inf;
-  thr_range.last = thr_range.first;
+  if (ptid_equal (inferior_ptid, null_ptid))
+    {
+      thr_range.first = 0;
+      thr_range.last = 0;
+    }
+  else
+    {
+      thr_range.first = inferior_thread ()->num_inf;
+      thr_range.last = thr_range.first;
+    }
 
   new_elt_range = create_thread_range_itset (width, 0,
 					     &inf_range,

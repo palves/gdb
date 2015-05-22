@@ -8019,17 +8019,20 @@ normal_stop (void)
      after this event is handled, so we're not really switching, only
      informing of a stop.  */
   if (!non_stop
+      && last.kind != TARGET_WAITKIND_NO_RESUMED
       && !ptid_equal (get_current_context ()->ptid, inferior_ptid)
-      && itfocus_should_follow_stop_event ()
-      && target_has_execution
-      && last.kind != TARGET_WAITKIND_SIGNALLED
-      && last.kind != TARGET_WAITKIND_EXITED
-      && last.kind != TARGET_WAITKIND_NO_RESUMED)
+      && itfocus_should_follow_stop_event ())
     {
-      target_terminal_ours_for_output ();
-      printf_filtered (_("[Switching to %s]\n"),
-		       target_pid_to_str (inferior_ptid));
-      annotate_thread_changed ();
+      if (target_has_execution
+	  && last.kind != TARGET_WAITKIND_SIGNALLED
+	  && last.kind != TARGET_WAITKIND_EXITED)
+	{
+	  target_terminal_ours_for_output ();
+	  printf_filtered (_("[Switching to %s]\n"),
+			   target_pid_to_str (inferior_ptid));
+	  annotate_thread_changed ();
+	}
+
       set_current_context ();
       itfocus_from_thread_switch ();
     }
