@@ -1538,11 +1538,12 @@ get_selected_frame (const char *message)
 {
   if (selected_frame == NULL)
     {
-      struct thread_info *tp = inferior_thread ();
+      struct thread_info *tp;
 
       if (message != NULL && !has_stack_frames ())
 	error (("%s"), message);
 
+      tp = inferior_thread ();
       if (tp->control.selected_frame_level == -1)
 	select_frame (get_current_frame ());
       else
