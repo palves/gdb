@@ -1536,37 +1536,49 @@ status_command (char *arg, int from_tty)
 
 /* Switch from one thread to another.  */
 
+void switch_to_thread_info (struct thread_info *thr);
+
+void
+switch_to_thread_info (struct thread_info *thr)
+{
+  struct inferior *inf;
+
+  inf = get_thread_inferior (thr);
+  set_current_program_space (inf->pspace);
+  set_current_inferior (inf);
+
+  if (ptid_equal (thr->ptid, inferior_ptid))
+    return;
+
+  inferior_ptid = thr->ptid;
+  reinit_frame_cache ();
+
+  /* Don't check for THREAD_STOPPED, because we're called when the
+     thread is stopped but not user-visibly marked as such.  E.g.,
+     while handling an internal event.  */
+  if (thr->state != THREAD_EXITED
+      && !thr->executing)
+    stop_pc = regcache_read_pc (get_thread_regcache (thr->ptid));
+  else
+    stop_pc = ~(CORE_ADDR) 0;
+}
+
+/* Switch from one thread to another.  */
+
 void
 switch_to_thread (ptid_t ptid)
 {
-  /* Switch the program space as well, if we can infer it from the now
-     current thread.  Otherwise, it's up to the caller to select the
-     space it wants.  */
-  if (!ptid_equal (ptid, null_ptid))
+  if (ptid_equal (ptid, null_ptid))
     {
-      struct inferior *inf;
-
-      inf = find_inferior_ptid (ptid);
-      gdb_assert (inf != NULL);
-      set_current_program_space (inf->pspace);
-      set_current_inferior (inf);
+      /* No way to infer an inferior or program space.  It's up to the
+	 caller to select whichever it wants.  */
+      inferior_ptid = ptid;
+      reinit_frame_cache ();
+      stop_pc = ~(CORE_ADDR) 0;
+      return;
     }
 
-  if (ptid_equal (ptid, inferior_ptid))
-    return;
-
-  inferior_ptid = ptid;
-  reinit_frame_cache ();
-
-  /* We don't check for is_stopped, because we're called at times
-     while in the TARGET_RUNNING state, e.g., while handling an
-     internal event.  */
-  if (!ptid_equal (inferior_ptid, null_ptid)
-      && !is_exited (ptid)
-      && !is_executing (ptid))
-    stop_pc = regcache_read_pc (get_thread_regcache (ptid));
-  else
-    stop_pc = ~(CORE_ADDR) 0;
+  switch_to_thread_info (find_thread_ptid (ptid));
 }
 
 static void
