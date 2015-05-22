@@ -862,8 +862,7 @@ for_each_selected_inferior_cmd (enum itset_width default_width,
      thread.  */
   ALL_INFERIORS (inf)
     {
-      if (!itset_contains_inferior (current_itset, default_width,
-				    inf))
+      if (!itset_contains_inferior (current_itset, inf))
 	continue;
       count++;
       if (count > 1)
@@ -872,8 +871,7 @@ for_each_selected_inferior_cmd (enum itset_width default_width,
 
   ALL_INFERIORS (inf)
     {
-      if (!itset_contains_inferior (current_itset, default_width,
-				    inf))
+      if (!itset_contains_inferior (current_itset, inf))
 	continue;
 
       if (inf->pid != 0)
