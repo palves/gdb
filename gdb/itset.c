@@ -4525,6 +4525,8 @@ make_internal_itset (struct itset *itset, const char *name)
   add_to_named_itset_chain (named_itset);
 }
 
+void switch_to_thread_info (struct thread_info *thr);
+
 static void
 restore_execution_context_thread (void *arg)
 {
@@ -4534,7 +4536,7 @@ restore_execution_context_thread (void *arg)
   thr = find_thread_global_id (ctx->thread_gnum);
   if (thr != NULL)
     {
-      switch_to_thread (thr->ptid);
+      switch_to_thread_info (thr);
     }
   else
     {
