@@ -77,7 +77,8 @@ struct itset_elt_vtable
 
   int (*contains_inferior) (struct itset_elt *elt,
 			    enum itset_width default_width,
-			    struct inferior *inf);
+			    struct inferior *inf,
+			    int including_width);
 
   /* Return true if the element contains the thread.  The element and
      the thread are passed as arguments.  */
@@ -268,14 +269,16 @@ set_contains_program_space (VEC (itset_elt_ptr) *elements,
 static int
 set_contains_inferior (VEC (itset_elt_ptr) *elements,
 		       enum itset_width default_width,
-		       struct inferior *inf)
+		       struct inferior *inf,
+		       int including_width)
 {
   int ix;
   struct itset_elt *elt;
 
   for (ix = 0; VEC_iterate (itset_elt_ptr, elements, ix, elt); ++ix)
     {
-      if (elt->vtable->contains_inferior (elt, default_width, inf))
+      if (elt->vtable->contains_inferior (elt, default_width,
+					  inf, including_width))
 	return 1;
     }
 
@@ -347,7 +350,8 @@ exec_destroy (struct itset_elt *base)
 static int
 exec_contains_inferior (struct itset_elt *base,
 			enum itset_width default_width,
-			struct inferior *inf)
+			struct inferior *inf,
+			int including_width)
 {
   struct itset_elt_exec *exec = (struct itset_elt_exec *) base;
 
@@ -648,7 +652,8 @@ inferior_range_contains_inferior (struct spec_range *range,
 static int
 inferior_range_elt_contains_inferior (struct itset_elt *base,
 				      enum itset_width default_width,
-				      struct inferior *inf)
+				      struct inferior *inf,
+				      int including_width)
 {
   struct itset_elt_range *elt_range = (struct itset_elt_range *) base;
   enum itset_width width = effective_width (elt_range->width, default_width);
@@ -824,28 +829,29 @@ thread_range_contains_program_space (struct itset_elt *base,
 static int
 thread_range_contains_inferior (struct itset_elt *base,
 				enum itset_width default_width,
-				struct inferior *inf)
+				struct inferior *inf,
+				int including_width)
 {
   struct itset_elt_thread_range *thread_range
     = (struct itset_elt_thread_range *) base;
   struct itset_elt_range *range = (struct itset_elt_range *) base;
   enum itset_width width = effective_width (range->width, default_width);
 
-  if (width == ITSET_WIDTH_ALL)
+  if (including_width && width == ITSET_WIDTH_ALL)
     return 1;
 
-  if (width == ITSET_WIDTH_EXPLICIT)
+  if (including_width && width == ITSET_WIDTH_EXPLICIT)
     {
       struct itset *ew = range->explicit_width;
 
-      if (itset_contains_inferior (ew, default_width, inf))
+      if (itset_width_contains_inferior (ew, default_width, inf))
 	return 1;
     }
 
-  if (width == ITSET_WIDTH_GROUP)
+  if (including_width && width == ITSET_WIDTH_GROUP)
     {
       if (range->group->vtable->contains_inferior (range->group, default_width,
-						   inf))
+						   inf, including_width))
 	return 1;
     }
 
@@ -1135,7 +1141,8 @@ core_range_contains_thread (struct itset_elt *base,
 static int
 core_range_contains_inferior (struct itset_elt *base,
 			      enum itset_width default_width,
-			      struct inferior *inf)
+			      struct inferior *inf,
+			      int including_width)
 {
   struct thread_info *thr;
 
@@ -1265,7 +1272,8 @@ ada_task_range_contains_program_space (struct itset_elt *base,
 static int
 ada_task_range_contains_inferior (struct itset_elt *base,
 				  enum itset_width default_width,
-				  struct inferior *inf)
+				  struct inferior *inf,
+				  int including_width)
 {
   struct itset_elt_range *range_elt = (struct itset_elt_range *) base;
   struct itset_elt_ada_task_range *ada_task_range_elt
@@ -1518,7 +1526,8 @@ intersect_destroy (struct itset_elt *base)
 static int
 intersect_contains_inferior (struct itset_elt *base,
 			     enum itset_width default_width,
-			     struct inferior *inf)
+			     struct inferior *inf,
+			     int including_width)
 {
   struct itset_elt_intersect *intersect = (struct itset_elt_intersect *) base;
   struct itset_elt *elt;
@@ -1528,7 +1537,8 @@ intersect_contains_inferior (struct itset_elt *base,
 
   for (ix = 0; VEC_iterate (itset_elt_ptr, intersect->elements, ix, elt); ++ix)
     {
-      if (!elt->vtable->contains_inferior (elt, default_width, inf))
+      if (!elt->vtable->contains_inferior (elt, default_width,
+					   inf, including_width))
 	return 0;
     }
 
@@ -1660,7 +1670,8 @@ all_contains_program_space (struct itset_elt *base,
 static int
 all_contains_inferior (struct itset_elt *base,
 		       enum itset_width default_width,
-		       struct inferior *inf)
+		       struct inferior *inf,
+		       int including_width)
 {
   return 1;
 }
@@ -1743,7 +1754,8 @@ empty_contains_program_space (struct itset_elt *base,
 static int
 empty_contains_inferior (struct itset_elt *base,
 			 enum itset_width default_width,
-			 struct inferior *inf)
+			 struct inferior *inf,
+			 int including_width)
 {
   return 0;
 }
@@ -1812,16 +1824,24 @@ itset_elt_itset_contains_program_space (struct itset_elt *base,
   return itset_contains_program_space (iiset->set, default_width, pspace);
 }
 
+static int
+itset_contains_inferior_1 (struct itset *set,
+			   enum itset_width default_width,
+			   struct inferior *inf,
+			   int including_width);
+
 /* Implementation of `contains_inferior' method.  */
 
 static int
 itset_elt_itset_contains_inferior (struct itset_elt *base,
 				   enum itset_width default_width,
-				   struct inferior *inf)
+				   struct inferior *inf,
+				   int including_width)
 {
   struct itset_elt_itset *iiset = (struct itset_elt_itset *) base;
 
-  return itset_contains_inferior (iiset->set, default_width, inf);
+  return itset_contains_inferior_1 (iiset->set, default_width,
+				    inf, including_width);
 }
 
 /* Implementation of `contains_thread' method.  */
@@ -1936,11 +1956,12 @@ itset_elt_negated_destroy (struct itset_elt *base)
 static int
 itset_elt_negated_contains_inferior (struct itset_elt *base,
 				     enum itset_width default_width,
-				     struct inferior *inf)
+				     struct inferior *inf,
+				     int including_width)
 {
   struct itset_elt_negated *elt = (struct itset_elt_negated *) base;
   return !elt->negated->vtable->contains_inferior (elt->negated, default_width,
-						   inf);
+						   inf, including_width);
 }
 
 /* Implementation of `contains_thread' method.  */
@@ -2097,7 +2118,8 @@ state_contains_program_space (struct itset_elt *base,
 static int
 state_contains_inferior (struct itset_elt *base,
 			 enum itset_width default_width,
-			 struct inferior *inf)
+			 struct inferior *inf,
+			 int including_width)
 {
   struct itset_elt_state *state = (struct itset_elt_state *) base;
   struct thread_info *thr;
@@ -2176,7 +2198,8 @@ curinf_contains_program_space (struct itset_elt *base,
 static int
 curinf_contains_inferior (struct itset_elt *base,
 			  enum itset_width default_width,
-			  struct inferior *inf)
+			  struct inferior *inf,
+			  int including_width)
 {
   return current_inferior () == inf;
 }
@@ -2243,7 +2266,8 @@ curthr_contains_program_space (struct itset_elt *base,
 static int
 curthr_contains_inferior (struct itset_elt *base,
 			  enum itset_width default_width,
-			  struct inferior *inf)
+			  struct inferior *inf,
+			  int including_width)
 {
   return current_inferior () == inf;
 }
@@ -2301,7 +2325,8 @@ lockstep_contains_program_space (struct itset_elt *base,
 static int
 lockstep_contains_inferior (struct itset_elt *base,
 			    enum itset_width default_width,
-			    struct inferior *inf)
+			    struct inferior *inf,
+			    int including_width)
 {
   return current_inferior () == inf;
 }
@@ -2454,7 +2479,8 @@ static_contains_program_space (struct itset_elt *base,
 static int
 static_contains_inferior (struct itset_elt *base,
 			  enum itset_width default_width,
-			  struct inferior *inf)
+			  struct inferior *inf,
+			  int including_width)
 {
   struct itset_elt_static *st = (struct itset_elt_static *) base;
   int idx;
@@ -2520,7 +2546,7 @@ check_one_inferior (struct inferior *inf, void *datum)
 {
   struct iter_data *id = datum;
 
-  if (set_contains_inferior (id->elements, id->default_width, inf))
+  if (set_contains_inferior (id->elements, id->default_width, inf, 1))
     VEC_safe_push (int, id->st->inferiors, inf->num);
 
   /* Keep going.  */
@@ -3589,14 +3615,36 @@ itset_contains_program_space (struct itset *set,
 
 /* Return 1 if SET contains INF, 0 otherwise.  */
 
-int
-itset_contains_inferior (struct itset *set,
-			 enum itset_width default_width,
-			 struct inferior *inf)
+static int
+itset_contains_inferior_1 (struct itset *set,
+			   enum itset_width default_width,
+			   struct inferior *inf,
+			   int including_width)
 {
-  return set_contains_inferior (set->elements, default_width, inf);
+  if (including_width)
+    return set_contains_inferior (set->elements, default_width, inf, 1);
+  else
+    return set_contains_inferior (set->elements, ITSET_WIDTH_INFERIOR, inf, 0);
 }
 
+/* Return 1 if SET contains INF, 0 otherwise.  */
+
+int
+itset_width_contains_inferior (struct itset *set,
+			       enum itset_width default_width,
+			       struct inferior *inf)
+{
+  return itset_contains_inferior_1 (set, default_width, inf, 1);
+}
+
+/* Return 1 if SET contains INF, 0 otherwise.  */
+
+int
+itset_contains_inferior (struct itset *set,
+			 struct inferior *inf)
+{
+  return itset_contains_inferior_1 (set, ITSET_WIDTH_INFERIOR, inf, 0);
+}
 
 static int
 itset_contains_thread_1 (struct itset *set,
@@ -3698,7 +3746,7 @@ iter_callback (struct inferior *inf, void *d)
 {
   struct iterate_data *data = d;
 
-  if (itset_contains_inferior (data->itset, data->default_width, inf))
+  if (itset_contains_inferior_1 (data->itset, data->default_width, inf, 1))
     return data->callback (inf, data->client_data);
 
   /* Keep going.  */
@@ -3878,7 +3926,7 @@ switch_to_itset (struct itset *itset)
 
   ALL_INFERIORS (inf)
     {
-      if (itset_contains_inferior (itset, ITSET_WIDTH_ALL, inf))
+      if (itset_contains_inferior (itset, inf))
 	{
 	  struct thread_info *thr = NULL;
 
@@ -4384,7 +4432,7 @@ viewset (struct itset *itset)
   printed = 0;
   ALL_INFERIORS (inf)
     {
-      if (itset_contains_inferior (itset, ITSET_WIDTH_ALL, inf))
+      if (itset_width_contains_inferior (itset, ITSET_WIDTH_ALL, inf))
 	{
 	  if (!printed)
 	    {
@@ -4492,6 +4540,7 @@ for_each_selected_thread_cmd_1 (cmd_cfunc_ftype cmd,
 				char *args, int from_tty)
 {
   struct cleanup *old_chain;
+  struct inferior *inf;
   struct thread_info *tp;
   int count = 0;
   ptid_t selected_ptid = inferior_ptid;
@@ -4502,44 +4551,99 @@ for_each_selected_thread_cmd_1 (cmd_cfunc_ftype cmd,
 
   /* Don't print anything about threads if only printing one
      thread.  */
-  ALL_NON_EXITED_THREADS (tp)
+  ALL_INFERIORS (inf)
     {
-      if (!itset_contains_thread (current_itset, tp))
-	continue;
-      count++;
-      if (count > 1)
-	break;
-    }
-
-  ALL_NON_EXITED_THREADS (tp)
-    {
-      if (!itset_contains_thread (current_itset, tp))
-	continue;
-
-      switch_to_thread (tp->ptid);
-      if (count > 1)
+      if (inf->pid == 0)
 	{
-	  printf_filtered (_("\nThread %d (%s):\n"),
-			   tp->num, target_pid_to_str (inferior_ptid));
-	  if (tp->state == THREAD_RUNNING)
+	  if (!itset_contains_inferior (current_itset, inf))
+	    continue;
+	  count++;
+	  if (count > 1)
+	    break;
+	}
+      else
+	{
+	  ALL_NON_EXITED_THREADS (tp)
 	    {
-	      printf_filtered (_("\t(running)\n"));
-	      continue;
+	      if (inf->pid != ptid_get_pid (tp->ptid))
+		continue;
+
+	      if (!itset_contains_thread (current_itset, tp))
+		continue;
+
+	      count++;
+	      if (count > 1)
+		break;
 	    }
 	}
+    }
 
-      TRY
+  ALL_INFERIORS (inf)
+    {
+      if (inf->pid == 0)
 	{
-	  (*cmd) (args, from_tty);
-	}
-      CATCH (ex, RETURN_MASK_ERROR)
-	{
+	  if (!itset_contains_inferior (current_itset, inf))
+	    continue;
+
+	  set_current_program_space (inf->pspace);
+	  set_current_inferior (inf);
+	  switch_to_thread (null_ptid);
+
 	  if (count > 1)
-	    exception_print (gdb_stderr, ex);
-	  else
-	    throw_exception (ex);
+	    {
+	      printf_filtered (_("\nThread %d.0:\n"), inf->num);
+	    }
+
+	  TRY
+	    {
+	      (*cmd) (args, from_tty);
+	    }
+	  CATCH (ex, RETURN_MASK_ERROR)
+	    {
+	      if (count > 1)
+		exception_print (gdb_stderr, ex);
+	      else
+		throw_exception (ex);
+	    }
+	  END_CATCH
 	}
-      END_CATCH
+      else
+	{
+	  ALL_NON_EXITED_THREADS (tp)
+	    {
+	      if (inf->pid != ptid_get_pid (tp->ptid))
+		continue;
+
+	      if (!itset_contains_thread (current_itset, tp))
+		continue;
+
+	      switch_to_thread (tp->ptid);
+	      if (count > 1)
+		{
+		  printf_filtered (_("\nThread %d.%d (%s):\n"),
+				   inf->num, tp->num_inf,
+				   target_pid_to_str (inferior_ptid));
+		  if (tp->state == THREAD_RUNNING)
+		    {
+		      printf_filtered (_("\t(running)\n"));
+		      continue;
+		    }
+		}
+
+	      TRY
+		{
+		  (*cmd) (args, from_tty);
+		}
+	      CATCH (ex, RETURN_MASK_ERROR)
+		{
+		  if (count > 1)
+		    exception_print (gdb_stderr, ex);
+		  else
+		    throw_exception (ex);
+		}
+	      END_CATCH
+	    }
+	}
     }
 
   do_cleanups (old_chain);

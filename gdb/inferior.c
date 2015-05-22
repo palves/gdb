@@ -558,8 +558,8 @@ should_print_inferior (const char *requested_inferiors, struct inferior *inf)
   if (requested_inferiors != NULL && *requested_inferiors != '\0')
     return number_is_in_list (requested_inferiors, inf->num);
   else
-    return itset_contains_inferior (current_itset, ITSET_WIDTH_ALL,
-				    inf);
+    return itset_width_contains_inferior (current_itset, ITSET_WIDTH_ALL,
+					  inf);
 }
 
 /* Prints the list of inferiors and their details on UIOUT.  This is a

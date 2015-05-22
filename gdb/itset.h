@@ -107,9 +107,11 @@ int itset_contains_program_space (struct itset *itset,
 
 /* Return true if the inferior is contained in the I/T set.  */
 
-int itset_contains_inferior (struct itset *itset,
-			     enum itset_width default_width,
-			     struct inferior *inf);
+int itset_contains_inferior (struct itset *itset, struct inferior *inf);
+
+int itset_width_contains_inferior (struct itset *itset,
+				   enum itset_width default_width,
+				   struct inferior *inf);
 
 /* Return true if the thread is contained in the I/T set.  */
 

@@ -1413,7 +1413,7 @@ status_command (char *arg, int from_tty)
 
   ALL_INFERIORS (inf)
     {
-      if (!itset_contains_inferior (current_itset, default_width, inf))
+      if (!itset_width_contains_inferior (current_itset, default_width, inf))
 	continue;
 
       ui_out_message (uiout, 0, "  %d (%s)\t[%s]\n",
