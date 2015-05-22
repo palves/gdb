@@ -84,11 +84,6 @@ struct itset *itset_create_empty (void);
 
 int itset_is_empty_set (struct itset *set);
 
-/* Returns true if ITSET is empty.  That is, the set contains no
-   inferiors, threads, etc.  */
-
-int itset_is_empty (const struct itset *itset, enum itset_width default_width);
-
 /* Returns true if ITSET contains any thread.  */
 
 int itset_contains_any_thread (struct itset *itset);
