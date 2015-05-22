@@ -3835,13 +3835,27 @@ itset_create_default (void)
   return itset_create_spec ("dt1.1");
 }
 
-/* Return 1 if SET contains INF, 0 otherwise.  */
+/* Return 1 if SET contains INF, 0 otherwise.  FIXME: This is no
+   longer used anywhere.  */
 
 int
 itset_is_empty (const struct itset *set, enum itset_width default_width)
 {
   return set_is_empty (set->elements, default_width);
 }
+
+int
+itset_contains_any_thread (struct itset *itset)
+{
+  struct thread_info *thr;
+
+  ALL_THREADS (thr)
+    if (itset_contains_thread (itset, thr))
+      return 1;
+
+  return 0;
+}
+
 
 /* Return 1 if SET contains INF, 0 otherwise.  */
 
