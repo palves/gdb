@@ -4525,11 +4525,33 @@ make_internal_itset (struct itset *itset, const char *name)
 }
 
 static void
-switch_to_thread_cleanup (void *arg)
+restore_execution_context_thread (void *arg)
 {
-  ptid_t ptid = *(ptid_t *) arg;
+  struct execution_context *ctx = get_current_context ();
+  struct thread_info *thr;
 
-  switch_to_thread (ptid);
+  thr = find_thread_id (ctx->thread_gnum);
+  if (thr != NULL)
+    {
+      switch_to_thread (thr->ptid);
+    }
+  else
+    {
+      ctx->thread_gnum = 0;
+      set_current_program_space (ctx->inf->pspace);
+      set_current_inferior (ctx->inf);
+      switch_to_thread (null_ptid);
+    }
+}
+
+extern struct cleanup *make_cleanup_restore_execution_context_thread (void);
+
+struct cleanup *
+make_cleanup_restore_execution_context_thread (void)
+{
+  /* Don't use make_cleanup_restore_current_thread as CMD may want to
+     change the user selected thread or frame.  E.g., run, etc.  */
+  return make_cleanup (restore_execution_context_thread, NULL);
 }
 
 extern void for_each_selected_thread_cmd (cmd_cfunc_ftype cmd,
@@ -4547,7 +4569,7 @@ for_each_selected_thread_cmd_1 (cmd_cfunc_ftype cmd,
 
   /* Don't use make_cleanup_restore_current_thread as CMD may want to
      change the user selected frame, e.g., up/down/frame, etc.  */
-  old_chain = make_cleanup (switch_to_thread_cleanup, &selected_ptid);
+  old_chain = make_cleanup_restore_execution_context_thread ();
 
   /* Don't print anything about threads if only printing one
      thread.  */
@@ -4660,7 +4682,7 @@ for_each_selected_ada_task_cmd (cmd_cfunc_ftype cmd,
 
   /* Don't use make_cleanup_restore_current_thread as CMD may want to
      change the user selected frame, e.g., up/down/frame, etc.  */
-  old_chain = make_cleanup (switch_to_thread_cleanup, &saved_inferior_ptid);
+  old_chain = make_cleanup_restore_execution_context_thread ();
 
   /* Don't print anything about tasks if only focused on one task.  */
   ALL_INFERIORS (inf)

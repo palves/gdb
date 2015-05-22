@@ -822,26 +822,7 @@ do_run_command (char *args, int from_tty)
   run_command_1 (args, from_tty, 0);
 }
 
-static void
-restore_execution_context_thread (void *arg)
-{
-  struct execution_context *ctx = get_current_context ();
-  struct thread_info *thr;
-
-  thr = find_thread_id (ctx->thread_gnum);
-
-  if (thr != NULL)
-    {
-      switch_to_thread (thr->ptid);
-      ctx->thread_gnum = 0;
-    }
-  else
-    {
-      set_current_program_space (ctx->inf->pspace);
-      set_current_inferior (ctx->inf);
-      switch_to_thread (null_ptid);
-    }
-}
+extern struct cleanup *make_cleanup_restore_execution_context_thread (void);
 
 static void
 for_each_selected_inferior_cmd (enum itset_width default_width,
@@ -854,7 +835,7 @@ for_each_selected_inferior_cmd (enum itset_width default_width,
 
   /* Don't use make_cleanup_restore_current_thread as CMD may want to
      change the user selected thread or frame.  E.g., run, etc.  */
-  old_chain = make_cleanup (restore_execution_context_thread, NULL);
+  old_chain = make_cleanup_restore_execution_context_thread ();
 
   /* Don't print anything about threads if only printing one
      thread.  */
