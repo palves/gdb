@@ -1508,8 +1508,8 @@ frame_obstack_zalloc (unsigned long size)
 
 static struct frame_info *get_prev_frame_always_1 (struct frame_info *this_frame);
 
-struct frame_info *
-get_current_frame (void)
+static void
+check_has_frames (void)
 {
   /* First check, and report, the lack of registers.  Having GDB
      report "No stack!" or "No memory" when the target doesn't even
@@ -1525,6 +1525,12 @@ get_current_frame (void)
   /* Traceframes are effectively a substitute for the live inferior.  */
   if (get_traceframe_number () < 0)
     validate_registers_access ();
+}
+
+struct frame_info *
+get_current_frame (void)
+{
+  check_has_frames ();
 
   if (current_frame == NULL)
     {
@@ -1596,8 +1602,13 @@ get_selected_frame (const char *message)
     {
       struct thread_info *tp;
 
-      if (message != NULL && !has_stack_frames ())
-	error (("%s"), message);
+      if (message != NULL)
+	{
+	  if (!has_stack_frames ())
+	    error (("%s"), message);
+	}
+      else
+	check_has_frames ();
 
       tp = inferior_thread ();
       if (tp->control.selected_frame_level == -1)
