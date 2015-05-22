@@ -94,11 +94,9 @@ struct inferior *
 get_thread_inferior (struct thread_info *thr)
 {
   struct inferior *inf;
-  int pid;
 
-  pid = ptid_get_pid (thr->ptid);
-  inf = find_inferior_pid (pid);
-  gdb_assert (inf);
+  inf = find_inferior_id (thr->inf_num);
+  gdb_assert (inf != NULL);
 
   return inf;
 }
@@ -270,6 +268,8 @@ struct thread_info *
 add_thread_silent (ptid_t ptid)
 {
   struct thread_info *tp;
+  struct inferior *inf = find_inferior_ptid (ptid);
+  gdb_assert (inf != NULL);
 
   tp = find_thread_ptid (ptid);
   if (tp)
@@ -297,6 +297,7 @@ add_thread_silent (ptid_t ptid)
 	  delete_thread (ptid);
 
 	  /* Now reset its ptid, and reswitch inferior_ptid to it.  */
+	  tp->inf_num = inf->num;
 	  tp->ptid = ptid;
 	  tp->state = THREAD_STOPPED;
 	  switch_to_thread (ptid);
@@ -312,6 +313,7 @@ add_thread_silent (ptid_t ptid)
     }
 
   tp = new_thread (ptid);
+  tp->inf_num = inf->num;
   observer_notify_new_thread (tp);
 
   return tp;

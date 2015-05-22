@@ -193,9 +193,15 @@ struct thread_info
   ptid_t ptid;			/* "Actual process id";
 				    In fact, this may be overloaded with 
 				    kernel thread id, etc.  */
-  int num;			/* Convenient handle (GDB thread id) */
 
-  int num_inf;			/* Convenient handle (GDB thread id) */
+  /* GDB inferior number.  */
+  int inf_num;
+
+  /* GDB thread id within the inferior.  */
+  int num_inf;
+
+  /* Convenient handle (GDB global thread id) */
+  int num;
 
   /* The name of the thread, as specified by the user.  This is NULL
      if the thread does not have a user-given name.  */
