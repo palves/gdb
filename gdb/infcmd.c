@@ -823,9 +823,8 @@ do_run_command (char *args, int from_tty)
 extern struct cleanup *make_cleanup_restore_execution_context_thread (void);
 
 static void
-for_each_selected_inferior_cmd (enum itset_width default_width,
-				cmd_cfunc_ftype cmd,
-				char *args, int from_tty)
+for_each_focus_inferior_cmd (enum itset_width default_width,
+			     cmd_cfunc_ftype cmd, char *args, int from_tty)
 {
   struct cleanup *old_chain;
   struct inferior *inf;
@@ -839,7 +838,7 @@ for_each_selected_inferior_cmd (enum itset_width default_width,
      thread.  */
   ALL_INFERIORS (inf)
     {
-      if (!itset_contains_inferior (current_itset, inf))
+      if (!itset_width_contains_inferior (current_itset, default_width, inf))
 	continue;
       count++;
       if (count > 1)
@@ -848,7 +847,7 @@ for_each_selected_inferior_cmd (enum itset_width default_width,
 
   ALL_INFERIORS (inf)
     {
-      if (!itset_contains_inferior (current_itset, inf))
+      if (!itset_width_contains_inferior (current_itset, default_width, inf))
 	continue;
 
       if (inf->pid != 0)
@@ -858,7 +857,7 @@ for_each_selected_inferior_cmd (enum itset_width default_width,
 	      struct thread_info *tp;
 
 	      tp = any_thread_of_process (inf->pid);
-	      if (!tp)
+	      if (tp == NULL)
 		error (_("Inferior %d has no threads."), inf->num);
 
 	      switch_to_thread (tp->ptid);
@@ -867,8 +866,8 @@ for_each_selected_inferior_cmd (enum itset_width default_width,
       else
 	{
 	  set_current_inferior (inf);
-	  switch_to_thread (null_ptid);
 	  set_current_program_space (inf->pspace);
+	  switch_to_thread (null_ptid);
 	}
 
       if (count > 1)
@@ -894,16 +893,15 @@ for_each_selected_inferior_cmd (enum itset_width default_width,
 static void
 run_command (char *args, int from_tty)
 {
-  for_each_selected_inferior_cmd (ITSET_WIDTH_INFERIOR,
-				  do_run_command,
-				  args,  from_tty);
+  for_each_focus_inferior_cmd (ITSET_WIDTH_INFERIOR,
+			       do_run_command, args,  from_tty);
 }
 
 /* Start the execution of the program up until the beginning of the main
    program.  */
 
 static void
-start_command (char *args, int from_tty)
+do_start_command (char *args, int from_tty)
 {
   /* Some languages such as Ada need to search inside the program
      minimal symbols for the location where to put the temporary
@@ -914,6 +912,13 @@ start_command (char *args, int from_tty)
   /* Run the program until reaching the main procedure...  */
   run_command_1 (args, from_tty, 1);
 } 
+
+static void
+start_command (char *args, int from_tty)
+{
+  for_each_focus_inferior_cmd (ITSET_WIDTH_INFERIOR,
+			       do_start_command, args, from_tty);
+}
 
 static int
 proceed_thread_callback (struct thread_info *thread, void *arg)
@@ -3290,9 +3295,8 @@ do_kill_command (char *arg, int from_tty)
 static void
 kill_command (char *args, int from_tty)
 {
-  for_each_selected_inferior_cmd (ITSET_WIDTH_INFERIOR,
-				  do_kill_command,
-				  args,  from_tty);
+  for_each_focus_inferior_cmd (ITSET_WIDTH_INFERIOR,
+			       do_kill_command, args,  from_tty);
 }
 
 /* Used in `attach&' command.  ARG is a point to an integer
