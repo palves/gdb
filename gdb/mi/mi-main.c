@@ -251,7 +251,7 @@ proceed_thread (struct thread_info *thread, int pid)
     return;
 
   switch_to_thread (thread->ptid);
-  clear_proceed_status (0);
+  clear_proceed_status_thread (thread);
   proceed ((CORE_ADDR) -1, GDB_SIGNAL_DEFAULT);
 }
 

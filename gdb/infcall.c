@@ -396,7 +396,7 @@ run_inferior_call (struct thread_info *call_thread, CORE_ADDR real_pc)
 
   call_thread->control.in_infcall = 1;
 
-  clear_proceed_status (0);
+  clear_proceed_status_thread (call_thread);
 
   disable_watchpoints_before_interactive_call_start ();
 
@@ -409,20 +409,7 @@ run_inferior_call (struct thread_info *call_thread, CORE_ADDR real_pc)
 
       proceed (real_pc, GDB_SIGNAL_0);
 
-      if (target_is_non_stop_p ())
-	{
-	  struct itset *apply_itset = itset_create_empty ();
-	  struct itset *run_free_itset
-	    = default_run_free_itset (apply_itset, 0);
-
-	  apply_execution_command (apply_itset, current_itset,
-				   0, NULL, NULL);
-
-	  itset_free (apply_itset);
-	  itset_free (run_free_itset);
-
-	  switch_to_thread (call_thread->ptid);
-	}
+      switch_to_thread (call_thread->ptid);
 
       /* Inferior function calls are always synchronous, even if the
 	 target supports asynchronous execution.  Do here what

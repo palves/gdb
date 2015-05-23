@@ -11842,7 +11842,7 @@ until_break_aec_callback (struct thread_info *thread, void *data)
       make_cleanup (delete_longjmp_breakpoint_cleanup, &thread_num);
     }
 
-  clear_proceed_status (0);
+  clear_proceed_status_thread (thread);
   prepare_proceed (-1, GDB_SIGNAL_DEFAULT);
 
   /* If we are running asynchronously, and proceed call above has

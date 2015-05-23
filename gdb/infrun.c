@@ -884,7 +884,7 @@ proceed_after_vfork_done (struct thread_info *thread,
 			    target_pid_to_str (thread->ptid));
 
       switch_to_thread (thread->ptid);
-      clear_proceed_status (0);
+      clear_proceed_status_thread (thread);
       proceed ((CORE_ADDR) -1, GDB_SIGNAL_DEFAULT);
     }
 
@@ -2676,8 +2676,9 @@ resume (enum gdb_signal sig)
 
 /* Proceeding.  */
 
-/* Clear out all variables saying what to do when inferior is continued.
-   First do this, then set the ones you want, then call `proceed'.  */
+/* Clear out all variables saying what to do when a thread is
+   continued.  First do this, then set the ones you want, then call
+   `proceed'.  */
 
 void
 clear_proceed_status_thread (struct thread_info *tp)
@@ -2753,6 +2754,16 @@ clear_proceed_status_thread (struct thread_info *tp)
   bpstat_clear (&tp->control.stop_bpstat);
 }
 
+/* Clear out all variables saying what to do when a inferior is
+   continued.  First do this, then set the ones you want, then call
+   `proceed'.  */
+
+void
+clear_proceed_status_inferior (struct inferior *inf)
+{
+  inf->control.stop_soon = NO_STOP_QUIETLY;
+}
+
 enum itset_width default_run_control_width (void);
 
 enum itset_width
@@ -2766,58 +2777,6 @@ default_run_control_width (void)
     return ITSET_WIDTH_INFERIOR;
   else
     return ITSET_WIDTH_ALL;
-}
-
-void
-clear_proceed_status (int step)
-{
-  if (!target_is_non_stop_p ())
-    {
-      struct thread_info *tp;
-
-      /* In all-stop mode, delete the per-thread status of all threads
-	 we're about to resume, implicitly and explicitly.  */
-      ALL_NON_EXITED_THREADS (tp)
-        {
-	  if (!itset_width_contains_thread (current_itset,
-					    default_run_control_width (),
-					    tp))
-	    continue;
-
-	  if (tp->resumed)
-	    continue;
-
-	  if (thread_is_in_step_over_chain (tp))
-	    continue;
-
-	  clear_proceed_status_thread (tp);
-	}
-    }
-
-  if (!ptid_equal (inferior_ptid, null_ptid))
-    {
-      struct inferior *inferior;
-
-      if (target_is_non_stop_p ())
-	{
-	  /* If in non-stop mode, only delete the per-thread status of
-	     the current thread.  */
-	  clear_proceed_status_thread (inferior_thread ());
-	}
-
-      inferior = current_inferior ();
-      inferior->control.stop_soon = NO_STOP_QUIETLY;
-    }
-
-  stop_after_trap = 0;
-
-  observer_notify_about_to_proceed ();
-
-  if (stop_registers)
-    {
-      regcache_xfree (stop_registers);
-      stop_registers = NULL;
-    }
 }
 
 /* Returns true if TP is still stopped at a breakpoint that needs
@@ -3246,15 +3205,16 @@ start_remote (int from_tty)
 void
 init_wait_for_inferior (void)
 {
+#if 0
   /* These are meaningless until the first time through wait_for_inferior.  */
 
   breakpoint_init_inferior (inf_starting);
-
-  clear_proceed_status (0);
+#endif
 
   target_last_wait_ptid = minus_one_ptid;
 
   /* Discard any skipped inlined frames.  */
+  /* FIXME: why?  */
   clear_inline_frame_state (minus_one_ptid);
 }
 

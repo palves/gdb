@@ -123,6 +123,8 @@ void prepare_proceed (CORE_ADDR addr, enum gdb_signal siggnal);
 
 enum itset_width default_run_control_width (void);
 
+extern int stop_after_trap;
+
 void
 apply_execution_command (struct itset *apply_itset,
 			 struct itset *run_free_itset,
@@ -145,10 +147,26 @@ apply_execution_command (struct itset *apply_itset,
   if (!tp->control.in_infcall)
     mark_threads_running (resume_ptid);
 
+  stop_after_trap = 0;
+
+  if (stop_registers)
+    {
+      regcache_xfree (stop_registers);
+      stop_registers = NULL;
+    }
+
   if (target_is_non_stop_p ())
     {
+      struct inferior *inf;
       struct thread_info *t;
       int followed_fork = 0;
+
+      ALL_INFERIORS (inf)
+        {
+	  if (itset_width_contains_inferior (run_free_itset, default_width, inf)
+	      || itset_contains_inferior (apply_itset, inf))
+	    clear_proceed_status_inferior (inf);
+	}
 
       /* See if there are threads we'd run free that are stopped at
 	 forks.  If so, follow the fork, and refuse to apply the
@@ -188,6 +206,7 @@ apply_execution_command (struct itset *apply_itset,
 	  if (itset_contains_thread (apply_itset, t))
 	    {
 	      switch_to_thread (t->ptid);
+	      observer_notify_about_to_proceed ();
 	      (*callback) (t, callback_data);
 	      gdb_assert (t->apply_set == NULL);
 	      if (parallel_leader != NULL)
@@ -710,7 +729,8 @@ run_command_1 (char *args, int from_tty, int tbreak_at_main)
 
   kill_if_already_running (from_tty);
 
-  init_wait_for_inferior ();
+  breakpoint_init_inferior (inf_starting);
+  clear_proceed_status_inferior (current_inferior ());
   clear_breakpoint_hit_counts ();
 
   /* Clean up any leftovers from other runs.  Some other things from
@@ -1022,7 +1042,8 @@ continue_1 (int all_threads)
     {
       ensure_valid_thread ();
       ensure_not_running ();
-      clear_proceed_status (0);
+      /* XXX */
+      clear_proceed_status_thread (inferior_thread ());
       proceed ((CORE_ADDR) -1, GDB_SIGNAL_DEFAULT);
     }
 }
@@ -1164,7 +1185,7 @@ parse_execution_args (char *args, int step,
 static void
 continue_aec_callback (struct thread_info *thread, void *data)
 {
-  clear_proceed_status (0);
+  clear_proceed_status_thread (thread);
   prepare_proceed ((CORE_ADDR) -1, GDB_SIGNAL_DEFAULT);
 }
 
@@ -1655,7 +1676,7 @@ jump_aec_callback (struct thread_info *thread, void *data)
 		     thread->num, target_pid_to_str (thread->ptid),
 		     paddress (gdbarch, addr));
 
-  clear_proceed_status (0);
+  clear_proceed_status_thread (thread);
   prepare_proceed (addr, GDB_SIGNAL_0);
   return;
 }
@@ -1902,7 +1923,7 @@ signal_aec_callback (struct thread_info *thread, void *data)
 {
   struct signal_aec_callback_data *d = data;
 
-  clear_proceed_status (0);
+  clear_proceed_status_thread (thread);
   prepare_proceed ((CORE_ADDR) -1, d->oursig);
 }
 
@@ -2011,7 +2032,7 @@ until_next_command (char *arg, int from_tty)
 	if (!ptid_equal (inferior_ptid, thr->ptid))
 	  switch_to_thread (thr->ptid);
 
-	clear_proceed_status (0);
+	clear_proceed_status_thread (thr);
 	set_step_frame ();
 
 	frame = get_current_frame ();
@@ -2511,7 +2532,7 @@ finish_aec_callback (struct thread_info *tp, void *data)
   struct frame_info *frame, *prev;
   struct symbol *function;
 
-  clear_proceed_status (0);
+  clear_proceed_status_thread (tp);
 
   frame = frame_find_by_id (cmd_data->selected_frame_id);
   gdb_assert (frame != NULL);
@@ -3141,7 +3162,7 @@ proceed_after_attach_callback (struct thread_info *thread,
       && thread->suspend.stop_signal == GDB_SIGNAL_0)
     {
       switch_to_thread (thread->ptid);
-      clear_proceed_status (0);
+      clear_proceed_status_thread (thread);
       proceed ((CORE_ADDR) -1, GDB_SIGNAL_DEFAULT);
     }
 
@@ -3207,7 +3228,7 @@ attach_command_post_wait (char *args, int from_tty, int async_exec)
 	{
 	  if (inferior_thread ()->suspend.stop_signal == GDB_SIGNAL_0)
 	    {
-	      clear_proceed_status (0);
+	      clear_proceed_status_thread (0);
 	      proceed ((CORE_ADDR) -1, GDB_SIGNAL_DEFAULT);
 	    }
 	}
@@ -3307,6 +3328,8 @@ attach_command (char *args, int from_tty)
   /* Done with ARGS.  */
   do_cleanups (args_chain);
 
+  breakpoint_init_inferior (inf_starting);
+
   /* Set up the "saved terminal modes" of the inferior
      based on what modes we are starting it with.  */
   target_terminal_init ();
@@ -3329,8 +3352,7 @@ attach_command (char *args, int from_tty)
 
   /* Set up execution context to know that we should return from
      wait_for_inferior as soon as the target reports a stop.  */
-  init_wait_for_inferior ();
-  clear_proceed_status (0);
+  clear_proceed_status_inferior (current_inferior ());
 
   if (target_is_non_stop_p ())
     {
