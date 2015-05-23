@@ -1175,7 +1175,6 @@ continue_command (char *args, int from_tty)
 {
   int async_exec;
   int all_threads = 0;
-  struct cleanup *args_chain;
   int ignore_count = 0;
   int ignore_count_p = 0;
   struct itset *apply_itset = NULL;
@@ -1356,7 +1355,6 @@ static void
 step_1 (int skip_subroutines, int single_inst, char *args)
 {
   int count = 1;
-  struct cleanup *args_chain;
   int async_exec = 0;
   struct cleanup *old_chain;
   struct itset *apply_itset = NULL;
@@ -1370,9 +1368,9 @@ step_1 (int skip_subroutines, int single_inst, char *args)
   ensure_not_tfind_mode ();
 
   args = strip_bg_char (args, &async_exec);
-  args_chain = make_cleanup (xfree, args);
+  old_chain = make_cleanup (xfree, args);
 
-  old_chain = make_cleanup (itset_free_p, &apply_itset);
+  make_cleanup (itset_free_p, &apply_itset);
   make_cleanup (itset_free_p, &run_free_itset);
 
   args = parse_execution_args (args, 1,
@@ -1674,18 +1672,17 @@ jump_command (char *arg, int from_tty)
   struct cleanup *old_chain;
   struct thread_info *thr;
   struct jump_aec_callback_data cb_data;
-  struct cleanup *args_chain;
   struct thread_info *leader = NULL;
 
   ensure_not_tfind_mode ();
 
   /* Find out whether we must run in the background.  */
   arg = strip_bg_char (arg, &async_exec);
-  args_chain = make_cleanup (xfree, arg);
+  old_chain = make_cleanup (xfree, arg);
 
   prepare_execution_command (&current_target, async_exec);
 
-  old_chain = make_cleanup (itset_free_p, &apply_itset);
+  make_cleanup (itset_free_p, &apply_itset);
   make_cleanup (itset_free_p, &run_free_itset);
 
   arg = parse_execution_args (arg, 0,
@@ -1702,9 +1699,6 @@ jump_command (char *arg, int from_tty)
 
   if (!arg)
     error_no_arg (_("starting address"));
-
-  /* Done with ARGS.  */
-  do_cleanups (args_chain);
 
   ALL_THREADS (thr)
     if (itset_width_contains_thread (apply_itset, default_run_control_width (),
@@ -1789,7 +1783,6 @@ signal_command (char *arg, int from_tty)
 {
   enum gdb_signal oursig;
   int async_exec;
-  struct cleanup *args_chain;
   struct itset *apply_itset = NULL;
   int apply_itset_explicit = 0;
   struct itset *run_free_itset = NULL;
@@ -1802,11 +1795,11 @@ signal_command (char *arg, int from_tty)
 
   /* Find out whether we must run in the background.  */
   arg = strip_bg_char (arg, &async_exec);
-  args_chain = make_cleanup (xfree, arg);
+  old_chain = make_cleanup (xfree, arg);
 
   prepare_execution_command (&current_target, async_exec);
 
-  old_chain = make_cleanup (itset_free_p, &apply_itset);
+  make_cleanup (itset_free_p, &apply_itset);
   make_cleanup (itset_free_p, &run_free_itset);
 
   arg = parse_execution_args (arg, 0,
@@ -2453,7 +2446,7 @@ finish_command (char *arg, int from_tty)
 
   prepare_execution_command (&current_target, async_exec);
 
-  old_chain = make_cleanup (itset_free_p, &apply_itset);
+  make_cleanup (itset_free_p, &apply_itset);
   make_cleanup (itset_free_p, &run_free_itset);
 
   arg = parse_execution_args (arg, 0,
