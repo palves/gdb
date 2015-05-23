@@ -45,6 +45,7 @@
 #include "gdb_bfd.h"
 #include "completer.h"
 #include "filestuff.h"
+#include "itset.h"
 
 #ifndef O_LARGEFILE
 #define O_LARGEFILE 0
@@ -399,6 +400,11 @@ core_open (const char *arg, int from_tty)
 	  inferior_appeared (current_inferior (), CORELOW_PID);
 	  inferior_ptid = pid_to_ptid (CORELOW_PID);
 	  add_thread_silent (inferior_ptid);
+	  if (itfocus_should_follow_stop_event ())
+	    {
+	      set_current_context ();
+	      itfocus_from_thread_switch ();
+	    }
 	}
       else
 	switch_to_thread (thread->ptid);

@@ -171,6 +171,7 @@ extern struct itset *current_itset;
 extern enum itset_width itset_get_width (struct itset *set);
 
 extern void itfocus_from_thread_switch (void);
+extern int itfocus_should_follow_stop_event (void);
 extern struct thread_info *itset_get_toi (struct itset *set);
 extern int itset_has_fixed_toi (struct itset *set);
 
