@@ -26,6 +26,7 @@ struct address_space;
 struct return_value_info;
 struct itset;
 struct thread_info;
+struct inferior;
 
 /* True if we are debugging run control.  */
 extern unsigned int debug_infrun;
@@ -76,13 +77,17 @@ extern enum exec_direction_kind execution_direction;
 
 extern void start_remote (int from_tty);
 
+#if 0
 /* Clear out all variables saying what to do when inferior is
    continued or stepped.  First do this, then set the ones you want,
    then call `proceed'.  STEP indicates whether we're preparing for a
    step/stepi command.  */
 extern void clear_proceed_status (int step);
+#endif
 
 extern void clear_proceed_status_thread (struct thread_info *tp);
+extern void clear_proceed_status_inferior (struct inferior *inf);
+
 
 extern void proceed (CORE_ADDR, enum gdb_signal);
 
