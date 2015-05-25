@@ -2764,8 +2764,6 @@ clear_proceed_status_inferior (struct inferior *inf)
   inf->control.stop_soon = NO_STOP_QUIETLY;
 }
 
-enum itset_width default_run_control_width (void);
-
 enum itset_width
 default_run_control_width (void)
 {

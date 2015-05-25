@@ -122,27 +122,6 @@ make_cleanup_restore_execution_context_thread (void)
   return make_cleanup (restore_execution_context_thread, NULL);
 }
 
-static struct itset *
-current_thread_set (void)
-{
-  struct itset *set;
-  struct inferior *inf;
-  struct thread_info *tp;
-  char *b;
-
-  return itset_reference (current_itset);
-
-  if (ptid_equal (inferior_ptid, null_ptid))
-    return itset_create_empty ();
-
-  inf = current_inferior ();
-  tp = inferior_thread ();
-
-  b = alloca (256);
-  sprintf (b, "t%d", tp->num);
-  return itset_create (&b);
-}
-
 void
 apply_execution_command (struct itset *apply_itset,
 			 struct itset *run_free_itset,
@@ -1071,62 +1050,6 @@ itset_free_p (void *arg)
     itset_free (*itset_p);
 }
 
-struct itset *
-default_run_free_itset (struct itset *apply_itset, int step)
-{
-  if (non_stop)
-    {
-      /* In non-stop mode, threads are always handled
-	 individually.  */
-      return itset_create_empty ();
-    }
-  else if (scheduler_mode == schedlock_on
-	   || (scheduler_mode == schedlock_step && step))
-    {
-      /* User-settable 'scheduler' mode requires solo thread
-	 resume.  */
-      return itset_create_empty ();
-    }
-#if 0
-  else if (!sched_multi)
-    {
-      struct inferior *inf;
-      char *set_spec;
-      char *p;
-      int first = 1;
-      struct itset *set;
-
-      /* Resume only threads of the current inferior process.  */
-      set_spec = xstrdup ("");
-      ALL_INFERIORS (inf)
-	if (itset_contains_inferior (apply_itset, inf))
-	  {
-	    char buf[128];
-
-	    if (first)
-	      {
-		first = 0;
-		sprintf (buf, "i%d", inf->num);
-	      }
-	    else
-	      sprintf (buf, ",i%d", inf->num);
-
-	    set_spec = reconcat (set_spec, set_spec, buf, (char *) NULL);
-	  }
-
-      p = set_spec;
-      set = itset_create (&p);
-      xfree (set_spec);
-      return set;
-    }
-#endif
-  else
-    {
-      /* By default, resume all threads in the current set.  */
-      return itset_reference (current_itset);
-    }
-}
-
 char *
 parse_execution_args (char *args, int step,
 		      struct itset **apply_itset,
@@ -1185,10 +1108,10 @@ parse_execution_args (char *args, int step,
     }
 
   if (*apply_itset == NULL)
-    *apply_itset = current_thread_set ();
+    *apply_itset = itset_reference (current_itset);
 
   if (*run_free_itset == NULL)
-    *run_free_itset = default_run_free_itset (*apply_itset, step);
+    *run_free_itset = itset_reference (current_itset);
 
   if (args && *args == '\0')
     return NULL;
