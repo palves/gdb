@@ -675,6 +675,7 @@ follow_fork (int should_resume)
   CORE_ADDR step_range_end = 0;
   struct frame_id step_frame_id = { 0 };
   struct interp *command_interp = NULL;
+  void *cmd_data = NULL;
 
   tp = inferior_thread ();
 
@@ -699,6 +700,7 @@ follow_fork (int should_resume)
 	    exception_resume_breakpoint
 	      = clone_momentary_breakpoint (tp->control.exception_resume_breakpoint);
 	    command_interp = tp->control.command_interp;
+	    cmd_data = tp->cmd_data;
 
 	    /* For now, delete the parent's sr breakpoint, otherwise,
 	       parent/child sr breakpoints are considered duplicates,
@@ -711,6 +713,7 @@ follow_fork (int should_resume)
 	    tp->control.step_frame_id = null_frame_id;
 	    delete_exception_resume_breakpoint (tp);
 	    tp->control.command_interp = NULL;
+	    tp->cmd_data = NULL;
 	  }
 
 	parent = inferior_ptid;
@@ -757,6 +760,7 @@ follow_fork (int should_resume)
 		    tp->control.exception_resume_breakpoint
 		      = exception_resume_breakpoint;
 		    tp->control.command_interp = command_interp;
+		    tp->cmd_data = cmd_data;
 		  }
 		else
 		  {
