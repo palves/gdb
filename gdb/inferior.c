@@ -767,6 +767,7 @@ inferior_command (char *args, int from_tty)
     }
 
   set_current_context ();
+  itfocus_from_thread_switch ();
 
   if (inf->pid != 0 && is_running (inferior_ptid))
     ui_out_text (current_uiout, "(running)\n");
