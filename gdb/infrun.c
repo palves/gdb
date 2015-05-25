@@ -3832,20 +3832,18 @@ fetch_inferior_event (void *client_data)
      debugging.  If we're looking at traceframes while the target is
      running, we're going to need to get back to that mode after
      handling the event.  */
-  if (non_stop || !itfocus_should_follow_stop_event ())
+  if (target_is_non_stop_p ())
     {
       make_cleanup_restore_current_traceframe ();
       set_current_traceframe (-1);
     }
 
-  if (non_stop || itset_has_fixed_toi (current_itset))
-    {
-      /* In non-stop mode, the user/frontend should not notice a thread
-	 switch due to internal events.  Make sure we reverse to the
-	 user selected thread and frame after handling the event and
-	 running any breakpoint commands.  */
-      make_cleanup_restore_current_thread ();
-    }
+  /* In non-stop mode, the user/frontend should not notice a thread
+     switch due to internal events.  Make sure we revert to the user
+     selected thread and frame after handling the event and running
+     any breakpoint commands.  */
+  if (non_stop || !itfocus_should_follow_stop_event ())
+    make_cleanup_restore_current_thread ();
 
   overlay_cache_invalid = 1;
   /* Flush target cache before starting to handle each event.  Target
