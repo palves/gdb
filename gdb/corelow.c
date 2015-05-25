@@ -973,7 +973,7 @@ core_read_description (struct target_ops *target)
 static char *
 core_pid_to_str (struct target_ops *ops, ptid_t ptid)
 {
-  static char buf[64];
+  char *buf;
   struct inferior *inf;
   int pid;
 
@@ -998,7 +998,8 @@ core_pid_to_str (struct target_ops *ops, ptid_t ptid)
     return normal_pid_to_str (ptid);
 
   /* No luck.  We simply don't have a valid PID to print.  */
-  xsnprintf (buf, sizeof buf, "<main task>");
+  buf = get_print_cell ();
+  xsnprintf (buf, PRINT_CELL_SIZE, "<main task>");
   return buf;
 }
 
