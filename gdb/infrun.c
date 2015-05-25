@@ -660,10 +660,9 @@ holding the child stopped.  Try \"set detach-on-fork\" or \
    reason decided it's best not to resume.  */
 
 int
-follow_fork (int prepare_only)
+follow_fork (int should_resume)
 {
   int follow_child = (follow_fork_mode_string == follow_fork_mode_child);
-  int should_resume = 1;
   struct thread_info *tp;
 
   /* Copy user stepping state to the new inferior thread.  FIXME: the
@@ -676,37 +675,6 @@ follow_fork (int prepare_only)
   CORE_ADDR step_range_end = 0;
   struct frame_id step_frame_id = { 0 };
   struct interp *command_interp = NULL;
-
-  if (!target_is_non_stop_p ())
-    {
-      ptid_t wait_ptid;
-      struct target_waitstatus wait_status;
-
-      /* Get the last target status returned by target_wait().  */
-      get_last_target_status (&wait_ptid, &wait_status);
-
-      /* If not stopped at a fork event, then there's nothing else to
-	 do.  */
-      if (wait_status.kind != TARGET_WAITKIND_FORKED
-	  && wait_status.kind != TARGET_WAITKIND_VFORKED)
-	return 1;
-
-      /* Check if we switched over from WAIT_PTID, since the event was
-	 reported.  */
-      if (!ptid_equal (wait_ptid, minus_one_ptid)
-	  && !ptid_equal (inferior_ptid, wait_ptid))
-	{
-	  /* We did.  Switch back to WAIT_PTID thread, to tell the
-	     target to follow it (in either direction).  We'll
-	     afterwards refuse to resume, and inform the user what
-	     happened.  */
-	  switch_to_thread (wait_ptid);
-	  should_resume = 0;
-	}
-    }
-
-  if (prepare_only)
-    return 0;
 
   tp = inferior_thread ();
 
@@ -2003,7 +1971,7 @@ reset_ecs (struct execution_control_state *ecs, struct thread_info *tp)
 static void keep_going_pass_signal (struct execution_control_state *ecs);
 static void prepare_to_wait (struct execution_control_state *ecs);
 static int keep_going_stepped_thread (struct thread_info *tp);
-static int thread_still_needs_step_over (struct thread_info *tp);
+int thread_still_needs_step_over (struct thread_info *tp);
 static void stop_all_threads (struct itset *stop_set);
 
 /* Are there any pending step-over requests?  If so, run all we can
@@ -2802,7 +2770,7 @@ thread_still_needs_step_over_bp (struct thread_info *tp)
    to make progress when resumed.  Returns an bitwise or of enum
    step_over_what bits, indicating what needs to be stepped over.  */
 
-static int
+int
 thread_still_needs_step_over (struct thread_info *tp)
 {
   struct inferior *inf = find_inferior_ptid (tp->ptid);
@@ -3038,8 +3006,7 @@ do_proceed (void)
     }
   else if (non_stop || !target_is_non_stop_p ())
     {
-      /* XXX should walk over apply-set threads?  Maybe leave non-stop
-	 to the else branch below?  */
+      /* Maybe leave non-stop to the else branch below?  */
       struct thread_info *tp = inferior_thread ();
 
       if (!tp->resumed && !thread_is_in_step_over_chain (tp))
@@ -3061,9 +3028,20 @@ do_proceed (void)
       /* Start all other threads that are implicitly resumed too.  */
       ALL_NON_EXITED_THREADS (tp)
         {
-	  /* Ignore threads of processes we're not resuming.  */
-	  if (!itset_width_contains_thread (current_itset, default_width, tp))
-	    continue;
+	  /* Ignore threads of processes we're not resuming.  Note we
+	     don't check the current itset here.  Otherwise, e.g.,
+	     with focus "d1.1", if thread 1.1 had a pending fork, and
+	     schedule-multiple is off, we would end up not resuming
+	     anything.  */
+	  if (!(tp->state == THREAD_RUNNING || tp->control.in_infcall))
+	    {
+	      if (debug_infrun)
+		fprintf_unfiltered (gdb_stdlog,
+				    "infrun: proceed: [%s] not meant "
+				    "to be running\n",
+				    target_pid_to_str (tp->ptid));
+	      continue;
+	    }
 
 	  if (tp->resumed)
 	    {
@@ -3126,7 +3104,7 @@ proceed (CORE_ADDR addr, enum gdb_signal siggnal)
   /* If we're stopped at a fork/vfork, follow the branch set by the
      "set follow-fork-mode" command; otherwise, we'll just proceed
      resuming the current thread.  */
-  if (!follow_fork (0))
+  if (!follow_fork (1))
     {
       /* The target for some reason decided not to resume.  */
       normal_stop ();
@@ -5083,7 +5061,7 @@ Cannot fill $_exitsignal with the correct signal number.\n"));
 
 	  ecs->event_thread->suspend.stop_signal = GDB_SIGNAL_0;
 
-	  should_resume = follow_fork (0);
+	  should_resume = follow_fork (1);
 
 	  parent = ecs->ptid;
 	  child = ecs->ws.value.related_pid;
