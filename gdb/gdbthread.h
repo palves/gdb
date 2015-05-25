@@ -267,8 +267,6 @@ struct thread_info
      call.  See `struct thread_suspend_state'.  */
   struct thread_suspend_state suspend;
 
-  int reported_event;
-
   int current_line;
   struct symtab *current_symtab;
 
