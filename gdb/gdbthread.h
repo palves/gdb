@@ -493,6 +493,7 @@ extern int thread_count (void);
 /* Switch from one thread to another.  Also sets the STOP_PC
    global.  */
 extern void switch_to_thread (ptid_t ptid);
+extern void switch_to_thread_info (struct thread_info *thr);
 
 /* Switch from one thread to another.  Does not read registers and
    sets STOP_PC to -1.  */
@@ -655,18 +656,5 @@ extern void validate_registers_access (void);
 extern int show_thread_that_caused_stop (void);
 
 extern struct thread_info *thread_list;
-
-struct execution_context
-{
-  ptid_t ptid;
-  struct inferior *inf;
-  int thread_gnum;
-};
-
-extern struct execution_context *get_current_context (void);
-struct thread_info *get_current_context_thread (void);
-
-extern void set_current_context (void);
-
 
 #endif /* GDBTHREAD_H */

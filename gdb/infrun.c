@@ -2932,12 +2932,6 @@ schedlock_applies (struct thread_info *tp)
 					    execution_direction)));
 }
 
-void do_proceed (void);
-void enqueue_step_overs_leaders (struct thread_info *tp);
-void enqueue_step_overs (struct thread_info *tp);
-void mark_threads_running (ptid_t resume_ptid);
-void prepare_proceed (CORE_ADDR addr, enum gdb_signal siggnal);
-
 /* Basic routine for continuing the program in various fashions.
 
    ADDR is the address to resume at, or -1 for resume where stopped.
