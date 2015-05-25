@@ -2255,7 +2255,6 @@ do_target_resume (ptid_t resume_ptid, int step, enum gdb_signal sig)
   /* Avoid confusing the next resume, if the next stop/resume
      happens to apply to another thread.  */
   tp->suspend.stop_signal = GDB_SIGNAL_0;
-  tp->reported_event = 0;
 
   /* Advise target which signals may be handled silently.
 
@@ -7511,15 +7510,6 @@ stop_waiting (struct execution_control_state *ecs)
 
   /* Let callers know we don't want to wait for the inferior anymore.  */
   ecs->wait_some_more = 0;
-
-  if (ecs->event_thread != NULL)
-    {
-      /* Mark this thread as having reported its event to the
-	 frontend/user.  Later, when proceeding, if the thread is
-	 stopped at a breakpoint, we'll step over it in order to make
-	 progress.  */
-      ecs->event_thread->reported_event = 1;
-    }
 
   /* If all-stop, but the target is always in non-stop mode, stop all
      threads now that we're presenting the stop to the user.  */
