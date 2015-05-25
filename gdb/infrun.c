@@ -3948,8 +3948,6 @@ restore_execution_direction (void *arg)
   execution_direction = *save_exec_dir;
 }
 
-int itfocus_should_follow_stop_event (void);
-
 /* Asynchronous version of wait_for_inferior.  It is called by the
    event loop whenever a change of state is detected on the file
    descriptor corresponding to the target.  It can be called more than
