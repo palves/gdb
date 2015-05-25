@@ -1223,6 +1223,22 @@ continue_command (char *args, int from_tty)
   apply_execution_command (apply_itset, run_free_itset, 0,
 			   continue_aec_callback, NULL);
 
+  if (sync_execution)
+    {
+      /* Nothing calls this to put the inferior's terminal settings in
+	 effect and remove stdin from the event loop, which we must
+	 when running a foreground command.  E.g.:
+
+	 (gdb) c -a&
+	 Continuing.
+	 <all threads are running now>
+	 (gdb) c -a
+	 Continuing.
+	 <no thread was resumed, but the inferior now owns the terminal>
+      */
+      target_terminal_inferior ();
+    }
+
   do_cleanups (old_chain);
 }
 
