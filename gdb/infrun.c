@@ -610,8 +610,8 @@ holding the child stopped.  Try \"set detach-on-fork\" or \
 	      target_terminal_ours_for_output ();
 	      fprintf_filtered (gdb_stdlog,
 				_("Detaching after fork from "
-				  "child %s.\n"),
-				target_pid_to_str (child_ptid));
+				  "parent %s.\n"),
+				target_pid_to_str (parent_ptid));
 	    }
 
 	  target_detach (NULL, 0);
