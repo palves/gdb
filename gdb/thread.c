@@ -925,7 +925,13 @@ set_running_thread (struct thread_info *tp, int running)
 	 it until the user wants it to.  */
       if (tp->step_over_next != NULL)
 	thread_step_over_chain_remove (tp);
-
+    }
+  else
+    {
+      /* If the thread is now running, clear the previously selected
+	 thread so that we re-select the current frame next time.  XXX
+	 but what if anything before the thread is actually resumed
+	 calls get_selected_frame?  */
       tp->control.selected_frame_id = null_frame_id;
       tp->control.selected_frame_level = -1;
     }
