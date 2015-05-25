@@ -126,6 +126,8 @@ make_cleanup_restore_execution_context_thread (void)
   return make_cleanup (restore_execution_context_thread, NULL);
 }
 
+int thread_needs_step_over (struct thread_info *tp);
+
 void
 apply_execution_command (struct itset *apply_itset,
 			 struct itset *run_free_itset,
@@ -136,6 +138,7 @@ apply_execution_command (struct itset *apply_itset,
   ptid_t resume_ptid;
   struct cleanup *old_chain;
   enum itset_width default_width = default_run_control_width ();
+  struct thread_info *tmp;
 
   resume_ptid = user_visible_resume_ptid (tp->control.stepping_command);
 
@@ -172,18 +175,36 @@ apply_execution_command (struct itset *apply_itset,
 	  if (itset_width_contains_thread (run_free_itset, default_width, t)
 	      && !itset_contains_thread (apply_itset, t))
 	    {
-	      if (t->suspend.waitstatus.kind == TARGET_WAITKIND_FORKED
-		  || t->suspend.waitstatus.kind == TARGET_WAITKIND_VFORKED)
+	      if (t->pending_follow.kind == TARGET_WAITKIND_FORKED
+		  || t->pending_follow.kind == TARGET_WAITKIND_VFORKED)
 		{
 		  switch_to_thread (t->ptid);
 		  follow_fork (0);
 		  followed_fork = 1;
+		}
+	      else if (thread_needs_step_over (tp))
+		{
+		  gdb_assert (!thread_is_in_step_over_chain (tp));
+
+		  if (debug_infrun)
+		    fprintf_unfiltered (gdb_stdlog,
+					"infrun: need to step-over [%s] first\n",
+					target_pid_to_str (tp->ptid));
+
+		  thread_step_over_chain_enqueue (tp);
 		}
 	    }
 	}
 
       if (followed_fork)
 	{
+	  /* If we get here, it was because we're trying to resume
+	     from a fork catchpoint, but, the user has switched
+	     threads away from the thread that forked.  In that case,
+	     the resume command issued is most likely not applicable
+	     to the child, so just warn, and refuse to resume.  */
+	  warning (_("Not resuming: switched threads "
+		     "before following fork child.\n"));
 	  normal_stop ();
 	  if (target_can_async_p ())
 	    inferior_event_handler (INF_EXEC_COMPLETE, NULL);
@@ -191,14 +212,27 @@ apply_execution_command (struct itset *apply_itset,
 	  return;
 	}
 
-      ALL_NON_EXITED_THREADS (t)
+      ALL_THREADS_SAFE (t, tmp)
         {
 	  if (t->resumed)
+	    continue;
+	  if (t->state == THREAD_EXITED)
 	    continue;
 
 	  if (itset_contains_thread (apply_itset, t))
 	    {
 	      switch_to_thread (t->ptid);
+
+	      if (t->pending_follow.kind == TARGET_WAITKIND_FORKED
+		  || t->pending_follow.kind == TARGET_WAITKIND_VFORKED)
+		{
+		  if (follow_fork (1))
+		    {
+		      t = inferior_thread ();
+		      set_running (t->ptid, 1);
+		    }
+		}
+
 	      observer_notify_about_to_proceed ();
 	      (*callback) (t, callback_data);
 	      gdb_assert (t->apply_set == NULL);
@@ -208,6 +242,10 @@ apply_execution_command (struct itset *apply_itset,
 		  t->parallel_leader = parallel_leader;
 		  parallel_leader->refcount++;
 		}
+
+	      /* Enqueue the apply threads last, so that we move all
+		 other threads over their breakpoints first.  */
+	      enqueue_step_overs_leaders (tp);
 	    }
 	  else if (itset_width_contains_thread (run_free_itset,
 						default_run_control_width (),
@@ -222,10 +260,6 @@ apply_execution_command (struct itset *apply_itset,
       ERROR_NO_INFERIOR;
       (*callback) (inferior_thread (), callback_data);
     }
-
-  enqueue_step_overs (tp);
-
-  enqueue_step_overs_leaders (tp);
 
   do_proceed ();
 
