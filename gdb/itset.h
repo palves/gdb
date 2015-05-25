@@ -175,4 +175,10 @@ extern int itfocus_should_follow_stop_event (void);
 extern struct thread_info *itset_get_toi (struct itset *set);
 extern int itset_has_fixed_toi (struct itset *set);
 
+#include "command.h"
+
+/* Should probably move to infcmd.c, and the include above dropped.  */
+extern void for_each_selected_thread_cmd (cmd_cfunc_ftype cmd,
+					  char *args, int from_tty);
+
 #endif /* ITSET_H */

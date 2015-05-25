@@ -230,4 +230,26 @@ extern void
 			   struct thread_info *parallel_leader,
 			   aec_callback_func callback, void *callback_data);
 
+extern void do_proceed (void);
+extern void enqueue_step_overs_leaders (struct thread_info *tp);
+extern void enqueue_step_overs (struct thread_info *tp);
+extern void mark_threads_running (ptid_t resume_ptid);
+extern void prepare_proceed (CORE_ADDR addr, enum gdb_signal siggnal);
+
+enum itset_width default_run_control_width (void);
+
+extern int stop_after_trap;
+
+struct execution_context
+{
+  ptid_t ptid;
+  struct inferior *inf;
+  int thread_gnum;
+};
+
+extern struct execution_context *get_current_context (void);
+struct thread_info *get_current_context_thread (void);
+extern void set_current_context (void);
+extern struct cleanup *make_cleanup_restore_execution_context_thread (void);
+
 #endif /* INFRUN_H */

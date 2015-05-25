@@ -4019,8 +4019,6 @@ switch_to_itset (struct itset *itset)
 #endif
 }
 
-int itfocus_should_follow_stop_event (void);
-
 int
 itfocus_should_follow_stop_event (void)
 {
@@ -4532,41 +4530,6 @@ make_internal_itset (struct itset *itset, const char *name)
   add_to_named_itset_chain (named_itset);
 }
 
-void switch_to_thread_info (struct thread_info *thr);
-
-static void
-restore_execution_context_thread (void *arg)
-{
-  struct execution_context *ctx = get_current_context ();
-  struct thread_info *thr;
-
-  thr = find_thread_id (ctx->thread_gnum);
-  if (thr != NULL)
-    {
-      switch_to_thread_info (thr);
-    }
-  else
-    {
-      ctx->thread_gnum = 0;
-      set_current_program_space (ctx->inf->pspace);
-      set_current_inferior (ctx->inf);
-      switch_to_thread (null_ptid);
-    }
-}
-
-extern struct cleanup *make_cleanup_restore_execution_context_thread (void);
-
-struct cleanup *
-make_cleanup_restore_execution_context_thread (void)
-{
-  /* Don't use make_cleanup_restore_current_thread as CMD may want to
-     change the user selected thread or frame.  E.g., run, etc.  */
-  return make_cleanup (restore_execution_context_thread, NULL);
-}
-
-extern void for_each_selected_thread_cmd (cmd_cfunc_ftype cmd,
-					  char *args, int from_tty);
-
 static void
 for_each_selected_thread_cmd_1 (cmd_cfunc_ftype cmd,
 				char *args, int from_tty)
@@ -4753,9 +4716,6 @@ for_each_selected_ada_task_cmd (cmd_cfunc_ftype cmd,
 
   do_cleanups (old_chain);
 }
-
-extern void for_each_selected_thread_cmd (cmd_cfunc_ftype cmd,
-					  char *args, int from_tty);
 
 static int focus_mode;
 

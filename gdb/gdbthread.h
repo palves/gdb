@@ -457,6 +457,7 @@ extern int thread_count (void);
 
 /* Switch from one thread to another.  */
 extern void switch_to_thread (ptid_t ptid);
+extern void switch_to_thread_info (struct thread_info *thr);
 
 /* Marks or clears thread(s) PTID as resumed.  If PTID is
    MINUS_ONE_PTID, applies to all threads.  If ptid_is_pid(PTID) is
@@ -594,18 +595,5 @@ extern struct thread_info *thread_step_over_chain_next (struct thread_info *tp);
 extern int thread_is_in_step_over_chain (struct thread_info *tp);
 
 extern struct thread_info *thread_list;
-
-struct execution_context
-{
-  ptid_t ptid;
-  struct inferior *inf;
-  int thread_gnum;
-};
-
-extern struct execution_context *get_current_context (void);
-struct thread_info *get_current_context_thread (void);
-
-extern void set_current_context (void);
-
 
 #endif /* GDBTHREAD_H */
