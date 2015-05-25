@@ -3273,9 +3273,9 @@ generic_mourn_inferior (void)
 char *
 normal_pid_to_str (ptid_t ptid)
 {
-  static char buf[32];
+  char *buf = get_print_cell ();
 
-  xsnprintf (buf, sizeof buf, "process %d", ptid_get_pid (ptid));
+  xsnprintf (buf, PRINT_CELL_SIZE, "process %d", ptid_get_pid (ptid));
   return buf;
 }
 
