@@ -7513,7 +7513,11 @@ stop_waiting (struct execution_control_state *ecs)
 
   /* If all-stop, but the target is always in non-stop mode, stop all
      threads now that we're presenting the stop to the user.  */
-  if (!non_stop && target_is_non_stop_p ())
+  if (!non_stop && target_is_non_stop_p ()
+      /* But not if we're in the middle of a multi-step.  */
+      && !(ecs->event_thread != NULL
+	   && ecs->event_thread->step_multi
+	   && ecs->event_thread->control.stop_step))
     {
       if (ecs->stop_set == NULL)
 	{

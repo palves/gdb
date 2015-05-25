@@ -1459,6 +1459,10 @@ step_1_continuation (void *args, int err)
 	     ending a stepping range.  Do another step.  */
 	  step_once (a->skip_subroutines, a->single_inst,
 		     a->count - 1, a->thread);
+
+	  enqueue_step_overs_leaders (tp);
+	  do_proceed ();
+
 	  return;
 	}
       tp->step_multi = 0;
