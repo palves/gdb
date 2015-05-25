@@ -98,6 +98,34 @@ get_current_context_thread (void)
     return find_thread_ptid (ctx->ptid);
 }
 
+static void
+restore_execution_context_thread (void *arg)
+{
+  struct execution_context *ctx = get_current_context ();
+  struct thread_info *thr;
+
+  thr = find_thread_global_id (ctx->thread_gnum);
+  if (thr != NULL)
+    {
+      switch_to_thread_info (thr);
+    }
+  else
+    {
+      ctx->thread_gnum = 0;
+      set_current_program_space (ctx->inf->pspace);
+      set_current_inferior (ctx->inf);
+      switch_to_thread (null_ptid);
+    }
+}
+
+struct cleanup *
+make_cleanup_restore_execution_context_thread (void)
+{
+  /* Don't use make_cleanup_restore_current_thread as CMD may want to
+     change the user selected thread or frame.  E.g., run, etc.  */
+  return make_cleanup (restore_execution_context_thread, NULL);
+}
+
 static struct itset *
 current_thread_set (void)
 {
@@ -118,14 +146,6 @@ current_thread_set (void)
   xsnprintf (b, sizeof buf, "t%d", tp->per_inf_num);
   return itset_create (&b);
 }
-
-void do_proceed (void);
-void enqueue_step_overs_leaders (struct thread_info *tp);
-void enqueue_step_overs (struct thread_info *tp);
-void mark_threads_running (ptid_t resume_ptid);
-void prepare_proceed (CORE_ADDR addr, enum gdb_signal siggnal);
-
-enum itset_width default_run_control_width (void);
 
 void
 apply_execution_command (struct itset *apply_itset,
@@ -700,8 +720,6 @@ prepare_execution_command (struct target_ops *target, int background)
     }
 }
 
-int itfocus_should_follow_stop_event (void);
-
 /* Implement the "run" command.  If TBREAK_AT_MAIN is set, then insert
    a temporary breakpoint at the begining of the main program before
    running the program.  */
@@ -833,8 +851,6 @@ do_run_command (char *args, int from_tty)
 {
   run_command_1 (args, from_tty, 0);
 }
-
-extern struct cleanup *make_cleanup_restore_execution_context_thread (void);
 
 static void
 for_each_focus_inferior_cmd (enum itset_width default_width,
