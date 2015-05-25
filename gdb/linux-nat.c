@@ -4051,13 +4051,13 @@ linux_nat_update_thread_list (struct target_ops *ops)
 static char *
 linux_nat_pid_to_str (struct target_ops *ops, ptid_t ptid)
 {
-  static char buf[64];
-
   if (ptid_lwp_p (ptid)
       && (ptid_get_pid (ptid) != ptid_get_lwp (ptid)
 	  || num_lwps (ptid_get_pid (ptid)) > 1))
     {
-      snprintf (buf, sizeof (buf), "LWP %ld", ptid_get_lwp (ptid));
+      char *buf = get_print_cell ();
+
+      xsnprintf (buf, CELLSIZE, "LWP %ld", ptid_get_lwp (ptid));
       return buf;
     }
 

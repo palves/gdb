@@ -24,12 +24,11 @@
 /* Temporary storage using circular buffer.  */
 
 #define NUMCELLS 16
-#define CELLSIZE 50
 
 /* Return the next entry in the circular buffer.  */
 
-static char *
-get_cell (void)
+char *
+get_print_cell (void)
 {
   static char buf[NUMCELLS][CELLSIZE];
   static int cell = 0;
@@ -45,7 +44,7 @@ decimal2str (char *sign, ULONGEST addr, int width)
   /* Steal code from valprint.c:print_decimal().  Should this worry
      about the real size of addr as the above does?  */
   unsigned long temp[3];
-  char *str = get_cell ();
+  char *str = get_print_cell ();
   int i = 0;
 
   do
@@ -86,7 +85,7 @@ static char *
 octal2str (ULONGEST addr, int width)
 {
   unsigned long temp[3];
-  char *str = get_cell ();
+  char *str = get_print_cell ();
   int i = 0;
 
   do
@@ -157,17 +156,17 @@ phex (ULONGEST l, int sizeof_l)
   switch (sizeof_l)
     {
     case 8:
-      str = get_cell ();
+      str = get_print_cell ();
       xsnprintf (str, CELLSIZE, "%08lx%08lx",
 		 (unsigned long) (l >> thirty_two),
 		 (unsigned long) (l & 0xffffffff));
       break;
     case 4:
-      str = get_cell ();
+      str = get_print_cell ();
       xsnprintf (str, CELLSIZE, "%08lx", (unsigned long) l);
       break;
     case 2:
-      str = get_cell ();
+      str = get_print_cell ();
       xsnprintf (str, CELLSIZE, "%04x", (unsigned short) (l & 0xffff));
       break;
     default:
@@ -191,7 +190,7 @@ phex_nz (ULONGEST l, int sizeof_l)
       {
 	unsigned long high = (unsigned long) (l >> thirty_two);
 
-	str = get_cell ();
+	str = get_print_cell ();
 	if (high == 0)
 	  xsnprintf (str, CELLSIZE, "%lx",
 		     (unsigned long) (l & 0xffffffff));
@@ -201,11 +200,11 @@ phex_nz (ULONGEST l, int sizeof_l)
 	break;
       }
     case 4:
-      str = get_cell ();
+      str = get_print_cell ();
       xsnprintf (str, CELLSIZE, "%lx", (unsigned long) l);
       break;
     case 2:
-      str = get_cell ();
+      str = get_print_cell ();
       xsnprintf (str, CELLSIZE, "%x", (unsigned short) (l & 0xffff));
       break;
     default:
@@ -221,7 +220,7 @@ phex_nz (ULONGEST l, int sizeof_l)
 char *
 hex_string (LONGEST num)
 {
-  char *result = get_cell ();
+  char *result = get_print_cell ();
 
   xsnprintf (result, CELLSIZE, "0x%s", phex_nz (num, sizeof (num)));
   return result;
@@ -232,7 +231,7 @@ hex_string (LONGEST num)
 char *
 hex_string_custom (LONGEST num, int width)
 {
-  char *result = get_cell ();
+  char *result = get_print_cell ();
   char *result_end = result + CELLSIZE - 1;
   const char *hex = phex_nz (num, sizeof (num));
   int hex_len = strlen (hex);
@@ -296,7 +295,7 @@ int_string (LONGEST val, int radix, int is_signed, int width,
 const char *
 core_addr_to_string (const CORE_ADDR addr)
 {
-  char *str = get_cell ();
+  char *str = get_print_cell ();
 
   strcpy (str, "0x");
   strcat (str, phex (addr, sizeof (addr)));
@@ -308,7 +307,7 @@ core_addr_to_string (const CORE_ADDR addr)
 const char *
 core_addr_to_string_nz (const CORE_ADDR addr)
 {
-  char *str = get_cell ();
+  char *str = get_print_cell ();
 
   strcpy (str, "0x");
   strcat (str, phex_nz (addr, sizeof (addr)));
@@ -320,7 +319,7 @@ core_addr_to_string_nz (const CORE_ADDR addr)
 const char *
 host_address_to_string (const void *addr)
 {
-  char *str = get_cell ();
+  char *str = get_print_cell ();
 
   xsnprintf (str, CELLSIZE, "0x%s", phex_nz ((uintptr_t) addr, sizeof (addr)));
   return str;

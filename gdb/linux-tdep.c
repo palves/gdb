@@ -384,11 +384,11 @@ linux_has_shared_address_space (struct gdbarch *gdbarch)
 static char *
 linux_core_pid_to_str (struct gdbarch *gdbarch, ptid_t ptid)
 {
-  static char buf[80];
-
   if (ptid_get_lwp (ptid) != 0)
     {
-      snprintf (buf, sizeof (buf), "LWP %ld", ptid_get_lwp (ptid));
+      char *buf = get_print_cell ();
+
+      xsnprintf (buf, CELLSIZE, "LWP %ld", ptid_get_lwp (ptid));
       return buf;
     }
 

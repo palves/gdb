@@ -67,4 +67,8 @@ extern const char *core_addr_to_string_nz (const CORE_ADDR addr);
 
 extern const char *host_address_to_string (const void *addr);
 
+#define CELLSIZE 50
+
+extern char *get_print_cell (void);
+
 #endif /* COMMON_CELLS_H */

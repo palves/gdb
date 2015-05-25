@@ -9486,7 +9486,6 @@ init_remote_threadtests (void)
 static char *
 remote_pid_to_str (struct target_ops *ops, ptid_t ptid)
 {
-  static char buf[64];
   struct remote_state *rs = get_remote_state ();
 
   if (ptid_equal (ptid, null_ptid))
@@ -9506,7 +9505,9 @@ remote_pid_to_str (struct target_ops *ops, ptid_t ptid)
 	 no smart special casing here.  */
       if (!remote_multi_process_p (rs))
 	{
-	  xsnprintf (buf, sizeof buf, "Remote target");
+	  char *buf = get_print_cell ();
+
+	  xsnprintf (buf, CELLSIZE, "Remote target");
 	  return buf;
 	}
 
@@ -9514,13 +9515,15 @@ remote_pid_to_str (struct target_ops *ops, ptid_t ptid)
     }
   else
     {
+      char *buf = get_print_cell ();
+
       if (ptid_equal (magic_null_ptid, ptid))
-	xsnprintf (buf, sizeof buf, "Thread <main>");
+	xsnprintf (buf, CELLSIZE, "Thread <main>");
       else if (rs->extended && remote_multi_process_p (rs))
-	xsnprintf (buf, sizeof buf, "Thread %d.%ld",
+	xsnprintf (buf, CELLSIZE, "Thread %d.%ld",
 		   ptid_get_pid (ptid), ptid_get_lwp (ptid));
       else
-	xsnprintf (buf, sizeof buf, "Thread %ld",
+	xsnprintf (buf, CELLSIZE, "Thread %ld",
 		   ptid_get_lwp (ptid));
       return buf;
     }
