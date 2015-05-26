@@ -232,10 +232,9 @@ init_thread_list (void)
    list.  */
 
 static struct thread_info *
-new_thread (ptid_t ptid)
+new_thread (struct inferior *inf, ptid_t ptid)
 {
   struct thread_info *tp;
-  struct inferior *inf = find_inferior_pid (ptid_get_pid (ptid));
 
   gdb_assert (inf != NULL);
 
@@ -287,7 +286,7 @@ add_thread_silent (ptid_t ptid)
 
       if (ptid_equal (inferior_ptid, ptid))
 	{
-	  tp = new_thread (null_ptid);
+	  tp = new_thread (inf, null_ptid);
 
 	  /* Make switch_to_thread not read from the thread.  */
 	  tp->state = THREAD_EXITED;
@@ -312,7 +311,7 @@ add_thread_silent (ptid_t ptid)
 	delete_thread (ptid);
     }
 
-  tp = new_thread (ptid);
+  tp = new_thread (inf, ptid);
   tp->inf_num = inf->num;
   observer_notify_new_thread (tp);
 
