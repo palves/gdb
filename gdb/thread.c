@@ -2007,6 +2007,7 @@ thread_apply_set (const char *cmd, struct itset *set, int ascending,
       for (k = 0; k != i; k++)
         if (thread_alive (tp_array[k]))
           {
+	    struct itset *save_itset;
 	    int selected_frame_level = tp_array[k]->control.selected_frame_level;
 	    struct frame_id selected_frame_id = tp_array[k]->control.selected_frame_id;
 
@@ -2015,6 +2016,10 @@ thread_apply_set (const char *cmd, struct itset *set, int ascending,
             switch_to_thread (tp_array[k]->ptid);
 	    set_current_context ();
 
+	    /* FIXME: cleanup.  */
+	    save_itset = current_itset;
+	    current_itset = itset_create_spec ("tT");
+
 	    printf_filtered (_("\nThread %s (%s):\n"),
 			     print_thread_id (tp_array[k]),
 			     target_pid_to_str (inferior_ptid));
@@ -2022,6 +2027,9 @@ thread_apply_set (const char *cmd, struct itset *set, int ascending,
 	       by execute_command.  */
             strcpy (saved_cmd, cmd);
             execute_command (saved_cmd, from_tty);
+
+	    itset_free (current_itset);
+	    current_itset = save_itset;
 
 	    tp_array[k]->control.selected_frame_level = selected_frame_level;
 	    tp_array[k]->control.selected_frame_id = selected_frame_id;
@@ -2145,6 +2153,7 @@ thread_apply_command (char *tidlist, int from_tty)
       struct thread_info *tp = NULL;
       struct inferior *inf;
       int inf_num, thr_num;
+      struct itset *save_itset;
 
       tid_range_parser_get_tid (&parser, &inf_num, &thr_num);
       inf = find_inferior_id (inf_num);
@@ -2186,12 +2195,19 @@ thread_apply_command (char *tidlist, int from_tty)
 	  continue;
 	}
 
+      /* FIXME: cleanup.  */
+      save_itset = current_itset;
+      current_itset = itset_create_spec ("tT");
+
       switch_to_thread (tp->ptid);
       set_current_context ();
 
       printf_filtered (_("\nThread %s (%s):\n"), print_thread_id (tp),
 		       target_pid_to_str (inferior_ptid));
       execute_command (cmd, from_tty);
+
+      itset_free (current_itset);
+      current_itset = save_itset;
 
       /* Restore exact command used previously.  */
       strcpy (cmd, saved_cmd);
