@@ -251,5 +251,7 @@ extern struct execution_context *get_current_context (void);
 struct thread_info *get_current_context_thread (void);
 extern void set_current_context (void);
 extern struct cleanup *make_cleanup_restore_execution_context_thread (void);
+extern void mark_infrun_async_event_handler (void);
+extern int thread_still_needs_step_over (struct thread_info *tp);
 
 #endif /* INFRUN_H */

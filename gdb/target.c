@@ -2207,6 +2207,15 @@ target_wait (ptid_t ptid, struct target_waitstatus *status, int options)
   return (current_target.to_wait) (&current_target, ptid, status, options);
 }
 
+ptid_t
+default_target_wait (ptid_t ptid,
+		     struct target_waitstatus *status,
+		     int options)
+{
+  status->kind = TARGET_WAITKIND_NO_RESUMED;
+  return minus_one_ptid;
+}
+
 char *
 target_pid_to_str (ptid_t ptid)
 {

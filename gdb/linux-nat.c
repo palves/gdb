@@ -4599,16 +4599,8 @@ static int async_terminal_is_ours = 1;
 static void
 linux_nat_terminal_inferior (struct target_ops *self)
 {
-  /* Like target_terminal_inferior, use target_can_async_p, not
-     target_is_async_p, since at this point the target is not async
-     yet.  If it can async, then we know it will become async prior to
-     resume.  */
-  if (!target_can_async_p ())
-    {
-      /* Async mode is disabled.  */
-      child_terminal_inferior (self);
-      return;
-    }
+  if (debug_linux_nat)
+    fprintf_unfiltered (gdb_stdlog, "linux_nat_terminal_inferior\n");
 
   child_terminal_inferior (self);
 
@@ -4616,6 +4608,7 @@ linux_nat_terminal_inferior (struct target_ops *self)
   if (!async_terminal_is_ours)
     return;
 
+  gdb_assert (input_fd == 0);
   delete_file_handler (input_fd);
   async_terminal_is_ours = 0;
   set_sigint_trap ();
@@ -4633,6 +4626,9 @@ linux_nat_terminal_inferior (struct target_ops *self)
 static void
 linux_nat_terminal_ours (struct target_ops *self)
 {
+  if (debug_linux_nat)
+    fprintf_unfiltered (gdb_stdlog, "linux_nat_terminal_ours\n");
+
   /* GDB should never give the terminal to the inferior if the
      inferior is running in the background (run&, continue&, etc.),
      but claiming it sure should.  */
@@ -4642,6 +4638,9 @@ linux_nat_terminal_ours (struct target_ops *self)
     return;
 
   clear_sigint_trap ();
+
+  gdb_assert (input_fd == 0);
+
   add_file_handler (input_fd, stdin_event_handler, 0);
   async_terminal_is_ours = 1;
 }

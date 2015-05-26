@@ -38,6 +38,8 @@
 #include "observer.h"
 #include "itset.h"
 #include "infcmd.h"
+#include "top.h"
+#include "interps.h"
 
 /* If we can't find a function's name from its address,
    we print this instead.  */
@@ -389,10 +391,13 @@ run_inferior_call (struct thread_info *call_thread, CORE_ADDR real_pc)
   int saved_in_infcall = call_thread->control.in_infcall;
   ptid_t call_thread_ptid = call_thread->ptid;
   int saved_sync_execution = sync_execution;
+  int saved_interpreter_async = interpreter_async;
 
   /* Infcalls run synchronously, in the foreground.  */
-  if (target_can_async_p ())
-    sync_execution = 1;
+  sync_execution = 1;
+  /* So that we don't print the prompt prematurely in
+     fetch_inferior_event.  */
+  interpreter_async = 0;
 
   call_thread->control.in_infcall = 1;
 
@@ -405,33 +410,24 @@ run_inferior_call (struct thread_info *call_thread, CORE_ADDR real_pc)
 
   TRY
     {
-      int was_sync = sync_execution;
-
       proceed (real_pc, GDB_SIGNAL_0);
 
-      switch_to_thread (call_thread->ptid);
-
       /* Inferior function calls are always synchronous, even if the
-	 target supports asynchronous execution.  Do here what
-	 `proceed' itself does in sync mode.  */
-      if (target_can_async_p ())
-	{
-	  wait_for_inferior ();
-	  normal_stop ();
-	  /* If GDB was previously in sync execution mode, then ensure
-	     that it remains so.  normal_stop calls
-	     async_enable_stdin, so reset it again here.  In other
-	     cases, stdin will be re-enabled by
-	     inferior_event_handler, when an exception is thrown.  */
-	  if (was_sync)
-	    async_disable_stdin ();
-	}
+	 target supports asynchronous execution.  */
+      wait_sync_command_done ();
     }
   CATCH (e, RETURN_MASK_ALL)
     {
       caught_error = e;
     }
   END_CATCH
+
+  /* If GDB was previously in sync execution mode, then ensure that it
+     remains so.  normal_stop calls async_enable_stdin, so reset it
+     again here.  In other cases, stdin will be re-enabled by
+     inferior_event_handler, when an exception is thrown.  */
+  sync_execution = saved_sync_execution;
+  interpreter_async = saved_interpreter_async;
 
   /* At this point the current thread may have changed.  Refresh
      CALL_THREAD as it could be invalid if its thread has exited.  */
@@ -452,8 +448,6 @@ run_inferior_call (struct thread_info *call_thread, CORE_ADDR real_pc)
 
   if (call_thread != NULL)
     call_thread->control.in_infcall = saved_in_infcall;
-
-  sync_execution = saved_sync_execution;
 
   return caught_error;
 }

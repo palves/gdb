@@ -122,8 +122,6 @@ make_cleanup_restore_execution_context_thread (void)
   return make_cleanup (restore_execution_context_thread, NULL);
 }
 
-int thread_still_needs_step_over (struct thread_info *tp);
-
 void
 apply_execution_command (struct itset *apply_itset,
 			 struct itset *run_free_itset,
@@ -209,8 +207,7 @@ apply_execution_command (struct itset *apply_itset,
 	  warning (_("Not resuming: switched threads "
 		     "before following fork child.\n"));
 	  normal_stop ();
-	  if (target_can_async_p ())
-	    inferior_event_handler (INF_EXEC_COMPLETE, NULL);
+	  inferior_event_handler (INF_EXEC_COMPLETE, NULL);
 	  discard_cleanups (old_chain);
 	  return;
 	}
@@ -268,15 +265,11 @@ apply_execution_command (struct itset *apply_itset,
 
   discard_cleanups (old_chain);
 
-  /* Wait for it to stop (if not standalone)
-     and in any case decode why it stopped, and act accordingly.  */
-  /* Do this only if we are not using the event loop, or if the target
-     does not support asynchronous execution.  */
+  /* Tell the event loop to wait for it to stop.  If the target
+     supports asynchronous execution, it'll do this from within
+     target_resume.  */
   if (!target_can_async_p ())
-    {
-      wait_for_inferior ();
-      normal_stop ();
-    }
+    mark_infrun_async_event_handler ();
 }
 
 /* Local functions: */
@@ -727,13 +720,12 @@ prepare_execution_command (struct target_ops *target, int background)
   if (background && !target->to_can_async_p (target))
     error (_("Asynchronous execution not supported on this target."));
 
-  /* If we don't get a request of running in the bg, then we need
-     to simulate synchronous (fg) execution.  */
-  if (!background && target->to_can_async_p (target))
+  if (!background)
     {
-      /* Simulate synchronous execution.  Note no cleanup is necessary
-	 for this.  stdin is re-enabled whenever an error reaches the
-	 top level.  */
+      /* If we get a request of running in the fg, then we need to
+	 simulate synchronous (fg) execution. Note no cleanup is
+	 necessary for this.  stdin is re-enabled whenever an error
+	 reaches the top level.  */
       async_disable_stdin ();
     }
 }
@@ -1445,44 +1437,15 @@ step_1_1 (int skip_subroutines, int single_inst, int count)
       make_cleanup (delete_longjmp_breakpoint_cleanup, &thread);
     }
 
-  /* In synchronous case, all is well; each step_once call will step once.  */
-  if (!target_can_async_p ())
-    {
-      for (; count > 0; count--)
-	{
-	  step_once (skip_subroutines, single_inst, count, thread);
+  /* do only one step for now, before returning control to the event
+     loop.  Let the continuation figure out how many other steps we
+     need to do, and handle them one at the time, through
+     step_once.  */
+  step_once (skip_subroutines, single_inst, count, thread);
 
-	  if (!target_has_execution)
-	    break;
-	  else
-	    {
-	      struct thread_info *tp = inferior_thread ();
-
-	      if (!tp->control.stop_step || !tp->step_multi)
-		{
-		  /* If we stopped for some reason that is not stepping
-		     there are no further steps to make.  */
-		  tp->step_multi = 0;
-		  break;
-		}
-	    }
-	}
-
-      do_cleanups (cleanups);
-    }
-  else
-    {
-      /* In the case of an asynchronous target things get complicated;
-	 do only one step for now, before returning control to the
-	 event loop.  Let the continuation figure out how many other
-	 steps we need to do, and handle them one at the time, through
-	 step_once.  */
-      step_once (skip_subroutines, single_inst, count, thread);
-
-      /* We are running, and the continuation is installed.  It will
-	 disable the longjmp breakpoint as appropriate.  */
-      discard_cleanups (cleanups);
-    }
+  /* We are running, and the continuation is installed.  It will
+     disable the longjmp breakpoint as appropriate.  */
+  discard_cleanups (cleanups);
 }
 
 /* Called after we are done with one step operation, to check whether
@@ -1537,6 +1500,7 @@ step_once (int skip_subroutines, int single_inst, int count, int thread)
 
   if (count > 0)
     {
+      struct step_1_args *args;
       /* Don't assume THREAD is a valid thread id.  It is set to -1 if
 	 the longjmp breakpoint was not required.  Use the
 	 INFERIOR_PTID thread instead, which is the same thread when
@@ -1620,21 +1584,14 @@ step_once (int skip_subroutines, int single_inst, int count, int thread)
       tp->control.stepping_command = 1;
       prepare_proceed ((CORE_ADDR) -1, GDB_SIGNAL_DEFAULT);
 
-      /* For async targets, register a continuation to do any
-	 additional steps.  For sync targets, the caller will handle
-	 further stepping.  */
-      if (target_can_async_p ())
-	{
-	  struct step_1_args *args;
+      /* Register a continuation to do any additional steps.  */
+      args = xmalloc (sizeof (*args));
+      args->skip_subroutines = skip_subroutines;
+      args->single_inst = single_inst;
+      args->count = count;
+      args->thread = thread;
 
-	  args = xmalloc (sizeof (*args));
-	  args->skip_subroutines = skip_subroutines;
-	  args->single_inst = single_inst;
-	  args->count = count;
-	  args->thread = thread;
-
-	  add_intermediate_continuation (tp, step_1_continuation, args, xfree);
-	}
+      add_intermediate_continuation (tp, step_1_continuation, args, xfree);
     }
 }
 
@@ -2089,7 +2046,7 @@ until_next_aec_callback (struct thread_info *tp, void *data)
 
   prepare_proceed ((CORE_ADDR) -1, GDB_SIGNAL_DEFAULT);
 
-  if (target_can_async_p () && is_running (inferior_ptid))
+  if (is_running (inferior_ptid))
     {
       struct until_next_continuation_args *cont_args;
 
@@ -2417,8 +2374,6 @@ finish_forward (struct symbol *function, struct frame_info *frame)
   prepare_proceed ((CORE_ADDR) -1, GDB_SIGNAL_DEFAULT);
 
   discard_cleanups (old_chain);
-  if (!target_can_async_p ())
-    do_all_continuations (0);
 }
 
 struct finish_cmd_data
@@ -3228,8 +3183,7 @@ attach_command_post_wait (char *args, int from_tty, int async_exec)
       /* The user requested a plain `attach', so be sure to leave
 	 the inferior stopped.  */
 
-      if (target_can_async_p ())
-	async_enable_stdin ();
+      async_enable_stdin ();
 
       /* At least the current thread is already stopped.  */
 
@@ -3363,6 +3317,7 @@ attach_command (char *args, int from_tty)
      E.g. Mach 3 or GNU hurd.  */
   if (!target_attach_no_wait)
     {
+      struct attach_command_continuation_args *a;
       struct inferior *inferior = current_inferior ();
 
       /* Careful here.  See comments in inferior.h.  Basically some
@@ -3372,21 +3327,14 @@ attach_command (char *args, int from_tty)
 	 STOP_QUIETLY_NO_SIGSTOP is for.  */
       inferior->control.stop_soon = STOP_QUIETLY_NO_SIGSTOP;
 
-      if (target_can_async_p ())
-	{
-	  /* sync_execution mode.  Wait for stop.  */
-	  struct attach_command_continuation_args *a;
-
-	  a = xmalloc (sizeof (*a));
-	  a->args = xstrdup (args);
-	  a->from_tty = from_tty;
-	  a->async_exec = async_exec;
-	  add_inferior_continuation (attach_command_continuation, a,
-				     attach_command_continuation_free_args);
-	  return;
-	}
-
-      wait_for_inferior ();
+      /* sync_execution mode.  Wait for stop.  */
+      a = xmalloc (sizeof (*a));
+      a->args = xstrdup (args);
+      a->from_tty = from_tty;
+      a->async_exec = async_exec;
+      add_inferior_continuation (attach_command_continuation, a,
+				 attach_command_continuation_free_args);
+      return;
     }
 
   attach_command_post_wait (args, from_tty, async_exec);
@@ -3424,6 +3372,7 @@ notice_new_inferior (ptid_t ptid, int leave_running, int from_tty)
 
   if (is_executing (inferior_ptid))
     {
+      struct attach_command_continuation_args *a;
       struct inferior *inferior = current_inferior ();
 
       /* We're going to install breakpoints, and poke at memory,
@@ -3434,22 +3383,15 @@ notice_new_inferior (ptid_t ptid, int leave_running, int from_tty)
       inferior->control.stop_soon = STOP_QUIETLY_REMOTE;
 
       /* Wait for stop before proceeding.  */
-      if (target_can_async_p ())
-	{
-	  struct attach_command_continuation_args *a;
+      a = xmalloc (sizeof (*a));
+      a->args = xstrdup ("");
+      a->from_tty = from_tty;
+      a->async_exec = async_exec;
+      add_inferior_continuation (attach_command_continuation, a,
+				 attach_command_continuation_free_args);
 
-	  a = xmalloc (sizeof (*a));
-	  a->args = xstrdup ("");
-	  a->from_tty = from_tty;
-	  a->async_exec = async_exec;
-	  add_inferior_continuation (attach_command_continuation, a,
-				     attach_command_continuation_free_args);
-
-	  do_cleanups (old_chain);
-	  return;
-	}
-      else
-	wait_for_inferior ();
+      do_cleanups (old_chain);
+      return;
     }
 
   async_exec = leave_running;
