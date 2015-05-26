@@ -127,7 +127,7 @@ foreach name { corefile core0file } { with_test_prefix $name {
     # mapping various OS's may do?  Let's assume that there must
     # be at least two threads:
 
-    gdb_test "info threads" "  2 ${horiz}${nl}\\* 1 ${horiz}" \
+    gdb_test "info threads" "\\* 1 ${horiz}${nl}  2 ${horiz}.*" \
 	    "corefile contains at least two threads"
 
     # One thread in the corefile should be in the "thread2" function.
