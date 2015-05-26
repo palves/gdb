@@ -1208,11 +1208,11 @@ print_thread_info (struct ui_out *uiout, char *requested_threads, int pid)
 	  return;
 	}
 
-      make_cleanup_ui_out_table_begin_end (uiout, 5, n_threads, "threads");
+      make_cleanup_ui_out_table_begin_end (uiout, 4, n_threads, "threads");
 
       ui_out_table_header (uiout, 1, ui_left, "current", "");
-      ui_out_table_header (uiout, 4, ui_left, "id_inf", "Id");
-      ui_out_table_header (uiout, 4, ui_left, "id", "GId");
+      ui_out_table_header (uiout, 4, ui_left, "id", "Id");
+      //      ui_out_table_header (uiout, 4, ui_left, "id", "GId");
       ui_out_table_header (uiout, 17, ui_left, "target-id", "Target Id");
       ui_out_table_header (uiout, 1, ui_left, "frame", "Frame");
       ui_out_table_body (uiout);
@@ -1261,11 +1261,11 @@ print_thread_info (struct ui_out *uiout, char *requested_threads, int pid)
 
 	contents = xstrprintf ("%d.%d", inf->num, tp->num_inf);
 	str_cleanup = make_cleanup (xfree, contents);
-	ui_out_field_string (uiout, "id_inf", contents);
+	ui_out_field_string (uiout, "id", contents);
 	do_cleanups (str_cleanup);
       }
 
-      ui_out_field_int (uiout, "id", tp->num);
+      // ui_out_field_int (uiout, "id", tp->num);
 
       /* For the CLI, we stuff everything into the target-id field.
 	 This is a gross hack to make the output come out looking
