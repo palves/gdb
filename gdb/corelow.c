@@ -400,14 +400,15 @@ core_open (const char *arg, int from_tty)
 	  inferior_appeared (current_inferior (), CORELOW_PID);
 	  inferior_ptid = pid_to_ptid (CORELOW_PID);
 	  add_thread_silent (inferior_ptid);
-	  if (itfocus_should_follow_stop_event ())
-	    {
-	      set_current_context ();
-	      itfocus_from_thread_switch ();
-	    }
 	}
       else
 	switch_to_thread (thread->ptid);
+    }
+
+  if (itfocus_should_follow_stop_event ())
+    {
+      set_current_context ();
+      itfocus_from_thread_switch ();
     }
 
   post_create_inferior (&core_ops, from_tty);
