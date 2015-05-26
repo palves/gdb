@@ -1254,6 +1254,7 @@ print_thread_info (struct ui_out *uiout, char *requested_threads, int pid)
 	    ui_out_field_skip (uiout, "current");
 	}
 
+      if (0)
       {
 	struct cleanup *str_cleanup;
 	char *contents;
@@ -1263,6 +1264,8 @@ print_thread_info (struct ui_out *uiout, char *requested_threads, int pid)
 	ui_out_field_string (uiout, "id", contents);
 	do_cleanups (str_cleanup);
       }
+      else
+	ui_out_field_int (uiout, "id", tp->num_inf);
 
       // ui_out_field_int (uiout, "id", tp->num);
 
