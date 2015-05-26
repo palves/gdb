@@ -130,13 +130,13 @@ apply_execution_command (struct itset *apply_itset,
 			 struct thread_info *parallel_leader,
 			 aec_callback_func callback, void *callback_data)
 {
-  struct thread_info *tp = inferior_thread ();
+  struct thread_info *cur_thr = inferior_thread ();
   ptid_t resume_ptid;
   struct cleanup *old_chain;
   enum itset_width default_width = default_run_control_width ();
   struct thread_info *tmp;
 
-  resume_ptid = user_visible_resume_ptid (tp->control.stepping_command);
+  resume_ptid = user_visible_resume_ptid (cur_thr->control.stepping_command);
 
   /* If an exception is thrown from this point on, make sure to
      propagate GDB's knowledge of the executing state to the
@@ -144,7 +144,7 @@ apply_execution_command (struct itset *apply_itset,
   /* XXX FIXME */
   old_chain = make_cleanup (finish_thread_state_cleanup, &resume_ptid);
 
-  if (!tp->control.in_infcall)
+  if (!cur_thr->control.in_infcall)
     mark_threads_running (resume_ptid);
 
   stop_after_trap = 0;
@@ -171,7 +171,7 @@ apply_execution_command (struct itset *apply_itset,
       /* See if there are threads we'd run free that are stopped at
 	 forks.  If so, follow the fork, and refuse to apply the
 	 execution command further.  */
-      ALL_NON_EXITED_THREADS (t)
+      ALL_THREADS_SAFE (t, tmp)
         {
 	  if (t->resumed)
 	    continue;
@@ -186,16 +186,15 @@ apply_execution_command (struct itset *apply_itset,
 		  follow_fork (0);
 		  followed_fork = 1;
 		}
-	      else if (thread_still_needs_step_over (tp))
+	      else if (thread_still_needs_step_over (t))
 		{
-		  gdb_assert (!thread_is_in_step_over_chain (tp));
-
 		  if (debug_infrun)
 		    fprintf_unfiltered (gdb_stdlog,
 					"infrun: need to step-over [%s] first\n",
-					target_pid_to_str (tp->ptid));
+					target_pid_to_str (t->ptid));
 
-		  thread_step_over_chain_enqueue (tp);
+		  gdb_assert (!thread_is_in_step_over_chain (t));
+		  thread_step_over_chain_enqueue (t);
 		}
 	    }
 	}
@@ -249,7 +248,7 @@ apply_execution_command (struct itset *apply_itset,
 
 	      /* Enqueue the apply threads last, so that we move all
 		 other threads over their breakpoints first.  */
-	      enqueue_step_overs_leaders (tp);
+	      enqueue_step_overs_leaders (t);
 	    }
 	  else if (itset_width_contains_thread (run_free_itset,
 						default_run_control_width (),
