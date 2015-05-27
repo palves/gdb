@@ -259,17 +259,7 @@ extern void all_uis_on_sync_execution_starting (void);
 
 extern void do_target_resume (ptid_t ptid, int step, enum gdb_signal signo);
 
-typedef void (*aec_callback_func) (struct thread_info *thr, void *data);
-
-struct itset;
-
 extern int follow_fork (int prepare_only);
-
-extern void
-  apply_execution_command (struct itset *apply_itset,
-			   struct itset *run_free_itset,
-			   struct thread_info *parallel_leader,
-			   aec_callback_func callback, void *callback_data);
 
 extern void do_proceed (void);
 extern void enqueue_step_overs_leaders (struct thread_info *tp);
