@@ -11668,39 +11668,23 @@ struct until_break_aec_callback_data
 
 static void until_break_aec_callback (struct thread_info *thread, void *data);
 
-static void
-itset_free_p (void *arg)
-{
-  struct itset **itset_p = arg;
-
-  if (*itset_p)
-    itset_free (*itset_p);
-}
-
 void
 until_break_command (char *arg, int from_tty, int anywhere)
 {
-  struct itset *apply_itset = NULL;
-  int apply_itset_explicit = 0;
-  struct itset *run_free_itset = NULL;
   struct thread_info *thr;
-  struct cleanup *old_chain;
   int thr_count = 0;
   struct until_break_aec_callback_data cb_data;
   struct thread_info *leader = NULL;
   int first = 1;
   struct symtab_and_line sal;
   enum itset_width default_width = default_run_control_width ();
+  enum execution_arg exec_option;
 
-  old_chain = make_cleanup (itset_free_p, &apply_itset);
-  make_cleanup (itset_free_p, &run_free_itset);
-
-  arg = parse_execution_args (arg, 0,
-			      &apply_itset, &apply_itset_explicit,
-			      &run_free_itset);
+  arg = parse_execution_args (arg, &exec_option);
 
   ALL_THREADS (thr)
-    if (itset_contains_thread (apply_itset, thr))
+    if (itset_contains_thread_maybe_width (current_itset, default_width,
+					   thr, exec_option == EXEC_OPTION_ALL))
       {
 	struct frame_info *frame;
 	struct frame_id breakpoint_frame_id;
@@ -11767,19 +11751,19 @@ until_break_command (char *arg, int from_tty, int anywhere)
 
   if (thr_count == 0)
     {
+#if 0
       if (apply_itset_explicit)
 	error (_("Set of threads to until is empty."));
       else
+#endif
 	error (_("The program is not being run."));
     }
 
   gdb_assert (leader != NULL);
 
   cb_data.from_tty = from_tty;
-  apply_execution_command (apply_itset, run_free_itset, leader,
+  apply_execution_command (exec_option, leader,
 			   until_break_aec_callback, NULL);
-
-  do_cleanups (old_chain);
 }
 
 void prepare_proceed (CORE_ADDR addr, enum gdb_signal siggnal);

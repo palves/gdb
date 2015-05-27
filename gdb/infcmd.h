@@ -21,10 +21,21 @@
 struct itset;
 struct thread_info;
 
-extern char *parse_execution_args (char *args, int step,
-				   struct itset **apply_itset,
-				   int *apply_set_explicit,
-				   struct itset **run_free_itset);
+enum execution_arg
+  {
+    EXEC_OPTION_DEFAULT = 0,
+    EXEC_OPTION_ALL = 1,
+    EXEC_OPTION_LOCK = 2,
+  };
+
+extern char *parse_execution_args (char *args, enum execution_arg *exec_option);
+
+typedef void (*aec_callback_func) (struct thread_info *thr, void *data);
+
+extern void
+  apply_execution_command (enum execution_arg exec_option,
+			   struct thread_info *parallel_leader,
+			   aec_callback_func callback, void *callback_data);
 
 extern void ensure_runnable (struct thread_info *thr);
 

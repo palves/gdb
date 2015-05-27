@@ -123,8 +123,7 @@ make_cleanup_restore_execution_context_thread (void)
 }
 
 void
-apply_execution_command (struct itset *apply_itset,
-			 struct itset *run_free_itset,
+apply_execution_command (enum execution_arg exec_option,
 			 struct thread_info *parallel_leader,
 			 aec_callback_func callback, void *callback_data)
 {
@@ -133,6 +132,7 @@ apply_execution_command (struct itset *apply_itset,
   struct cleanup *old_chain;
   enum itset_width default_width = default_run_control_width ();
   struct thread_info *tmp;
+  struct itset *itset = current_itset;
 
   resume_ptid = user_visible_resume_ptid (cur_thr->control.stepping_command);
 
@@ -161,21 +161,21 @@ apply_execution_command (struct itset *apply_itset,
 
       ALL_INFERIORS (inf)
         {
-	  if (itset_width_contains_inferior (run_free_itset, default_width, inf)
-	      || itset_contains_inferior (apply_itset, inf))
+	  if (itset_width_contains_inferior (itset, default_width, inf))
 	    clear_proceed_status_inferior (inf);
 	}
 
       /* See if there are threads we'd run free that are stopped at
 	 forks.  If so, follow the fork, and refuse to apply the
 	 execution command further.  */
+      if (exec_option == EXEC_OPTION_DEFAULT)
       ALL_THREADS_SAFE (t, tmp)
         {
 	  if (t->resumed)
 	    continue;
 
-	  if (itset_width_contains_thread (run_free_itset, default_width, t)
-	      && !itset_contains_thread (apply_itset, t))
+	  if (itset_width_contains_thread (itset, default_width, t)
+	      && !itset_contains_thread (itset, t))
 	    {
 	      if (t->pending_follow.kind == TARGET_WAITKIND_FORKED
 		  || t->pending_follow.kind == TARGET_WAITKIND_VFORKED)
@@ -219,7 +219,9 @@ apply_execution_command (struct itset *apply_itset,
 	  if (t->state == THREAD_EXITED)
 	    continue;
 
-	  if (itset_contains_thread (apply_itset, t))
+	  if (itset_contains_thread_maybe_width (itset,
+						 default_run_control_width (),
+						 t, (exec_option == EXEC_OPTION_ALL)))
 	    {
 	      switch_to_thread (t->ptid);
 
@@ -238,7 +240,7 @@ apply_execution_command (struct itset *apply_itset,
 	      gdb_assert (t->apply_set == NULL);
 	      if (parallel_leader != NULL)
 		{
-		  t->apply_set = itset_reference (apply_itset);
+		  t->apply_set = itset_reference (current_itset);
 		  t->parallel_leader = parallel_leader;
 		  parallel_leader->refcount++;
 		}
@@ -247,9 +249,10 @@ apply_execution_command (struct itset *apply_itset,
 		 other threads over their breakpoints first.  */
 	      enqueue_step_overs_leaders (t);
 	    }
-	  else if (itset_width_contains_thread (run_free_itset,
-						default_run_control_width (),
-						t))
+	  else if (exec_option == EXEC_OPTION_DEFAULT
+		   && itset_width_contains_thread (itset,
+						   default_run_control_width (),
+						   t))
 	    {
 	      clear_proceed_status_thread (t);
 	    }
@@ -1066,21 +1069,11 @@ continue_1 (int all_threads)
     }
 }
 
-static void
-itset_free_p (void *arg)
-{
-  struct itset **itset_p = arg;
-
-  if (*itset_p)
-    itset_free (*itset_p);
-}
-
 char *
-parse_execution_args (char *args, int step,
-		      struct itset **apply_itset,
-		      int *apply_set_explicit,
-		      struct itset **run_free_itset)
+parse_execution_args (char *args, enum execution_arg *exec_option)
 {
+  *exec_option = EXEC_OPTION_DEFAULT;
+
   if (args != NULL)
     {
       while (*args)
@@ -1092,32 +1085,12 @@ parse_execution_args (char *args, int step,
 
 	  if (strncmp (args, "-a", p - args) == 0)
 	    {
-	      if (*apply_itset)
-		itset_free (*apply_itset);
-	      *apply_itset = itset_reference (current_itset);
-	      *apply_set_explicit = 1;
 	      args = p;
-	    }
-	  else if (strncmp (args, "-p", p - args) == 0)
-	    {
-	      if (*apply_itset)
-		itset_free (*apply_itset);
-	      *apply_itset = itset_create (&p);
-	      *apply_set_explicit = 1;
-	      args = p;
-	    }
-	  else if (strncmp (args, "-c", p - args) == 0)
-	    {
-	      if (*run_free_itset)
-		itset_free (*run_free_itset);
-	      *run_free_itset = itset_reference (current_itset);
-	      args = p;
+	      *exec_option = EXEC_OPTION_ALL;
 	    }
 	  else if (strncmp (args, "-l", p - args) == 0)
 	    {
-	      if (*run_free_itset)
-		itset_free (*run_free_itset);
-	      *run_free_itset = itset_create_empty ();
+	      *exec_option = EXEC_OPTION_LOCK;
 	      args = p;
 	    }
 	  else if (strcmp (args, "--") == 0)
@@ -1131,12 +1104,6 @@ parse_execution_args (char *args, int step,
 
       args = skip_spaces (args);
     }
-
-  if (*apply_itset == NULL)
-    *apply_itset = itset_reference (current_itset);
-
-  if (*run_free_itset == NULL)
-    *run_free_itset = itset_reference (current_itset);
 
   if (args && *args == '\0')
     return NULL;
@@ -1157,24 +1124,16 @@ static void
 continue_command (char *args, int from_tty)
 {
   int async_exec;
-  int all_threads = 0;
   int ignore_count = 0;
   int ignore_count_p = 0;
-  struct itset *apply_itset = NULL;
-  int apply_itset_explicit = 0;
-  struct itset *run_free_itset = NULL;
   struct cleanup *old_chain;
+  enum execution_arg exec_option;
 
   /* Find out whether we must run in the background.  */
   args = strip_bg_char (args, &async_exec);
   old_chain = make_cleanup (xfree, args);
 
-  make_cleanup (itset_free_p, &apply_itset);
-  make_cleanup (itset_free_p, &run_free_itset);
-
-  args = parse_execution_args (args, 0,
-			       &apply_itset, &apply_itset_explicit,
-			       &run_free_itset);
+  args = parse_execution_args (args, &exec_option);
   if (args)
     {
       args = skip_spaces (args);
@@ -1185,20 +1144,19 @@ continue_command (char *args, int from_tty)
 	}
     }
 
-  if (!itset_contains_any_thread (apply_itset))
+  if (!itset_contains_any_thread (current_itset))
     {
+#if 0
       if (apply_itset_explicit)
 	error (_("Set of threads to continue is empty."));
       else
+#endif
 	error (_("The program is not being run."));
     }
 
   prepare_execution_command (&current_target, async_exec);
 
-  if (!non_stop && all_threads)
-    error (_("`-a' is meaningless in all-stop mode."));
-
-  if (args != NULL && all_threads)
+  if (args != NULL && exec_option == EXEC_OPTION_ALL)
     error (_("Can't resume all threads and specify "
 	     "proceed count simultaneously."));
 
@@ -1245,7 +1203,7 @@ continue_command (char *args, int from_tty)
   if (from_tty)
     printf_filtered (_("Continuing.\n"));
 
-  apply_execution_command (apply_itset, run_free_itset, 0,
+  apply_execution_command (exec_option, 0,
 			   continue_aec_callback, NULL);
 
   if (sync_execution)
@@ -1356,25 +1314,18 @@ step_1 (int skip_subroutines, int single_inst, char *args)
   int count = 1;
   int async_exec = 0;
   struct cleanup *old_chain;
-  struct itset *apply_itset = NULL;
-  int apply_itset_explicit = 0;
-  struct itset *run_free_itset = NULL;
   struct step_1_args step_args;
   struct thread_info *thr;
   int thr_count = 0;
   struct thread_info *leader = NULL;
+  enum execution_arg exec_option;
 
   ensure_not_tfind_mode ();
 
   args = strip_bg_char (args, &async_exec);
   old_chain = make_cleanup (xfree, args);
 
-  make_cleanup (itset_free_p, &apply_itset);
-  make_cleanup (itset_free_p, &run_free_itset);
-
-  args = parse_execution_args (args, 1,
-			       &apply_itset, &apply_itset_explicit,
-			       &run_free_itset);
+  args = parse_execution_args (args, &exec_option);
 
   if (args)
     {
@@ -1384,7 +1335,7 @@ step_1 (int skip_subroutines, int single_inst, char *args)
     }
 
   ALL_THREADS (thr)
-    if (itset_contains_thread (apply_itset, thr))
+    if (itset_contains_thread (current_itset, thr))
       {
 	++thr_count;
 
@@ -1400,9 +1351,11 @@ step_1 (int skip_subroutines, int single_inst, char *args)
 
   if (thr_count == 0)
     {
+#if 0
       if (apply_itset_explicit)
 	error (_("Set of threads to step is empty."));
       else
+#endif
 	error (_("The program is not being run."));
     }
 
@@ -1413,7 +1366,7 @@ step_1 (int skip_subroutines, int single_inst, char *args)
   step_args.count = count;
   step_args.thread = -1;
 
-  apply_execution_command (apply_itset, run_free_itset, leader,
+  apply_execution_command (exec_option, leader,
 			   step_1_aec_callback, &step_args);
 
   do_cleanups (old_chain);
@@ -1634,13 +1587,11 @@ static void
 jump_command (char *arg, int from_tty)
 {
   int async_exec;
-  struct itset *apply_itset = NULL;
-  int apply_itset_explicit = 0;
-  struct itset *run_free_itset = NULL;
   struct cleanup *old_chain;
   struct thread_info *thr;
   struct jump_aec_callback_data cb_data;
   struct thread_info *leader = NULL;
+  enum execution_arg exec_option;
 
   ensure_not_tfind_mode ();
 
@@ -1650,18 +1601,15 @@ jump_command (char *arg, int from_tty)
 
   prepare_execution_command (&current_target, async_exec);
 
-  make_cleanup (itset_free_p, &apply_itset);
-  make_cleanup (itset_free_p, &run_free_itset);
+  arg = parse_execution_args (arg, &exec_option);
 
-  arg = parse_execution_args (arg, 0,
-			      &apply_itset, &apply_itset_explicit,
-			      &run_free_itset);
-
-  if (!itset_contains_any_thread (apply_itset))
+  if (!itset_contains_any_thread (current_itset))
     {
+#if 0
       if (apply_itset_explicit)
 	error (_("Set of threads to jump is empty."));
       else
+#endif
 	error (_("The program is not being run."));
     }
 
@@ -1669,8 +1617,7 @@ jump_command (char *arg, int from_tty)
     error_no_arg (_("starting address"));
 
   ALL_THREADS (thr)
-    if (itset_width_contains_thread (apply_itset, default_run_control_width (),
-				     thr))
+    if (itset_contains_thread (current_itset, thr))
       {
 	struct symtabs_and_lines sals;
 	struct symtab_and_line sal;
@@ -1731,7 +1678,7 @@ jump_command (char *arg, int from_tty)
       }
 
   cb_data.from_tty = from_tty;
-  apply_execution_command (apply_itset, run_free_itset, leader,
+  apply_execution_command (exec_option, leader,
 			   jump_aec_callback, &cb_data);
 
   do_cleanups (old_chain);
@@ -1751,12 +1698,10 @@ signal_command (char *arg, int from_tty)
 {
   enum gdb_signal oursig;
   int async_exec;
-  struct itset *apply_itset = NULL;
-  int apply_itset_explicit = 0;
-  struct itset *run_free_itset = NULL;
   struct cleanup *old_chain;
   struct signal_aec_callback_data cb_data;
   struct thread_info *thr;
+  enum execution_arg exec_option;
 
   dont_repeat ();		/* Too dangerous.  */
   ensure_not_tfind_mode ();
@@ -1767,18 +1712,15 @@ signal_command (char *arg, int from_tty)
 
   prepare_execution_command (&current_target, async_exec);
 
-  make_cleanup (itset_free_p, &apply_itset);
-  make_cleanup (itset_free_p, &run_free_itset);
+  arg = parse_execution_args (arg, &exec_option);
 
-  arg = parse_execution_args (arg, 0,
-			      &apply_itset, &apply_itset_explicit,
-			      &run_free_itset);
-
-  if (!itset_contains_any_thread (apply_itset))
+  if (!itset_contains_any_thread (current_itset))
     {
+#if 0
       if (apply_itset_explicit)
 	error (_("Set of threads to signal is empty."));
       else
+#endif
 	error (_("The program is not being run."));
     }
 
@@ -1786,7 +1728,7 @@ signal_command (char *arg, int from_tty)
     error_no_arg (_("signal number"));
 
   ALL_THREADS (thr)
-    if (itset_contains_thread (apply_itset, thr))
+    if (itset_contains_thread (current_itset, thr))
       ensure_runnable (thr);
 
   /* It would be even slicker to make signal names be valid expressions,
@@ -1859,7 +1801,7 @@ signal_command (char *arg, int from_tty)
     }
 
   cb_data.oursig = oursig;
-  apply_execution_command (apply_itset, run_free_itset, 0,
+  apply_execution_command (exec_option, 0,
 			   signal_aec_callback, &cb_data);
 
   do_cleanups (old_chain);
@@ -1945,23 +1887,15 @@ static void until_next_aec_callback (struct thread_info *thread, void *data);
 static void
 until_next_command (char *arg, int from_tty)
 {
-  struct itset *apply_itset = NULL;
-  int apply_itset_explicit = 0;
-  struct itset *run_free_itset = NULL;
-  struct cleanup *old_chain;
   struct thread_info *thr;
   int thr_count = 0;
   struct thread_info *leader = NULL;
+  enum execution_arg exec_option;
 
-  old_chain = make_cleanup (itset_free_p, &apply_itset);
-  make_cleanup (itset_free_p, &run_free_itset);
-
-  arg = parse_execution_args (arg, 0,
-			      &apply_itset, &apply_itset_explicit,
-			      &run_free_itset);
+  arg = parse_execution_args (arg, &exec_option);
 
   ALL_THREADS (thr)
-    if (itset_contains_thread (apply_itset, thr))
+    if (itset_contains_thread (current_itset, thr))
       {
 	struct frame_info *frame;
 	CORE_ADDR pc;
@@ -2016,17 +1950,16 @@ until_next_command (char *arg, int from_tty)
 
   if (thr_count == 0)
     {
+#if 0
       if (apply_itset_explicit)
 	error (_("Set of threads to until is empty."));
       else
+#endif
 	error (_("The program is not being run."));
     }
 
   gdb_assert (leader != NULL);
-  apply_execution_command (apply_itset, run_free_itset, leader,
-			   until_next_aec_callback, NULL);
-
-  do_cleanups (old_chain);
+  apply_execution_command (exec_option, leader, until_next_aec_callback, NULL);
 }
 
 
@@ -2394,15 +2327,13 @@ static void finish_aec_callback (struct thread_info *thread, void *data);
 static void
 finish_command (char *arg, int from_tty)
 {
-  struct itset *apply_itset = NULL;
-  int apply_itset_explicit = 0;
-  struct itset *run_free_itset = NULL;
   struct cleanup *old_chain;
   struct thread_info *thr;
   int thr_count = 0;
   struct finish_aec_callback_data cb_data;
   int async_exec;
   struct thread_info *leader = NULL;
+  enum execution_arg exec_option;
 
   ensure_not_tfind_mode ();
 
@@ -2412,18 +2343,13 @@ finish_command (char *arg, int from_tty)
 
   prepare_execution_command (&current_target, async_exec);
 
-  make_cleanup (itset_free_p, &apply_itset);
-  make_cleanup (itset_free_p, &run_free_itset);
-
-  arg = parse_execution_args (arg, 0,
-			      &apply_itset, &apply_itset_explicit,
-			      &run_free_itset);
+  arg = parse_execution_args (arg, &exec_option);
 
   if (arg)
     error (_("The \"finish\" command does not take any arguments."));
 
   ALL_THREADS (thr)
-    if (itset_contains_thread (apply_itset, thr))
+    if (itset_contains_thread (current_itset, thr))
       {
 	struct frame_info *frame;
 	struct frame_info *prev;
@@ -2452,16 +2378,18 @@ finish_command (char *arg, int from_tty)
 
   if (thr_count == 0)
     {
+#if 0
       if (apply_itset_explicit)
 	error (_("Set of threads to finish is empty."));
       else
+#endif
 	error (_("The program is not being run."));
     }
 
   gdb_assert (leader != NULL);
 
   cb_data.from_tty = from_tty;
-  apply_execution_command (apply_itset, run_free_itset, leader,
+  apply_execution_command (exec_option, leader,
 			   finish_aec_callback, &cb_data);
 
   do_cleanups (old_chain);

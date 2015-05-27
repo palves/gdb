@@ -3646,11 +3646,11 @@ itset_contains_inferior (struct itset *set,
   return itset_contains_inferior_1 (set, ITSET_WIDTH_INFERIOR, inf, 0);
 }
 
-static int
-itset_contains_thread_1 (struct itset *set,
-			 enum itset_width default_width,
-			 struct thread_info *thr,
-			 int including_width)
+int
+itset_contains_thread_maybe_width (struct itset *set,
+				   enum itset_width default_width,
+				   struct thread_info *thr,
+				   int including_width)
 {
   if (including_width)
     return set_contains_thread (set->elements, default_width, thr, 1);
@@ -3665,7 +3665,7 @@ itset_width_contains_thread (struct itset *set,
 		       enum itset_width default_width,
 		       struct thread_info *thr)
 {
-  return itset_contains_thread_1 (set, default_width, thr, 1);
+  return itset_contains_thread_maybe_width (set, default_width, thr, 1);
 }
 
 /* Return 1 if SET contains THR, 0 otherwise.  */
@@ -3674,7 +3674,7 @@ int
 itset_contains_thread (struct itset *set,
 		       struct thread_info *thr)
 {
-  return itset_contains_thread_1 (set, ITSET_WIDTH_THREAD, thr, 0);
+  return itset_contains_thread_maybe_width (set, ITSET_WIDTH_THREAD, thr, 0);
 }
 
 /* Return 1 if SET contains TASK, 0 otherwise.  */
@@ -3691,8 +3691,8 @@ itset_contains_ada_task (struct itset *set,
   if (thr == NULL)
     return 0;
 
-  return itset_contains_thread_1 (set, default_width,
-				  thr, including_width);
+  return itset_contains_thread_maybe_width (set, default_width,
+					    thr, including_width);
 }
 
 /* Acquire a new reference to an I/T set.  */
@@ -3796,7 +3796,8 @@ iter_thr_callback (struct thread_info *thr, void *d)
 {
   struct iterate_thr_data *data = d;
 
-  if (itset_contains_thread_1 (data->itset, data->default_width, thr, 1))
+  if (itset_contains_thread_maybe_width (data->itset, data->default_width,
+					 thr, 1))
     return data->callback (thr, data->client_data);
 
   /* Keep going.  */

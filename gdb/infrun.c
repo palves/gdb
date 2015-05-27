@@ -2902,31 +2902,17 @@ mark_threads_running (ptid_t resume_ptid)
      doesn't run at all.  */
   if (target_is_non_stop_p ())
     {
-#if 0
-      enum itset_width width = itset_get_width (current_itset);
+      enum itset_width default_width = default_run_control_width ();
+      struct thread_info *tp;
 
-      if (width == ITSET_WIDTH_ALL)
-	set_running (minus_one_ptid, 1);
-      else if (width == ITSET_WIDTH_INFERIOR)
-	{
-	  resume_ptid = pid_to_ptid (ptid_get_pid (inferior_ptid));
-	  set_running (resume_ptid, 1);
-	}
-      else
-#endif
-	{
-	  enum itset_width default_width = default_run_control_width ();
-	  struct thread_info *tp;
+      ALL_NON_EXITED_THREADS (tp)
+        {
+	  if (!itset_width_contains_thread (current_itset,
+					    default_width,
+					    tp))
+	    continue;
 
-	  ALL_NON_EXITED_THREADS (tp)
-	    {
-	      if (!itset_width_contains_thread (current_itset,
-						default_width,
-						tp))
-		continue;
-
-	      set_running (tp->ptid, 1);
-	    }
+	  set_running (tp->ptid, 1);
 	}
     }
   else
@@ -3031,7 +3017,6 @@ do_proceed (void)
     }
   else if (!non_stop && target_is_non_stop_p ())
     {
-      enum itset_width default_width = default_run_control_width ();
       struct thread_info *current = inferior_thread ();
       struct thread_info *tp;
 

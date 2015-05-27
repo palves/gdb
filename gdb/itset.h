@@ -124,6 +124,11 @@ int itset_width_contains_thread (struct itset *itset,
 int itset_contains_thread (struct itset *itset,
 			   struct thread_info *thr);
 
+int itset_contains_thread_maybe_width (struct itset *set,
+				       enum itset_width default_width,
+				       struct thread_info *thr,
+				       int including_width);
+
 /* Return true if the Ada task is contained in the I/T set.  */
 
 int itset_contains_ada_task (struct itset *set,
