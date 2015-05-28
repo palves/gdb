@@ -2951,33 +2951,22 @@ prepare_proceed (CORE_ADDR addr, enum gdb_signal siggnal)
 			gdb_signal_to_symbol_string (siggnal));
 }
 
+/* Mark threads that from the user/frontend's point of view are
+   running, as running.  */
+
 void
-mark_threads_running (ptid_t resume_ptid,
-		      int step,
-		      enum execution_arg exec_option)
+mark_threads_running (int stepping_command, enum execution_arg exec_option)
 {
-  /* Even if RESUME_PTID is a wildcard, and we end up resuming fewer
-     threads (e.g., we might need to set threads stepping over
-     breakpoints first), from the user/frontend's point of view, all
-     threads in RESUME_PTID are now running.  Unless we're calling an
-     inferior function, as in that case we pretend the inferior
-     doesn't run at all.  */
-  if (target_is_non_stop_p ())
+  struct thread_info *tp;
+
+  ALL_NON_EXITED_THREADS (tp)
     {
-      struct thread_info *tp;
+      if (!should_run_thread (tp, stepping_command, exec_option))
+	continue;
 
-      ALL_NON_EXITED_THREADS (tp)
-        {
-	  if (!should_run_thread (tp, step, exec_option))
-	    continue;
-
-	  set_running (tp->ptid, 1);
-	}
+      set_running (tp->ptid, 1);
     }
-  else
-    set_running (resume_ptid, 1);
 }
-
 
 /* In a multi-threaded task we may select another thread and then
    continue or step.
@@ -3161,7 +3150,7 @@ proceed (CORE_ADDR addr, enum gdb_signal siggnal)
   old_chain = make_cleanup (finish_thread_state_cleanup, &resume_ptid);
 
   if (!tp->control.in_infcall)
-    mark_threads_running (resume_ptid, 0, EXEC_OPTION_DEFAULT);
+    mark_threads_running (0, EXEC_OPTION_DEFAULT);
 
   /* If we're stopped at a fork/vfork, follow the branch set by the
      "set follow-fork-mode" command; otherwise, we'll just proceed

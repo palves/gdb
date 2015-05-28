@@ -151,7 +151,7 @@ apply_execution_command (int stepping_command,
   observer_notify_about_to_proceed ();
 
   if (!cur_thr->control.in_infcall)
-    mark_threads_running (resume_ptid, stepping_command, exec_option);
+    mark_threads_running (stepping_command, exec_option);
 
   stop_after_trap = 0;
 
@@ -1471,12 +1471,7 @@ step_once (int skip_subroutines, int single_inst, int count, int thread)
 	  if (!skip_subroutines
 	      && inline_skipped_frames (inferior_ptid))
 	    {
-	      ptid_t resume_ptid;
-
 	      /* Pretend that we've ran.  */
-	      resume_ptid = user_visible_resume_ptid (1);
-	      set_running (resume_ptid, 1);
-
 	      step_into_inline_frame (inferior_ptid);
 	      if (count > 1)
 		step_once (skip_subroutines, single_inst, count - 1, thread);
@@ -1756,18 +1751,18 @@ signal_command (char *arg, int from_tty)
   if (!non_stop)
     {
       struct thread_info *tp;
-      ptid_t resume_ptid;
       int must_confirm = 0;
-
-      /* This indicates what will be resumed.  Either a single thread,
-	 a whole process, or all threads of all processes.  */
-      resume_ptid = user_visible_resume_ptid (0);
+      int including_width = exec_option == EXEC_OPTION_ALL;
 
       ALL_NON_EXITED_THREADS (tp)
 	{
-	  if (ptid_equal (tp->ptid, inferior_ptid))
+	  if (!should_run_thread (tp, 0, exec_option))
 	    continue;
-	  if (!ptid_match (tp->ptid, resume_ptid))
+
+	  if (itset_contains_thread_maybe_width (current_itset,
+						 default_run_control_width (),
+						 tp,
+						 including_width))
 	    continue;
 
 	  if (tp->suspend.stop_signal != GDB_SIGNAL_0

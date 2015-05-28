@@ -230,8 +230,7 @@ enum execution_arg
 extern void do_proceed (void);
 extern void enqueue_step_overs_leaders (struct thread_info *tp);
 extern void enqueue_step_overs (struct thread_info *tp);
-extern void mark_threads_running (ptid_t resume_ptid,
-				  int step,
+extern void mark_threads_running (int stepping_command,
 				  enum execution_arg exec_option);
 extern void prepare_proceed (CORE_ADDR addr, enum gdb_signal siggnal);
 
