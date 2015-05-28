@@ -7924,6 +7924,7 @@ stop_waiting (struct execution_control_state *ecs)
 	  if (non_stop)
 	    ecs->stop_set = itset_create_empty ();
 	  else
+	    /* FIXME: should be independent of current focus?  */
 	    ecs->stop_set = itset_reference (current_itset);
 	}
 
