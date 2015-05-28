@@ -129,7 +129,8 @@ make_cleanup_restore_execution_context_thread (void)
 int thread_needs_step_over (struct thread_info *tp);
 
 void
-apply_execution_command (enum execution_arg exec_option,
+apply_execution_command (int stepping_command,
+			 enum execution_arg exec_option,
 			 struct thread_info *parallel_leader,
 			 aec_callback_func callback, void *callback_data)
 {
@@ -149,31 +150,36 @@ apply_execution_command (enum execution_arg exec_option,
   old_chain = make_cleanup (finish_thread_state_cleanup, &resume_ptid);
 
   if (!cur_thr->control.in_infcall)
-    mark_threads_running (resume_ptid);
+    mark_threads_running (resume_ptid, stepping_command, exec_option);
 
   if (target_is_non_stop_p ())
     {
       struct inferior *inf;
       struct thread_info *t;
       int followed_fork = 0;
+      int including_width = exec_option == EXEC_OPTION_ALL;
 
       ALL_INFERIORS (inf)
         {
-	  if (itset_width_contains_inferior (itset, default_width, inf))
+	  if (should_run_inferior (inf, stepping_command, exec_option))
 	    clear_proceed_status_inferior (inf);
 	}
 
       /* See if there are threads we'd run free that are stopped at
 	 forks.  If so, follow the fork, and refuse to apply the
 	 execution command further.  */
-      if (exec_option == EXEC_OPTION_DEFAULT)
       ALL_THREADS_SAFE (t, tmp)
         {
 	  if (t->resumed)
 	    continue;
 
-	  if (itset_width_contains_thread (itset, default_width, t)
-	      && !itset_contains_thread (itset, t))
+	  if (!should_run_thread (t, stepping_command, exec_option))
+	    continue;
+
+	  if (!itset_contains_thread_maybe_width (itset,
+						  default_run_control_width (),
+						  t,
+						  including_width))
 	    {
 	      if (t->pending_follow.kind == TARGET_WAITKIND_FORKED
 		  || t->pending_follow.kind == TARGET_WAITKIND_VFORKED)
@@ -218,9 +224,13 @@ apply_execution_command (enum execution_arg exec_option,
 	  if (t->state == THREAD_EXITED)
 	    continue;
 
+	  if (!should_run_thread (t, stepping_command, exec_option))
+	    continue;
+
 	  if (itset_contains_thread_maybe_width (itset,
 						 default_run_control_width (),
-						 t, (exec_option == EXEC_OPTION_ALL)))
+						 t,
+						 including_width))
 	    {
 	      switch_to_thread (t->ptid);
 
@@ -248,10 +258,7 @@ apply_execution_command (enum execution_arg exec_option,
 		 other threads over their breakpoints first.  */
 	      enqueue_step_overs_leaders (t);
 	    }
-	  else if (exec_option == EXEC_OPTION_DEFAULT
-		   && itset_width_contains_thread (itset,
-						   default_run_control_width (),
-						   t))
+	  else
 	    {
 	      clear_proceed_status_thread (t);
 	    }
@@ -1201,7 +1208,7 @@ continue_command (char *args, int from_tty)
   if (from_tty)
     printf_filtered (_("Continuing.\n"));
 
-  apply_execution_command (exec_option, 0,
+  apply_execution_command (0, exec_option, 0,
 			   continue_aec_callback, NULL);
 
   if (current_ui->prompt_state == PROMPT_BLOCKED)
@@ -1434,7 +1441,7 @@ step_1 (int skip_subroutines, int single_inst, char *args)
   step_args.count = count;
   step_args.thread = -1;
 
-  apply_execution_command (exec_option, leader,
+  apply_execution_command (1, exec_option, leader,
 			   step_1_aec_callback, &step_args);
 
   do_cleanups (old_chain);
@@ -1742,7 +1749,7 @@ jump_command (char *arg, int from_tty)
       }
 
   cb_data.from_tty = from_tty;
-  apply_execution_command (exec_option, leader,
+  apply_execution_command (0, exec_option, leader,
 			   jump_aec_callback, &cb_data);
 
   do_cleanups (old_chain);
@@ -1865,7 +1872,7 @@ signal_command (char *arg, int from_tty)
     }
 
   cb_data.oursig = oursig;
-  apply_execution_command (exec_option, 0,
+  apply_execution_command (0, exec_option, 0,
 			   signal_aec_callback, &cb_data);
 
   do_cleanups (old_chain);
@@ -2081,7 +2088,8 @@ until_next_command (char *arg, int from_tty)
     }
 
   gdb_assert (leader != NULL);
-  apply_execution_command (exec_option, leader, until_next_aec_callback, NULL);
+  apply_execution_command (0, exec_option,
+			   leader, until_next_aec_callback, NULL);
 }
 
 
@@ -2582,7 +2590,7 @@ finish_command (char *arg, int from_tty)
   gdb_assert (leader != NULL);
 
   cb_data.from_tty = from_tty;
-  apply_execution_command (exec_option, leader,
+  apply_execution_command (0, exec_option, leader,
 			   finish_aec_callback, &cb_data);
 
   do_cleanups (old_chain);
