@@ -3235,6 +3235,12 @@ do_proceed (void)
     }
   else
     gdb_assert_not_reached ("unhandled scenario");
+
+  /* Tell the event loop to wait for it to stop.  If the target
+     supports asynchronous execution, it'll do this from within
+     target_resume.  */
+  if (!target_can_async_p ())
+    mark_async_event_handler (infrun_async_inferior_event_token);
 }
 
 void
@@ -3279,12 +3285,6 @@ proceed (CORE_ADDR addr, enum gdb_signal siggnal)
   do_proceed ();
 
   discard_cleanups (old_chain);
-
-  /* Tell the event loop to wait for it to stop.  If the target
-     supports asynchronous execution, it'll do this from within
-     target_resume.  */
-  if (!target_can_async_p ())
-    mark_async_event_handler (infrun_async_inferior_event_token);
 }
 
 

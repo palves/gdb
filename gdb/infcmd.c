@@ -276,16 +276,6 @@ apply_execution_command (int stepping_command,
   do_proceed ();
 
   discard_cleanups (old_chain);
-
-  /* Wait for it to stop (if not standalone)
-     and in any case decode why it stopped, and act accordingly.  */
-  /* Do this only if we are not using the event loop, or if the target
-     does not support asynchronous execution.  */
-  if (!target_can_async_p ())
-    {
-      wait_for_inferior ();
-      normal_stop ();
-    }
 }
 
 /* Local functions: */
@@ -840,11 +830,8 @@ run_command_1 (char *args, int from_tty, int tbreak_at_main)
   /* to_create_inferior should push the target, so after this point we
      shouldn't refer to run_target again.  */
   run_target = NULL;
-  if (itfocus_should_follow_stop_event ())
-    {
-      set_current_context ();
-      itfocus_from_thread_switch ();
-    }
+  set_current_context ();
+  set_running (pid_to_ptid (ptid_get_pid (inferior_ptid)), 1);
 
   /* We're starting off a new process.  When we get out of here, in
      non-stop mode, finish the state of all threads of that process,
@@ -864,7 +851,7 @@ run_command_1 (char *args, int from_tty, int tbreak_at_main)
 
   /* Start the target running.  Do not use -1 continuation as it would skip
      breakpoint right at the entry point.  */
-  proceed (regcache_read_pc (get_current_regcache ()), GDB_SIGNAL_0);
+  prepare_proceed (regcache_read_pc (get_current_regcache ()), GDB_SIGNAL_0);
 
   /* Since there was no error, there's no need to finish the thread
      states here.  */
@@ -943,6 +930,9 @@ for_each_focus_inferior_cmd (enum itset_width default_width,
     }
 
   do_cleanups (old_chain);
+
+  if (itfocus_should_follow_stop_event ())
+    itfocus_from_thread_switch ();
 }
 
 static void
@@ -950,6 +940,8 @@ run_command (char *args, int from_tty)
 {
   for_each_focus_inferior_cmd (ITSET_WIDTH_INFERIOR,
 			       do_run_command, args,  from_tty);
+
+  do_proceed ();
 }
 
 /* Start the execution of the program up until the beginning of the main
@@ -973,6 +965,7 @@ start_command (char *args, int from_tty)
 {
   for_each_focus_inferior_cmd (ITSET_WIDTH_INFERIOR,
 			       do_start_command, args, from_tty);
+  do_proceed ();
 }
 
 static int
