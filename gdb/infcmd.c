@@ -3436,7 +3436,7 @@ interrupt_target_1 (int all_threads)
      non-stop mode, as when debugging a multi-threaded application in
      all-stop mode, we will only get one stop event --- it's undefined
      which thread will report the event.  */
-  if (target_is_non_stop_p ())
+  if (non_stop)
     set_stop_requested (ptid, 1);
 }
 
