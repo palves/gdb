@@ -142,6 +142,11 @@ apply_execution_command (int stepping_command,
   /* XXX FIXME */
   old_chain = make_cleanup (finish_thread_state_cleanup, &resume_ptid);
 
+  /* Needed for MI's ^running.  Must be done before we mark threads
+     running, because the emission of ^running is done by
+     mi_on_resume, which is called from within set_running.  XXX */
+  observer_notify_about_to_proceed ();
+
   if (!cur_thr->control.in_infcall)
     mark_threads_running (resume_ptid, stepping_command, exec_option);
 
@@ -244,7 +249,6 @@ apply_execution_command (int stepping_command,
 		    }
 		}
 
-	      observer_notify_about_to_proceed ();
 	      (*callback) (t, callback_data);
 	      gdb_assert (t->apply_set == NULL);
 	      if (parallel_leader != NULL)

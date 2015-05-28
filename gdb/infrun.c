@@ -3144,6 +3144,9 @@ proceed (CORE_ADDR addr, enum gdb_signal siggnal)
   ptid_t resume_ptid;
   struct cleanup *old_chain;
 
+  /* Needed for MI's ^running.  */
+  observer_notify_about_to_proceed ();
+
   resume_ptid = user_visible_resume_ptid (tp->control.stepping_command);
 
   /* If an exception is thrown from this point on, make sure to

@@ -53,6 +53,8 @@
 #include "linespec.h"
 #include "extension.h"
 #include "gdbcmd.h"
+#include "itset.h"
+#include "observer.h"
 
 #include <ctype.h>
 #include <sys/time.h>
@@ -2208,6 +2210,9 @@ mi_cmd_execute (struct mi_parse *parse)
 	tp = any_live_thread_of_process (inf->pid);
       switch_to_thread (tp ? tp->ptid : null_ptid);
       set_current_program_space (inf->pspace);
+
+      set_current_context ();
+      itfocus_from_thread_switch ();
     }
 
   if (parse->thread != -1)
@@ -2221,6 +2226,9 @@ mi_cmd_execute (struct mi_parse *parse)
 	error (_("Thread id: %d has terminated"), parse->thread);
 
       switch_to_thread (tp->ptid);
+
+      set_current_context ();
+      itfocus_from_thread_switch ();
     }
 
   if (parse->frame != -1)
