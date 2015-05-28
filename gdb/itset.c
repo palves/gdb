@@ -4092,64 +4092,62 @@ restore_current_context_cleanup (void *data)
 static void
 itfocus_command (char *spec, int from_tty)
 {
-  struct itset *itset;
   struct cleanup *old_chain;
+  char *expanded_spec;
 
-  if (spec == NULL)
+  if (spec != NULL)
     {
-      if (current_itset)
-	printf_filtered (_("Focus is `%s' (current inferior is %d)"),
-			 current_itset->spec,
-			 current_inferior ()->num);
-      else
-	printf_filtered (_("No focus has been set. (current inferior is %d)"),
-			 current_inferior ()->num);
-      printf_filtered ("\n");
-      return;
-    }
+      struct itset *itset;
 
-  itset = itset_create (&spec);
-  old_chain = make_cleanup_itset_free (itset);
+      itset = itset_create (&spec);
+      old_chain = make_cleanup_itset_free (itset);
 
-  spec = skip_spaces (spec);
-  if (*spec != '\0')
-    {
-      struct execution_context saved_ctx;
+      spec = skip_spaces (spec);
+      if (*spec != '\0')
+	{
+	  struct execution_context saved_ctx;
 
-      save_current_itset ();
+	  save_current_itset ();
+	  current_itset = itset;
+
+	  saved_ctx = *get_current_context ();
+	  make_cleanup (restore_current_context_cleanup, &saved_ctx);
+
+	  old_chain = make_cleanup_restore_current_thread ();
+
+	  switch_to_itset (itset);
+
+	  execute_command (spec, from_tty);
+
+	  do_cleanups (old_chain);
+	  return;
+	}
+
+      discard_cleanups (old_chain);
+
+      itset_free (current_itset);
       current_itset = itset;
 
-      saved_ctx = *get_current_context ();
-      make_cleanup (restore_current_context_cleanup, &saved_ctx);
-
-      old_chain = make_cleanup_restore_current_thread ();
-
       switch_to_itset (itset);
-
-      execute_command (spec, from_tty);
-
-      do_cleanups (old_chain);
-      return;
     }
 
 #if 0
-  if (itset_is_empty (itset, ITSET_WIDTH_ALL))
+  if (itset_is_empty (current_itset, ITSET_WIDTH_ALL))
     warning (_("focus set is empty"));
 #endif
 
-  discard_cleanups (old_chain);
-
-  itset_free (current_itset);
-  current_itset = itset;
-
-  switch_to_itset (itset);
-
   /* Confirm the choice of focus.  */
+  expanded_spec = itset_get_spec (current_itset);
+  old_chain = make_cleanup (xfree, expanded_spec);
+
+  printf_filtered (_("Focus is `%s'.\n"), expanded_spec);
   printf_filtered (_("Current inferior is %d.\n"), current_inferior ()->num);
   if (!ptid_equal (inferior_ptid, null_ptid))
     printf_filtered (_("Current thread is %d.\n"), inferior_thread ()->num);
   else
     printf_filtered (_("No current thread.\n"));
+
+  do_cleanups (old_chain);
 }
 
 static struct named_itset *
