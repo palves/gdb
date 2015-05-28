@@ -132,7 +132,10 @@ apply_execution_command (int stepping_command,
   ptid_t resume_ptid;
   struct cleanup *old_chain;
   enum itset_width default_width = default_run_control_width ();
-  struct thread_info *tmp;
+  struct inferior *inf;
+  struct thread_info *t, *tmp;
+  int followed_fork;
+  int including_width;
 
   resume_ptid = user_visible_resume_ptid (cur_thr->control.stepping_command);
 
@@ -158,120 +161,110 @@ apply_execution_command (int stepping_command,
       stop_registers = NULL;
     }
 
-  if (target_is_non_stop_p ())
+  followed_fork = 0;
+  including_width = exec_option == EXEC_OPTION_ALL;
+
+  ALL_INFERIORS (inf)
     {
-      struct inferior *inf;
-      struct thread_info *t;
-      int followed_fork = 0;
-      int including_width = exec_option == EXEC_OPTION_ALL;
+      if (should_run_inferior (inf, stepping_command, exec_option))
+	clear_proceed_status_inferior (inf);
+    }
 
-      ALL_INFERIORS (inf)
-        {
-	  if (should_run_inferior (inf, stepping_command, exec_option))
-	    clear_proceed_status_inferior (inf);
-	}
+  /* See if there are threads we'd run free that are stopped at forks.
+     If so, follow the fork, and refuse to apply the execution command
+     further.  */
+  ALL_THREADS_SAFE (t, tmp)
+    {
+      if (t->resumed)
+	continue;
 
-      /* See if there are threads we'd run free that are stopped at
-	 forks.  If so, follow the fork, and refuse to apply the
-	 execution command further.  */
-      ALL_THREADS_SAFE (t, tmp)
-        {
-	  if (t->resumed)
-	    continue;
+      if (!should_run_thread (t, stepping_command, exec_option))
+	continue;
 
-	  if (!should_run_thread (t, stepping_command, exec_option))
-	    continue;
-
-	  if (!itset_contains_thread_maybe_width (current_itset,
-						  default_run_control_width (),
-						  t,
-						  including_width))
-	    {
-	      if (t->pending_follow.kind == TARGET_WAITKIND_FORKED
-		  || t->pending_follow.kind == TARGET_WAITKIND_VFORKED)
-		{
-		  switch_to_thread (t->ptid);
-		  follow_fork (0);
-		  followed_fork = 1;
-		}
-	      else if (thread_still_needs_step_over (t))
-		{
-		  if (debug_infrun)
-		    fprintf_unfiltered (gdb_stdlog,
-					"infrun: need to step-over [%s] first\n",
-					target_pid_to_str (t->ptid));
-
-		  gdb_assert (!thread_is_in_step_over_chain (t));
-		  thread_step_over_chain_enqueue (t);
-		}
-	    }
-	}
-
-      if (followed_fork)
+      if (!itset_contains_thread_maybe_width (current_itset,
+					      default_run_control_width (),
+					      t,
+					      including_width))
 	{
-	  /* If we get here, it was because we're trying to resume
-	     from a fork catchpoint, but, the user has switched
-	     threads away from the thread that forked.  In that case,
-	     the resume command issued is most likely not applicable
-	     to the child, so just warn, and refuse to resume.  */
-	  warning (_("Not resuming: switched threads "
-		     "before following fork child.\n"));
-	  normal_stop ();
-	  inferior_event_handler (INF_EXEC_COMPLETE, NULL);
-	  discard_cleanups (old_chain);
-	  return;
-	}
-
-      ALL_THREADS_SAFE (t, tmp)
-        {
-	  if (t->resumed)
-	    continue;
-	  if (t->state == THREAD_EXITED)
-	    continue;
-
-	  if (!should_run_thread (t, stepping_command, exec_option))
-	    continue;
-
-	  if (itset_contains_thread_maybe_width (current_itset,
-						 default_run_control_width (),
-						 t,
-						 including_width))
+	  if (t->pending_follow.kind == TARGET_WAITKIND_FORKED
+	      || t->pending_follow.kind == TARGET_WAITKIND_VFORKED)
 	    {
 	      switch_to_thread (t->ptid);
-
-	      if (t->pending_follow.kind == TARGET_WAITKIND_FORKED
-		  || t->pending_follow.kind == TARGET_WAITKIND_VFORKED)
-		{
-		  if (follow_fork (1))
-		    {
-		      t = inferior_thread ();
-		      set_running (t->ptid, 1);
-		    }
-		}
-
-	      (*callback) (t, callback_data);
-	      gdb_assert (t->apply_set == NULL);
-	      if (parallel_leader != NULL)
-		{
-		  t->apply_set = itset_reference (current_itset);
-		  t->parallel_leader = parallel_leader;
-		  parallel_leader->refcount++;
-		}
-
-	      /* Enqueue the apply threads last, so that we move all
-		 other threads over their breakpoints first.  */
-	      enqueue_step_overs_leaders (t);
+	      follow_fork (0);
+	      followed_fork = 1;
 	    }
-	  else
+	  else if (thread_still_needs_step_over (t))
 	    {
-	      clear_proceed_status_thread (t);
+	      if (debug_infrun)
+		fprintf_unfiltered (gdb_stdlog,
+				    "infrun: need to step-over [%s] first\n",
+				    target_pid_to_str (t->ptid));
+
+	      gdb_assert (!thread_is_in_step_over_chain (t));
+	      thread_step_over_chain_enqueue (t);
 	    }
 	}
     }
-  else
+
+  if (followed_fork)
     {
-      ERROR_NO_INFERIOR;
-      (*callback) (inferior_thread (), callback_data);
+      /* If we get here, it was because we're trying to resume
+	 from a fork catchpoint, but, the user has switched
+	 threads away from the thread that forked.  In that case,
+	 the resume command issued is most likely not applicable
+	 to the child, so just warn, and refuse to resume.  */
+      warning (_("Not resuming: switched threads "
+		 "before following fork child.\n"));
+      normal_stop ();
+      inferior_event_handler (INF_EXEC_COMPLETE, NULL);
+      discard_cleanups (old_chain);
+      return;
+    }
+
+  ALL_THREADS_SAFE (t, tmp)
+    {
+      if (t->resumed)
+	continue;
+      if (t->state == THREAD_EXITED)
+	continue;
+
+      if (!should_run_thread (t, stepping_command, exec_option))
+	continue;
+
+      if (itset_contains_thread_maybe_width (current_itset,
+					     default_run_control_width (),
+					     t,
+					     including_width))
+	{
+	  switch_to_thread (t->ptid);
+
+	  if (t->pending_follow.kind == TARGET_WAITKIND_FORKED
+	      || t->pending_follow.kind == TARGET_WAITKIND_VFORKED)
+	    {
+	      if (follow_fork (1))
+		{
+		  t = inferior_thread ();
+		  set_running (t->ptid, 1);
+		}
+	    }
+
+	  (*callback) (t, callback_data);
+	  gdb_assert (t->apply_set == NULL);
+	  if (parallel_leader != NULL)
+	    {
+	      t->apply_set = itset_reference (current_itset);
+	      t->parallel_leader = parallel_leader;
+	      parallel_leader->refcount++;
+	    }
+
+	  /* Enqueue the apply threads last, so that we move all
+	     other threads over their breakpoints first.  */
+	  enqueue_step_overs_leaders (t);
+	}
+      else
+	{
+	  clear_proceed_status_thread (t);
+	}
     }
 
   do_proceed ();
