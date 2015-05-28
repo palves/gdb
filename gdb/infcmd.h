@@ -21,19 +21,15 @@
 struct itset;
 struct thread_info;
 
-enum execution_arg
-  {
-    EXEC_OPTION_DEFAULT = 0,
-    EXEC_OPTION_ALL = 1,
-    EXEC_OPTION_LOCK = 2,
-  };
+#include "infrun.h"
 
 extern char *parse_execution_args (char *args, enum execution_arg *exec_option);
 
 typedef void (*aec_callback_func) (struct thread_info *thr, void *data);
 
 extern void
-  apply_execution_command (enum execution_arg exec_option,
+  apply_execution_command (int stepping_command,
+			   enum execution_arg exec_option,
 			   struct thread_info *parallel_leader,
 			   aec_callback_func callback, void *callback_data);
 

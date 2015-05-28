@@ -220,13 +220,28 @@ extern void do_target_resume (ptid_t ptid, int step, enum gdb_signal signo);
 
 extern int follow_fork (int prepare_only);
 
+enum execution_arg
+  {
+    EXEC_OPTION_DEFAULT = 0,
+    EXEC_OPTION_ALL = 1,
+    EXEC_OPTION_LOCK = 2,
+  };
+
 extern void do_proceed (void);
 extern void enqueue_step_overs_leaders (struct thread_info *tp);
 extern void enqueue_step_overs (struct thread_info *tp);
-extern void mark_threads_running (ptid_t resume_ptid);
+extern void mark_threads_running (ptid_t resume_ptid,
+				  int step,
+				  enum execution_arg exec_option);
 extern void prepare_proceed (CORE_ADDR addr, enum gdb_signal siggnal);
 
 enum itset_width default_run_control_width (void);
+
+int should_run_inferior (struct inferior *inf, int step,
+			 enum execution_arg exec_option);
+int should_run_thread (struct thread_info *thr, int step,
+		       enum execution_arg exec_option);
+
 
 extern int stop_after_trap;
 

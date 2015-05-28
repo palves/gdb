@@ -2744,6 +2744,7 @@ clear_proceed_status_inferior (struct inferior *inf)
 enum itset_width
 default_run_control_width (void)
 {
+#if 0
   if (non_stop)
     return ITSET_WIDTH_THREAD;
   else if (scheduler_mode == schedlock_on)
@@ -2751,7 +2752,66 @@ default_run_control_width (void)
   else if (!sched_multi)
     return ITSET_WIDTH_INFERIOR;
   else
+#endif
     return ITSET_WIDTH_ALL;
+}
+
+int
+should_run_inferior (struct inferior *inf, int step,
+		     enum execution_arg exec_option)
+{
+  if (itset_contains_inferior (current_itset, inf))
+    return 1;
+
+  if (exec_option == EXEC_OPTION_LOCK)
+    return 0;
+
+  if (exec_option == EXEC_OPTION_DEFAULT
+      && (non_stop
+	  || scheduler_mode == schedlock_on
+	  || (scheduler_mode == schedlock_step
+	      && step)))
+    return 0;
+
+  if (!sched_multi)
+    return 0;
+
+  if (!itset_width_contains_inferior (current_itset,
+				      default_run_control_width (),
+				      inf))
+    return 0;
+
+  return 1;
+}
+
+int
+should_run_thread (struct thread_info *thr, int step,
+		   enum execution_arg exec_option)
+{
+  if (itset_contains_thread (current_itset, thr))
+    return 1;
+
+  if (exec_option == EXEC_OPTION_LOCK)
+    return 0;
+
+  if (exec_option == EXEC_OPTION_DEFAULT
+      && (non_stop
+	  || scheduler_mode == schedlock_on
+	  || (scheduler_mode == schedlock_step
+	      && step)))
+    return 0;
+
+  if (!sched_multi
+      && !itset_contains_inferior (current_itset,
+				   get_thread_inferior (thr)))
+    return 0;
+
+  if (!itset_width_contains_thread (current_itset,
+				    default_run_control_width (),
+				    thr))
+    return 0;
+
+  return 1;
 }
 
 /* Returns true if TP is still stopped at a breakpoint that needs
@@ -2892,7 +2952,9 @@ prepare_proceed (CORE_ADDR addr, enum gdb_signal siggnal)
 }
 
 void
-mark_threads_running (ptid_t resume_ptid)
+mark_threads_running (ptid_t resume_ptid,
+		      int step,
+		      enum execution_arg exec_option)
 {
   /* Even if RESUME_PTID is a wildcard, and we end up resuming fewer
      threads (e.g., we might need to set threads stepping over
@@ -2902,14 +2964,11 @@ mark_threads_running (ptid_t resume_ptid)
      doesn't run at all.  */
   if (target_is_non_stop_p ())
     {
-      enum itset_width default_width = default_run_control_width ();
       struct thread_info *tp;
 
       ALL_NON_EXITED_THREADS (tp)
         {
-	  if (!itset_width_contains_thread (current_itset,
-					    default_width,
-					    tp))
+	  if (!should_run_thread (tp, step, exec_option))
 	    continue;
 
 	  set_running (tp->ptid, 1);
@@ -3094,7 +3153,7 @@ proceed (CORE_ADDR addr, enum gdb_signal siggnal)
   old_chain = make_cleanup (finish_thread_state_cleanup, &resume_ptid);
 
   if (!tp->control.in_infcall)
-    mark_threads_running (resume_ptid);
+    mark_threads_running (resume_ptid, 0, EXEC_OPTION_DEFAULT);
 
   /* If we're stopped at a fork/vfork, follow the branch set by the
      "set follow-fork-mode" command; otherwise, we'll just proceed

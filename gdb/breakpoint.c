@@ -11762,7 +11762,7 @@ until_break_command (char *arg, int from_tty, int anywhere)
   gdb_assert (leader != NULL);
 
   cb_data.from_tty = from_tty;
-  apply_execution_command (exec_option, leader,
+  apply_execution_command (0, exec_option, leader,
 			   until_break_aec_callback, NULL);
 }
 
