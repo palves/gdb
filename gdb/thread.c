@@ -1822,7 +1822,9 @@ tp_array_compar (const void *ap_voidp, const void *bp_voidp)
 	  * (tp_array_compar_ascending ? +1 : -1));
 }
 
-static void
+extern void restore_current_context_cleanup (void *data);
+
+void
 restore_current_context_cleanup (void *data)
 {
   struct execution_context *ctx = data;

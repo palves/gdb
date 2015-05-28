@@ -150,6 +150,7 @@ proc test {signal_thread} {
 	# It's helpful to have this in the log if the test ever
 	# happens to fail.
 	gdb_test "info threads"
+	gdb_test "itfocus"
     }
 }
 

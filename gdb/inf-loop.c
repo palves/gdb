@@ -32,6 +32,8 @@
 #include "top.h"
 #include "observer.h"
 
+#include "itset.h"
+
 /* General function to handle events in the inferior.  So far it just
    takes care of detecting errors reported by select() or poll(),
    otherwise it assumes that all is OK, and goes on reading data from
@@ -112,8 +114,18 @@ inferior_event_handler (enum inferior_event_type event_type,
 	 are only run when the command list is all done.  */
       if (interpreter_async)
 	{
+	  struct cleanup *old_chain;
+	  struct execution_context saved_ctx;
+	  struct itset *saved_current = itset_reference (current_itset);
+	  extern void restore_current_context_cleanup (void *data);
 
 	  check_frame_language_change ();
+
+	  saved_ctx = *get_current_context ();
+	  old_chain = make_cleanup (restore_current_context_cleanup, &saved_ctx);
+
+	  set_current_context ();
+	  itfocus_from_thread_switch ();
 
 	  /* Don't propagate breakpoint commands errors.  Either we're
 	     stopping or some command resumes the inferior.  The user will
@@ -127,6 +139,11 @@ inferior_event_handler (enum inferior_event_type event_type,
 	      exception_print (gdb_stderr, e);
 	    }
 	  END_CATCH
+
+	  itset_free (current_itset);
+	  current_itset = saved_current;
+
+	  do_cleanups (old_chain);
 	}
       break;
 
