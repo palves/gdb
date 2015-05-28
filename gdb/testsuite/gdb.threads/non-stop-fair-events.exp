@@ -227,9 +227,10 @@ proc test {signal_thread} {
 
 	enable_debug 0
 
-	# It's helpful to have this in the log if the test ever
+	# It's helpful to have these in the log if the test ever
 	# happens to fail.
 	gdb_test "info threads"
+	gdb_test "itfocus"
 
 	return $gotit
     }
