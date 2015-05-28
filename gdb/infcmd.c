@@ -133,7 +133,6 @@ apply_execution_command (int stepping_command,
   struct cleanup *old_chain;
   enum itset_width default_width = default_run_control_width ();
   struct thread_info *tmp;
-  struct itset *itset = current_itset;
 
   resume_ptid = user_visible_resume_ptid (cur_thr->control.stepping_command);
 
@@ -178,7 +177,7 @@ apply_execution_command (int stepping_command,
 	  if (!should_run_thread (t, stepping_command, exec_option))
 	    continue;
 
-	  if (!itset_contains_thread_maybe_width (itset,
+	  if (!itset_contains_thread_maybe_width (current_itset,
 						  default_run_control_width (),
 						  t,
 						  including_width))
@@ -228,7 +227,7 @@ apply_execution_command (int stepping_command,
 	  if (!should_run_thread (t, stepping_command, exec_option))
 	    continue;
 
-	  if (itset_contains_thread_maybe_width (itset,
+	  if (itset_contains_thread_maybe_width (current_itset,
 						 default_run_control_width (),
 						 t,
 						 including_width))
