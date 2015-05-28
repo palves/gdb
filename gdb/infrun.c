@@ -2995,7 +2995,6 @@ enqueue_step_overs (struct thread_info *tp)
 {
   if (!non_stop)
     {
-      enum itset_width default_width = default_run_control_width ();
       struct thread_info *current = tp;
 
       ALL_NON_EXITED_THREADS (tp)
@@ -3006,7 +3005,7 @@ enqueue_step_overs (struct thread_info *tp)
 	    continue;
 
 	  /* Ignore threads of processes we're not resuming.  */
-	  if (!itset_width_contains_thread (current_itset, default_width, tp))
+	  if (!(tp->state == THREAD_RUNNING || tp->control.in_infcall))
 	    continue;
 
 	  if (!thread_still_needs_step_over (tp))
