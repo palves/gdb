@@ -3059,7 +3059,6 @@ parse_elem_1 (struct itset_parser *self)
   if (*self->spec == ' '
       || *self->spec == '\0'
       || *self->spec == '&'
-      || *self->spec == '|'
       || *self->spec == ','
       || *self->spec == '('
       || *self->spec == ')')
