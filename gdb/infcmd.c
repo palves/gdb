@@ -826,6 +826,10 @@ run_command_1 (char *args, int from_tty, int tbreak_at_main)
      shouldn't refer to run_target again.  */
   run_target = NULL;
   set_current_context ();
+
+  /* Must do this before set_running, so that MI emits ^running.  */
+  observer_notify_about_to_proceed ();
+
   set_running (pid_to_ptid (ptid_get_pid (inferior_ptid)), 1);
 
   /* We're starting off a new process.  When we get out of here, in
