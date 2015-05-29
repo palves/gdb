@@ -1452,6 +1452,7 @@ create_ada_task_range_itset (enum itset_width width, int is_current,
 }
 
 static const char *parse_range (const char *spec, struct spec_range *range);
+static int looks_like_range (const char *spec);
 
 typedef struct itset_elt_range *(*create_double_range_itset_func)
   (enum itset_width, int, struct spec_range *, struct spec_range *);
@@ -1481,6 +1482,9 @@ parse_double_range_itset (const char **spec, enum itset_width width,
       (*spec)++;
     }
   else if (default_type_char != range_type_char)
+    return NULL;
+
+  if (!looks_like_range (*spec))
     return NULL;
 
   *spec = parse_range (*spec, &ranges[0]);
