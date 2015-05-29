@@ -907,6 +907,8 @@ proc mi_run_cmd_full {use_mi_command args} {
     gdb_expect {
 	-re "${run_match}\\^running\r\n(\\*running,thread-id=\"\[^\"\]+\"\r\n|=thread-created,id=\"1\",group-id=\"\[0-9\]+\"\r\n)*(${library_loaded_re})*(${thread_selected_re})?${mi_gdb_prompt}" {
 	}
+	-re "${run_match}\\^running\r\n.*${mi_gdb_prompt}" {
+	}
 	-re "\\^error,msg=\"The target does not support running in non-stop mode.\"" {
 	    unsupported "Non-stop mode not supported"
 	    return -1

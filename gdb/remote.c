@@ -3633,12 +3633,32 @@ remote_start_remote (int from_tty, struct target_ops *target, int extended_p)
     }
   else
     {
+      struct inferior *inf;
+
       /* Clear WFI global state.  Do this before finding about new
 	 threads and inferiors, and setting the current inferior.
 	 Otherwise we would clear the proceed status of the current
 	 inferior when we want its stop_soon state to be preserved
 	 (see notice_new_inferior).  */
       init_wait_for_inferior ();
+
+      /* init_wait_for_inferior used to do this.  This is
+	 broken... Above we've already updated the thread list and
+	 created inferiors, and given in non-stop we assume they're
+	 running, until we see a stop reply, we manually requested a
+	 pause and set stop_soon.  Here we're clearing it, so that the
+	 stops indeed result in normal_stop being called.  This is
+	 bogus, but the testsuite expects this (e.g.,
+	 gdb.server/solib-list.exp).  What we should be doing is
+	 fetching the thread list to a local VEC without adding it to
+	 GDB's main thread list, fetch pending stop replies, to detect
+	 which threads are supposed to be stopped on connection, and
+	 only _then_ add threads to the list with the correct
+	 running/stopped state.  */
+      ALL_INFERIORS (inf)
+	{
+	  inf->control.stop_soon = NO_STOP_QUIETLY;
+	}
 
       /* In non-stop, we will either get an "OK", meaning that there
 	 are no stopped threads at this time; or, a regular stop
