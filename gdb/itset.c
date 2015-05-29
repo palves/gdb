@@ -1980,14 +1980,49 @@ itset_elt_negated_destroy (struct itset_elt *base)
 /* Implementation of `contains_inferior' method.  */
 
 static int
+itset_elt_negated_contains_program_space (struct itset_elt *base,
+					  enum itset_width default_width,
+					  struct program_space *pspace)
+{
+  struct itset_elt_negated *elt = (struct itset_elt_negated *) base;
+
+  if (!elt->negated->vtable->contains_program_space (elt->negated,
+						     default_width,
+						     pspace))
+    return 0;
+
+  /* See comment in contains_inferior below.  */
+  return elt->negated->vtable->contains_program_space (elt->negated,
+						       default_width,
+						       pspace);
+}
+
+/* Implementation of `contains_inferior' method.  */
+
+static int
 itset_elt_negated_contains_inferior (struct itset_elt *base,
 				     enum itset_width default_width,
 				     struct inferior *inf,
 				     int including_width)
 {
   struct itset_elt_negated *elt = (struct itset_elt_negated *) base;
-  return !elt->negated->vtable->contains_inferior (elt->negated, default_width,
-						   inf, including_width);
+
+  if (including_width
+      && !elt->negated->vtable->contains_inferior (elt->negated,
+						   default_width,
+						   inf, 1))
+    return 0;
+
+  /* Hmm.  This doesn't actually negate on purpose.  Otherwise, what
+     would:
+
+       "itfocus ~at1.1 b main"
+
+     mean?  But this looks odd.  FIXME.  Maybe we should think of a
+     better design.  */
+  return elt->negated->vtable->contains_inferior (elt->negated,
+						   default_width,
+						   inf, 0);
 }
 
 /* Implementation of `contains_thread' method.  */
@@ -2001,26 +2036,13 @@ itset_elt_negated_contains_thread (struct itset_elt *base,
 {
   struct itset_elt_negated *elt = (struct itset_elt_negated *) base;
 
-  if (elt->negated->vtable->contains_thread (elt->negated, default_width,
-					     NULL, thr, 1))
-    {
-      return !elt->negated->vtable->contains_thread (elt->negated,
-						     default_width,
-						     NULL, thr,
-						     including_width);
-    }
-  return 0;
+  if (including_width && !elt->negated->vtable->contains_thread (elt->negated,
+								 default_width,
+								 NULL, thr, 1))
+    return 0;
 
-  if (!including_width)
-    return !elt->negated->vtable->contains_thread (elt->negated, default_width,
+  return !elt->negated->vtable->contains_thread (elt->negated, default_width,
 						   NULL, thr, 0);
-  else
-    return (elt->negated->vtable->contains_thread (elt->negated, default_width,
-						   NULL, thr, 1)
-	    && !elt->negated->vtable->contains_thread (elt->negated,
-						       default_width,
-						       NULL, thr,
-						       including_width));
 }
 
 static char *
@@ -2063,7 +2085,7 @@ static const struct itset_elt_vtable itset_elt_negated_vtable =
 {
   itset_elt_negated_destroy,
   NULL, /* is_range_type */
-  NULL, /* contains_program_space */
+  itset_elt_negated_contains_program_space,
   itset_elt_negated_contains_inferior,
   itset_elt_negated_contains_thread,
   itset_elt_negated_get_spec,
