@@ -1525,6 +1525,28 @@ intersect_destroy (struct itset_elt *base)
   VEC_free (itset_elt_ptr, set->elements);
 }
 
+/* Implementation of `contains_program_space' method.  */
+
+static int
+intersect_contains_program_space (struct itset_elt *base,
+				  enum itset_width default_width,
+				  struct program_space *pspace)
+{
+  struct itset_elt_intersect *intersect = (struct itset_elt_intersect *) base;
+  struct itset_elt *elt;
+  int ix;
+
+  gdb_assert (!VEC_empty (itset_elt_ptr, intersect->elements));
+
+  for (ix = 0; VEC_iterate (itset_elt_ptr, intersect->elements, ix, elt); ++ix)
+    {
+      if (!elt->vtable->contains_program_space (elt, default_width, pspace))
+	return 0;
+    }
+
+  return 1;
+}
+
 /* Implementation of `contains_inferior' method.  */
 
 static int
@@ -1627,7 +1649,7 @@ static const struct itset_elt_vtable intersect_vtable =
 {
   intersect_destroy,
   NULL, /* is_range_type */
-  NULL, /* contains_program_space */
+  intersect_contains_program_space,
   intersect_contains_inferior,
   intersect_contains_thread,
   intersect_get_spec,
@@ -2087,35 +2109,37 @@ state_contains_thread (struct itset_elt *base,
   return thr->state == state->state;
 }
 
-#if 0
- /* Implementation of `contains_inferior' method.  */
+ /* Implementation of `contains_program_space' method.  */
 
 static int
 state_contains_program_space (struct itset_elt *base,
+			      enum itset_width default_width,
 			      struct program_space *pspace)
 {
   struct itset_elt_state *state = (struct itset_elt_state *) base;
   struct thread_info *thr;
+  /* FIXME: does this method need to take this as parameter?  */
+  int including_width = 1;
 
-  /* True if we find a thread of this inferior that is in the state
-     we're interested in.  */
+  /* True if we find a thread that is in the state we're interested in
+     of an inferior that is bound to PSPACE */
   ALL_THREADS (thr)
     {
       /* It's cheaper to check the state first, because looking up the
 	 a thread's inferior is O(n).  */
-      if (state_contains_thread (base, thr))
+      if (state_contains_thread (base, default_width,
+				 NULL, thr, including_width))
 	{
 	  struct inferior *thr_inf;
 
 	  thr_inf = get_thread_inferior (thr);
-	  if (thr_inf == inf)
+	  if (thr_inf->pspace == pspace)
 	    return 1;
 	}
     }
 
   return 0;
 }
-#endif
 
 /* Implementation of `contains_inferior' method.  */
 
@@ -2163,14 +2187,21 @@ state_get_spec (struct itset_elt *base)
   gdb_assert_not_reached ("unhandled state");
 }
 
+static enum itset_width
+state_get_width (struct itset_elt *base)
+{
+  return ITSET_WIDTH_DEFAULT;
+}
+
 static const struct itset_elt_vtable state_vtable =
 {
   NULL,
   NULL, /* is_range_type */
-  NULL, /* contains_program_space */
+  state_contains_program_space,
   state_contains_inferior,
   state_contains_thread,
-  state_get_spec
+  state_get_spec,
+  state_get_width
 };
 
 static struct itset_elt *
@@ -3407,12 +3438,15 @@ set_get_focus_object_type (VEC (itset_elt_ptr) *elements)
 
   for (ix = 0; VEC_iterate (itset_elt_ptr, elements, ix, elt); ++ix)
     {
-      char object_type_char;
+      char object_type_char = '\0';
 
-      object_type_char = elt->vtable->get_focus_object_type (elt);
+      if (elt->vtable->get_focus_object_type != NULL)
+	object_type_char = elt->vtable->get_focus_object_type (elt);
       if (object_type_char != '\0')
 	return object_type_char;
     }
+
+  return '\0';
 
   gdb_assert_not_reached ("set has no object type");
 }
