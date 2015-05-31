@@ -4433,15 +4433,15 @@ whichsets_callback (struct thread_info *thr, void *data)
   struct inferior *inf = get_thread_inferior (thr);
   int printed = 0;
 
-  ALL_NAMED_ITSETS(named_itset)
+  ALL_NAMED_ITSETS (named_itset)
     {
       QUIT;
 
-      if (itset_width_contains_thread (named_itset->set, ITSET_WIDTH_ALL, thr))
+      if (itset_contains_thread (named_itset->set, thr))
 	{
 	  if (!printed)
 	    {
-	      printf_filtered (_("i%d.t%d (%s) is in:"),
+	      printf_filtered (_("Thread %d.%d (%s) is in:"),
 			       inf->num, thr->num,
 			       target_pid_to_str (thr->ptid));
 	      printf_filtered (" %s", itset_name (named_itset->set));
