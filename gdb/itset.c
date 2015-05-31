@@ -3625,22 +3625,24 @@ itset_create_lockstep (void)
   return itset_create_spec ("t/L/t1.1");
 }
 
+static struct itset *itset_from_elt (struct itset_elt *elt);
+
 static struct itset *
 itset_create_all (void)
 {
-  return itset_create_spec ("g/all/t1.1");
+  return itset_from_elt (create_all_itset ());
 }
 
 static struct itset *
 itset_create_running (void)
 {
-  return itset_create_spec ("g/running/t1.1");
+  return itset_from_elt (create_state_itset (THREAD_RUNNING));
 }
 
 static struct itset *
 itset_create_stopped (void)
 {
-  return itset_create_spec ("g/stopped/t1.1");
+  return itset_from_elt (create_state_itset (THREAD_STOPPED));
 }
 
 static struct itset *
