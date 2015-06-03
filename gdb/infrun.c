@@ -61,6 +61,7 @@
 #include "target-dcache.h"
 #include "terminal.h"
 #include "solist.h"
+#include "readline/readline.h"
 
 /* Prototypes for local functions */
 
@@ -3249,6 +3250,29 @@ reinstall_readline_callback_handler_cleanup (void *arg)
     gdb_rl_callback_handler_reinstall ();
 }
 
+static void
+redisplay_prompt (void *old_prompt)
+{
+  rl_set_prompt (old_prompt);
+  xfree (old_prompt);
+  (*rl_redisplay_function) ();
+}
+
+static void
+hide_prompt_and_make_cleanup (void)
+{
+  char *prompt;
+
+  /* Don't rely on rl_save_prompt, as that doesn't handle nesting.  */
+
+  prompt = xstrdup (rl_prompt);
+
+  rl_set_prompt ("");
+  (*rl_redisplay_function) ();
+
+  make_cleanup (redisplay_prompt, prompt);
+}
+
 /* Asynchronous version of wait_for_inferior.  It is called by the
    event loop whenever a change of state is detected on the file
    descriptor corresponding to the target.  It can be called more than
@@ -3268,6 +3292,10 @@ fetch_inferior_event (void *client_data)
   int was_sync = sync_execution;
   int cmd_done = 0;
   ptid_t waiton_ptid = minus_one_ptid;
+
+  /* Hide the prompt while here, so that any message printed while
+     handling the event doesn't mess up with the prompt.  */
+  hide_prompt_and_make_cleanup ();
 
   memset (ecs, 0, sizeof (*ecs));
 

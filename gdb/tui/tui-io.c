@@ -132,10 +132,6 @@ static FILE *tui_old_rl_outstream;
 static int tui_readline_pipe[2];
 #endif
 
-/* The last gdb prompt that was registered in readline.
-   This may be the main gdb prompt or a secondary prompt.  */
-static char *tui_rl_saved_prompt;
-
 static void
 tui_putc (char c)
 {
@@ -221,7 +217,7 @@ tui_redisplay_readline (void)
   if (tui_current_key_mode == TUI_SINGLE_KEY_MODE)
     prompt = "";
   else
-    prompt = tui_rl_saved_prompt;
+    prompt = rl_display_prompt;
   
   c_pos = -1;
   c_line = -1;
@@ -301,11 +297,6 @@ tui_redisplay_readline (void)
 static void
 tui_prep_terminal (int notused1)
 {
-  /* Save the prompt registered in readline to correctly display it.
-     (we can't use gdb_prompt() due to secondary prompts and can't use
-     rl_prompt because it points to an alloca buffer).  */
-  xfree (tui_rl_saved_prompt);
-  tui_rl_saved_prompt = rl_prompt != NULL ? xstrdup (rl_prompt) : NULL;
 }
 
 /* Readline callback to restore the terminal.  It is called once each
