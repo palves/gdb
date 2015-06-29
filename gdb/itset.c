@@ -4168,13 +4168,13 @@ itfocus_command (char *spec, int from_tty)
 	{
 	  struct execution_context saved_ctx;
 
-	  save_current_itset ();
+	  old_chain = save_current_itset ();
 	  current_itset = itset;
 
 	  saved_ctx = *get_current_context ();
 	  make_cleanup (restore_current_context_cleanup, &saved_ctx);
 
-	  old_chain = make_cleanup_restore_current_thread ();
+	  make_cleanup_restore_current_thread ();
 
 	  switch_to_itset (itset);
 
