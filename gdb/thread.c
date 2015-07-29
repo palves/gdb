@@ -1394,6 +1394,25 @@ make_cleanup_restore_current_thread (void)
 			    restore_current_thread_cleanup_dtor);
 }
 
+/* Cleanup that decrements a thread's refcount.  */
+
+static void
+thread_decref_cleanup (void *arg)
+{
+  struct thread_info *thr = arg;
+
+  thr->refcount--;
+}
+
+/* See gdbthread.h.  */
+
+struct cleanup *
+make_cleanup_thread_hold_ref (struct thread_info *thr)
+{
+  thr->refcount++;
+  return make_cleanup (thread_decref_cleanup, thr);
+}
+
 /* If non-zero tp_array_compar should sort in ascending order, otherwise in
    descending order.  */
 

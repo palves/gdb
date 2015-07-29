@@ -471,6 +471,11 @@ extern void print_thread_info (struct ui_out *uiout, char *threads,
 
 extern struct cleanup *make_cleanup_restore_current_thread (void);
 
+/* Increment the refcount of THR, and return a cleanup that decrements
+   it back.  Used to grab a strong reference to THR.  */
+
+extern struct cleanup *make_cleanup_thread_hold_ref (struct thread_info *thr);
+
 /* Returns a pointer into the thread_info corresponding to
    INFERIOR_PTID.  INFERIOR_PTID *must* be in the thread list.  */
 extern struct thread_info* inferior_thread (void);

@@ -3305,13 +3305,27 @@ fetch_inferior_event (void *client_data)
   if (debug_infrun)
     print_target_wait_results (waiton_ptid, ecs->ptid, &ecs->ws);
 
-  /* If an error happens while handling the event, propagate GDB's
-     knowledge of the executing state to the frontend/user running
-     state.  */
-  if (!non_stop)
-    ts_old_chain = make_cleanup (finish_thread_state_cleanup, &minus_one_ptid);
-  else
-    ts_old_chain = make_cleanup (finish_thread_state_cleanup, &ecs->ptid);
+  ts_old_chain = make_cleanup (null_cleanup, NULL);
+  if (ecs->ws.kind != TARGET_WAITKIND_IGNORE
+      && ecs->ws.kind != TARGET_WAITKIND_NO_RESUMED)
+    {
+      /* If an error happens while handling the event, propagate GDB's
+	 knowledge of the executing state to the frontend/user running
+	 state.  */
+      if (!non_stop)
+	make_cleanup (finish_thread_state_cleanup, &minus_one_ptid);
+      else if (ecs->ws.kind != TARGET_WAITKIND_EXITED
+	       && ecs->ws.kind != TARGET_WAITKIND_SIGNALLED)
+	{
+	  struct thread_info *thr = find_thread_ptid (ecs->ptid);
+
+	  /* Grab a strong reference to the thread, in case the target
+	     dies/disconnects while we're processing the event, and then
+	     later on we try to finish the stale thread's state.  */
+	  make_cleanup_thread_hold_ref (thr);
+	  make_cleanup (finish_thread_state_cleanup, &ecs->ptid);
+	}
+    }
 
   /* Get executed before make_cleanup_restore_current_thread above to apply
      still for the thread which has thrown the exception.  */
