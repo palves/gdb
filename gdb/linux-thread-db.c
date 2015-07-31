@@ -440,6 +440,21 @@ thread_from_lwp (ptid_t ptid)
   tp = find_thread_ptid (ptid);
   record_thread (info, tp, ptid, &th, &ti);
 }
+
+static void
+thread_from_lwp_nothrow (ptid_t ptid)
+{
+  TRY
+    {
+      thread_from_lwp (ptid);
+    }
+  CATCH (ex, RETURN_MASK_ERROR)
+    {
+      exception_print (gdb_stderr, ex);
+    }
+  END_CATCH
+}
+
 
 
 /* See linux-nat.h.  */
@@ -457,11 +472,11 @@ thread_db_notice_clone (ptid_t parent, ptid_t child)
   if (info == NULL)
     return 0;
 
-  thread_from_lwp (child);
+  thread_from_lwp_nothrow (child);
 
   /* If we do not know about the main thread yet, this would be a good
      time to find it.  */
-  thread_from_lwp (parent);
+  thread_from_lwp_nothrow (parent);
   return 1;
 }
 
@@ -761,7 +776,7 @@ try_thread_db_load_1 (struct thread_db_info *info)
 
       ALL_LWPS (lp)
 	if (ptid_get_pid (lp->ptid) == pid)
-	  thread_from_lwp (lp->ptid);
+	  thread_from_lwp_nothrow (lp->ptid);
 
       linux_unstop_all_lwps ();
     }
@@ -1540,7 +1555,7 @@ thread_db_wait (struct target_ops *ops,
     check_event (ptid);
 
   /* Fill in the thread's user-level thread id and status.  */
-  thread_from_lwp (ptid);
+  thread_from_lwp_nothrow (ptid);
 
   return ptid;
 }

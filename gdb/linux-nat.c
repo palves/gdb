@@ -2502,25 +2502,38 @@ check_stopped_by_watchpoint (struct lwp_info *lp)
 /* Called when the LWP stopped for a trap that could be explained by a
    watchpoint or a breakpoint.  */
 
-static void
+static int
 save_sigtrap (struct lwp_info *lp)
 {
   gdb_assert (lp->stop_reason == TARGET_STOPPED_BY_NO_REASON);
   gdb_assert (lp->status != 0);
 
-  /* Check first if this was a SW/HW breakpoint before checking
-     watchpoints, because at least s390 can't tell the data address of
-     hardware watchpoint hits, and the kernel returns
-     stopped-by-watchpoint as long as there's a watchpoint set.  */
-  if (linux_nat_status_is_event (lp->status))
-    check_stopped_by_breakpoint (lp);
+  TRY
+    {
+      /* Check first if this was a SW/HW breakpoint before checking
+	 watchpoints, because at least s390 can't tell the data
+	 address of hardware watchpoint hits, and the kernel returns
+	 stopped-by-watchpoint as long as there's a watchpoint
+	 set.  */
+      if (linux_nat_status_is_event (lp->status))
+	check_stopped_by_breakpoint (lp);
 
-  /* Note that TRAP_HWBKPT can indicate either a hardware breakpoint
-     or hardware watchpoint.  Check which is which if we got
-     TARGET_STOPPED_BY_HW_BREAKPOINT.  */
-  if (lp->stop_reason == TARGET_STOPPED_BY_NO_REASON
-      || lp->stop_reason == TARGET_STOPPED_BY_HW_BREAKPOINT)
-    check_stopped_by_watchpoint (lp);
+      /* Note that TRAP_HWBKPT can indicate either a hardware
+	 breakpoint or hardware watchpoint.  Check which is which if
+	 we got TARGET_STOPPED_BY_HW_BREAKPOINT.  */
+      if (lp->stop_reason == TARGET_STOPPED_BY_NO_REASON
+	  || lp->stop_reason == TARGET_STOPPED_BY_HW_BREAKPOINT)
+	check_stopped_by_watchpoint (lp);
+    }
+  CATCH (ex, RETURN_MASK_ERROR)
+    {
+      if (!check_ptrace_stopped_lwp_gone (lp))
+	throw_exception (ex);
+      return 0;
+    }
+  END_CATCH
+
+  return 1;
 }
 
 /* Returns true if the LWP had stopped for a watchpoint.  */
@@ -3332,7 +3345,13 @@ linux_nat_filter_event (int lwpid, int status)
   /* An interesting event.  */
   gdb_assert (lp);
   lp->status = status;
-  save_sigtrap (lp);
+  if (!save_sigtrap (lp))
+    {
+      /* LWP disappeared (another thread exited the process).  Discard
+	 this event.  We'll collect the process's exit status next
+	 time we wait.  */
+      return NULL;
+    }
   return lp;
 }
 
