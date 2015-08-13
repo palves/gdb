@@ -160,7 +160,7 @@ static unsigned char use_poll = USE_POLL;
 #include <io.h>
 #endif
 
-static struct
+struct gdb_notifier
   {
     /* Ptr to head of file handler list.  */
     file_handler *first_file_handler;
@@ -203,8 +203,7 @@ static struct
 
     /* Flag to tell whether the timeout should be used.  */
     int timeout_valid;
-  }
-gdb_notifier;
+  };
 
 /* Structure associated with a timer.  PROC will be executed at the
    first occasion after WHEN.  */
@@ -219,39 +218,48 @@ struct gdb_timer
 
 /* List of currently active timers.  It is sorted in order of
    increasing timers.  */
-static struct
+struct timer_list
   {
     /* Pointer to first in timer list.  */
     struct gdb_timer *first_timer;
 
     /* Id of the last timer created.  */
     int num_timers;
-  }
-timer_list;
+  };
 
 /* All the async_signal_handlers gdb is interested in are kept onto
    this list.  */
-static struct
+struct sighandler_list
   {
     /* Pointer to first in handler list.  */
     async_signal_handler *first_handler;
 
     /* Pointer to last in handler list.  */
     async_signal_handler *last_handler;
-  }
-sighandler_list;
+  };
 
 /* All the async_event_handlers gdb is interested in are kept onto
    this list.  */
-static struct
+struct async_event_handler_list
   {
     /* Pointer to first in handler list.  */
     async_event_handler *first_handler;
 
     /* Pointer to last in handler list.  */
     async_event_handler *last_handler;
-  }
-async_event_handler_list;
+  };
+
+struct event_loop
+{
+  struct gdb_notifier gdb_notifier;
+  struct timer_list timer_list;
+  struct sighandler_list sighandler_list;
+  struct async_event_handler_list async_event_handler_list;
+
+  int event_source_head;
+};
+
+#define NUMBER_OF_SOURCES 3
 
 static int invoke_async_signal_handlers (void);
 static void create_file_handler (int fd, int mask, handler_func *proc,
@@ -262,6 +270,15 @@ static int update_wait_timeout (void);
 static int poll_timers (void);
 
 
+static struct event_loop event_loop;
+static struct event_loop *current_event_loop = &event_loop;
+
+static struct event_loop *
+get_event_loop (void)
+{
+  return current_event_loop;
+}
+
 /* Process one high level event.  If nothing is ready at this time,
    wait for something to happen (via gdb_wait_for_event), then process
    it.  Returns >0 if something was done otherwise returns <0 (this
@@ -270,8 +287,8 @@ static int poll_timers (void);
 int
 gdb_do_one_event (void)
 {
-  static int event_source_head = 0;
-  const int number_of_sources = 3;
+  struct event_loop *el = get_event_loop ();
+
   int current = 0;
 
   /* First let's see if there are any asynchronous signal handlers
@@ -282,11 +299,11 @@ gdb_do_one_event (void)
 
   /* To level the fairness across event sources, we poll them in a
      round-robin fashion.  */
-  for (current = 0; current < number_of_sources; current++)
+  for (current = 0; current < NUMBER_OF_SOURCES; current++)
     {
       int res;
 
-      switch (event_source_head)
+      switch (el->event_source_head)
 	{
 	case 0:
 	  /* Are any timers that are ready?  */
@@ -304,12 +321,12 @@ gdb_do_one_event (void)
 	default:
 	  internal_error (__FILE__, __LINE__,
 			  "unexpected event_source_head %d",
-			  event_source_head);
+			  el->event_source_head);
 	}
 
-      event_source_head++;
-      if (event_source_head == number_of_sources)
-	event_source_head = 0;
+      el->event_source_head++;
+      if (el->event_source_head == NUMBER_OF_SOURCES)
+	el->event_source_head = 0;
 
       if (res > 0)
 	return 1;
@@ -440,11 +457,12 @@ static void
 create_file_handler (int fd, int mask, handler_func * proc, 
 		     gdb_client_data client_data)
 {
+  struct event_loop *el = get_event_loop ();
   file_handler *file_ptr;
 
   /* Do we already have a file handler for this file?  (We may be
      changing its associated procedure).  */
-  for (file_ptr = gdb_notifier.first_file_handler; file_ptr != NULL;
+  for (file_ptr = el->gdb_notifier.first_file_handler; file_ptr != NULL;
        file_ptr = file_ptr->next_file)
     {
       if (file_ptr->fd == fd)
@@ -458,24 +476,23 @@ create_file_handler (int fd, int mask, handler_func * proc,
       file_ptr = XNEW (file_handler);
       file_ptr->fd = fd;
       file_ptr->ready_mask = 0;
-      file_ptr->next_file = gdb_notifier.first_file_handler;
-      gdb_notifier.first_file_handler = file_ptr;
+      file_ptr->next_file = el->gdb_notifier.first_file_handler;
+      el->gdb_notifier.first_file_handler = file_ptr;
 
       if (use_poll)
 	{
 #ifdef HAVE_POLL
-	  gdb_notifier.num_fds++;
-	  if (gdb_notifier.poll_fds)
-	    gdb_notifier.poll_fds =
-	      (struct pollfd *) xrealloc (gdb_notifier.poll_fds,
-					  (gdb_notifier.num_fds
+	  el->gdb_notifier.num_fds++;
+	  if (el->gdb_notifier.poll_fds)
+	    el->gdb_notifier.poll_fds =
+	      (struct pollfd *) xrealloc (el->gdb_notifier.poll_fds,
+					  (el->gdb_notifier.num_fds
 					   * sizeof (struct pollfd)));
 	  else
-	    gdb_notifier.poll_fds =
-	      XNEW (struct pollfd);
-	  (gdb_notifier.poll_fds + gdb_notifier.num_fds - 1)->fd = fd;
-	  (gdb_notifier.poll_fds + gdb_notifier.num_fds - 1)->events = mask;
-	  (gdb_notifier.poll_fds + gdb_notifier.num_fds - 1)->revents = 0;
+	    el->gdb_notifier.poll_fds = XNEW (struct pollfd);
+	  (el->gdb_notifier.poll_fds + el->gdb_notifier.num_fds - 1)->fd = fd;
+	  (el->gdb_notifier.poll_fds + el->gdb_notifier.num_fds - 1)->events = mask;
+	  (el->gdb_notifier.poll_fds + el->gdb_notifier.num_fds - 1)->revents = 0;
 #else
 	  internal_error (__FILE__, __LINE__,
 			  _("use_poll without HAVE_POLL"));
@@ -484,22 +501,22 @@ create_file_handler (int fd, int mask, handler_func * proc,
       else
 	{
 	  if (mask & GDB_READABLE)
-	    FD_SET (fd, &gdb_notifier.check_masks[0]);
+	    FD_SET (fd, &el->gdb_notifier.check_masks[0]);
 	  else
-	    FD_CLR (fd, &gdb_notifier.check_masks[0]);
+	    FD_CLR (fd, &el->gdb_notifier.check_masks[0]);
 
 	  if (mask & GDB_WRITABLE)
-	    FD_SET (fd, &gdb_notifier.check_masks[1]);
+	    FD_SET (fd, &el->gdb_notifier.check_masks[1]);
 	  else
-	    FD_CLR (fd, &gdb_notifier.check_masks[1]);
+	    FD_CLR (fd, &el->gdb_notifier.check_masks[1]);
 
 	  if (mask & GDB_EXCEPTION)
-	    FD_SET (fd, &gdb_notifier.check_masks[2]);
+	    FD_SET (fd, &el->gdb_notifier.check_masks[2]);
 	  else
-	    FD_CLR (fd, &gdb_notifier.check_masks[2]);
+	    FD_CLR (fd, &el->gdb_notifier.check_masks[2]);
 
-	  if (gdb_notifier.num_fds <= fd)
-	    gdb_notifier.num_fds = fd + 1;
+	  if (el->gdb_notifier.num_fds <= fd)
+	    el->gdb_notifier.num_fds = fd + 1;
 	}
     }
 
@@ -515,20 +532,21 @@ create_file_handler (int fd, int mask, handler_func * proc,
 static file_handler *
 get_next_file_handler_to_handle_and_advance (void)
 {
+  struct event_loop *el = get_event_loop ();
   file_handler *curr_next;
 
   /* The first time around, this is still NULL.  */
-  if (gdb_notifier.next_file_handler == NULL)
-    gdb_notifier.next_file_handler = gdb_notifier.first_file_handler;
+  if (el->gdb_notifier.next_file_handler == NULL)
+    el->gdb_notifier.next_file_handler = el->gdb_notifier.first_file_handler;
 
-  curr_next = gdb_notifier.next_file_handler;
+  curr_next = el->gdb_notifier.next_file_handler;
   gdb_assert (curr_next != NULL);
 
   /* Advance.  */
-  gdb_notifier.next_file_handler = curr_next->next_file;
+  el->gdb_notifier.next_file_handler = curr_next->next_file;
   /* Wrap around, if necessary.  */
-  if (gdb_notifier.next_file_handler == NULL)
-    gdb_notifier.next_file_handler = gdb_notifier.first_file_handler;
+  if (el->gdb_notifier.next_file_handler == NULL)
+    el->gdb_notifier.next_file_handler = el->gdb_notifier.first_file_handler;
 
   return curr_next;
 }
@@ -538,6 +556,7 @@ get_next_file_handler_to_handle_and_advance (void)
 void
 delete_file_handler (int fd)
 {
+  struct event_loop *el = get_event_loop ();
   file_handler *file_ptr, *prev_ptr = NULL;
   int i;
 #ifdef HAVE_POLL
@@ -547,7 +566,7 @@ delete_file_handler (int fd)
 
   /* Find the entry for the given file.  */
 
-  for (file_ptr = gdb_notifier.first_file_handler; file_ptr != NULL;
+  for (file_ptr = el->gdb_notifier.first_file_handler; file_ptr != NULL;
        file_ptr = file_ptr->next_file)
     {
       if (file_ptr->fd == fd)
@@ -564,22 +583,22 @@ delete_file_handler (int fd)
          but the one we want to get rid of.  */
 
       new_poll_fds = (struct pollfd *) 
-	xmalloc ((gdb_notifier.num_fds - 1) * sizeof (struct pollfd));
+	xmalloc ((el->gdb_notifier.num_fds - 1) * sizeof (struct pollfd));
 
-      for (i = 0, j = 0; i < gdb_notifier.num_fds; i++)
+      for (i = 0, j = 0; i < el->gdb_notifier.num_fds; i++)
 	{
-	  if ((gdb_notifier.poll_fds + i)->fd != fd)
+	  if ((el->gdb_notifier.poll_fds + i)->fd != fd)
 	    {
-	      (new_poll_fds + j)->fd = (gdb_notifier.poll_fds + i)->fd;
-	      (new_poll_fds + j)->events = (gdb_notifier.poll_fds + i)->events;
+	      (new_poll_fds + j)->fd = (el->gdb_notifier.poll_fds + i)->fd;
+	      (new_poll_fds + j)->events = (el->gdb_notifier.poll_fds + i)->events;
 	      (new_poll_fds + j)->revents
-		= (gdb_notifier.poll_fds + i)->revents;
+		= (el->gdb_notifier.poll_fds + i)->revents;
 	      j++;
 	    }
 	}
-      xfree (gdb_notifier.poll_fds);
-      gdb_notifier.poll_fds = new_poll_fds;
-      gdb_notifier.num_fds--;
+      xfree (el->gdb_notifier.poll_fds);
+      el->gdb_notifier.poll_fds = new_poll_fds;
+      el->gdb_notifier.num_fds--;
 #else
       internal_error (__FILE__, __LINE__,
 		      _("use_poll without HAVE_POLL"));
@@ -588,25 +607,25 @@ delete_file_handler (int fd)
   else
     {
       if (file_ptr->mask & GDB_READABLE)
-	FD_CLR (fd, &gdb_notifier.check_masks[0]);
+	FD_CLR (fd, &el->gdb_notifier.check_masks[0]);
       if (file_ptr->mask & GDB_WRITABLE)
-	FD_CLR (fd, &gdb_notifier.check_masks[1]);
+	FD_CLR (fd, &el->gdb_notifier.check_masks[1]);
       if (file_ptr->mask & GDB_EXCEPTION)
-	FD_CLR (fd, &gdb_notifier.check_masks[2]);
+	FD_CLR (fd, &el->gdb_notifier.check_masks[2]);
 
       /* Find current max fd.  */
 
-      if ((fd + 1) == gdb_notifier.num_fds)
+      if ((fd + 1) == el->gdb_notifier.num_fds)
 	{
-	  gdb_notifier.num_fds--;
-	  for (i = gdb_notifier.num_fds; i; i--)
+	  el->gdb_notifier.num_fds--;
+	  for (i = el->gdb_notifier.num_fds; i; i--)
 	    {
-	      if (FD_ISSET (i - 1, &gdb_notifier.check_masks[0])
-		  || FD_ISSET (i - 1, &gdb_notifier.check_masks[1])
-		  || FD_ISSET (i - 1, &gdb_notifier.check_masks[2]))
+	      if (FD_ISSET (i - 1, &el->gdb_notifier.check_masks[0])
+		  || FD_ISSET (i - 1, &el->gdb_notifier.check_masks[1])
+		  || FD_ISSET (i - 1, &el->gdb_notifier.check_masks[2]))
 		break;
 	    }
-	  gdb_notifier.num_fds = i;
+	  el->gdb_notifier.num_fds = i;
 	}
     }
 
@@ -617,21 +636,21 @@ delete_file_handler (int fd)
 
   /* If this file handler was going to be the next one to be handled,
      advance to the next's next, if any.  */
-  if (gdb_notifier.next_file_handler == file_ptr)
+  if (el->gdb_notifier.next_file_handler == file_ptr)
     {
       if (file_ptr->next_file == NULL
-	  && file_ptr == gdb_notifier.first_file_handler)
-	gdb_notifier.next_file_handler = NULL;
+	  && file_ptr == el->gdb_notifier.first_file_handler)
+	el->gdb_notifier.next_file_handler = NULL;
       else
 	get_next_file_handler_to_handle_and_advance ();
     }
 
   /* Get rid of the file handler in the file handler list.  */
-  if (file_ptr == gdb_notifier.first_file_handler)
-    gdb_notifier.first_file_handler = file_ptr->next_file;
+  if (file_ptr == el->gdb_notifier.first_file_handler)
+    el->gdb_notifier.first_file_handler = file_ptr->next_file;
   else
     {
-      for (prev_ptr = gdb_notifier.first_file_handler;
+      for (prev_ptr = el->gdb_notifier.first_file_handler;
 	   prev_ptr->next_file != file_ptr;
 	   prev_ptr = prev_ptr->next_file)
 	;
@@ -720,6 +739,7 @@ handle_file_event (file_handler *file_ptr, int ready_mask)
 static int
 gdb_wait_for_event (int block)
 {
+  struct event_loop *el = get_event_loop ();
   file_handler *file_ptr;
   int num_found = 0;
 
@@ -727,7 +747,7 @@ gdb_wait_for_event (int block)
   gdb_flush (gdb_stdout);
   gdb_flush (gdb_stderr);
 
-  if (gdb_notifier.num_fds == 0)
+  if (el->gdb_notifier.num_fds == 0)
     return -1;
 
   if (block)
@@ -739,12 +759,14 @@ gdb_wait_for_event (int block)
       int timeout;
 
       if (block)
-	timeout = gdb_notifier.timeout_valid ? gdb_notifier.poll_timeout : -1;
+	timeout = (el->gdb_notifier.timeout_valid
+		   ? el->gdb_notifier.poll_timeout
+		   : -1);
       else
 	timeout = 0;
 
-      num_found = poll (gdb_notifier.poll_fds,
-			(unsigned long) gdb_notifier.num_fds, timeout);
+      num_found = poll (el->gdb_notifier.poll_fds,
+			(unsigned long) el->gdb_notifier.num_fds, timeout);
 
       /* Don't print anything if we get out of poll because of a
 	 signal.  */
@@ -761,29 +783,29 @@ gdb_wait_for_event (int block)
       struct timeval *timeout_p;
 
       if (block)
-	timeout_p = gdb_notifier.timeout_valid
-	  ? &gdb_notifier.select_timeout : NULL;
+	timeout_p = el->gdb_notifier.timeout_valid
+	  ? &el->gdb_notifier.select_timeout : NULL;
       else
 	{
 	  memset (&select_timeout, 0, sizeof (select_timeout));
 	  timeout_p = &select_timeout;
 	}
 
-      gdb_notifier.ready_masks[0] = gdb_notifier.check_masks[0];
-      gdb_notifier.ready_masks[1] = gdb_notifier.check_masks[1];
-      gdb_notifier.ready_masks[2] = gdb_notifier.check_masks[2];
-      num_found = gdb_select (gdb_notifier.num_fds,
-			      &gdb_notifier.ready_masks[0],
-			      &gdb_notifier.ready_masks[1],
-			      &gdb_notifier.ready_masks[2],
+      el->gdb_notifier.ready_masks[0] = el->gdb_notifier.check_masks[0];
+      el->gdb_notifier.ready_masks[1] = el->gdb_notifier.check_masks[1];
+      el->gdb_notifier.ready_masks[2] = el->gdb_notifier.check_masks[2];
+      num_found = gdb_select (el->gdb_notifier.num_fds,
+			      &el->gdb_notifier.ready_masks[0],
+			      &el->gdb_notifier.ready_masks[1],
+			      &el->gdb_notifier.ready_masks[2],
 			      timeout_p);
 
       /* Clear the masks after an error from select.  */
       if (num_found == -1)
 	{
-	  FD_ZERO (&gdb_notifier.ready_masks[0]);
-	  FD_ZERO (&gdb_notifier.ready_masks[1]);
-	  FD_ZERO (&gdb_notifier.ready_masks[2]);
+	  FD_ZERO (&el->gdb_notifier.ready_masks[0]);
+	  FD_ZERO (&el->gdb_notifier.ready_masks[1]);
+	  FD_ZERO (&el->gdb_notifier.ready_masks[2]);
 
 	  /* Dont print anything if we got a signal, let gdb handle
 	     it.  */
@@ -812,25 +834,25 @@ gdb_wait_for_event (int block)
 
       while (1)
 	{
-	  if (gdb_notifier.next_poll_fds_index >= gdb_notifier.num_fds)
-	    gdb_notifier.next_poll_fds_index = 0;
-	  i = gdb_notifier.next_poll_fds_index++;
+	  if (el->gdb_notifier.next_poll_fds_index >= el->gdb_notifier.num_fds)
+	    el->gdb_notifier.next_poll_fds_index = 0;
+	  i = el->gdb_notifier.next_poll_fds_index++;
 
-	  gdb_assert (i < gdb_notifier.num_fds);
-	  if ((gdb_notifier.poll_fds + i)->revents)
+	  gdb_assert (i < el->gdb_notifier.num_fds);
+	  if ((el->gdb_notifier.poll_fds + i)->revents)
 	    break;
 	}
 
-      for (file_ptr = gdb_notifier.first_file_handler;
+      for (file_ptr = el->gdb_notifier.first_file_handler;
 	   file_ptr != NULL;
 	   file_ptr = file_ptr->next_file)
 	{
-	  if (file_ptr->fd == (gdb_notifier.poll_fds + i)->fd)
+	  if (file_ptr->fd == (el->gdb_notifier.poll_fds + i)->fd)
 	    break;
 	}
       gdb_assert (file_ptr != NULL);
 
-      mask = (gdb_notifier.poll_fds + i)->revents;
+      mask = (el->gdb_notifier.poll_fds + i)->revents;
       handle_file_event (file_ptr, mask);
       return 1;
 #else
@@ -847,11 +869,11 @@ gdb_wait_for_event (int block)
 	{
 	  file_ptr = get_next_file_handler_to_handle_and_advance ();
 
-	  if (FD_ISSET (file_ptr->fd, &gdb_notifier.ready_masks[0]))
+	  if (FD_ISSET (file_ptr->fd, &el->gdb_notifier.ready_masks[0]))
 	    mask |= GDB_READABLE;
-	  if (FD_ISSET (file_ptr->fd, &gdb_notifier.ready_masks[1]))
+	  if (FD_ISSET (file_ptr->fd, &el->gdb_notifier.ready_masks[1]))
 	    mask |= GDB_WRITABLE;
-	  if (FD_ISSET (file_ptr->fd, &gdb_notifier.ready_masks[2]))
+	  if (FD_ISSET (file_ptr->fd, &el->gdb_notifier.ready_masks[2]))
 	    mask |= GDB_EXCEPTION;
 	}
       while (mask == 0);
@@ -873,6 +895,7 @@ async_signal_handler *
 create_async_signal_handler (sig_handler_func * proc,
 			     gdb_client_data client_data)
 {
+  struct event_loop *el = get_event_loop ();
   async_signal_handler *async_handler_ptr;
 
   async_handler_ptr = XNEW (async_signal_handler);
@@ -880,11 +903,11 @@ create_async_signal_handler (sig_handler_func * proc,
   async_handler_ptr->next_handler = NULL;
   async_handler_ptr->proc = proc;
   async_handler_ptr->client_data = client_data;
-  if (sighandler_list.first_handler == NULL)
-    sighandler_list.first_handler = async_handler_ptr;
+  if (el->sighandler_list.first_handler == NULL)
+    el->sighandler_list.first_handler = async_handler_ptr;
   else
-    sighandler_list.last_handler->next_handler = async_handler_ptr;
-  sighandler_list.last_handler = async_handler_ptr;
+    el->sighandler_list.last_handler->next_handler = async_handler_ptr;
+  el->sighandler_list.last_handler = async_handler_ptr;
   return async_handler_ptr;
 }
 
@@ -928,6 +951,7 @@ async_signal_handler_is_marked (async_signal_handler *async_handler_ptr)
 static int
 invoke_async_signal_handlers (void)
 {
+  struct event_loop *el = get_event_loop ();
   async_signal_handler *async_handler_ptr;
   int any_ready = 0;
 
@@ -935,7 +959,7 @@ invoke_async_signal_handlers (void)
 
   while (1)
     {
-      for (async_handler_ptr = sighandler_list.first_handler;
+      for (async_handler_ptr = el->sighandler_list.first_handler;
 	   async_handler_ptr != NULL;
 	   async_handler_ptr = async_handler_ptr->next_handler)
 	{
@@ -957,23 +981,24 @@ invoke_async_signal_handlers (void)
 void
 delete_async_signal_handler (async_signal_handler ** async_handler_ptr)
 {
+  struct event_loop *el = get_event_loop ();
   async_signal_handler *prev_ptr;
 
-  if (sighandler_list.first_handler == (*async_handler_ptr))
+  if (el->sighandler_list.first_handler == (*async_handler_ptr))
     {
-      sighandler_list.first_handler = (*async_handler_ptr)->next_handler;
-      if (sighandler_list.first_handler == NULL)
-	sighandler_list.last_handler = NULL;
+      el->sighandler_list.first_handler = (*async_handler_ptr)->next_handler;
+      if (el->sighandler_list.first_handler == NULL)
+	el->sighandler_list.last_handler = NULL;
     }
   else
     {
-      prev_ptr = sighandler_list.first_handler;
+      prev_ptr = el->sighandler_list.first_handler;
       while (prev_ptr && prev_ptr->next_handler != (*async_handler_ptr))
 	prev_ptr = prev_ptr->next_handler;
       gdb_assert (prev_ptr);
       prev_ptr->next_handler = (*async_handler_ptr)->next_handler;
-      if (sighandler_list.last_handler == (*async_handler_ptr))
-	sighandler_list.last_handler = prev_ptr;
+      if (el->sighandler_list.last_handler == (*async_handler_ptr))
+	el->sighandler_list.last_handler = prev_ptr;
     }
   xfree ((*async_handler_ptr));
   (*async_handler_ptr) = NULL;
@@ -987,6 +1012,7 @@ async_event_handler *
 create_async_event_handler (async_event_handler_func *proc,
 			    gdb_client_data client_data)
 {
+  struct event_loop *el = get_event_loop ();
   async_event_handler *h;
 
   h = XNEW (struct async_event_handler);
@@ -994,11 +1020,11 @@ create_async_event_handler (async_event_handler_func *proc,
   h->next_handler = NULL;
   h->proc = proc;
   h->client_data = client_data;
-  if (async_event_handler_list.first_handler == NULL)
-    async_event_handler_list.first_handler = h;
+  if (el->async_event_handler_list.first_handler == NULL)
+    el->async_event_handler_list.first_handler = h;
   else
-    async_event_handler_list.last_handler->next_handler = h;
-  async_event_handler_list.last_handler = h;
+    el->async_event_handler_list.last_handler->next_handler = h;
+  el->async_event_handler_list.last_handler = h;
   return h;
 }
 
@@ -1026,9 +1052,10 @@ clear_async_event_handler (async_event_handler *async_handler_ptr)
 static int
 check_async_event_handlers (void)
 {
+  struct event_loop *el = get_event_loop ();
   async_event_handler *async_handler_ptr;
 
-  for (async_handler_ptr = async_event_handler_list.first_handler;
+  for (async_handler_ptr = el->async_event_handler_list.first_handler;
        async_handler_ptr != NULL;
        async_handler_ptr = async_handler_ptr->next_handler)
     {
@@ -1048,24 +1075,25 @@ check_async_event_handlers (void)
 void
 delete_async_event_handler (async_event_handler **async_handler_ptr)
 {
+  struct event_loop *el = get_event_loop ();
   async_event_handler *prev_ptr;
 
-  if (async_event_handler_list.first_handler == *async_handler_ptr)
+  if (el->async_event_handler_list.first_handler == *async_handler_ptr)
     {
-      async_event_handler_list.first_handler
+      el->async_event_handler_list.first_handler
 	= (*async_handler_ptr)->next_handler;
-      if (async_event_handler_list.first_handler == NULL)
-	async_event_handler_list.last_handler = NULL;
+      if (el->async_event_handler_list.first_handler == NULL)
+	el->async_event_handler_list.last_handler = NULL;
     }
   else
     {
-      prev_ptr = async_event_handler_list.first_handler;
+      prev_ptr = el->async_event_handler_list.first_handler;
       while (prev_ptr && prev_ptr->next_handler != *async_handler_ptr)
 	prev_ptr = prev_ptr->next_handler;
       gdb_assert (prev_ptr);
       prev_ptr->next_handler = (*async_handler_ptr)->next_handler;
-      if (async_event_handler_list.last_handler == (*async_handler_ptr))
-	async_event_handler_list.last_handler = prev_ptr;
+      if (el->async_event_handler_list.last_handler == (*async_handler_ptr))
+	el->async_event_handler_list.last_handler = prev_ptr;
     }
   xfree (*async_handler_ptr);
   *async_handler_ptr = NULL;
@@ -1079,6 +1107,7 @@ int
 create_timer (int milliseconds, timer_handler_func * proc, 
 	      gdb_client_data client_data)
 {
+  struct event_loop *el = get_event_loop ();
   struct gdb_timer *timer_ptr, *timer_index, *prev_timer;
   struct timeval time_now, delta;
 
@@ -1100,13 +1129,13 @@ create_timer (int milliseconds, timer_handler_func * proc,
     }
   timer_ptr->proc = proc;
   timer_ptr->client_data = client_data;
-  timer_list.num_timers++;
-  timer_ptr->timer_id = timer_list.num_timers;
+  el->timer_list.num_timers++;
+  timer_ptr->timer_id = el->timer_list.num_timers;
 
   /* Now add the timer to the timer queue, making sure it is sorted in
      increasing order of expiration.  */
 
-  for (timer_index = timer_list.first_timer;
+  for (timer_index = el->timer_list.first_timer;
        timer_index != NULL;
        timer_index = timer_index->next)
     {
@@ -1118,15 +1147,15 @@ create_timer (int milliseconds, timer_handler_func * proc,
 	break;
     }
 
-  if (timer_index == timer_list.first_timer)
+  if (timer_index == el->timer_list.first_timer)
     {
-      timer_ptr->next = timer_list.first_timer;
-      timer_list.first_timer = timer_ptr;
+      timer_ptr->next = el->timer_list.first_timer;
+      el->timer_list.first_timer = timer_ptr;
 
     }
   else
     {
-      for (prev_timer = timer_list.first_timer;
+      for (prev_timer = el->timer_list.first_timer;
 	   prev_timer->next != timer_index;
 	   prev_timer = prev_timer->next)
 	;
@@ -1135,7 +1164,7 @@ create_timer (int milliseconds, timer_handler_func * proc,
       timer_ptr->next = timer_index;
     }
 
-  gdb_notifier.timeout_valid = 0;
+  el->gdb_notifier.timeout_valid = 0;
   return timer_ptr->timer_id;
 }
 
@@ -1144,11 +1173,12 @@ create_timer (int milliseconds, timer_handler_func * proc,
 void
 delete_timer (int id)
 {
+  struct event_loop *el = get_event_loop ();
   struct gdb_timer *timer_ptr, *prev_timer = NULL;
 
   /* Find the entry for the given timer.  */
 
-  for (timer_ptr = timer_list.first_timer; timer_ptr != NULL;
+  for (timer_ptr = el->timer_list.first_timer; timer_ptr != NULL;
        timer_ptr = timer_ptr->next)
     {
       if (timer_ptr->timer_id == id)
@@ -1158,11 +1188,11 @@ delete_timer (int id)
   if (timer_ptr == NULL)
     return;
   /* Get rid of the timer in the timer list.  */
-  if (timer_ptr == timer_list.first_timer)
-    timer_list.first_timer = timer_ptr->next;
+  if (timer_ptr == el->timer_list.first_timer)
+    el->timer_list.first_timer = timer_ptr->next;
   else
     {
-      for (prev_timer = timer_list.first_timer;
+      for (prev_timer = el->timer_list.first_timer;
 	   prev_timer->next != timer_ptr;
 	   prev_timer = prev_timer->next)
 	;
@@ -1170,7 +1200,7 @@ delete_timer (int id)
     }
   xfree (timer_ptr);
 
-  gdb_notifier.timeout_valid = 0;
+  el->gdb_notifier.timeout_valid = 0;
 }
 
 /* Update the timeout for the select() or poll().  Returns true if the
@@ -1179,13 +1209,14 @@ delete_timer (int id)
 static int
 update_wait_timeout (void)
 {
+  struct event_loop *el = get_event_loop ();
   struct timeval time_now, delta;
 
-  if (timer_list.first_timer != NULL)
+  if (el->timer_list.first_timer != NULL)
     {
       gettimeofday (&time_now, NULL);
-      delta.tv_sec = timer_list.first_timer->when.tv_sec - time_now.tv_sec;
-      delta.tv_usec = timer_list.first_timer->when.tv_usec - time_now.tv_usec;
+      delta.tv_sec = el->timer_list.first_timer->when.tv_sec - time_now.tv_sec;
+      delta.tv_usec = el->timer_list.first_timer->when.tv_usec - time_now.tv_usec;
       /* Borrow?  */
       if (delta.tv_usec < 0)
 	{
@@ -1195,9 +1226,9 @@ update_wait_timeout (void)
 
       /* Cannot simply test if delta.tv_sec is negative because time_t
          might be unsigned.  */
-      if (timer_list.first_timer->when.tv_sec < time_now.tv_sec
-	  || (timer_list.first_timer->when.tv_sec == time_now.tv_sec
-	      && timer_list.first_timer->when.tv_usec < time_now.tv_usec))
+      if (el->timer_list.first_timer->when.tv_sec < time_now.tv_sec
+	  || (el->timer_list.first_timer->when.tv_sec == time_now.tv_sec
+	      && el->timer_list.first_timer->when.tv_usec < time_now.tv_usec))
 	{
 	  /* It expired already.  */
 	  delta.tv_sec = 0;
@@ -1208,7 +1239,7 @@ update_wait_timeout (void)
       if (use_poll)
 	{
 #ifdef HAVE_POLL
-	  gdb_notifier.poll_timeout = delta.tv_sec * 1000;
+	  el->gdb_notifier.poll_timeout = delta.tv_sec * 1000;
 #else
 	  internal_error (__FILE__, __LINE__,
 			  _("use_poll without HAVE_POLL"));
@@ -1216,16 +1247,16 @@ update_wait_timeout (void)
 	}
       else
 	{
-	  gdb_notifier.select_timeout.tv_sec = delta.tv_sec;
-	  gdb_notifier.select_timeout.tv_usec = delta.tv_usec;
+	  el->gdb_notifier.select_timeout.tv_sec = delta.tv_sec;
+	  el->gdb_notifier.select_timeout.tv_usec = delta.tv_usec;
 	}
-      gdb_notifier.timeout_valid = 1;
+      el->gdb_notifier.timeout_valid = 1;
 
       if (delta.tv_sec == 0 && delta.tv_usec == 0)
 	return 1;
     }
   else
-    gdb_notifier.timeout_valid = 0;
+    el->gdb_notifier.timeout_valid = 0;
 
   return 0;
 }
@@ -1238,14 +1269,16 @@ update_wait_timeout (void)
 static int
 poll_timers (void)
 {
+  struct event_loop *el = get_event_loop ();
+
   if (update_wait_timeout ())
     {
-      struct gdb_timer *timer_ptr = timer_list.first_timer;
+      struct gdb_timer *timer_ptr = el->timer_list.first_timer;
       timer_handler_func *proc = timer_ptr->proc;
       gdb_client_data client_data = timer_ptr->client_data;
 
       /* Get rid of the timer from the beginning of the list.  */
-      timer_list.first_timer = timer_ptr->next;
+      el->timer_list.first_timer = timer_ptr->next;
 
       /* Delete the timer before calling the callback, not after, in
 	 case the callback itself decides to try deleting the timer
