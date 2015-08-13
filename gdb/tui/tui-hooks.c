@@ -184,9 +184,9 @@ tui_about_to_proceed (void)
    if frame information hasn't changed.  */
 
 static void
-tui_refresh_frame_and_register_information (int registers_too_p)
+tui_refresh_frame_and_register_information_wrapper (void *data)
 {
-  int level = *(int *) data;
+  int registers_too_p = *(int *) data;
   struct frame_info *fi;
   CORE_ADDR pc;
   struct cleanup *old_chain;
@@ -231,6 +231,12 @@ tui_refresh_frame_and_register_information (int registers_too_p)
   do_cleanups (old_chain);
 }
 
+static void
+tui_refresh_frame_and_register_information (int registers_too_p)
+{
+  for_each_terminal (tui_refresh_frame_and_register_information_wrapper, &registers_too_p);
+}
+
 /* Dummy callback for deprecated_print_frame_info_listing_hook which is called
    from print_frame_info.  */
 
@@ -252,6 +258,12 @@ tui_inferior_exit_1 (void *data)
   tui_set_key_mode (TUI_COMMAND_MODE);
   tui_show_frame_info (0);
   tui_display_main ();
+}
+
+static void
+tui_inferior_exit (struct inferior *inf)
+{
+  for_each_terminal (tui_inferior_exit_1, NULL);
 }
 
 /* Observer for the before_prompt notification.  */

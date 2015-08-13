@@ -62,18 +62,22 @@ static struct gdb_exception safe_execute_command (struct ui_out *uiout,
 
 /* Observer for the normal_stop notification.  */
 
-static void
+void
 cli_on_normal_stop (struct bpstats *bs, int print_frame)
 {
-  struct interp *interp;
+  struct interp *interp = current_interpreter;
+  struct thread_info *tp;
 
   if (!print_frame)
     return;
 
-  ALL_CONSOLE_INTERPS (interp)
-    {
-      print_stop_event (interp_ui_out (interp));
-    }
+  tp = inferior_thread ();
+
+  /* Broadcast asynchronous stops to all consoles.  If we just
+     finished a step, print this to the console if it was the console
+     that started the step in the first place.  */
+  if (should_print_stop_to_console (interp, tp))
+    print_stop_event (interp_ui_out (interp));
 }
 
 /* Observer for the signal_received notification.  */
@@ -160,24 +164,6 @@ should_print_stop_to_console (struct interp *interp,
     return 1;
 
   return 0;
-}
-
-void
-cli_on_normal_stop (struct bpstats *bs, int print_frame)
-{
-  struct interp *interp = current_interpreter;
-  struct thread_info *tp;
-
-  if (!print_frame)
-    return;
-
-  tp = inferior_thread ();
-
-  /* Broadcast asynchronous stops to all consoles.  If we just
-     finished a step, print this to the console if it was the console
-     that started the step in the first place.  */
-  if (should_print_stop_to_console (interp, tp))
-    print_stop_event (interp_ui_out (interp));
 }
 
 void cli_on_sync_execution_done (void);
