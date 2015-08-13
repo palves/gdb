@@ -67,6 +67,45 @@ struct interp
   int quiet_p;
 };
 
+struct interp_factory
+{
+  /* This is the name in "-i=" and set interpreter.  */
+  const char *name;
+
+  interp_factory_func func;
+};
+
+typedef struct interp_factory *interp_factory_p;
+DEF_VEC_P(interp_factory_p);
+
+VEC(interp_factory_p) *interpreter_factories = NULL;
+
+void
+interp_factory_register (const char *name, interp_factory_func func)
+{
+  struct interp_factory *f = XNEW (struct interp_factory);
+
+  f->name = name;
+  f->func = func;
+
+  VEC_safe_push (interp_factory_p, interpreter_factories, f);
+}
+
+struct interp *
+interp_create (const char *name)
+{
+  struct interp_factory *factory;
+  int ix;
+
+  for (ix = 0;
+       VEC_iterate (interp_factory_p, interpreter_factories, ix, factory);
+       ++ix)
+    if (strcmp (factory->name, name) == 0)
+      return factory->func (name);
+
+  internal_error (__FILE__, __LINE__, "unknown interpreter %s", name); 
+}
+
 /* The magic initialization routine for this module.  */
 
 void _initialize_interpreter (void);
@@ -104,7 +143,7 @@ interp_new (const char *name, const struct interp_procs *procs)
 void
 interp_add (struct interp *interp)
 {
-  gdb_assert (interp_lookup (interp->name) == NULL);
+  //  gdb_assert (interp_lookup (interp->name) == NULL);
 
   interp->next = interp_list;
   interp_list = interp;

@@ -25,6 +25,11 @@
 struct ui_out;
 struct interp;
 
+typedef struct interp *(*interp_factory_func) (const char *interp);
+
+extern void interp_factory_register (const char *name, interp_factory_func func);
+extern struct interp *interp_create (const char *name);
+
 extern int interp_resume (struct interp *interp);
 extern int interp_suspend (struct interp *interp);
 extern struct gdb_exception interp_exec (struct interp *interp,

@@ -180,7 +180,7 @@ mi_interpreter_resume (void *data)
   gdb_setup_readline ();
 
   /* These overwrite some of the initialization done in
-     _intialize_event_loop.  */
+     _initialize_event_loop.  */
   call_readline = gdb_readline2;
   input_handler = mi_execute_command_input_handler;
   async_command_editing_p = 0;

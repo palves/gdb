@@ -207,24 +207,33 @@ tui_exec (void *data, const char *command_str)
   internal_error (__FILE__, __LINE__, _("tui_exec called"));
 }
 
+static const struct interp_procs tui_procs = {
+  tui_init,
+  tui_resume,
+  tui_suspend,
+  tui_exec,
+  tui_ui_out,
+  NULL,
+  cli_command_loop
+};
+
+static struct interp *
+tui_interp_factory (const char *name)
+{
+  /* Create a default uiout builder for the TUI.  */
+  return interp_new (INTERP_TUI, &tui_procs);
+}
+
 /* Provide a prototype to silence -Wmissing-prototypes.  */
 extern initialize_file_ftype _initialize_tui_interp;
 
 void
 _initialize_tui_interp (void)
 {
-  static const struct interp_procs procs = {
-    tui_init,
-    tui_resume,
-    tui_suspend,
-    tui_exec,
-    tui_ui_out,
-    NULL,
-    cli_command_loop
-  };
+  interp_factory_register (INTERP_CONSOLE, tui_interp_factory);
 
   /* Create a default uiout builder for the TUI.  */
-  tui_interp = interp_new (INTERP_TUI, &procs);
+  tui_interp = interp_new (INTERP_TUI, &tui_procs);
   interp_add (tui_interp);
   if (interpreter_p && strcmp (interpreter_p, INTERP_TUI) == 0)
     tui_start_enabled = 1;
