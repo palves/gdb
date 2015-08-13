@@ -67,7 +67,7 @@ gdb_test "thread 3" {\[Switching to thread 3 .*}
 
 set test "continue thread 1"
 gdb_test_multiple "continue&" $test {
-    -re "event type: continue\r\nthread num: 3\r\n.*$gdb_prompt " {
+    -re "event type: continue\r\nthread num: 3\r\n$gdb_prompt " {
 	# This expect string must not expect the end-of-buffer '$'.
         pass $test
     }
