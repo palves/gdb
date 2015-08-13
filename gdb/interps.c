@@ -414,7 +414,7 @@ interp_exec (struct interp *interp, const char *command_str)
   save_command_interp = command_interpreter;
   command_interpreter = interp;
 
-  ex = interp->procs->exec_proc (interp->data, command_str);
+  ex = interp->procs->exec_proc (interp, command_str);
 
   command_interpreter = save_command_interp;
 
