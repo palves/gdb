@@ -1664,9 +1664,9 @@ init_page_info (void)
   struct terminal *term = current_terminal;
   struct page_info *pi;
 
-  gdb_assert (term->page_info == NULL);
+  if (term->page_info == NULL)
+    term->page_info = XCNEW (struct page_info);
 
-  term->page_info = XCNEW (struct page_info);
   pi = term->page_info;
   pi->pagination_enabled = 1;
 
