@@ -37,6 +37,7 @@
 #include "gdbcmd.h"		/* for dont_repeat() */
 #include "annotate.h"
 #include "maint.h"
+#include <pthread.h>
 
 /* readline include files.  */
 #include "readline/readline.h"
@@ -1206,6 +1207,20 @@ static struct terminal *new_terminal_1 (FILE *instream,
    early, before readline has a chance to read the inputrc files.  */
 static struct readline_state initial_readline_state;
 
+static pthread_mutex_t gdb_global_lock;
+
+void
+ggl_lock (void)
+{
+  pthread_mutex_lock (&gdb_global_lock);
+}
+
+void
+ggl_unlock (void)
+{
+  pthread_mutex_unlock (&gdb_global_lock);
+}
+
 void
 init_terminal (void)
 {
@@ -1225,6 +1240,10 @@ init_terminal (void)
 
   current_terminal = terminal;
   main_terminal = terminal;
+
+  pthread_mutex_init (&gdb_global_lock, NULL);
+
+  ggl_lock ();
 }
 
 /* Set things up for readline to be invoked via the alternate
@@ -1342,6 +1361,35 @@ new_terminal (FILE *instream, FILE *outstream, FILE *errstream)
   return terminal;
 }
 
+static pthread_mutex_t gdb_global_lock;
+
+static void *
+console_thread_entry (void *arg)
+{
+  struct terminal *term = arg;
+
+  ggl_lock ();
+
+  switch_to_terminal (term);
+
+  start_event_loop ();
+
+  ggl_unlock ();
+
+  return NULL;
+}
+
+static int
+create_console_thread (struct terminal *term)
+{
+  pthread_t child_thread;
+  int res;
+
+  res = pthread_create (&child_thread, NULL, console_thread_entry, term);
+
+  return res;
+}
+
 static void
 new_console_command (char *args, int from_tty)
 {
@@ -1350,6 +1398,7 @@ new_console_command (char *args, int from_tty)
   struct interp *interp;
   FILE *stream;
   int tty;
+  int res;
 
   /* Now open the specified new terminal.  */
   tty = open (args, O_RDWR | O_NOCTTY);
@@ -1387,6 +1436,8 @@ new_console_command (char *args, int from_tty)
      (we're inside a readline callback.)  */
   switch_to_terminal (prev_terminal);
   printf_unfiltered ("New GDB console allocated\n");
+
+  create_console_thread (terminal);
 }
 
 extern void _initialize_event_top (void);

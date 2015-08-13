@@ -125,11 +125,15 @@ extern void init_terminal (void);
 
 extern void switch_to_terminal (struct terminal *terminal);
 
+extern void ggl_lock (void);
+extern void ggl_unlock (void);
+
 struct term_state *new_term_state (void);
 
 struct terminal_readline_state;
 struct target_term_state;
 struct page_info;
+struct event_loop;
 
 typedef struct interp *interp_ptr;
 DEF_VEC_P(interp_ptr);
@@ -170,6 +174,8 @@ struct terminal
   char *env_columns;
 
   struct page_info *page_info;
+
+  struct event_loop *event_loop;
 };
 
 typedef struct terminal *terminal_ptr;
