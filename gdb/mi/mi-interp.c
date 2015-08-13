@@ -523,9 +523,13 @@ mi_on_normal_stop (struct bpstats *bs, int print_frame)
   if (print_frame)
     {
       int core;
+      struct interp *console_interp;
 
       print_stop_event (mi->mi_uiout);
-      if (should_print_stop_to_console (interp, tp))
+
+      console_interp = interp_lookup (current_terminal, INTERP_CONSOLE);
+      if (console_interp != NULL
+	  && should_print_stop_to_console (console_interp, tp))
 	print_stop_event (mi->cli_uiout);
 
       ui_out_field_int (mi->mi_uiout, "thread-id",

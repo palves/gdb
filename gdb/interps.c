@@ -72,7 +72,7 @@ interp_factory_register (const char *name, interp_factory_func func)
   VEC_safe_push (interp_factory_p, interpreter_factories, f);
 }
 
-static struct interp *
+struct interp *
 interp_lookup (struct terminal *terminal, const char *name)
 {
   struct interp *interp;

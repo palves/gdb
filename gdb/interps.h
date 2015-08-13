@@ -164,6 +164,8 @@ struct interp
   struct terminal *terminal;
 };
 
+extern struct interp *interp_lookup (struct terminal *terminal,
+				     const char *name);
 extern struct interp *interp_new (const char *name,
 				  const struct interp_procs *procs,
 				  struct terminal *terminal);
