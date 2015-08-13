@@ -26,6 +26,18 @@
 #include "infrun.h"
 #include "observer.h"
 
+struct cli_interp
+{
+  /* CLI's output channels */
+  struct ui_file *out;
+  struct ui_file *err;
+  struct ui_file *log;
+  struct ui_file *targ;
+
+  /* CLI's builder.  */
+  struct ui_out *uiout;
+};
+
 /* Longjmp-safe wrapper for "execute_command".  */
 static struct gdb_exception safe_execute_command (struct ui_out *uiout,
 						  char *command, 
@@ -144,13 +156,24 @@ cli_on_command_error (void)
 static void *
 cli_interpreter_init (struct interp *self, int top_level)
 {
-  return NULL;
+  struct cli_interp *cli = XNEW (struct cli_interp);
+
+  cli->out = gdb_stdout;
+  cli->err = gdb_stderr;
+  cli->log = gdb_stdlog;
+  cli->targ = gdb_stdtarg;
+  cli->uiout = cli_out_new (cli->out);
+
+  return cli;
 }
 
 static int
 cli_interpreter_resume (struct interp *self)
 {
+  struct cli_interp *cli = self->data;
+#if 0
   struct ui_file *stream;
+#endif
 
   /*sync_execution = 1; */
 
@@ -165,6 +188,12 @@ cli_interpreter_resume (struct interp *self)
       stream = NULL;
     }
 #endif
+
+  gdb_stdout = cli->out;
+  gdb_stderr = cli->err;
+  gdb_stdlog = cli->log;
+  gdb_stdtarg = cli->targ;
+  gdb_stdtargerr = cli->targ;
 
   gdb_setup_readline ();
 
@@ -244,7 +273,9 @@ safe_execute_command (struct ui_out *command_uiout, char *command, int from_tty)
 static struct ui_out *
 cli_ui_out (struct interp *self)
 {
-  return current_uiout;
+  struct cli_interp *cli = self->data;
+
+  return cli->uiout;
 }
 
 /* Standard gdb initialization hook.  */
