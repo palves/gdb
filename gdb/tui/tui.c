@@ -76,8 +76,28 @@ static const struct tui_char_command tui_commands[] = {
   { 0, 0 },
 };
 
-static Keymap tui_keymap;
-static Keymap tui_readline_standard_keymap;
+struct tui
+{
+  Keymap tui_keymap;
+  Keymap tui_readline_standard_keymap;
+};
+
+static struct tui *
+tui_new (void)
+{
+  return XCNEW (struct tui);
+}
+
+static struct tui *
+get_tui (void)
+{
+  struct tui_terminal_state *tts = tui_ts ();
+
+  if (tts->tui == NULL)
+    tts->tui = tui_new ();
+
+  return tts->tui;
+}
 
 /* TUI readline command.
    Switch the output mode between TUI/standard gdb.  */
@@ -307,9 +327,11 @@ tui_rl_startup_hook (void)
 void
 tui_set_key_mode (enum tui_key_mode mode)
 {
+  struct tui *tui = get_tui ();
+
   tui_current_key_mode = mode;
   rl_set_keymap (mode == TUI_SINGLE_KEY_MODE
-                 ? tui_keymap : tui_readline_standard_keymap);
+                 ? tui->tui_keymap : tui->tui_readline_standard_keymap);
   tui_show_locator_content ();
 }
 
@@ -322,6 +344,7 @@ tui_initialize_readline (void)
 {
   int i;
   Keymap tui_ctlx_keymap;
+  struct tui *tui = get_tui ();
 
   /* Tell readline to use the same input stream that gdb uses.  */
   rl_instream = instream;
@@ -333,14 +356,15 @@ tui_initialize_readline (void)
   rl_add_defun ("gdb-command", tui_rl_command_key, -1);
   rl_add_defun ("next-keymap", tui_rl_next_keymap, -1);
 
-  tui_keymap = rl_make_bare_keymap ();
+  tui->tui_keymap = rl_make_bare_keymap ();
   tui_ctlx_keymap = rl_make_bare_keymap ();
-  tui_readline_standard_keymap = rl_get_keymap ();
+  tui->tui_readline_standard_keymap = rl_get_keymap ();
 
   for (i = 0; tui_commands[i].cmd; i++)
-    rl_bind_key_in_map (tui_commands[i].key, tui_rl_command_key, tui_keymap);
+    rl_bind_key_in_map (tui_commands[i].key,
+			tui_rl_command_key, tui->tui_keymap);
 
-  rl_generic_bind (ISKMAP, "\\C-x", (char*) tui_ctlx_keymap, tui_keymap);
+  rl_generic_bind (ISKMAP, "\\C-x", (char*) tui_ctlx_keymap, tui->tui_keymap);
 
   /* Bind all other keys to tui_rl_command_mode so that we switch
      temporarily from SingleKey mode and can enter a gdb command.  */
@@ -355,7 +379,7 @@ tui_initialize_readline (void)
       if (tui_commands[j].cmd)
         continue;
 
-      rl_bind_key_in_map (i, tui_rl_command_mode, tui_keymap);
+      rl_bind_key_in_map (i, tui_rl_command_mode, tui->tui_keymap);
     }
 
   rl_bind_key_in_map ('a', tui_rl_switch_mode, emacs_ctlx_keymap);
@@ -370,7 +394,7 @@ tui_initialize_readline (void)
   rl_bind_key_in_map ('2', tui_rl_change_windows, tui_ctlx_keymap);
   rl_bind_key_in_map ('o', tui_rl_other_window, emacs_ctlx_keymap);
   rl_bind_key_in_map ('o', tui_rl_other_window, tui_ctlx_keymap);
-  rl_bind_key_in_map ('q', tui_rl_next_keymap, tui_keymap);
+  rl_bind_key_in_map ('q', tui_rl_next_keymap, tui->tui_keymap);
   rl_bind_key_in_map ('s', tui_rl_next_keymap, emacs_ctlx_keymap);
   rl_bind_key_in_map ('s', tui_rl_next_keymap, tui_ctlx_keymap);
 }
@@ -539,13 +563,17 @@ tui_enable (void)
 void
 tui_disable (void)
 {
+  struct tui *tui;
+
   if (!tui_active)
     return;
 
   tui_set_screen ();
 
+  tui = get_tui ();
+
   /* Restore initial readline keymap.  */
-  rl_set_keymap (tui_readline_standard_keymap);
+  rl_set_keymap (tui->tui_readline_standard_keymap);
 
   /* Remove TUI hooks.  */
   tui_remove_hooks ();

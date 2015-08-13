@@ -92,6 +92,7 @@ struct tui_terminal_state
 
   enum tui_key_mode tui_current_key_mode;
 
+  struct tui *tui;
   struct tui_data *tui_data;
 };
 
