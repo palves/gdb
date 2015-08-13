@@ -20,6 +20,7 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
 #include "defs.h"
+#include "tui/tui-interp.h"
 #include "target.h"
 #include "event-loop.h"
 #include "event-top.h"
@@ -39,6 +40,7 @@
 #include "filestuff.h"
 #include "completer.h"
 #include "gdb_curses.h"
+#include "interps.h"
 
 /* This redefines CTRL if it is not already defined, so it must come
    after terminal state releated include files like <term.h> and
@@ -106,35 +108,44 @@ key_is_backspace (int ch)
 #endif
 /* #undef TUI_USE_PIPE_FOR_READLINE */
 
-/* TUI output files.  */
-static struct ui_file *tui_stdout;
-static struct ui_file *tui_stderr;
-struct ui_out *tui_out;
+struct tui_io_data
+{
+  /* TUI output files.  */
+  struct ui_file *tui_stdout;
+  struct ui_file *tui_stderr;
+  struct ui_out *tui_out;
 
-/* GDB output files in non-curses mode.  */
-static struct ui_file *tui_old_stdout;
-static struct ui_file *tui_old_stderr;
-struct ui_out *tui_old_uiout;
+  /* GDB output files in non-curses mode.  */
+  struct ui_file *tui_old_stdout;
+  struct ui_file *tui_old_stderr;
+  struct ui_out *tui_old_uiout;
 
-/* Readline previous hooks.  */
-static rl_getc_func_t *tui_old_rl_getc_function;
-static rl_voidfunc_t *tui_old_rl_redisplay_function;
-static rl_vintfunc_t *tui_old_rl_prep_terminal;
-static rl_voidfunc_t *tui_old_rl_deprep_terminal;
-static rl_compdisp_func_t *tui_old_rl_display_matches_hook;
-static int tui_old_rl_echoing_p;
+  /* Readline previous hooks.  */
+  rl_getc_func_t *tui_old_rl_getc_function;
+  rl_voidfunc_t *tui_old_rl_redisplay_function;
+  rl_vintfunc_t *tui_old_rl_prep_terminal;
+  rl_voidfunc_t *tui_old_rl_deprep_terminal;
+  rl_compdisp_func_t *tui_old_rl_display_matches_hook;
+  int tui_old_rl_echoing_p;
 
-/* Readline output stream.
-   Should be removed when readline is clean.  */
-static FILE *tui_rl_outstream;
-static FILE *tui_old_rl_outstream;
+  /* Readline output stream.
+     Should be removed when readline is clean.  */
+  FILE *tui_rl_outstream;
+  FILE *tui_old_rl_outstream;
 #ifdef TUI_USE_PIPE_FOR_READLINE
-static int tui_readline_pipe[2];
+  int tui_readline_pipe[2];
 #endif
 
-/* The last gdb prompt that was registered in readline.
-   This may be the main gdb prompt or a secondary prompt.  */
-static char *tui_rl_saved_prompt;
+  /* The last gdb prompt that was registered in readline.
+     This may be the main gdb prompt or a secondary prompt.  */
+  char *tui_rl_saved_prompt;
+};
+
+struct tui_io_data *
+tui_io_data_new (void)
+{
+  return XCNEW (struct tui_io_data);
+}
 
 static void
 tui_putc (char c)
@@ -190,6 +201,27 @@ tui_puts (const char *string)
   TUI_CMD_WIN->detail.command_info.start_line = getcury (w);
 }
 
+static struct tui_io_data *
+tui_io (void)
+{
+  struct interp *interp = top_level_interpreter ();
+  struct tui_interp *tui_interp = (struct tui_interp *) interp;
+  
+  return tui_interp->io_data;
+}
+
+struct ui_out *
+tui_io_old_uiout (struct tui_io_data *io)
+{
+  return io->tui_old_uiout;
+}
+
+struct ui_out *
+tui_io_out (struct tui_io_data *io)
+{
+  return io->tui_out;
+}
+
 /* Readline callback.
    Redisplay the command line with its prompt after readline has
    changed the edited text.  */
@@ -218,7 +250,7 @@ tui_redisplay_readline (void)
   if (tui_current_key_mode == TUI_SINGLE_KEY_MODE)
     prompt = "";
   else
-    prompt = tui_rl_saved_prompt;
+    prompt = tui_io ()->tui_rl_saved_prompt;
   
   c_pos = -1;
   c_line = -1;
@@ -293,8 +325,8 @@ tui_prep_terminal (int notused1)
   /* Save the prompt registered in readline to correctly display it.
      (we can't use gdb_prompt() due to secondary prompts and can't use
      rl_prompt because it points to an alloca buffer).  */
-  xfree (tui_rl_saved_prompt);
-  tui_rl_saved_prompt = rl_prompt != NULL ? xstrdup (rl_prompt) : NULL;
+  xfree (tui_io ()->tui_rl_saved_prompt);
+  tui_io ()->tui_rl_saved_prompt = rl_prompt != NULL ? xstrdup (rl_prompt) : NULL;
 }
 
 /* Readline callback to restore the terminal.  It is called once each
@@ -313,7 +345,7 @@ tui_readline_output (int error, gdb_client_data data)
   int size;
   char buf[256];
 
-  size = read (tui_readline_pipe[0], buf, sizeof (buf) - 1);
+  size = read (tui_io ()->tui_readline_pipe[0], buf, sizeof (buf) - 1);
   if (size > 0 && tui_active)
     {
       buf[size] = 0;
@@ -439,35 +471,35 @@ tui_setup_io (int mode)
   if (mode)
     {
       /* Redirect readline to TUI.  */
-      tui_old_rl_redisplay_function = rl_redisplay_function;
-      tui_old_rl_deprep_terminal = rl_deprep_term_function;
-      tui_old_rl_prep_terminal = rl_prep_term_function;
-      tui_old_rl_getc_function = rl_getc_function;
-      tui_old_rl_display_matches_hook = rl_completion_display_matches_hook;
-      tui_old_rl_outstream = rl_outstream;
-      tui_old_rl_echoing_p = _rl_echoing_p;
+      tui_io ()->tui_old_rl_redisplay_function = rl_redisplay_function;
+      tui_io ()->tui_old_rl_deprep_terminal = rl_deprep_term_function;
+      tui_io ()->tui_old_rl_prep_terminal = rl_prep_term_function;
+      tui_io ()->tui_old_rl_getc_function = rl_getc_function;
+      tui_io ()->tui_old_rl_display_matches_hook = rl_completion_display_matches_hook;
+      tui_io ()->tui_old_rl_outstream = rl_outstream;
+      tui_io ()->tui_old_rl_echoing_p = _rl_echoing_p;
       rl_redisplay_function = tui_redisplay_readline;
       rl_deprep_term_function = tui_deprep_terminal;
       rl_prep_term_function = tui_prep_terminal;
       rl_getc_function = tui_getc;
       _rl_echoing_p = 0;
-      rl_outstream = tui_rl_outstream;
+      rl_outstream = tui_io ()->tui_rl_outstream;
       rl_prompt = 0;
       rl_completion_display_matches_hook = tui_rl_display_match_list;
       rl_already_prompted = 0;
 
       /* Keep track of previous gdb output.  */
-      tui_old_stdout = gdb_stdout;
-      tui_old_stderr = gdb_stderr;
-      tui_old_uiout = current_uiout;
+      tui_io ()->tui_old_stdout = gdb_stdout;
+      tui_io ()->tui_old_stderr = gdb_stderr;
+      tui_io ()->tui_old_uiout = current_uiout;
 
       /* Reconfigure gdb output.  */
-      gdb_stdout = tui_stdout;
-      gdb_stderr = tui_stderr;
+      gdb_stdout = tui_io ()->tui_stdout;
+      gdb_stderr = tui_io ()->tui_stderr;
       gdb_stdlog = gdb_stdout;	/* for moment */
       gdb_stdtarg = gdb_stderr;	/* for moment */
       gdb_stdtargerr = gdb_stderr;	/* for moment */
-      current_uiout = tui_out;
+      current_uiout = tui_io ()->tui_out;
 
       /* Save tty for SIGCONT.  */
       savetty ();
@@ -475,21 +507,21 @@ tui_setup_io (int mode)
   else
     {
       /* Restore gdb output.  */
-      gdb_stdout = tui_old_stdout;
-      gdb_stderr = tui_old_stderr;
+      gdb_stdout = tui_io ()->tui_old_stdout;
+      gdb_stderr = tui_io ()->tui_old_stderr;
       gdb_stdlog = gdb_stdout;	/* for moment */
       gdb_stdtarg = gdb_stderr;	/* for moment */
       gdb_stdtargerr = gdb_stderr;	/* for moment */
-      current_uiout = tui_old_uiout;
+      current_uiout = tui_io ()->tui_old_uiout;
 
       /* Restore readline.  */
-      rl_redisplay_function = tui_old_rl_redisplay_function;
-      rl_deprep_term_function = tui_old_rl_deprep_terminal;
-      rl_prep_term_function = tui_old_rl_prep_terminal;
-      rl_getc_function = tui_old_rl_getc_function;
-      rl_completion_display_matches_hook = tui_old_rl_display_matches_hook;
-      rl_outstream = tui_old_rl_outstream;
-      _rl_echoing_p = tui_old_rl_echoing_p;
+      rl_redisplay_function = tui_io ()->tui_old_rl_redisplay_function;
+      rl_deprep_term_function = tui_io ()->tui_old_rl_deprep_terminal;
+      rl_prep_term_function = tui_io ()->tui_old_rl_prep_terminal;
+      rl_getc_function = tui_io ()->tui_old_rl_getc_function;
+      rl_completion_display_matches_hook = tui_io ()->tui_old_rl_display_matches_hook;
+      rl_outstream = tui_io ()->tui_old_rl_outstream;
+      _rl_echoing_p = tui_io ()->tui_old_rl_echoing_p;
       rl_already_prompted = 0;
 
       /* Save tty for SIGCONT.  */
@@ -526,34 +558,34 @@ tui_initialize_io (void)
 #endif
 
   /* Create tui output streams.  */
-  tui_stdout = tui_fileopen (stdout);
-  tui_stderr = tui_fileopen (stderr);
-  tui_out = tui_out_new (tui_stdout);
+  tui_io ()->tui_stdout = tui_fileopen (stdout);
+  tui_io ()->tui_stderr = tui_fileopen (stderr);
+  tui_io ()->tui_out = tui_out_new (tui_io ()->tui_stdout);
 
   /* Create the default UI.  */
-  tui_old_uiout = cli_out_new (gdb_stdout);
+  tui_io ()->tui_old_uiout = cli_out_new (gdb_stdout);
 
 #ifdef TUI_USE_PIPE_FOR_READLINE
   /* Temporary solution for readline writing to stdout: redirect
      readline output in a pipe, read that pipe and output the content
      in the curses command window.  */
-  if (gdb_pipe_cloexec (tui_readline_pipe) != 0)
+  if (gdb_pipe_cloexec (tui_io ()->tui_readline_pipe) != 0)
     error (_("Cannot create pipe for readline"));
 
-  tui_rl_outstream = fdopen (tui_readline_pipe[1], "w");
-  if (tui_rl_outstream == 0)
+  tui_io ()->tui_rl_outstream = fdopen (tui_io ()->tui_readline_pipe[1], "w");
+  if (tui_io ()->tui_rl_outstream == NULL)
     error (_("Cannot redirect readline output"));
 
-  setvbuf (tui_rl_outstream, (char*) NULL, _IOLBF, 0);
+  setvbuf (tui_io ()->tui_rl_outstream, (char*) NULL, _IOLBF, 0);
 
 #ifdef O_NONBLOCK
-  (void) fcntl (tui_readline_pipe[0], F_SETFL, O_NONBLOCK);
+  (void) fcntl (tui_io ()->tui_readline_pipe[0], F_SETFL, O_NONBLOCK);
 #else
 #ifdef O_NDELAY
-  (void) fcntl (tui_readline_pipe[0], F_SETFL, O_NDELAY);
+  (void) fcntl (tui_io ()->tui_readline_pipe[0], F_SETFL, O_NDELAY);
 #endif
 #endif
-  add_file_handler (tui_readline_pipe[0], tui_readline_output, 0);
+  add_file_handler (tui_io ()->tui_readline_pipe[0], tui_readline_output, 0);
 #else
   tui_rl_outstream = stdout;
 #endif

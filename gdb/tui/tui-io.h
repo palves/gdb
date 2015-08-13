@@ -23,6 +23,7 @@
 #define TUI_IO_H
 
 struct ui_out;
+struct tui_io_data;
 
 /* Print the string in the curses command window.  */
 extern void tui_puts (const char *);
@@ -44,8 +45,10 @@ extern void tui_redisplay_readline (void);
 /* Expand TABs into spaces.  */
 extern char *tui_expand_tabs (const char *, int);
 
-extern struct ui_out *tui_out;
-extern struct ui_out *tui_old_uiout;
+extern struct tui_io_data *tui_io_data_new (void);
+
+extern struct ui_out *tui_io_old_uiout (struct tui_io_data *io);
+extern struct ui_out *tui_io_out (struct tui_io_data *io);
 
 extern int key_is_start_sequence (int ch);
 extern int key_is_end_sequence (int ch);
