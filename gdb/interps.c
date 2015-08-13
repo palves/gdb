@@ -92,7 +92,7 @@ void _initialize_interpreter (void);
 
 struct interp *interp_list = NULL;
 struct interp *current_interpreter = NULL;
-static struct interp *top_level_interpreter_ptr = NULL;
+struct interp *top_level_interpreter_ptr = NULL;
 
 /* interp_init - This fills the fields from the inputs.  */
 

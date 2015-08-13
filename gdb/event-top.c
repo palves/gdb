@@ -443,6 +443,7 @@ struct terminal
   struct readline_state readline_state;
 
   struct interp *current_interpreter;
+  struct interp *top_level_interpreter_ptr;
 };
 
 struct terminal *current_terminal;
@@ -569,6 +570,7 @@ switch_to_terminal (struct terminal *terminal)
 
   /* Save.  */
   current_terminal->current_interpreter = current_interpreter;
+  current_terminal->top_level_interpreter_ptr = top_level_interpreter_ptr;
   rl_save_state (&current_terminal->readline_state);
 
   current_terminal->input_fd = input_fd;
@@ -591,6 +593,7 @@ switch_to_terminal (struct terminal *terminal)
   gdb_stdlog = terminal->log;
 
   current_interpreter = terminal->current_interpreter;
+  top_level_interpreter_ptr = terminal->top_level_interpreter_ptr;
   current_uiout = terminal->current_uiout;
 
   input_handler = terminal->input_handler;

@@ -123,6 +123,7 @@ extern struct interp *command_interp (void);
 
 extern struct interp *current_interpreter;
 extern struct interp *interp_list;
+extern struct interp *top_level_interpreter_ptr;
 
 #define ALL_INTERPS(INTERP)				\
   for (INTERP = interp_list; INTERP; INTERP = INTERP->next)

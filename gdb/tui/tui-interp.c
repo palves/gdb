@@ -32,6 +32,7 @@
 #include "tui/tui-interp.h"
 #include "infrun.h"
 #include "observer.h"
+#include "gdbthread.h"
 
 static int tui_interp_p (struct interp *interp);
 
@@ -67,10 +68,21 @@ static void
 tui_on_normal_stop (struct bpstats *bs, int print_frame)
 {
   struct interp *interp;
+  struct thread_info *tp;
 
-  if (print_frame)
+  if (!print_frame)
+    return;
+
+  tp = inferior_thread ();
+  /* Broadcast asynchronous stops to all consoles.  If we just
+     finished a step, print this to the console if it was the console
+     that started the step in the first place.  */
+  ALL_TUI_INTERPS (interp)
     {
-      ALL_TUI_INTERPS (interp)
+      if ((!tp->control.stop_step
+	   && !tp->control.proceed_to_finish)
+	  || (tp->control.command_interp != NULL
+	      && tp->control.command_interp == interp))
 	print_stop_event (interp_ui_out (interp));
     }
 }
