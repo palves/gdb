@@ -343,8 +343,8 @@ child_terminal_inferior (struct target_ops *self)
 #endif
 
   if (gdb_has_a_terminal ()
+      && ts->inferior_terminal_info.ttystate != NULL
 #if 0
-      && tinfo->ttystate != NULL
       && tinfo->run_terminal == NULL
 #endif
       )
