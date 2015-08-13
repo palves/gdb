@@ -264,28 +264,24 @@ cli_interpreter_suspend (struct interp *self)
 static struct gdb_exception
 cli_interpreter_exec (struct interp *self, const char *command_str)
 {
-  struct ui_file *old_stream;
   struct gdb_exception result;
+  struct ui_out *cli_uiout;
 
   /* FIXME: cagney/2003-02-01: Need to const char *propogate
      safe_execute_command.  */
   char *str = (char *) alloca (strlen (command_str) + 1);
   strcpy (str, command_str);
 
-  /* gdb_stdout could change between the time cli_uiout was
+  /* gdb_stdout could change between the time cli's uiout was
      initialized and now.  Since we're probably using a different
      interpreter which has a new ui_file for gdb_stdout, use that one
      instead of the default.
 
      It is important that it gets reset everytime, since the user
      could set gdb to use a different interpreter.  */
-#if 0
-  old_stream = cli_out_set_stream (cli_uiout, gdb_stdout);
+  cli_uiout = cli_out_new (gdb_stdout);
   result = safe_execute_command (cli_uiout, str, 1);
-  cli_out_set_stream (cli_uiout, old_stream);
-#endif
-
-  result = safe_execute_command (current_uiout, str, 1);
+  ui_out_destroy (cli_uiout);
 
   return result;
 }
