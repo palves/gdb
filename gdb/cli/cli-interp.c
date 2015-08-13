@@ -25,6 +25,19 @@
 #include "top.h"		/* for "execute_command" */
 #include "infrun.h"
 #include "observer.h"
+#include "gdbthread.h"
+
+/* FIXME: Move to a header.  */
+extern int should_print_stop_to_console (struct interp *interp,
+					 struct thread_info *tp);
+extern void cli_on_signal_received (enum gdb_signal siggnal);
+extern void cli_on_end_stepping_range (void);
+extern void cli_on_signal_exited (enum gdb_signal siggnal);
+extern void cli_on_exited (int exitstatus);
+extern void cli_on_no_history (void);
+extern void cli_on_normal_stop (struct bpstats *bs, int print_frame);
+extern void cli_on_sync_execution_done (void);
+extern void cli_on_command_error (void);
 
 struct cli_interp
 {
@@ -42,8 +55,6 @@ struct cli_interp
 static struct gdb_exception safe_execute_command (struct ui_out *uiout,
 						  char *command, 
 						  int from_tty);
-
-static int console_interp_p (struct interp *interp);
 
 /* Observers for several run control events.  If the interpreter is
    quiet (i.e., another interpreter is being run with
@@ -67,7 +78,7 @@ cli_on_normal_stop (struct bpstats *bs, int print_frame)
 
 /* Observer for the signal_received notification.  */
 
-static void
+void
 cli_on_signal_received (enum gdb_signal siggnal)
 {
   struct interp *interp = current_interpreter;
@@ -77,7 +88,7 @@ cli_on_signal_received (enum gdb_signal siggnal)
 
 /* Observer for the end_stepping_range notification.  */
 
-static void
+void
 cli_on_end_stepping_range (void)
 {
   struct interp *interp = current_interpreter;
@@ -87,7 +98,7 @@ cli_on_end_stepping_range (void)
 
 /* Observer for the signalled notification.  */
 
-static void
+void
 cli_on_signal_exited (enum gdb_signal siggnal)
 {
   struct interp *interp = current_interpreter;
@@ -97,7 +108,7 @@ cli_on_signal_exited (enum gdb_signal siggnal)
 
 /* Observer for the exited notification.  */
 
-static void
+void
 cli_on_exited (int exitstatus)
 {
   struct interp *interp = current_interpreter;
@@ -107,7 +118,7 @@ cli_on_exited (int exitstatus)
 
 /* Observer for the no_history notification.  */
 
-static void
+void
 cli_on_no_history (void)
 {
   struct interp *interp = current_interpreter;
@@ -115,23 +126,78 @@ cli_on_no_history (void)
   print_no_history_reason (interp_ui_out (interp));
 }
 
-/* Observer for the sync_execution_done notification.  */
+int
+should_print_stop_to_console (struct interp *interp,
+			      struct thread_info *tp)
+{
+  /* Breakpoint hits should always be mirrored to the console.
+     Deciding what to mirror to the console wrt to breakpoints and
+     random stops gets messy real fast.  E.g., say "s" trips on a
+     breakpoint.  We'd clearly want to mirror the event to the console
+     in this case.  But what about more complicated cases like "s&;
+     thread n; s&", and one of those steps spawning a new thread, and
+     that thread hitting a breakpoint?  It's impossible in general to
+     track whether the thread had any relation to the commands that
+     had been executed.  So we just simplify and always mirror
+     breakpoints and random events to the console.
 
-static void
-cli_on_sync_execution_done (void)
+     FIXME comment. XXXXXXXX
+
+     Also, CLI execution commands (-interpreter-exec console "next",
+     for example) in async mode have the opposite issue as described
+     in the "then" branch above -- normal_stop has already printed
+     frame information to MI uiout, but nothing has printed the same
+     information to the CLI channel.  We should print the source line
+     to the console when stepping or other similar commands, iff the
+     step was started by a console command (but not if it was started
+     with -exec-step or similar).  */
+  if ((!tp->control.stop_step
+       && !tp->control.proceed_to_finish))
+    return 1;
+
+  if (tp->control.command_interp != NULL
+       && tp->control.command_interp == interp)
+    return 1;
+
+  return 0;
+}
+
+void
+cli_on_normal_stop (struct bpstats *bs, int print_frame)
 {
   struct interp *interp = current_interpreter;
+  struct thread_info *tp;
 
-  display_gdb_prompt (NULL);
+  if (!print_frame)
+    return;
+
+  tp = inferior_thread ();
+
+  /* Broadcast asynchronous stops to all consoles.  If we just
+     finished a step, print this to the console if it was the console
+     that started the step in the first place.  */
+  if (should_print_stop_to_console (interp, tp))
+    print_stop_event (interp_ui_out (interp));
+}
+
+/* Observer for the sync_execution_done notification.  */
+
+void
+cli_on_sync_execution_done (void)
+{
+  if (sync_execution)
+    {
+      async_enable_stdin ();
+      display_gdb_prompt (NULL);
+    }
 }
 
 /* Observer for the command_error notification.  */
 
-static void
+void
 cli_on_command_error (void)
 {
-  if (console_interp_p (current_interpreter))
-    display_gdb_prompt (NULL);
+  display_gdb_prompt (NULL);
 }
 
 /* These implement the cli out interpreter: */
@@ -271,7 +337,35 @@ static const struct interp_procs console_interp_procs = {
   cli_interpreter_exec,	/* exec_proc */
   cli_ui_out,			/* ui_out_proc */
   NULL,                       /* set_logging_proc */
-  cli_command_loop            /* command_loop_proc */
+  cli_command_loop,            /* command_loop_proc */
+  cli_on_normal_stop,
+  cli_on_signal_received,
+  cli_on_end_stepping_range,
+  cli_on_signal_exited,
+  cli_on_exited,
+  cli_on_no_history,
+  cli_on_sync_execution_done,
+  NULL, /* on_new_thread */
+  NULL, /* on_thread_exit */
+  NULL, /* on_on_target_resumed */
+  NULL, /* on_about_to_proceed */
+  NULL, /* on_breakpoint_created */
+  NULL, /* on_breakpoint_deleted */
+  NULL, /* on_breakpoint_modified */
+  NULL, /* on_inferior_added */
+  NULL, /* on_inferior_appeared */
+  NULL, /* on_inferior_exit */
+  NULL, /* on_inferior_removed */
+  NULL, /* on_tsv_created */
+  NULL, /* on_tsv_deleted */
+  NULL, /* on_tsv_modified */
+  NULL, /* on_record_changed */
+  NULL, /* on_solib_loaded */
+  NULL, /* on_solib_unloaded */
+  NULL, /* on_traceframe_changed */
+  NULL, /* on_command_param_changed */
+  cli_on_command_error,
+  NULL, /* on_memory_changed */
 };
 
 static struct interp *
@@ -280,17 +374,12 @@ console_interp_factory (const char *name, struct terminal *terminal)
   return interp_new (name, &console_interp_procs, terminal);
 }
 
-static int
-console_interp_p (struct interp *interp)
-{
-  return interp->procs == &console_interp_procs;
-}
-
 void
 _initialize_cli_interp (void)
 {
   interp_factory_register (INTERP_CONSOLE, console_interp_factory);
 
+#if 0
   /* If changing this, remember to update tui-interp.c as well.  */
   observer_attach_normal_stop (cli_on_normal_stop);
   observer_attach_end_stepping_range (cli_on_end_stepping_range);
@@ -300,4 +389,5 @@ _initialize_cli_interp (void)
   observer_attach_no_history (cli_on_no_history);
   observer_attach_sync_execution_done (cli_on_sync_execution_done);
   observer_attach_command_error (cli_on_command_error);
+#endif
 }

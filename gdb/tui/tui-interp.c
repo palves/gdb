@@ -53,136 +53,14 @@ tui_exit (void)
    quiet (i.e., another interpreter is being run with
    interpreter-exec), print nothing.  */
 
-/* Observer for the normal_stop notification.  */
-
-extern int should_print_stop_to_console (struct interp *interp,
-					 struct thread_info *tp);
-
-int
-should_print_stop_to_console (struct interp *interp,
-			      struct thread_info *tp)
-{
-  /* Breakpoint hits should always be mirrored to the console.
-     Deciding what to mirror to the console wrt to breakpoints and
-     random stops gets messy real fast.  E.g., say "s" trips on a
-     breakpoint.  We'd clearly want to mirror the event to the console
-     in this case.  But what about more complicated cases like "s&;
-     thread n; s&", and one of those steps spawning a new thread, and
-     that thread hitting a breakpoint?  It's impossible in general to
-     track whether the thread had any relation to the commands that
-     had been executed.  So we just simplify and always mirror
-     breakpoints and random events to the console.
-
-     FIXME comment. XXXXXXXX
-
-     Also, CLI execution commands (-interpreter-exec console "next",
-     for example) in async mode have the opposite issue as described
-     in the "then" branch above -- normal_stop has already printed
-     frame information to MI uiout, but nothing has printed the same
-     information to the CLI channel.  We should print the source line
-     to the console when stepping or other similar commands, iff the
-     step was started by a console command (but not if it was started
-     with -exec-step or similar).  */
-  if ((!tp->control.stop_step
-       && !tp->control.proceed_to_finish))
-    return 1;
-
-  if (tp->control.command_interp != NULL
-       && tp->control.command_interp == interp)
-    return 1;
-
-  return 0;
-}
-
-static void
-tui_on_normal_stop (struct bpstats *bs, int print_frame)
-{
-  struct interp *interp = current_interpreter;
-  struct thread_info *tp;
-
-  if (!print_frame)
-    return;
-
-  tp = inferior_thread ();
-
-  /* Broadcast asynchronous stops to all consoles.  If we just
-     finished a step, print this to the console if it was the console
-     that started the step in the first place.  */
-  if (should_print_stop_to_console (interp, tp))
-    print_stop_event (interp_ui_out (interp));
-}
-
-/* Observer for the signal_received notification.  */
-
-static void
-tui_on_signal_received (enum gdb_signal siggnal)
-{
-  struct interp *interp = current_interpreter;
-
-  print_signal_received_reason (interp_ui_out (interp), siggnal);
-}
-
-/* Observer for the end_stepping_range notification.  */
-
-static void
-tui_on_end_stepping_range (void)
-{
-  struct interp *interp = current_interpreter;
-
-  print_end_stepping_range_reason (interp_ui_out (interp));
-}
-
-/* Observer for the signal_exited notification.  */
-
-static void
-tui_on_signal_exited (enum gdb_signal siggnal)
-{
-  struct interp *interp = current_interpreter;
-
-  print_signal_exited_reason (interp_ui_out (interp), siggnal);
-}
-
-/* Observer for the exited notification.  */
-
-static void
-tui_on_exited (int exitstatus)
-{
-  struct interp *interp = current_interpreter;
-
-  print_exited_reason (interp_ui_out (interp), exitstatus);
-}
-
-/* Observer for the no_history notification.  */
-
-static void
-tui_on_no_history (void)
-{
-  struct interp *interp = current_interpreter;
-
-  print_no_history_reason (interp_ui_out (interp));
-}
-
-/* Observer for the sync_execution_done notification.  */
-
-static void
-tui_on_sync_execution_done (void)
-{
-  struct interp *interp = current_interpreter;
-
-  if (interp->terminal->sync_execution)
-    {
-      async_enable_stdin ();
-      display_gdb_prompt (NULL);
-    }
-}
-
-/* Observer for the command_error notification.  */
-
-static void
-tui_on_command_error (void)
-{
-  display_gdb_prompt (NULL);
-}
+extern void cli_on_signal_received (enum gdb_signal siggnal);
+extern void cli_on_end_stepping_range (void);
+extern void cli_on_signal_exited (enum gdb_signal siggnal);
+extern void cli_on_exited (int exitstatus);
+extern void cli_on_no_history (void);
+extern void cli_on_normal_stop (struct bpstats *bs, int print_frame);
+extern void cli_on_sync_execution_done (void);
+extern void cli_on_command_error (void);
 
 /* These implement the TUI interpreter.  */
 
@@ -245,13 +123,13 @@ static const struct interp_procs tui_interp_procs = {
   tui_ui_out,
   NULL,
   cli_command_loop,
-  tui_on_normal_stop,
-  tui_on_signal_received,
-  tui_on_end_stepping_range,
-  tui_on_signal_exited,
-  tui_on_exited,
-  tui_on_no_history,
-  tui_on_sync_execution_done,
+  cli_on_normal_stop,
+  cli_on_signal_received,
+  cli_on_end_stepping_range,
+  cli_on_signal_exited,
+  cli_on_exited,
+  cli_on_no_history,
+  cli_on_sync_execution_done,
   NULL, /* on_new_thread */
   NULL, /* on_thread_exit */
   NULL, /* on_on_target_resumed */
@@ -271,7 +149,7 @@ static const struct interp_procs tui_interp_procs = {
   NULL, /* on_solib_unloaded */
   NULL, /* on_traceframe_changed */
   NULL, /* on_command_param_changed */
-  tui_on_command_error,
+  cli_on_command_error,
   NULL, /* on_memory_changed */
 };
 
