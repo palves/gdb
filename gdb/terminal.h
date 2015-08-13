@@ -154,6 +154,9 @@ struct terminal
 
   int sync_execution;
 
+  unsigned int lines_per_page;
+  unsigned int chars_per_line;
+
   /* Readline-related things.  Private to most of GDB.  */
   struct terminal_readline_state *rl;
 
