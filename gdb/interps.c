@@ -90,7 +90,7 @@ void _initialize_interpreter (void);
 
 /* Variables local to this file: */
 
-static struct interp *interp_list = NULL;
+struct interp *interp_list = NULL;
 struct interp *current_interpreter = NULL;
 static struct interp *top_level_interpreter_ptr = NULL;
 
@@ -238,7 +238,7 @@ interp_lookup (const char *name)
   if (name == NULL || strlen (name) == 0)
     return NULL;
 
-  for (interp = interp_list; interp != NULL; interp = interp->next)
+  ALL_INTERPS (interp)
     {
       if (strcmp (interp->name, name) == 0)
 	return interp;
@@ -467,7 +467,7 @@ interpreter_completer (struct cmd_list_element *ignore,
   struct interp *interp;
 
   textlen = strlen (text);
-  for (interp = interp_list; interp != NULL; interp = interp->next)
+  ALL_INTERPS (interp)
     {
       if (strncmp (interp->name, text, textlen) == 0)
 	{

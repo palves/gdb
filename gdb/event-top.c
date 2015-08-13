@@ -94,8 +94,11 @@ static void async_sigterm_handler (gdb_client_data arg);
    line of input is ready.  CALL_READLINE is to be set to the function
    that readline offers as callback to the event_loop.  */
 
-void (*input_handler) (char *);
-void (*call_readline) (gdb_client_data);
+typedef void (*input_handler_ftype) (char *);
+typedef void (*call_readline_ftype) (gdb_client_data);
+
+input_handler_ftype input_handler;
+call_readline_ftype call_readline;
 
 /* Important variables for the event loop.  */
 
@@ -421,11 +424,17 @@ struct terminal
   /* Output channels */
   struct ui_file *out;
   struct ui_file *err;
+  struct ui_file *log;
 
   struct ui_out *current_uiout;
 
   struct line_buffer line_buffer;
   int more_to_come;
+
+  /* Readline-related things.  */
+  int async_command_editing_p;
+  input_handler_ftype input_handler;
+  call_readline_ftype call_readline;
 
   struct readline_input_state readline_input_state;
 
@@ -566,17 +575,27 @@ switch_to_terminal (struct terminal *terminal)
   current_terminal->instream = instream;
   current_terminal->out = gdb_stdout;
   current_terminal->err = gdb_stderr;
+  current_terminal->log = gdb_stdlog;
 
   current_terminal->current_uiout = current_uiout;
+
+  current_terminal->input_handler = input_handler;
+  current_terminal->call_readline = call_readline;
+  current_terminal->async_command_editing_p = async_command_editing_p;
 
   /* Restore.  */
   input_fd = terminal->input_fd;
   instream = terminal->instream;
   gdb_stdout = terminal->out;
   gdb_stderr = terminal->err;
+  gdb_stdlog = terminal->log;
 
   current_interpreter = terminal->current_interpreter;
   current_uiout = terminal->current_uiout;
+
+  input_handler = terminal->input_handler;
+  call_readline = terminal->call_readline;
+  async_command_editing_p = terminal->async_command_editing_p;
 
   rl_restore_state (&terminal->readline_state);
 
