@@ -295,6 +295,11 @@ mi_on_sync_execution_done (void)
 {
   /* If MI is sync, then output the MI prompt now, indicating we're
      ready for further input.  */
+  struct interp *interp = current_interpreter;
+
+  if (interp->terminal->sync_execution)
+    async_enable_stdin ();
+
   if (!mi_async_p ())
     {
       fputs_unfiltered ("(gdb) \n", raw_stdout);
