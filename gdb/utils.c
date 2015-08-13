@@ -87,8 +87,8 @@ static void fputs_maybe_filtered (const char *, struct ui_file *, int);
 
 static void prompt_for_continue (void);
 
-static void set_screen_size (void);
-static void set_width (void);
+static void set_readline_screen_size (void);
+static void reinitialize_wrap_buffer (void);
 
 /* Time spent in prompt_for_continue in the currently executing command
    waiting for user to respond.
@@ -1715,8 +1715,8 @@ init_page_info (void)
   /* We handle SIGWINCH ourselves.  XXX */
   rl_catch_sigwinch = 0;
 
-  set_screen_size ();
-  set_width ();
+  set_readline_screen_size ();
+  reinitialize_wrap_buffer ();
 }
 
 
@@ -1729,8 +1729,9 @@ show_lines_per_page (struct ui_file *file, int from_tty,
   struct page_info *pi = get_page_info ();
 
   fprintf_filtered (file,
-		    _("Number of lines gdb thinks are in a page is %u.\n"),
-		    pi->lines_per_page);
+		    _("Number of lines gdb thinks are in a page is %s.\n"),
+		    (pi->lines_per_page == UINT_MAX)
+		    ? "unlimited" : plongest (pi->lines_per_page));
 }
 
 /* Number of chars per line or UINT_MAX if line folding is disabled.  */
@@ -1743,7 +1744,9 @@ show_chars_per_line (struct ui_file *file, int from_tty,
 
   fprintf_filtered (file,
 		    _("Number of characters gdb thinks "
-		      "are in a line is %u.\n"), pi->chars_per_line);
+		      "are in a line is %s.\n"),
+		    (pi->chars_per_line == UINT_MAX)
+		    ? "unlimited" : plongest (pi->chars_per_line));
 }
 
 /* Return nonzero if filtered printing is initialized.  */
@@ -1758,8 +1761,8 @@ filtered_printing_initialized (void)
 static void
 do_restore_page_info_cleanup (void *arg)
 {
-  set_screen_size ();
-  set_width ();
+  set_readline_screen_size ();
+  reinitialize_wrap_buffer ();
 }
 
 /* Provide cleanup for restoring the terminal size.  */
@@ -1795,7 +1798,7 @@ set_batch_flag_and_make_cleanup_restore_page_info (void)
 /* Set the screen size based on LINES_PER_PAGE and CHARS_PER_LINE.  */
 
 static void
-set_screen_size (void)
+set_readline_screen_size (void)
 {
   struct page_info *pi = get_page_info ();
   int rows = pi->lines_per_page;
@@ -1815,7 +1818,7 @@ set_screen_size (void)
    CHARS_PER_LINE.  */
 
 static void
-set_width (void)
+reinitialize_wrap_buffer (void)
 {
   struct page_info *pi = get_page_info ();
 
@@ -1835,14 +1838,16 @@ set_width (void)
 static void
 set_width_command (char *args, int from_tty, struct cmd_list_element *c)
 {
-  set_screen_size ();
-  set_width ();
+  get_page_info ()->chars_per_line = chars_per_line_var;
+  set_readline_screen_size ();
+  reinitialize_wrap_buffer ();
 }
 
 static void
 set_height_command (char *args, int from_tty, struct cmd_list_element *c)
 {
-  set_screen_size ();
+  get_page_info ()->lines_per_page = lines_per_page_var;
+  set_readline_screen_size ();
 }
 
 /* See utils.h.  */
@@ -1855,8 +1860,8 @@ set_screen_width_and_height (int width, int height)
   pi->lines_per_page = height;
   pi->chars_per_line = width;
 
-  set_screen_size ();
-  set_width ();
+  set_readline_screen_size ();
+  reinitialize_wrap_buffer ();
 }
 
 /* Wait, so the user can read what's on the screen.  Prompt the user
