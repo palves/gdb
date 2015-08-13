@@ -851,8 +851,6 @@ struct gdb_readline2_state
   int result_size;
 };
 
-struct gdb_readline2_state *rl2;
-
 #include "serial.h"
 
 struct serial *terminal_stdin_serial (struct terminal *terminal);
@@ -868,9 +866,11 @@ gdb_readline2 (gdb_client_data client_data)
 {
   int c;
   char *r;
+  struct gdb_readline2_state *rl2;
 
-  if (rl2 == NULL)
-    rl2 = XCNEW (struct gdb_readline2_state);
+  if (current_terminal->rl->rl2 == NULL)
+    current_terminal->rl->rl2 = XCNEW (struct gdb_readline2_state);
+  rl2 = current_terminal->rl->rl2;
 
   if (rl2->result == NULL)
     {
