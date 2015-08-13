@@ -189,11 +189,17 @@ tui_on_sync_execution_done (void)
   struct terminal *terminal;
   int ix;
 
+  /* Save the current state.   */
+  switch_to_terminal (current_terminal);
+
   for (ix = 0; VEC_iterate (terminal_ptr, terminals, ix, terminal); ++ix)
     {
-      if (tui_interp_p (terminal->current_interpreter))
+      if (terminal->sync_execution
+	  && tui_interp_p (terminal->current_interpreter))
 	{
 	  switch_to_terminal (terminal);
+
+	  async_enable_stdin ();
 	  display_gdb_prompt (NULL);
 	}
     }

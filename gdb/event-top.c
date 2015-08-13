@@ -548,9 +548,6 @@ extern FILE *_rl_in_stream, *_rl_out_stream;
 void
 switch_to_terminal (struct terminal *terminal)
 {
-  if (current_terminal == terminal)
-    return;
-
   /* Save.  */
   current_terminal->current_interpreter = current_interpreter;
   current_terminal->top_level_interpreter_ptr = top_level_interpreter_ptr;
@@ -568,6 +565,13 @@ switch_to_terminal (struct terminal *terminal)
   current_terminal->rl->call_readline = call_readline;
   current_terminal->rl->async_command_editing_p = async_command_editing_p;
 
+  current_terminal->sync_execution = sync_execution;
+
+  /* We're just saving the current state.  No need to switch it
+     back.  */
+  if (current_terminal == terminal)
+    return;
+
   /* Restore.  */
   input_fd = terminal->input_fd;
   instream = terminal->instream;
@@ -582,6 +586,8 @@ switch_to_terminal (struct terminal *terminal)
   input_handler = terminal->rl->input_handler;
   call_readline = terminal->rl->call_readline;
   async_command_editing_p = terminal->rl->async_command_editing_p;
+
+  sync_execution = terminal->sync_execution;
 
   rl_restore_state (&terminal->rl->readline_state);
 

@@ -3935,7 +3935,7 @@ fetch_inferior_event (void *client_data)
   /* If the inferior was in sync execution mode, and now isn't,
      restore the prompt (a synchronous execution command has finished,
      and we're ready for input).  */
-  if (interpreter_async && was_sync && !sync_execution)
+  if (interpreter_async /* && was_sync && !sync_execution */ && cmd_done)
     observer_notify_sync_execution_done ();
 
   if (cmd_done
@@ -8057,7 +8057,7 @@ normal_stop (void)
     disable_current_display ();
 
   target_terminal_ours ();
-  async_enable_stdin ();
+  //  async_enable_stdin ();
 
   /* Let the user/frontend see the threads as stopped.  */
   do_cleanups (old_chain);
