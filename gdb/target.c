@@ -447,7 +447,27 @@ enum terminal_state
     terminal_is_ours = 2
   };
 
-static enum terminal_state terminal_state = terminal_is_ours;
+struct target_term_state
+{
+  enum terminal_state terminal_state;
+};
+
+static struct target_term_state *
+target_term_state (struct terminal *terminal)
+{
+  if (terminal->target_term_state == NULL)
+    {
+      terminal->target_term_state = XCNEW (struct target_term_state);
+      terminal->target_term_state->terminal_state = terminal_is_ours;
+     }
+  return terminal->target_term_state;
+}
+
+static struct target_term_state *
+current_target_term_state (void)
+{
+  return target_term_state (current_terminal);
+}
 
 /* See target.h.  */
 
@@ -456,7 +476,7 @@ target_terminal_init (void)
 {
   (*current_target.to_terminal_init) (&current_target);
 
-  terminal_state = terminal_is_ours;
+  current_target_term_state ()->terminal_state = terminal_is_ours;
 }
 
 /* See target.h.  */
@@ -464,7 +484,8 @@ target_terminal_init (void)
 int
 target_terminal_is_inferior (void)
 {
-  return (terminal_state == terminal_is_inferior);
+  return (current_target_term_state ()->terminal_state
+	  == terminal_is_inferior);
 }
 
 /* See target.h.  */
@@ -481,13 +502,13 @@ target_terminal_inferior (void)
 
   delete_file_handler (input_fd);
 
-  if (terminal_state == terminal_is_inferior)
+  if (current_target_term_state ()->terminal_state == terminal_is_inferior)
     return;
 
   /* If GDB is resuming the inferior in the foreground, install
      inferior's terminal modes.  */
   (*current_target.to_terminal_inferior) (&current_target);
-  terminal_state = terminal_is_inferior;
+  current_target_term_state ()->terminal_state = terminal_is_inferior;
 }
 
 /* See target.h.  */
@@ -495,14 +516,13 @@ target_terminal_inferior (void)
 void
 target_terminal_ours (void)
 {
-  if (terminal_state != terminal_is_ours)
+  if (current_target_term_state ()->terminal_state != terminal_is_ours)
     {
       (*current_target.to_terminal_ours) (&current_target);
-      terminal_state = terminal_is_ours;
+      current_target_term_state ()->terminal_state = terminal_is_ours;
     }
 
   add_file_handler (input_fd, stdin_event_handler, current_terminal);
-
 }
 
 /* See target.h.  */
@@ -510,10 +530,10 @@ target_terminal_ours (void)
 void
 target_terminal_ours_for_output (void)
 {
-  if (terminal_state == terminal_is_inferior)
+  if (current_target_term_state ()->terminal_state == terminal_is_inferior)
     {
       (*current_target.to_terminal_ours_for_output) (&current_target);
-      terminal_state = terminal_is_ours_for_output;
+      current_target_term_state ()->terminal_state = terminal_is_ours_for_output;
     }
 
   add_file_handler (input_fd, stdin_event_handler, current_terminal);
@@ -565,7 +585,7 @@ make_cleanup_restore_target_terminal (void)
 {
   enum terminal_state *ts = XNEW (enum terminal_state);
 
-  *ts = terminal_state;
+  *ts = current_target_term_state ()->terminal_state;
 
   return make_cleanup_dtor (cleanup_restore_target_terminal, ts, xfree);
 }

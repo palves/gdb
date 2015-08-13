@@ -128,6 +128,7 @@ extern void switch_to_terminal (struct terminal *terminal);
 struct term_state *new_term_state (void);
 
 struct terminal_readline_state;
+struct target_term_state;
 
 typedef struct interp *interp_ptr;
 DEF_VEC_P(interp_ptr);
@@ -157,6 +158,8 @@ struct terminal
   struct terminal_readline_state *rl;
 
   struct term_state *term_state;
+
+  struct target_term_state *target_term_state;
 };
 
 typedef struct terminal *terminal_ptr;
