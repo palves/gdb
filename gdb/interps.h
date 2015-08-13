@@ -170,9 +170,7 @@ extern struct interp *interp_new (const char *name,
 extern void interp_ctor (struct interp *self, const char *name,
 			 const struct interp_procs *procs,
 			 struct terminal *terminal);
-extern void interp_add (struct interp *interp);
 extern int interp_set (struct interp *interp, int top_level);
-extern struct interp *interp_lookup (const char *name);
 extern struct ui_out *interp_ui_out (struct interp *interp);
 extern void *interp_data (struct interp *interp);
 extern const char *interp_name (struct interp *interp);

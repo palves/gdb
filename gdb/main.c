@@ -974,8 +974,6 @@ captured_main (void *data)
     if (interp == NULL)
       error (_("Interpreter `%s' unrecognized"), interpreter_p);
 
-    interp_add (interp);
-
     /* Install it.  */
     if (!interp_set (interp, 1))
       error (_("Interpreter `%s' failed to initialize."), interpreter_p);

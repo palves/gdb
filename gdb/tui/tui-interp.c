@@ -301,12 +301,6 @@ _initialize_tui_interp (void)
 
   interp_factory_register (INTERP_TUI, tui_interp_factory);
 
-#if 0
-  /* Create a default uiout builder for the TUI.  */
-  tui_interp = tui_interp_factory (NULL);
-  interp_add (tui_interp);
-#endif
-
   if (interpreter_p && strcmp (interpreter_p, INTERP_TUI) == 0)
     tui_start_enabled = 1;
 

@@ -79,6 +79,7 @@ struct term_state;
 #endif
 
 #include "vec.h"
+#include "interps.h"
 
 struct inferior;
 
@@ -128,6 +129,9 @@ struct term_state *new_term_state (void);
 
 struct terminal_readline_state;
 
+typedef struct interp *interp_ptr;
+DEF_VEC_P(interp_ptr);
+
 struct terminal
 {
   int input_fd;
@@ -144,6 +148,8 @@ struct terminal
 
   struct interp *current_interpreter;
   struct interp *top_level_interpreter_ptr;
+
+  VEC(interp_ptr) *interpreters;
 
   int sync_execution;
 

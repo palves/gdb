@@ -308,14 +308,6 @@ _initialize_cli_interp (void)
 {
   interp_factory_register (INTERP_CONSOLE, console_interp_factory);
 
-#if 0
-  /* Create a default uiout builder for the CLI.  */
-  cli_uiout = cli_out_new (gdb_stdout);
-  cli_interp = interp_new (INTERP_CONSOLE, &procs);
-
-  interp_add (cli_interp);
-#endif
-
   /* If changing this, remember to update tui-interp.c as well.  */
   observer_attach_normal_stop (cli_on_normal_stop);
   observer_attach_end_stepping_range (cli_on_end_stepping_range);

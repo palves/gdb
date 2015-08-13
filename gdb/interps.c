@@ -68,20 +68,49 @@ interp_factory_register (const char *name, interp_factory_func func)
   f->name = name;
   f->func = func;
 
+  /* FIXME: assert that no factory for NAME is already registered.  */
   VEC_safe_push (interp_factory_p, interpreter_factories, f);
 }
+
+static struct interp *
+interp_lookup (struct terminal *terminal, const char *name)
+{
+  struct interp *interp;
+  int ix;
+
+  /* Only create each interpreter once per terminal.  */
+  for (ix = 0;
+       VEC_iterate (interp_ptr, terminal->interpreters, ix, interp);
+       ++ix)
+    if (strcmp (interp->name, name) == 0)
+      return interp;
+
+  return NULL;
+}
+
+static void interp_add (struct terminal *terminal, struct interp *interp);
 
 struct interp *
 interp_create (const char *name, struct terminal *terminal)
 {
   struct interp_factory *factory;
+  struct interp *interp;
   int ix;
+
+  /* Only create each interpreter once per terminal.  */
+  interp = interp_lookup (terminal, name);
+  if (interp != NULL)
+    return interp;
 
   for (ix = 0;
        VEC_iterate (interp_factory_p, interpreter_factories, ix, factory);
        ++ix)
     if (strcmp (factory->name, name) == 0)
-      return factory->func (name, terminal);
+      {
+	interp = factory->func (name, terminal);
+	interp_add (terminal, interp);
+	return interp;
+      }
 
   return NULL;
 }
@@ -129,16 +158,25 @@ interp_new (const char *name, const struct interp_procs *procs,
   return new_interp;
 }
 
-/* Add interpreter INTERP to the gdb interpreter list.  The
-   interpreter must not have previously been added.  */
-void
-interp_add (struct interp *interp)
+/* Add interpreter INTERP to both gdb interpreter list, and to the
+   terminal's interpreter VEC.  The interpreter with this name must
+   not have previously been added to this terminal.  */
+
+static void
+interp_add (struct terminal *terminal, struct interp *interp)
 {
-  //  gdb_assert (interp_lookup (interp->name) == NULL);
+  gdb_assert (interp_lookup (terminal, interp->name) == NULL);
+  VEC_safe_push (interp_ptr, terminal->interpreters, interp);
 
   interp->next = interp_list;
   interp_list = interp;
 }
+
+#if 0
+
+/// XXX call these when the terminal is removed.  Note that thread's
+/// also have a reference to interpreters (through
+/// command_interpreter).
 
 static void
 interp_remove (struct interp *todel)
@@ -167,6 +205,7 @@ interp_delete (struct interp *interp)
   /* FIXME: should call dtor method.  */
   xfree (interp);
 }
+#endif
 
 /* This sets the current interpreter to be INTERP.  If INTERP has not
    been initialized, then this will also run the init proc.  If the
@@ -432,8 +471,6 @@ interpreter_exec_cmd (char *args, int from_tty)
   if (interp_to_use == NULL)
     error (_("Could not find interpreter \"%s\"."), prules[0]);
 
-  interp_add (interp_to_use);
-
   /* Temporarily set interpreters quiet.  */
   old_quiet = interp_set_quiet (old_interp, 1);
   use_quiet = interp_set_quiet (interp_to_use, 1);
@@ -457,9 +494,6 @@ interpreter_exec_cmd (char *args, int from_tty)
   interp_set (old_interp, 0);
   interp_set_quiet (interp_to_use, use_quiet);
   interp_set_quiet (old_interp, old_quiet);
-
-  interp_remove (interp_to_use);
-  interp_delete (interp_to_use);
 
   do_cleanups (cleanup);
 }
