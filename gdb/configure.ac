@@ -525,6 +525,8 @@ AC_CHECK_LIB(m, main)
 AC_CHECK_FUNC(wctype, [],
   [AC_CHECK_LIB(w, wctype)])
 
+AC_SEARCH_LIBS(pthread_create, pthread)
+
 # Some systems (e.g. Solaris) have `gethostbyname' in libnsl.
 AC_SEARCH_LIBS(gethostbyname, nsl)
 
@@ -1290,7 +1292,7 @@ AC_CHECK_HEADERS([nlist.h machine/reg.h poll.h sys/poll.h proc_service.h \
 		  sys/reg.h sys/debugreg.h sys/select.h sys/syscall.h \
 		  termios.h termio.h \
 		  sgtty.h elf_hp.h \
-		  dlfcn.h])
+		  dlfcn.h pthread.h])
 AC_CHECK_HEADERS(sys/proc.h, [], [],
 [#if HAVE_SYS_PARAM_H
 # include <sys/param.h>
@@ -1364,7 +1366,7 @@ AC_CHECK_FUNCS([getauxval getrusage getuid getgid \
 		sigaction sigprocmask sigsetmask socketpair \
 		ttrace wborder wresize setlocale iconvlist libiconvlist btowc \
 		setrlimit getrlimit posix_madvise waitpid \
-		ptrace64 sigaltstack mkdtemp setns])
+		ptrace64 sigaltstack mkdtemp setns pthread_create])
 AM_LANGINFO_CODESET
 GDB_AC_COMMON
 
