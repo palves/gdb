@@ -26,15 +26,20 @@
 #include "infrun.h"
 #include "observer.h"
 
-/* These are the ui_out and the interpreter for the console
-   interpreter.  */
-struct ui_out *cli_uiout;
-static struct interp *cli_interp;
-
 /* Longjmp-safe wrapper for "execute_command".  */
 static struct gdb_exception safe_execute_command (struct ui_out *uiout,
 						  char *command, 
 						  int from_tty);
+
+static int console_interp_p (struct interp *interp);
+
+#define ALL_CONSOLE_INTERPS(INTERP)					\
+  ALL_INTERPS (INTERP)						\
+    if (!console_interp_p (INTERP) || interp_quiet_p (INTERP))	\
+      {								\
+	/* Nothing.  */						\
+      }								\
+    else
 
 /* Observers for several run control events.  If the interpreter is
    quiet (i.e., another interpreter is being run with
@@ -45,10 +50,14 @@ static struct gdb_exception safe_execute_command (struct ui_out *uiout,
 static void
 cli_on_normal_stop (struct bpstats *bs, int print_frame)
 {
-  if (!interp_quiet_p (cli_interp))
+  struct interp *interp;
+
+  if (!print_frame)
+    return;
+
+  ALL_CONSOLE_INTERPS (interp)
     {
-      if (print_frame)
-	print_stop_event (cli_uiout);
+      print_stop_event (interp_ui_out (interp));
     }
 }
 
@@ -57,8 +66,10 @@ cli_on_normal_stop (struct bpstats *bs, int print_frame)
 static void
 cli_on_signal_received (enum gdb_signal siggnal)
 {
-  if (!interp_quiet_p (cli_interp))
-    print_signal_received_reason (cli_uiout, siggnal);
+  struct interp *interp;
+
+  ALL_CONSOLE_INTERPS (interp)
+    print_signal_received_reason (interp_ui_out (interp), siggnal);
 }
 
 /* Observer for the end_stepping_range notification.  */
@@ -66,8 +77,10 @@ cli_on_signal_received (enum gdb_signal siggnal)
 static void
 cli_on_end_stepping_range (void)
 {
-  if (!interp_quiet_p (cli_interp))
-    print_end_stepping_range_reason (cli_uiout);
+  struct interp *interp;
+
+  ALL_CONSOLE_INTERPS (interp)
+    print_end_stepping_range_reason (interp_ui_out (interp));
 }
 
 /* Observer for the signalled notification.  */
@@ -75,8 +88,10 @@ cli_on_end_stepping_range (void)
 static void
 cli_on_signal_exited (enum gdb_signal siggnal)
 {
-  if (!interp_quiet_p (cli_interp))
-    print_signal_exited_reason (cli_uiout, siggnal);
+  struct interp *interp;
+
+  ALL_CONSOLE_INTERPS (interp)
+    print_signal_exited_reason (interp_ui_out (interp), siggnal);
 }
 
 /* Observer for the exited notification.  */
@@ -84,8 +99,10 @@ cli_on_signal_exited (enum gdb_signal siggnal)
 static void
 cli_on_exited (int exitstatus)
 {
-  if (!interp_quiet_p (cli_interp))
-    print_exited_reason (cli_uiout, exitstatus);
+  struct interp *interp;
+
+  ALL_CONSOLE_INTERPS (interp)
+    print_exited_reason (interp_ui_out (interp), exitstatus);
 }
 
 /* Observer for the no_history notification.  */
@@ -93,8 +110,10 @@ cli_on_exited (int exitstatus)
 static void
 cli_on_no_history (void)
 {
-  if (!interp_quiet_p (cli_interp))
-    print_no_history_reason (cli_uiout);
+  struct interp *interp;
+
+  ALL_CONSOLE_INTERPS (interp)
+    print_no_history_reason (interp_ui_out (interp));
 }
 
 /* Observer for the sync_execution_done notification.  */
@@ -102,8 +121,13 @@ cli_on_no_history (void)
 static void
 cli_on_sync_execution_done (void)
 {
-  if (!interp_quiet_p (cli_interp))
-    display_gdb_prompt (NULL);
+  struct interp *interp;
+
+  ALL_CONSOLE_INTERPS (interp)
+    {
+      /* FIXME: switch to console.  */
+      display_gdb_prompt (NULL);
+    }
 }
 
 /* Observer for the command_error notification.  */
@@ -111,7 +135,7 @@ cli_on_sync_execution_done (void)
 static void
 cli_on_command_error (void)
 {
-  if (!interp_quiet_p (cli_interp))
+  if (console_interp_p (current_interpreter))
     display_gdb_prompt (NULL);
 }
 
@@ -120,16 +144,6 @@ cli_on_command_error (void)
 static void *
 cli_interpreter_init (struct interp *self, int top_level)
 {
-  /* If changing this, remember to update tui-interp.c as well.  */
-  observer_attach_normal_stop (cli_on_normal_stop);
-  observer_attach_end_stepping_range (cli_on_end_stepping_range);
-  observer_attach_signal_received (cli_on_signal_received);
-  observer_attach_signal_exited (cli_on_signal_exited);
-  observer_attach_exited (cli_on_exited);
-  observer_attach_no_history (cli_on_no_history);
-  observer_attach_sync_execution_done (cli_on_sync_execution_done);
-  observer_attach_command_error (cli_on_command_error);
-
   return NULL;
 }
 
@@ -143,18 +157,21 @@ cli_interpreter_resume (struct interp *self)
   /* gdb_setup_readline will change gdb_stdout.  If the CLI was
      previously writing to gdb_stdout, then set it to the new
      gdb_stdout afterwards.  */
-
+#if 0
   stream = cli_out_set_stream (cli_uiout, gdb_stdout);
   if (stream != gdb_stdout)
     {
       cli_out_set_stream (cli_uiout, stream);
       stream = NULL;
     }
+#endif
 
   gdb_setup_readline ();
 
+#if 0
   if (stream != NULL)
     cli_out_set_stream (cli_uiout, gdb_stdout);
+#endif
 
   return 1;
 }
@@ -184,9 +201,14 @@ cli_interpreter_exec (struct interp *self, const char *command_str)
 
      It is important that it gets reset everytime, since the user
      could set gdb to use a different interpreter.  */
+#if 0
   old_stream = cli_out_set_stream (cli_uiout, gdb_stdout);
   result = safe_execute_command (cli_uiout, str, 1);
   cli_out_set_stream (cli_uiout, old_stream);
+#endif
+
+  result = safe_execute_command (current_uiout, str, 1);
+
   return result;
 }
 
@@ -222,28 +244,54 @@ safe_execute_command (struct ui_out *command_uiout, char *command, int from_tty)
 static struct ui_out *
 cli_ui_out (struct interp *self)
 {
-  return cli_uiout;
+  return current_uiout;
 }
 
 /* Standard gdb initialization hook.  */
 extern initialize_file_ftype _initialize_cli_interp; /* -Wmissing-prototypes */
 
+static const struct interp_procs console_interp_procs = {
+  cli_interpreter_init,	/* init_proc */
+  cli_interpreter_resume,	/* resume_proc */
+  cli_interpreter_suspend,	/* suspend_proc */
+  cli_interpreter_exec,	/* exec_proc */
+  cli_ui_out,			/* ui_out_proc */
+  NULL,                       /* set_logging_proc */
+  cli_command_loop            /* command_loop_proc */
+};
+
+static struct interp *
+console_interp_factory (const char *name)
+{
+  return interp_new (name, &console_interp_procs);
+}
+
+static int
+console_interp_p (struct interp *interp)
+{
+  return interp->procs == &console_interp_procs;
+}
+
 void
 _initialize_cli_interp (void)
 {
-  static const struct interp_procs procs = {
-    cli_interpreter_init,	/* init_proc */
-    cli_interpreter_resume,	/* resume_proc */
-    cli_interpreter_suspend,	/* suspend_proc */
-    cli_interpreter_exec,	/* exec_proc */
-    cli_ui_out,			/* ui_out_proc */
-    NULL,                       /* set_logging_proc */
-    cli_command_loop            /* command_loop_proc */
-  };
+  interp_factory_register (INTERP_CONSOLE, console_interp_factory);
 
+#if 0
   /* Create a default uiout builder for the CLI.  */
   cli_uiout = cli_out_new (gdb_stdout);
   cli_interp = interp_new (INTERP_CONSOLE, &procs);
 
   interp_add (cli_interp);
+#endif
+
+  /* If changing this, remember to update tui-interp.c as well.  */
+  observer_attach_normal_stop (cli_on_normal_stop);
+  observer_attach_end_stepping_range (cli_on_end_stepping_range);
+  observer_attach_signal_received (cli_on_signal_received);
+  observer_attach_signal_exited (cli_on_signal_exited);
+  observer_attach_exited (cli_on_exited);
+  observer_attach_no_history (cli_on_no_history);
+  observer_attach_sync_execution_done (cli_on_sync_execution_done);
+  observer_attach_command_error (cli_on_command_error);
 }

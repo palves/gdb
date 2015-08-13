@@ -81,7 +81,7 @@ interp_create (const char *name)
     if (strcmp (factory->name, name) == 0)
       return factory->func (name);
 
-  internal_error (__FILE__, __LINE__, "unknown interpreter %s", name); 
+  return NULL;
 }
 
 /* The magic initialization routine for this module.  */
@@ -227,26 +227,6 @@ interp_set (struct interp *interp, int top_level)
   return 1;
 }
 
-/* interp_lookup - Looks up the interpreter for NAME.  If no such
-   interpreter exists, return NULL, otherwise return a pointer to the
-   interpreter.  */
-struct interp *
-interp_lookup (const char *name)
-{
-  struct interp *interp;
-
-  if (name == NULL || strlen (name) == 0)
-    return NULL;
-
-  ALL_INTERPS (interp)
-    {
-      if (strcmp (interp->name, name) == 0)
-	return interp;
-    }
-
-  return NULL;
-}
-
 /* Returns the current interpreter.  */
 
 struct ui_out *
@@ -269,18 +249,6 @@ current_interp_set_logging (int start_log, struct ui_file *out,
   return current_interpreter->procs->set_logging_proc (current_interpreter,
 						       start_log, out,
 						       logfile);
-}
-
-/* Temporarily overrides the current interpreter.  */
-struct interp *
-interp_set_temp (const char *name)
-{
-  struct interp *interp = interp_lookup (name);
-  struct interp *old_interp = current_interpreter;
-
-  if (interp)
-    current_interpreter = interp;
-  return old_interp;
 }
 
 /* Returns the interpreter's cookie.  */
@@ -426,7 +394,8 @@ interpreter_exec_cmd (char *args, int from_tty)
 
   old_interp = current_interpreter;
 
-  interp_to_use = interp_lookup (prules[0]);
+  /* FIXME: leaking interpreter.  */
+  interp_to_use = interp_create (prules[0]);
   if (interp_to_use == NULL)
     error (_("Could not find interpreter \"%s\"."), prules[0]);
 

@@ -1345,7 +1345,8 @@ new_console_command (char *args, int from_tty)
      in a new heap allocated readline, then it's now NULL.  */
   _rl_keymap = emacs_standard_keymap;
 
-  interp = interp_create (INTERP_CONSOLE);
+  //  interp = interp_create (INTERP_CONSOLE);
+  interp = interp_create (INTERP_TUI);
   interp_set (interp, 0);
 
   /* Make sure Readline has initialized its terminal settings.  XX Do we

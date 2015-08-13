@@ -100,7 +100,6 @@ extern struct interp *interp_lookup (const char *name);
 extern struct ui_out *interp_ui_out (struct interp *interp);
 extern void *interp_data (struct interp *interp);
 extern const char *interp_name (struct interp *interp);
-extern struct interp *interp_set_temp (const char *name);
 
 extern int current_interp_named_p (const char *name);
 

@@ -1233,7 +1233,7 @@ recurse_read_control_structure (char * (*read_next_line_func) (void),
 static void
 restore_interp (void *arg)
 {
-  interp_set_temp (interp_name ((struct interp *)arg));
+  current_interpreter = (struct interp *) arg;
 }
 
 /* Read lines from the input stream and accumulate them in a chain of
@@ -1276,8 +1276,12 @@ read_command_lines (char *prompt_arg, int from_tty, int parse_commands,
 				 validator, closure);
   else
     {
-      struct interp *old_interp = interp_set_temp (INTERP_CONSOLE);
+      struct interp *old_interp = current_interpreter;
+      /* FIXME: leaking interpreter.  */
+      struct interp *temp_interp = interp_create (INTERP_CONSOLE);
       struct cleanup *old_chain = make_cleanup (restore_interp, old_interp);
+
+      current_interpreter = temp_interp;
 
       head = read_command_lines_1 (read_next_line, parse_commands,
 				   validator, closure);

@@ -968,8 +968,8 @@ captured_main (void *data)
      look at things by now.  Initialize the default interpreter.  */
 
   {
-    /* Find it.  */
-    struct interp *interp = interp_lookup (interpreter_p);
+    /* Create it.  */
+    struct interp *interp = interp_create (interpreter_p);
 
     if (interp == NULL)
       error (_("Interpreter `%s' unrecognized"), interpreter_p);

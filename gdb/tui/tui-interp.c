@@ -220,7 +220,7 @@ tui_exec (struct interp *self, const char *command_str)
   internal_error (__FILE__, __LINE__, _("tui_exec called"));
 }
 
-static const struct interp_procs tui_procs = {
+static const struct interp_procs tui_interp_procs = {
   tui_init,
   tui_resume,
   tui_suspend,
@@ -241,7 +241,7 @@ tui_interp_factory (const char *name)
 
   interp = &tui_interp->interp;
   /* Create a default uiout builder for the TUI.  */
-  interp_init (interp, INTERP_TUI, &tui_procs);
+  interp_init (interp, INTERP_TUI, &tui_interp_procs);
 
   return interp;
 }
@@ -249,7 +249,7 @@ tui_interp_factory (const char *name)
 static int
 tui_interp_p (struct interp *interp)
 {
-  return interp->procs == &tui_procs;
+  return interp->procs == &tui_interp_procs;
 }
 
 /* Provide a prototype to silence -Wmissing-prototypes.  */
