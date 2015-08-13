@@ -104,6 +104,7 @@ get_tui (void)
 static int
 tui_rl_switch_mode (int notused1, int notused2)
 {
+  tui_set_screen ();
 
   /* Don't let exceptions escape.  We're in the middle of a readline
      callback that isn't prepared for that.  */
@@ -428,7 +429,9 @@ tui_ts (void)
 void
 tui_set_screen (void)
 {
-  set_term (tui_ts ()->screen);
+  if (current_terminal->tui != NULL
+      && current_terminal->tui->screen != NULL)
+    set_term (current_terminal->tui->screen);
 }
 
 /* Enter in the tui mode (curses).

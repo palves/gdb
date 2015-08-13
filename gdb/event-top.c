@@ -597,6 +597,12 @@ switch_to_terminal (struct terminal *terminal)
   rl_restore_state (&terminal->rl->readline_state);
 
   current_terminal = terminal;
+
+  {
+    extern void tui_set_screen ();
+
+    tui_set_screen ();
+  }
 }
 
 VEC(terminal_ptr) *terminals;
