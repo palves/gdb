@@ -43,6 +43,9 @@
 #include "agent.h"
 #include "auxv.h"
 #include "target-debug.h"
+#include "event-loop.h"
+#include "event-top.h"
+#include "terminal.h"
 
 static void target_info (char *, int);
 
@@ -476,6 +479,8 @@ target_terminal_inferior (void)
   if (target_can_async_p () && !sync_execution)
     return;
 
+  delete_file_handler (input_fd);
+
   if (terminal_state == terminal_is_inferior)
     return;
 
@@ -490,11 +495,14 @@ target_terminal_inferior (void)
 void
 target_terminal_ours (void)
 {
-  if (terminal_state == terminal_is_ours)
-    return;
+  if (terminal_state != terminal_is_ours)
+    {
+      (*current_target.to_terminal_ours) (&current_target);
+      terminal_state = terminal_is_ours;
+    }
 
-  (*current_target.to_terminal_ours) (&current_target);
-  terminal_state = terminal_is_ours;
+  add_file_handler (input_fd, stdin_event_handler, current_terminal);
+
 }
 
 /* See target.h.  */
@@ -502,10 +510,13 @@ target_terminal_ours (void)
 void
 target_terminal_ours_for_output (void)
 {
-  if (terminal_state != terminal_is_inferior)
-    return;
-  (*current_target.to_terminal_ours_for_output) (&current_target);
-  terminal_state = terminal_is_ours_for_output;
+  if (terminal_state == terminal_is_inferior)
+    {
+      (*current_target.to_terminal_ours_for_output) (&current_target);
+      terminal_state = terminal_is_ours_for_output;
+    }
+
+  add_file_handler (input_fd, stdin_event_handler, current_terminal);
 }
 
 /* See target.h.  */
