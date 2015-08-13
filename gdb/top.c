@@ -2056,6 +2056,7 @@ gdb_init (char *argv0)
   initialize_targets ();    /* Setup target_terminal macros for utils.c.  */
   initialize_utils ();	    /* Make errors and warnings possible.  */
 
+  init_terminal ();
   init_page_info ();
 
   /* Here is where we call all the _initialize_foo routines.  Note the
@@ -2065,7 +2066,7 @@ gdb_init (char *argv0)
 
   /* Now call the initialization routines that have dependencies.  */
 
-  init_terminal ();
+  initialize_stdin_serial (current_terminal);
   /* This creates the current_program_space.  Do this after all the
      _initialize_foo routines have had a chance to install their
      per-sspace data keys.  Also do this before
