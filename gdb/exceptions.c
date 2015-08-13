@@ -26,6 +26,7 @@
 #include "ui-out.h"
 #include "serial.h"
 #include "gdbthread.h"
+#include "terminal.h"
 
 void
 prepare_to_throw_exception (void)
@@ -59,7 +60,7 @@ print_flush (void)
   gdb_flush (gdb_stderr);
 
   /* 3.  The system-level buffer.  */
-  gdb_stdout_serial = serial_fdopen (1);
+  gdb_stdout_serial = serial_fdopen (fileno (current_terminal->outstream));
   if (gdb_stdout_serial)
     {
       serial_drain_output (gdb_stdout_serial);
