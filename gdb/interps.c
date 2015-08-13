@@ -486,16 +486,16 @@ top_level_interpreter_data (void)
 static void								\
 interp_ ## method params						\
 {									\
+  struct interp *interp;						\
   struct terminal *prev_terminal = current_terminal;			\
-  struct terminal *terminal;						\
-  int ix;								\
 									\
-  for (ix = 0; VEC_iterate (terminal_ptr, terminals, ix, terminal); ++ix) \
+  ALL_INTERPS (interp)							\
     {									\
-      switch_to_terminal (terminal);					\
-									\
-      if (current_interpreter->procs-> method != NULL)			\
-	current_interpreter->procs-> method args;			\
+      if (interp->procs-> method != NULL)				\
+	{								\
+	  switch_to_terminal (interp->terminal);			\
+	  interp->procs-> method args;					\
+	}								\
     }									\
 									\
   switch_to_terminal (prev_terminal);					\
