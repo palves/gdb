@@ -33,6 +33,7 @@
 #include "infrun.h"
 #include "observer.h"
 #include "gdbthread.h"
+#include "terminal.h"
 
 static int tui_interp_p (struct interp *interp);
 
@@ -184,13 +185,20 @@ tui_on_no_history (void)
 static void
 tui_on_sync_execution_done (void)
 {
-  struct interp *interp;
+  struct terminal *prev_terminal = current_terminal;
+  struct terminal *terminal;
+  int ix;
 
-  ALL_TUI_INTERPS (interp)
+  for (ix = 0; VEC_iterate (terminal_ptr, terminals, ix, terminal); ++ix)
     {
-      /* FIXME: switch to console.  */
-      display_gdb_prompt (NULL);
+      if (tui_interp_p (terminal->current_interpreter))
+	{
+	  switch_to_terminal (terminal);
+	  display_gdb_prompt (NULL);
+	}
     }
+
+  switch_to_terminal (prev_terminal);
 }
 
 /* Observer for the command_error notification.  */

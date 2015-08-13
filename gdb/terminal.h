@@ -77,6 +77,8 @@ struct terminal;
 #endif /* sgtty */
 #endif
 
+#include "vec.h"
+
 struct inferior;
 
 extern void new_tty_prefork (const char *);
@@ -116,5 +118,37 @@ extern FILE *terminal_outstream (struct terminal *terminal);
 extern FILE *terminal_errstream (struct terminal *terminal);
 
 extern void init_terminal (void);
+
+extern void switch_to_terminal (struct terminal *terminal);
+
+struct terminal_readline_state;
+
+struct terminal
+{
+  int input_fd;
+  FILE *instream;
+  FILE *outstream;
+  FILE *errstream;
+
+  /* Output channels */
+  struct ui_file *out;
+  struct ui_file *err;
+  struct ui_file *log;
+
+  struct ui_out *current_uiout;
+
+  struct interp *current_interpreter;
+  struct interp *top_level_interpreter_ptr;
+
+  /* Readline-related things.  Private to most of GDB.  */
+  struct terminal_readline_state *rl;
+};
+
+typedef struct terminal *terminal_ptr;
+DEF_VEC_P(terminal_ptr);
+
+extern VEC(terminal_ptr) *terminals;
+
+extern struct terminal *current_terminal;
 
 #endif /* !defined (TERMINAL_H) */

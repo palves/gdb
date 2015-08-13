@@ -414,20 +414,8 @@ struct readline_input_state
   char *linebuffer_ptr;
 };
 
-struct terminal
+struct terminal_readline_state
 {
-  int input_fd;
-  FILE *instream;
-  FILE *outstream;
-  FILE *errstream;
-
-  /* Output channels */
-  struct ui_file *out;
-  struct ui_file *err;
-  struct ui_file *log;
-
-  struct ui_out *current_uiout;
-
   struct line_buffer line_buffer;
   int more_to_come;
 
@@ -441,9 +429,6 @@ struct terminal
   /* readline state, saved/restored with
      rl_save_state/rl_restore_state.  */
   struct readline_state readline_state;
-
-  struct interp *current_interpreter;
-  struct interp *top_level_interpreter_ptr;
 };
 
 struct terminal *current_terminal;
@@ -459,8 +444,6 @@ terminal_errstream (struct terminal *terminal)
 {
   return terminal->errstream;
 }
-
-extern void switch_to_terminal (struct terminal *terminal);
 
 /* When there is an event ready on the stdin file desriptor, instead
    of calling readline directly throught the callback function, or
@@ -571,7 +554,7 @@ switch_to_terminal (struct terminal *terminal)
   /* Save.  */
   current_terminal->current_interpreter = current_interpreter;
   current_terminal->top_level_interpreter_ptr = top_level_interpreter_ptr;
-  rl_save_state (&current_terminal->readline_state);
+  rl_save_state (&current_terminal->rl->readline_state);
 
   current_terminal->input_fd = input_fd;
   current_terminal->instream = instream;
@@ -581,9 +564,9 @@ switch_to_terminal (struct terminal *terminal)
 
   current_terminal->current_uiout = current_uiout;
 
-  current_terminal->input_handler = input_handler;
-  current_terminal->call_readline = call_readline;
-  current_terminal->async_command_editing_p = async_command_editing_p;
+  current_terminal->rl->input_handler = input_handler;
+  current_terminal->rl->call_readline = call_readline;
+  current_terminal->rl->async_command_editing_p = async_command_editing_p;
 
   /* Restore.  */
   input_fd = terminal->input_fd;
@@ -596,11 +579,11 @@ switch_to_terminal (struct terminal *terminal)
   top_level_interpreter_ptr = terminal->top_level_interpreter_ptr;
   current_uiout = terminal->current_uiout;
 
-  input_handler = terminal->input_handler;
-  call_readline = terminal->call_readline;
-  async_command_editing_p = terminal->async_command_editing_p;
+  input_handler = terminal->rl->input_handler;
+  call_readline = terminal->rl->call_readline;
+  async_command_editing_p = terminal->rl->async_command_editing_p;
 
-  rl_restore_state (&terminal->readline_state);
+  rl_restore_state (&terminal->rl->readline_state);
 
   /* Tell readline to use the same input stream that gdb uses.  */
   rl_instream = instream;
@@ -618,11 +601,7 @@ switch_to_terminal (struct terminal *terminal)
   current_terminal = terminal;
 }
 
-typedef struct terminal *terminal_p;
-
-DEF_VEC_P(terminal_p);
-
-static VEC(terminal_p) *terminals;
+VEC(terminal_ptr) *terminals;
 
 #if 0
 static struct terminal *
@@ -652,9 +631,9 @@ static void
 command_line_handler (char *rl)
 {
   struct terminal *terminal = current_terminal;
-  struct line_buffer *line_buffer = &terminal->line_buffer;
+  struct line_buffer *line_buffer = &terminal->rl->line_buffer;
   struct readline_input_state *readline_input_state
-    = &terminal->readline_input_state;
+    = &terminal->rl->readline_input_state;
   char *p;
   char *p1;
   char *nline;
@@ -676,12 +655,12 @@ command_line_handler (char *rl)
 
   p = line_buffer->buffer;
 
-  if (terminal->more_to_come)
+  if (terminal->rl->more_to_come)
     {
       strcpy (line_buffer->buffer, readline_input_state->linebuffer);
       p = readline_input_state->linebuffer_ptr;
       xfree (readline_input_state->linebuffer);
-      terminal->more_to_come = 0;
+      terminal->rl->more_to_come = 0;
     }
 
 #ifdef STOP_SIGNAL
@@ -732,7 +711,7 @@ command_line_handler (char *rl)
       /* We will not invoke a execute_command if there is more
 	 input expected to complete the command.  So, we need to
 	 print an empty prompt here.  */
-      terminal->more_to_come = 1;
+      terminal->rl->more_to_come = 1;
       display_gdb_prompt ("");
       return;
     }
@@ -830,7 +809,7 @@ command_line_handler (char *rl)
 	  saved_command_line_size = line_buffer->length;
 	}
       strcpy (saved_command_line, line_buffer->buffer);
-      if (!terminal->more_to_come)
+      if (!terminal->rl->more_to_come)
 	{
 	  command_handler (saved_command_line);
 	  display_gdb_prompt (0);
@@ -1318,7 +1297,10 @@ new_terminal (FILE *instream, FILE *outstream, FILE *errstream)
   terminal->outstream = outstream;
   terminal->errstream = errstream;
 
-  terminal->readline_state = initial_readline_state;
+  terminal->rl = XCNEW (struct terminal_readline_state);
+  terminal->rl->readline_state = initial_readline_state;
+
+  VEC_safe_push (terminal_ptr, terminals, terminal);
 
   return terminal;
 }
