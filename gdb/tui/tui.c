@@ -428,12 +428,16 @@ tui_enable (void)
       if (!ui_file_isatty (gdb_stdout))
 	error (_("Cannot enable the TUI when output is not a terminal"));
 
-      s = newterm (NULL, stdout, stdin);
+      s = newterm (NULL, current_terminal->outstream, current_terminal->instream);
 #ifdef __MINGW32__
       /* The MinGW port of ncurses requires $TERM to be unset in order
 	 to activate the Windows console driver.  */
       if (s == NULL)
-	s = newterm ("unknown", stdout, stdin);
+	{
+	  s = newterm ("unknown",
+		       current_terminal->outstream,
+		       current_terminal->instream);
+	}
 #endif
       if (s == NULL)
 	{
