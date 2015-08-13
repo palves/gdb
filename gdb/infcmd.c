@@ -2662,8 +2662,6 @@ attach_command_post_wait (char *args, int from_tty, int async_exec)
       /* The user requested a plain `attach', so be sure to leave
 	 the inferior stopped.  */
 
-      async_enable_stdin ();
-
       /* At least the current thread is already stopped.  */
 
       /* In all-stop, by definition, all threads have to be already
