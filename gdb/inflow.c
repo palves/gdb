@@ -233,7 +233,7 @@ gdb_has_a_terminal (void)
 
       gdb_assert (ts->terminal_is_ours);
 
-      fd = fileno (current_terminal->instream);
+      fd = current_terminal->input_fd;
 #ifdef F_GETFL
       ts->our_terminal_info.tflags = fcntl (fd, F_GETFL, 0);
 #endif
@@ -349,8 +349,8 @@ child_terminal_inferior (struct target_ops *self)
 #endif
       )
     {
+      int fd = current_terminal->input_fd;
       int result;
-      int fd = fileno (current_terminal->instream);
 
       gdb_assert (fd >= 0);
 
@@ -483,7 +483,7 @@ child_terminal_ours_1 (int output_only)
       sighandler_t osigttou = NULL;
 #endif
       int result;
-      int fd = fileno (current_terminal->instream);
+      int fd = current_terminal->input_fd;
       struct terminal_info *tinfo;
 
       tinfo = &ts->inferior_terminal_info;
