@@ -404,6 +404,8 @@ interpreter_exec_cmd (char *args, int from_tty)
   if (interp_to_use == NULL)
     error (_("Could not find interpreter \"%s\"."), prules[0]);
 
+  interp_add (interp_to_use);
+
   /* Temporarily set interpreters quiet.  */
   old_quiet = interp_set_quiet (old_interp, 1);
   use_quiet = interp_set_quiet (interp_to_use, 1);
@@ -487,17 +489,23 @@ static void								\
 interp_ ## method params						\
 {									\
   struct interp *interp;						\
+  struct interp *prev_interp = current_interpreter;			\
   struct terminal *prev_terminal = current_terminal;			\
 									\
   ALL_INTERPS (interp)							\
     {									\
+      if (interp_quiet_p (interp))					\
+	continue;							\
+									\
       if (interp->procs-> method != NULL)				\
 	{								\
+	  current_interpreter = interp;					\
 	  switch_to_terminal (interp->terminal);			\
 	  interp->procs-> method args;					\
 	}								\
     }									\
 									\
+  current_interpreter = prev_interp;					\
   switch_to_terminal (prev_terminal);					\
 }
 

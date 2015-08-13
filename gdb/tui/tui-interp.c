@@ -35,16 +35,6 @@
 #include "gdbthread.h"
 #include "terminal.h"
 
-static int tui_interp_p (struct interp *interp);
-
-#define ALL_TUI_INTERPS(INTERP)					\
-  ALL_INTERPS (INTERP)						\
-    if (!tui_interp_p (INTERP) || interp_quiet_p (INTERP))	\
-      {								\
-	/* Nothing.  */						\
-      }								\
-    else
-
 /* Set to 1 when the TUI mode must be activated when we first start
    gdb.  */
 static int tui_start_enabled = 0;
@@ -107,7 +97,7 @@ should_print_stop_to_console (struct interp *interp,
 static void
 tui_on_normal_stop (struct bpstats *bs, int print_frame)
 {
-  struct interp *interp;
+  struct interp *interp = current_interpreter;
   struct thread_info *tp;
 
   if (!print_frame)
@@ -118,11 +108,8 @@ tui_on_normal_stop (struct bpstats *bs, int print_frame)
   /* Broadcast asynchronous stops to all consoles.  If we just
      finished a step, print this to the console if it was the console
      that started the step in the first place.  */
-  ALL_TUI_INTERPS (interp)
-    {
-      if (should_print_stop_to_console (interp, tp))
-	print_stop_event (interp_ui_out (interp));
-    }
+  if (should_print_stop_to_console (interp, tp))
+    print_stop_event (interp_ui_out (interp));
 }
 
 /* Observer for the signal_received notification.  */
@@ -130,10 +117,9 @@ tui_on_normal_stop (struct bpstats *bs, int print_frame)
 static void
 tui_on_signal_received (enum gdb_signal siggnal)
 {
-  struct interp *interp;
+  struct interp *interp = current_interpreter;
 
-  ALL_TUI_INTERPS (interp)
-    print_signal_received_reason (interp_ui_out (interp), siggnal);
+  print_signal_received_reason (interp_ui_out (interp), siggnal);
 }
 
 /* Observer for the end_stepping_range notification.  */
@@ -141,10 +127,9 @@ tui_on_signal_received (enum gdb_signal siggnal)
 static void
 tui_on_end_stepping_range (void)
 {
-  struct interp *interp;
+  struct interp *interp = current_interpreter;
 
-  ALL_TUI_INTERPS (interp)
-    print_end_stepping_range_reason (interp_ui_out (interp));
+  print_end_stepping_range_reason (interp_ui_out (interp));
 }
 
 /* Observer for the signal_exited notification.  */
@@ -152,10 +137,9 @@ tui_on_end_stepping_range (void)
 static void
 tui_on_signal_exited (enum gdb_signal siggnal)
 {
-  struct interp *interp;
+  struct interp *interp = current_interpreter;
 
-  ALL_TUI_INTERPS (interp)
-    print_signal_exited_reason (interp_ui_out (interp), siggnal);
+  print_signal_exited_reason (interp_ui_out (interp), siggnal);
 }
 
 /* Observer for the exited notification.  */
@@ -163,10 +147,9 @@ tui_on_signal_exited (enum gdb_signal siggnal)
 static void
 tui_on_exited (int exitstatus)
 {
-  struct interp *interp;
+  struct interp *interp = current_interpreter;
 
-  ALL_TUI_INTERPS (interp)
-    print_exited_reason (interp_ui_out (interp), exitstatus);
+  print_exited_reason (interp_ui_out (interp), exitstatus);
 }
 
 /* Observer for the no_history notification.  */
@@ -174,10 +157,9 @@ tui_on_exited (int exitstatus)
 static void
 tui_on_no_history (void)
 {
-  struct interp *interp;
+  struct interp *interp = current_interpreter;
 
-  ALL_TUI_INTERPS (interp)
-    print_no_history_reason (interp_ui_out (interp));
+  print_no_history_reason (interp_ui_out (interp));
 }
 
 /* Observer for the sync_execution_done notification.  */
@@ -185,26 +167,13 @@ tui_on_no_history (void)
 static void
 tui_on_sync_execution_done (void)
 {
-  struct terminal *prev_terminal = current_terminal;
-  struct terminal *terminal;
-  int ix;
+  struct interp *interp = current_interpreter;
 
-  /* Save the current state.   */
-  switch_to_terminal (current_terminal);
-
-  for (ix = 0; VEC_iterate (terminal_ptr, terminals, ix, terminal); ++ix)
+  if (interp->terminal->sync_execution)
     {
-      if (terminal->sync_execution
-	  && tui_interp_p (terminal->current_interpreter))
-	{
-	  switch_to_terminal (terminal);
-
-	  async_enable_stdin ();
-	  display_gdb_prompt (NULL);
-	}
+      async_enable_stdin ();
+      display_gdb_prompt (NULL);
     }
-
-  switch_to_terminal (prev_terminal);
 }
 
 /* Observer for the command_error notification.  */
@@ -212,8 +181,7 @@ tui_on_sync_execution_done (void)
 static void
 tui_on_command_error (void)
 {
-  if (tui_interp_p (current_interpreter))
-    display_gdb_prompt (NULL);
+  display_gdb_prompt (NULL);
 }
 
 /* These implement the TUI interpreter.  */
@@ -290,7 +258,35 @@ static const struct interp_procs tui_interp_procs = {
   tui_exec,
   tui_ui_out,
   NULL,
-  cli_command_loop
+  cli_command_loop,
+  tui_on_normal_stop,
+  tui_on_signal_received,
+  tui_on_end_stepping_range,
+  tui_on_signal_exited,
+  tui_on_exited,
+  tui_on_no_history,
+  tui_on_sync_execution_done,
+  NULL, /* on_new_thread */
+  NULL, /* on_thread_exit */
+  NULL, /* on_on_target_resumed */
+  NULL, /* on_about_to_proceed */
+  NULL, /* on_breakpoint_created */
+  NULL, /* on_breakpoint_deleted */
+  NULL, /* on_breakpoint_modified */
+  NULL, /* on_inferior_added */
+  NULL, /* on_inferior_appeared */
+  NULL, /* on_inferior_exit */
+  NULL, /* on_inferior_removed */
+  NULL, /* on_tsv_created */
+  NULL, /* on_tsv_deleted */
+  NULL, /* on_tsv_modified */
+  NULL, /* on_record_changed */
+  NULL, /* on_solib_loaded */
+  NULL, /* on_solib_unloaded */
+  NULL, /* on_traceframe_changed */
+  NULL, /* on_command_param_changed */
+  tui_on_command_error,
+  NULL, /* on_memory_changed */
 };
 
 static struct interp *
@@ -307,12 +303,6 @@ tui_interp_factory (const char *name, struct terminal *terminal)
   interp_ctor (interp, INTERP_TUI, &tui_interp_procs, terminal);
 
   return interp;
-}
-
-static int
-tui_interp_p (struct interp *interp)
-{
-  return interp->procs == &tui_interp_procs;
 }
 
 /* Provide a prototype to silence -Wmissing-prototypes.  */
@@ -342,14 +332,4 @@ _initialize_tui_interp (void)
 
   /* Install exit handler to leave the screen in a good shape.  */
   atexit (tui_exit);
-
-  /* If changing this, remember to update cli-interp.c as well.  */
-  observer_attach_normal_stop (tui_on_normal_stop);
-  observer_attach_signal_received (tui_on_signal_received);
-  observer_attach_end_stepping_range (tui_on_end_stepping_range);
-  observer_attach_signal_exited (tui_on_signal_exited);
-  observer_attach_exited (tui_on_exited);
-  observer_attach_no_history (tui_on_no_history);
-  observer_attach_sync_execution_done (tui_on_sync_execution_done);
-  observer_attach_command_error (tui_on_command_error);
 }
