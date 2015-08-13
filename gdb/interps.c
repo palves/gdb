@@ -595,6 +595,7 @@ GEN_INTERP_CALL (on_signal_exited, (enum gdb_signal siggnal), (siggnal))
 GEN_INTERP_CALL (on_exited, (int exitstatus), (exitstatus))
 GEN_INTERP_CALL (on_no_history, (void), ())
 GEN_INTERP_CALL (on_sync_execution_done, (void), ())
+GEN_INTERP_CALL (on_try_enable_input, (void), ())
 GEN_INTERP_CALL (on_new_thread, (struct thread_info *t), (t))
 GEN_INTERP_CALL (on_thread_exit,
 		 (struct thread_info *t, int silent), (t, silent))
@@ -672,5 +673,6 @@ The second argument is the command to execute.\n"), &cmdlist);
   observer_attach_command_param_changed (interp_on_command_param_changed);
   observer_attach_memory_changed (interp_on_memory_changed);
   observer_attach_sync_execution_done (interp_on_sync_execution_done);
+  observer_attach_try_enable_input (interp_on_try_enable_input);
   observer_attach_command_error (interp_on_command_error);
 }

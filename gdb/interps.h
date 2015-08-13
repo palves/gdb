@@ -65,6 +65,7 @@ typedef void (interp_on_signal_exited_ftype) (enum gdb_signal siggnal);
 typedef void (interp_on_exited_ftype) (int exitstatus);
 typedef void (interp_on_no_history_ftype) (void);
 typedef void (interp_on_sync_execution_done_ftype) (void);
+typedef void (interp_on_try_enable_input_ftype) (void);
 typedef void (interp_on_new_thread_ftype) (struct thread_info *t);
 typedef void (interp_on_thread_exit_ftype) (struct thread_info *t, int silent);
 typedef void (interp_on_target_resumed_ftype) (ptid_t ptid);
@@ -116,6 +117,7 @@ struct interp_procs
   interp_on_exited_ftype *on_exited;
   interp_on_no_history_ftype *on_no_history;
   interp_on_sync_execution_done_ftype *on_sync_execution_done;
+  interp_on_try_enable_input_ftype *on_try_enable_input;
   interp_on_new_thread_ftype *on_new_thread;
   interp_on_thread_exit_ftype *on_thread_exit;
   interp_on_target_resumed_ftype *on_target_resumed;

@@ -643,7 +643,7 @@ run_inferior_call (struct call_thread_fsm *sm,
   if (call_thread != NULL)
     call_thread->control.in_infcall = saved_in_infcall;
 
-  if (!saved_sync_execution)
+  if (saved_sync_execution <= 0)
     async_enable_stdin ();
 
   return caught_error;

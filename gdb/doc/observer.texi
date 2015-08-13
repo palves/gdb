@@ -114,6 +114,10 @@ The inferior program is finished.
 Reverse execution: target ran out of history info.
 @end deftypefun
 
+@deftypefun void try_enable_input (void)
+If a synchronous command finished.
+@end deftypefun
+
 @deftypefun void sync_execution_done (void)
 A synchronous command finished.
 @end deftypefun

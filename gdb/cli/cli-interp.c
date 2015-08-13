@@ -180,15 +180,32 @@ cli_on_normal_stop (struct bpstats *bs, int print_frame)
     print_stop_event (interp_ui_out (interp));
 }
 
+void cli_on_sync_execution_done (void);
+void cli_on_try_enable_input (void);
+
 /* Observer for the sync_execution_done notification.  */
 
 void
 cli_on_sync_execution_done (void)
 {
-  if (sync_execution)
+  if (sync_execution == 1)
     {
       async_enable_stdin ();
-      display_gdb_prompt (NULL);
+
+      /* Display the prompt */
+      sync_execution = -1;
+    }
+}
+
+void
+cli_on_try_enable_input (void)
+{
+  if (sync_execution == -1)
+    {
+      sync_execution = 0;
+
+      if (interpreter_async)
+	display_gdb_prompt (NULL);
     }
 }
 
@@ -197,6 +214,7 @@ cli_on_sync_execution_done (void)
 void
 cli_on_command_error (void)
 {
+  sync_execution = 0;
   display_gdb_prompt (NULL);
 }
 
@@ -341,6 +359,7 @@ static const struct interp_procs console_interp_procs = {
   cli_on_exited,
   cli_on_no_history,
   cli_on_sync_execution_done,
+  cli_on_try_enable_input,
   NULL, /* on_new_thread */
   NULL, /* on_thread_exit */
   NULL, /* on_on_target_resumed */

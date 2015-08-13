@@ -288,19 +288,30 @@ mi_execute_command_wrapper (const char *cmd)
   mi_execute_command (cmd, stdin == instream);
 }
 
-/* Observer for the synchronous_command_done notification.  */
+extern void cli_on_sync_execution_done (void);
+
+/* Observer for the check_enable_input notification.  */
 
 static void
 mi_on_sync_execution_done (void)
 {
-  /* If MI is sync, then output the MI prompt now, indicating we're
-     ready for further input.  */
+  cli_on_sync_execution_done ();
+}
+
+/* Observer for the synchronous_command_done notification.  */
+
+static void
+mi_on_try_enable_input (void)
+{
   struct interp *interp = current_interpreter;
 
-  if (!sync_execution)
+  if (sync_execution != -1)
     return;
 
-  async_enable_stdin ();
+  sync_execution = 0;
+
+  if (!interpreter_async)
+    return;
 
   if (!mi_async_p ())
     {
@@ -1173,6 +1184,7 @@ static const struct interp_procs mi_interp_procs =
     mi_on_exited,
     mi_on_no_history,
     mi_on_sync_execution_done,
+    mi_on_try_enable_input,
     mi_new_thread,
     mi_thread_exit,
     mi_on_target_resumed,

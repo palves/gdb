@@ -60,6 +60,7 @@ extern void cli_on_exited (int exitstatus);
 extern void cli_on_no_history (void);
 extern void cli_on_normal_stop (struct bpstats *bs, int print_frame);
 extern void cli_on_sync_execution_done (void);
+extern void cli_on_try_enable_input (void);
 extern void cli_on_command_error (void);
 
 /* These implement the TUI interpreter.  */
@@ -137,6 +138,7 @@ static const struct interp_procs tui_interp_procs = {
   cli_on_exited,
   cli_on_no_history,
   cli_on_sync_execution_done,
+  cli_on_try_enable_input,
   NULL, /* on_new_thread */
   NULL, /* on_thread_exit */
   NULL, /* on_on_target_resumed */

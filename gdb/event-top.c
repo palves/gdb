@@ -295,7 +295,7 @@ display_gdb_prompt (const char *new_prompt)
      IE, displayed but not set.  */
   if (! new_prompt)
     {
-      if (sync_execution)
+      if (sync_execution > 0)
 	{
 	  /* This is to trick readline into not trying to display the
 	     prompt.  Even though we display the prompt using this
