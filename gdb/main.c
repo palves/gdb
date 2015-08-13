@@ -967,7 +967,7 @@ captured_main (void *data)
 
   {
     /* Create it.  */
-    struct interp *interp = interp_create (interpreter_p);
+    struct interp *interp = interp_create (interpreter_p, current_terminal);
 
     if (interp == NULL)
       error (_("Interpreter `%s' unrecognized"), interpreter_p);

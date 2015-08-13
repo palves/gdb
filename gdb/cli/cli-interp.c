@@ -261,9 +261,9 @@ static const struct interp_procs console_interp_procs = {
 };
 
 static struct interp *
-console_interp_factory (const char *name)
+console_interp_factory (const char *name, struct terminal *terminal)
 {
-  return interp_new (name, &console_interp_procs);
+  return interp_new (name, &console_interp_procs, terminal);
 }
 
 static int

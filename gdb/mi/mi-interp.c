@@ -38,6 +38,7 @@
 #include "tracepoint.h"
 #include "cli-out.h"
 #include "thread-fsm.h"
+#include "terminal.h"
 
 /* These are the interpreter setup, etc. functions for the MI
    interpreter.  */
@@ -206,14 +207,14 @@ mi_cmd_interpreter_exec (char *command, char **argv, int argc)
 	     "Usage: -interpreter-exec interp command"));
 
   /* FIXME: leaking interpreter.   */
-  interp_to_use = interp_create (argv[0]);
+  interp_to_use = interp_create (argv[0], current_terminal);
   if (interp_to_use == NULL)
     error (_("-interpreter-exec: could not find interpreter \"%s\""),
 	   argv[0]);
 
   /* Note that unlike the CLI version of this command, we don't
      actually set INTERP_TO_USE as the current interpreter, as we
-     still want gdb_stdout, etc. to point at MI streams.  */
+     still want gdb_stdout, etc. to point at MI streams.  XXX */
 
   /* Insert the MI out hooks, making sure to also call the
      interpreter's hooks if it has any.  */
@@ -1173,9 +1174,9 @@ static const struct interp_procs mi_interp_procs =
   };
 
 static struct interp *
-mi_interp_factory (const char *name)
+mi_interp_factory (const char *name, struct terminal *terminal)
 {
-  return interp_new (name, &mi_interp_procs);
+  return interp_new (name, &mi_interp_procs, terminal);
 }
 
 void

@@ -72,7 +72,7 @@ interp_factory_register (const char *name, interp_factory_func func)
 }
 
 struct interp *
-interp_create (const char *name)
+interp_create (const char *name, struct terminal *terminal)
 {
   struct interp_factory *factory;
   int ix;
@@ -81,7 +81,7 @@ interp_create (const char *name)
        VEC_iterate (interp_factory_p, interpreter_factories, ix, factory);
        ++ix)
     if (strcmp (factory->name, name) == 0)
-      return factory->func (name);
+      return factory->func (name, terminal);
 
   return NULL;
 }
@@ -96,17 +96,19 @@ struct interp *interp_list = NULL;
 struct interp *current_interpreter = NULL;
 struct interp *top_level_interpreter_ptr = NULL;
 
-/* interp_init - This fills the fields from the inputs.  */
+/* interp_ctor - This fills the fields from the inputs.  */
 
 void
-interp_init (struct interp *self,
-	     const char *name, const struct interp_procs *procs)
+interp_ctor (struct interp *self,
+	     const char *name, const struct interp_procs *procs,
+	     struct terminal *terminal)
 {
   self->name = xstrdup (name);
   self->data = NULL;
   self->quiet_p = 0;
   self->procs = procs;
   self->inited = 0;
+  self->terminal = terminal;
 
   /* Check for required procs.  */
   gdb_assert (procs->command_loop_proc != NULL);
@@ -117,12 +119,13 @@ interp_init (struct interp *self,
    interpreter.  */
 
 struct interp *
-interp_new (const char *name, const struct interp_procs *procs)
+interp_new (const char *name, const struct interp_procs *procs,
+	    struct terminal *terminal)
 {
   struct interp *new_interp;
 
   new_interp = XNEW (struct interp);
-  interp_init (new_interp, name, procs);
+  interp_ctor (new_interp, name, procs, terminal);
   return new_interp;
 }
 
@@ -397,7 +400,7 @@ interpreter_exec_cmd (char *args, int from_tty)
   old_interp = current_interpreter;
 
   /* FIXME: leaking interpreter.  */
-  interp_to_use = interp_create (prules[0]);
+  interp_to_use = interp_create (prules[0], current_terminal);
   if (interp_to_use == NULL)
     error (_("Could not find interpreter \"%s\"."), prules[0]);
 

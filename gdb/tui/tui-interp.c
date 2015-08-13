@@ -294,7 +294,7 @@ static const struct interp_procs tui_interp_procs = {
 };
 
 static struct interp *
-tui_interp_factory (const char *name)
+tui_interp_factory (const char *name, struct terminal *terminal)
 {
   struct tui_interp *tui_interp;
   struct interp *interp;
@@ -304,7 +304,7 @@ tui_interp_factory (const char *name)
 
   interp = &tui_interp->interp;
   /* Create a default uiout builder for the TUI.  */
-  interp_init (interp, INTERP_TUI, &tui_interp_procs);
+  interp_ctor (interp, INTERP_TUI, &tui_interp_procs, terminal);
 
   return interp;
 }

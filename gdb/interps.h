@@ -30,11 +30,15 @@ struct trace_state_variable;
 struct bpstats;
 struct breakpoint;
 struct so_list;
+struct terminal;
 
-typedef struct interp *(*interp_factory_func) (const char *interp);
+typedef struct interp *(*interp_factory_func) (const char *interp,
+					       struct terminal *terminal);
 
-extern void interp_factory_register (const char *name, interp_factory_func func);
-extern struct interp *interp_create (const char *name);
+extern void interp_factory_register (const char *name,
+				     interp_factory_func func);
+extern struct interp *interp_create (const char *name,
+				     struct terminal *terminal);
 
 extern int interp_resume (struct interp *interp);
 extern int interp_suspend (struct interp *interp);
@@ -155,11 +159,17 @@ struct interp
 
   const struct interp_procs *procs;
   int quiet_p;
+
+  /* The terminal this interpreter is attached to.  */
+  struct terminal *terminal;
 };
 
-extern struct interp *interp_new (const char *name, const struct interp_procs *procs);
-extern void interp_init (struct interp *self, const char *name,
-			 const struct interp_procs *procs);
+extern struct interp *interp_new (const char *name,
+				  const struct interp_procs *procs,
+				  struct terminal *terminal);
+extern void interp_ctor (struct interp *self, const char *name,
+			 const struct interp_procs *procs,
+			 struct terminal *terminal);
 extern void interp_add (struct interp *interp);
 extern int interp_set (struct interp *interp, int top_level);
 extern struct interp *interp_lookup (const char *name);
