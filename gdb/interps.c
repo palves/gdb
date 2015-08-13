@@ -549,34 +549,43 @@ top_level_interpreter_data (void)
   return top_level_interpreter_ptr->data;  
 }
 
+#define MAYBE_CALL_INTERP_FUNC(the_interp, method, args)		\
+  do									\
+    {									\
+      if (the_interp != NULL						\
+	  && the_interp->procs->method != NULL				\
+	  && !interp_quiet_p (the_interp))				\
+	{								\
+	  struct interp *prev_interp;					\
+									\
+	  prev_interp = current_interpreter;				\
+	  current_interpreter = the_interp;				\
+	  the_interp->procs-> method args;				\
+	  current_interpreter = prev_interp;				\
+	}								\
+    } while (0)
+
 #define GEN_INTERP_CALL(method, params, args)				\
 static void								\
 interp_ ## method params						\
 {									\
-  struct interp *interp;						\
-  struct interp *prev_interp = current_interpreter;			\
   struct terminal *prev_terminal = current_terminal;			\
+  struct terminal *term;						\
+  int ix;								\
 									\
-  ALL_INTERPS (interp)							\
+  for (ix = 0; VEC_iterate (terminal_ptr, terminals, ix, term); ++ix)	\
     {									\
-      if (interp_quiet_p (interp))					\
+      switch_to_terminal (term);					\
+									\
+      MAYBE_CALL_INTERP_FUNC (top_level_interpreter_ptr, method, args);	\
+									\
+      if (current_interpreter == top_level_interpreter_ptr)		\
 	continue;							\
 									\
-      if (interp->procs-> method != NULL)				\
-	{								\
-	  struct interp *prev_interp;					\
-									\
-	  switch_to_terminal (interp->terminal);			\
-									\
-	  prev_interp = current_interpreter;				\
-	  current_interpreter = interp;					\
-	  interp->procs-> method args;					\
-	  current_interpreter = prev_interp;				\
-	}								\
+      MAYBE_CALL_INTERP_FUNC (current_interpreter, method, args);	\
     }									\
 									\
   switch_to_terminal (prev_terminal);					\
-  current_interpreter = prev_interp;					\
 }
 
 GEN_INTERP_CALL (on_normal_stop, (struct bpstats *bs,
