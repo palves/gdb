@@ -48,8 +48,6 @@ static void child_terminal_ours_1 (int);
 
 /* Record terminal status separately for debugger and inferior.  */
 
-static struct serial *stdin_serial;
-
 /* Terminal related info we need to keep track of.  Each inferior
    holds an instance of this structure --- we save it whenever the
    corresponding inferior stops, and restore it to the foreground
@@ -73,11 +71,39 @@ struct terminal_info
   int tflags;
 };
 
-/* Our own tty state, which we restore every time we need to deal with
-   the terminal.  This is only set once, when GDB first starts.  The
-   settings of flags which readline saves and restores and
-   unimportant.  */
-static struct terminal_info our_terminal_info;
+enum gdb_has_a_terminal_flag_enum
+  {
+    have_not_checked, yes, no
+  };
+
+struct term_state
+{
+  /* Our own tty state, which we restore every time we need to deal
+     with the terminal.  This is only set once, when we first attach
+     to the terminal (or when GDB first starts for the initial
+     terminal=.  The settings of flags which readline saves and
+     restores and unimportant.  */
+  struct terminal_info our_terminal_info;
+
+  struct serial *stdin_serial;
+
+  int terminal_is_ours;
+
+  enum gdb_has_a_terminal_flag_enum gdb_has_a_terminal_flag;
+};
+
+struct term_state *
+new_term_state (void)
+{
+  struct term_state *term_state;
+
+  term_state = XCNEW (struct term_state);
+
+  term_state->gdb_has_a_terminal_flag = have_not_checked;
+  term_state->terminal_is_ours = 1;
+
+  return term_state;
+}
 
 /* Snapshot of our own tty state taken during initialization of GDB.
    This is used as the initial tty state given to each new inferior.  */
@@ -115,8 +141,6 @@ static const char *inferior_thisrun_terminal;
    inferior's settings are in effect.  Ignored if !gdb_has_a_terminal
    ().  */
 
-int terminal_is_ours;
-
 #ifdef PROCESS_GROUP_TYPE
 static PROCESS_GROUP_TYPE
 gdb_getpgrp (void)
@@ -136,12 +160,6 @@ gdb_getpgrp (void)
 }
 #endif
 
-enum gdb_has_a_terminal_flag_enum
-  {
-    yes, no, have_not_checked
-  }
-gdb_has_a_terminal_flag = have_not_checked;
-
 /* The value of the "interactive-mode" setting.  */
 static enum auto_boolean interactive_mode = AUTO_BOOLEAN_AUTO;
 
@@ -160,22 +178,31 @@ show_interactive_mode (struct ui_file *file, int from_tty,
     fprintf_filtered (file, "Debugger's interactive mode is %s.\n", value);
 }
 
+static struct term_state *
+cur_term_state (void)
+{
+  return current_terminal->term_state;
+}
+
 /* Set the initial tty state that is to be inherited by new inferiors.  */
 
 void
 set_initial_gdb_ttystate (void)
 {
-  initial_gdb_ttystate = serial_get_tty_state (stdin_serial);
+  initial_gdb_ttystate
+    = serial_get_tty_state (cur_term_state ()->stdin_serial);
 }
 
 /* Does GDB have a terminal (on stdin)?  */
 int
 gdb_has_a_terminal (void)
 {
+  struct term_state *ts = current_terminal->term_state;
+
   if (interactive_mode != AUTO_BOOLEAN_AUTO)
     return interactive_mode == AUTO_BOOLEAN_TRUE;
 
-  switch (gdb_has_a_terminal_flag)
+  switch (ts->gdb_has_a_terminal_flag)
     {
     case yes:
       return 1;
@@ -188,24 +215,25 @@ gdb_has_a_terminal (void)
          initialized.  */
 
 #ifdef F_GETFL
-      our_terminal_info.tflags = fcntl (0, F_GETFL, 0);
+      ts->our_terminal_info.tflags = fcntl (0, F_GETFL, 0);
 #endif
 
-      gdb_has_a_terminal_flag = no;
-      if (stdin_serial != NULL)
+      ts->gdb_has_a_terminal_flag = no;
+      if (ts->stdin_serial != NULL)
 	{
-	  our_terminal_info.ttystate = serial_get_tty_state (stdin_serial);
+	  ts->our_terminal_info.ttystate
+	    = serial_get_tty_state (ts->stdin_serial);
 
-	  if (our_terminal_info.ttystate != NULL)
+	  if (ts->our_terminal_info.ttystate != NULL)
 	    {
-	      gdb_has_a_terminal_flag = yes;
+	      ts->gdb_has_a_terminal_flag = yes;
 #ifdef PROCESS_GROUP_TYPE
-	      our_terminal_info.process_group = gdb_getpgrp ();
+	      ts->our_terminal_info.process_group = gdb_getpgrp ();
 #endif
 	    }
 	}
 
-      return gdb_has_a_terminal_flag == yes;
+      return ts->gdb_has_a_terminal_flag == yes;
     default:
       /* "Can't happen".  */
       return 0;
@@ -237,14 +265,16 @@ child_terminal_init_with_pgrp (int pgrp)
 
   if (gdb_has_a_terminal ())
     {
+      struct term_state *ts = current_terminal->term_state;
+
       xfree (tinfo->ttystate);
-      tinfo->ttystate = serial_copy_tty_state (stdin_serial,
+      tinfo->ttystate = serial_copy_tty_state (ts->stdin_serial,
 					       initial_gdb_ttystate);
 
       /* Make sure that next time we call terminal_inferior (which will be
          before the program runs, as it needs to be), we install the new
          process group.  */
-      terminal_is_ours = 1;
+      ts->terminal_is_ours = 1;
     }
 }
 
@@ -255,10 +285,12 @@ child_terminal_init_with_pgrp (int pgrp)
 void
 gdb_save_tty_state (void)
 {
+  struct term_state *ts = current_terminal->term_state;
+
   if (gdb_has_a_terminal ())
     {
-      xfree (our_terminal_info.ttystate);
-      our_terminal_info.ttystate = serial_get_tty_state (stdin_serial);
+      xfree (ts->our_terminal_info.ttystate);
+      ts->our_terminal_info.ttystate = serial_get_tty_state (ts->stdin_serial);
     }
 }
 
@@ -288,8 +320,9 @@ child_terminal_inferior (struct target_ops *self)
 {
   struct inferior *inf;
   struct terminal_info *tinfo;
+  struct term_state *ts = current_terminal->term_state;
 
-  if (!terminal_is_ours)
+  if (!ts->terminal_is_ours)
     return;
 
   inf = current_inferior ();
@@ -313,7 +346,7 @@ child_terminal_inferior (struct target_ops *self)
       /* Because we were careful to not change in or out of raw mode in
          terminal_ours, we will not change in our out of raw mode with
          this call, so we don't flush any input.  */
-      result = serial_set_tty_state (stdin_serial,
+      result = serial_set_tty_state (ts->stdin_serial,
 				     tinfo->ttystate);
       OOPSY ("setting tty state");
 
@@ -353,7 +386,7 @@ child_terminal_inferior (struct target_ops *self)
 	}
 
     }
-  terminal_is_ours = 0;
+  ts->terminal_is_ours = 0;
 }
 
 /* Put some of our terminal settings into effect,
@@ -396,11 +429,12 @@ child_terminal_ours_1 (int output_only)
 {
   struct inferior *inf;
   struct terminal_info *tinfo;
+  struct term_state *ts = current_terminal->term_state;
 
-  if (terminal_is_ours)
+  if (ts->terminal_is_ours)
     return;
 
-  terminal_is_ours = 1;
+  ts->terminal_is_ours = 1;
 
   /* Checking inferior->run_terminal is necessary so that
      if GDB is running in the background, it won't block trying
@@ -427,7 +461,7 @@ child_terminal_ours_1 (int output_only)
 #endif
 
       xfree (tinfo->ttystate);
-      tinfo->ttystate = serial_get_tty_state (stdin_serial);
+      tinfo->ttystate = serial_get_tty_state (ts->stdin_serial);
 
 #ifdef PROCESS_GROUP_TYPE
       if (!inf->attach_flag)
@@ -451,13 +485,14 @@ child_terminal_ours_1 (int output_only)
          though, since readline will deal with raw mode when/if it needs
          to.  */
 
-      serial_noflush_set_tty_state (stdin_serial, our_terminal_info.ttystate,
+      serial_noflush_set_tty_state (ts->stdin_serial,
+				    ts->our_terminal_info.ttystate,
 				    tinfo->ttystate);
 
       if (job_control)
 	{
 #ifdef HAVE_TERMIOS
-	  result = tcsetpgrp (0, our_terminal_info.process_group);
+	  result = tcsetpgrp (0, ts->our_terminal_info.process_group);
 #if 0
 	  /* This fails on Ultrix with EINVAL if you run the testsuite
 	     in the background with nohup, and then log out.  GDB never
@@ -494,8 +529,8 @@ child_terminal_ours_1 (int output_only)
       /* Is there a reason this is being done twice?  It happens both
          places we use F_SETFL, so I'm inclined to think perhaps there
          is some reason, however perverse.  Perhaps not though...  */
-      result = fcntl (0, F_SETFL, our_terminal_info.tflags);
-      result = fcntl (0, F_SETFL, our_terminal_info.tflags);
+      result = fcntl (0, F_SETFL, ts->our_terminal_info.tflags);
+      result = fcntl (0, F_SETFL, ts->our_terminal_info.tflags);
 #endif
     }
 }
@@ -556,6 +591,7 @@ void
 copy_terminal_info (struct inferior *to, struct inferior *from)
 {
   struct terminal_info *tinfo_to, *tinfo_from;
+  struct term_state *ts = current_terminal->term_state;
 
   tinfo_to = get_inflow_inferior_data (to);
   tinfo_from = get_inflow_inferior_data (from);
@@ -571,7 +607,7 @@ copy_terminal_info (struct inferior *to, struct inferior *from)
 
   if (tinfo_from->ttystate)
     tinfo_to->ttystate
-      = serial_copy_tty_state (stdin_serial, tinfo_from->ttystate);
+      = serial_copy_tty_state (ts->stdin_serial, tinfo_from->ttystate);
 }
 
 void
@@ -585,6 +621,7 @@ child_terminal_info (struct target_ops *self, const char *args, int from_tty)
 {
   struct inferior *inf;
   struct terminal_info *tinfo;
+  struct term_state *ts = current_terminal->term_state;
 
   if (!gdb_has_a_terminal ())
     {
@@ -661,7 +698,7 @@ child_terminal_info (struct target_ops *self, const char *args, int from_tty)
   printf_filtered ("Process group = %d\n", (int) tinfo->process_group);
 #endif
 
-  serial_print_tty_state (stdin_serial, tinfo->ttystate, gdb_stdout);
+  serial_print_tty_state (ts->stdin_serial, tinfo->ttystate, gdb_stdout);
 }
 
 /* NEW_TTY_PREFORK is called before forking a new child process,
@@ -891,7 +928,9 @@ gdb_setpgid (void)
 void
 initialize_stdin_serial (void)
 {
-  stdin_serial = serial_fdopen (0);
+  struct term_state *ts = current_terminal->term_state;
+
+  ts->stdin_serial = serial_fdopen (fileno (current_terminal->instream));
 }
 
 void
@@ -913,8 +952,6 @@ input settings."),
                         NULL,
                         show_interactive_mode,
                         &setlist, &showlist);
-
-  terminal_is_ours = 1;
 
   /* OK, figure out whether we have job control.  If neither termios nor
      sgtty (i.e. termio or go32), leave job_control 0.  */

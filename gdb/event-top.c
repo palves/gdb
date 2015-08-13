@@ -1306,6 +1306,8 @@ new_terminal (FILE *instream, FILE *outstream, FILE *errstream)
   terminal->rl = XCNEW (struct terminal_readline_state);
   terminal->rl->readline_state = initial_readline_state;
 
+  terminal->term_state = new_term_state ();
+
   VEC_safe_push (terminal_ptr, terminals, terminal);
 
   return terminal;
