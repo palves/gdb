@@ -45,14 +45,6 @@ static struct gdb_exception safe_execute_command (struct ui_out *uiout,
 
 static int console_interp_p (struct interp *interp);
 
-#define ALL_CONSOLE_INTERPS(INTERP)					\
-  ALL_INTERPS (INTERP)						\
-    if (!console_interp_p (INTERP) || interp_quiet_p (INTERP))	\
-      {								\
-	/* Nothing.  */						\
-      }								\
-    else
-
 /* Observers for several run control events.  If the interpreter is
    quiet (i.e., another interpreter is being run with
    interpreter-exec), print nothing.  */
@@ -78,10 +70,9 @@ cli_on_normal_stop (struct bpstats *bs, int print_frame)
 static void
 cli_on_signal_received (enum gdb_signal siggnal)
 {
-  struct interp *interp;
+  struct interp *interp = current_interpreter;
 
-  ALL_CONSOLE_INTERPS (interp)
-    print_signal_received_reason (interp_ui_out (interp), siggnal);
+  print_signal_received_reason (interp_ui_out (interp), siggnal);
 }
 
 /* Observer for the end_stepping_range notification.  */
@@ -89,10 +80,9 @@ cli_on_signal_received (enum gdb_signal siggnal)
 static void
 cli_on_end_stepping_range (void)
 {
-  struct interp *interp;
+  struct interp *interp = current_interpreter;
 
-  ALL_CONSOLE_INTERPS (interp)
-    print_end_stepping_range_reason (interp_ui_out (interp));
+  print_end_stepping_range_reason (interp_ui_out (interp));
 }
 
 /* Observer for the signalled notification.  */
@@ -100,10 +90,9 @@ cli_on_end_stepping_range (void)
 static void
 cli_on_signal_exited (enum gdb_signal siggnal)
 {
-  struct interp *interp;
+  struct interp *interp = current_interpreter;
 
-  ALL_CONSOLE_INTERPS (interp)
-    print_signal_exited_reason (interp_ui_out (interp), siggnal);
+  print_signal_exited_reason (interp_ui_out (interp), siggnal);
 }
 
 /* Observer for the exited notification.  */
@@ -111,10 +100,9 @@ cli_on_signal_exited (enum gdb_signal siggnal)
 static void
 cli_on_exited (int exitstatus)
 {
-  struct interp *interp;
+  struct interp *interp = current_interpreter;
 
-  ALL_CONSOLE_INTERPS (interp)
-    print_exited_reason (interp_ui_out (interp), exitstatus);
+  print_exited_reason (interp_ui_out (interp), exitstatus);
 }
 
 /* Observer for the no_history notification.  */
@@ -122,10 +110,9 @@ cli_on_exited (int exitstatus)
 static void
 cli_on_no_history (void)
 {
-  struct interp *interp;
+  struct interp *interp = current_interpreter;
 
-  ALL_CONSOLE_INTERPS (interp)
-    print_no_history_reason (interp_ui_out (interp));
+  print_no_history_reason (interp_ui_out (interp));
 }
 
 /* Observer for the sync_execution_done notification.  */
@@ -133,13 +120,9 @@ cli_on_no_history (void)
 static void
 cli_on_sync_execution_done (void)
 {
-  struct interp *interp;
+  struct interp *interp = current_interpreter;
 
-  ALL_CONSOLE_INTERPS (interp)
-    {
-      /* FIXME: switch to console.  */
-      display_gdb_prompt (NULL);
-    }
+  display_gdb_prompt (NULL);
 }
 
 /* Observer for the command_error notification.  */
