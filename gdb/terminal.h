@@ -129,6 +129,7 @@ struct term_state *new_term_state (void);
 
 struct terminal_readline_state;
 struct target_term_state;
+struct page_info;
 
 typedef struct interp *interp_ptr;
 DEF_VEC_P(interp_ptr);
@@ -154,9 +155,6 @@ struct terminal
 
   int sync_execution;
 
-  unsigned int lines_per_page;
-  unsigned int chars_per_line;
-
   /* Readline-related things.  Private to most of GDB.  */
   struct terminal_readline_state *rl;
 
@@ -170,6 +168,8 @@ struct terminal
      termcap all read/write these.  */
   char *env_lines;
   char *env_columns;
+
+  struct page_info *page_info;
 };
 
 typedef struct terminal *terminal_ptr;
