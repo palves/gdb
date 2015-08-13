@@ -1102,7 +1102,6 @@ handle_sighup (int sig)
 static void
 async_disconnect (gdb_client_data arg)
 {
-
   TRY
     {
       quit_cover ();
@@ -1330,6 +1329,7 @@ new_terminal_1 (FILE *instream, FILE *outstream, FILE *errstream)
   terminal = xcalloc (1, sizeof *terminal);
 
   terminal->input_fd = -1;
+  terminal->stdin_stream = instream;
   terminal->instream = instream;
   terminal->outstream = outstream;
   terminal->errstream = errstream;

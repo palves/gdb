@@ -141,6 +141,11 @@ DEF_VEC_P(interp_ptr);
 struct terminal
 {
   int input_fd;
+
+  /* The terminal's stdin.  instream will usually point here, except
+     when input is temporarily redirected from a script.  */
+  FILE *stdin_stream;
+
   FILE *instream;
   FILE *outstream;
   FILE *errstream;
