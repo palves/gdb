@@ -275,7 +275,7 @@ set_observer_mode (char *args, int from_tty,
      going out we leave it that way.  */
   if (observer_mode)
     {
-      pagination_enabled = 0;
+      // pagination_enabled = 0;
       non_stop = non_stop_1 = 1;
     }
 

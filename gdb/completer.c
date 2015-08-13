@@ -1783,7 +1783,7 @@ gdb_display_match_list_1 (char **matches, int len, int max,
   int count, limit, printed_len, lines, cols;
   int i, j, k, l, common_length, sind;
   char *temp, *t;
-  int page_completions = displayer->height != INT_MAX && pagination_enabled;
+  int page_completions = displayer->height != INT_MAX && pagination_enabled ();
 
   /* Find the length of the prefix common to all items: length as displayed
      characters (common_length) and as a byte index into the matches (sind) */

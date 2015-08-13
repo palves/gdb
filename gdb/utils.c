@@ -137,14 +137,6 @@ show_sevenbit_strings (struct ui_file *file, int from_tty,
 
 char *warning_pre_print = "\nwarning: ";
 
-int pagination_enabled = 1;
-static void
-show_pagination_enabled (struct ui_file *file, int from_tty,
-			 struct cmd_list_element *c, const char *value)
-{
-  fprintf_filtered (file, _("State of pagination is %s.\n"), value);
-}
-
 
 /* Cleanup utilities.
 
@@ -1624,6 +1616,9 @@ struct page_info
   /* Column number on the screen where wrap_buffer begins, or 0 if
      wrapping is not in effect.  */
   int wrap_column;
+
+  /* Whether pagination is enabled on this terminal.  */
+  int pagination_enabled;
 };
 
 
@@ -1631,6 +1626,34 @@ static struct page_info *
 get_page_info (void)
 {
   return current_terminal->page_info;
+}
+
+int
+pagination_enabled (void)
+{
+  return get_page_info ()->pagination_enabled;
+}
+
+int pagination_enabled_var = 1;
+
+
+static void
+set_pagination_enabled (char *args, int from_tty,
+			struct cmd_list_element *c)
+{
+  struct page_info *pi = get_page_info ();
+
+  pi->pagination_enabled = pagination_enabled_var;
+}
+
+static void
+show_pagination_enabled (struct ui_file *file, int from_tty,
+			 struct cmd_list_element *c, const char *value)
+{
+  struct page_info *pi = get_page_info ();
+  const char *real_value = pi->pagination_enabled ? "on" : "off";
+
+  fprintf_filtered (file, _("State of pagination is %s.\n"), real_value);
 }
 
 /* Inialize the number of lines per page and chars per line.  */
@@ -1645,6 +1668,7 @@ init_page_info (void)
 
   term->page_info = XCNEW (struct page_info);
   pi = term->page_info;
+  pi->pagination_enabled = 1;
 
   if (batch_flag)
     {
@@ -2084,7 +2108,7 @@ fputs_maybe_filtered (const char *linebuffer, struct ui_file *stream,
 
   /* Don't do any filtering if it is disabled.  */
   if (stream != gdb_stdout
-      || !pagination_enabled
+      || !pi->pagination_enabled
       || batch_flag
       || (pi->lines_per_page == UINT_MAX
 	  && pi->chars_per_line == UINT_MAX)
@@ -2750,13 +2774,13 @@ Setting this to \"unlimited\" or zero causes GDB never pause during output."),
 			    &setlist, &showlist);
 
   add_setshow_boolean_cmd ("pagination", class_support,
-			   &pagination_enabled, _("\
+			   &pagination_enabled_var, _("\
 Set state of GDB output pagination."), _("\
 Show state of GDB output pagination."), _("\
 When pagination is ON, GDB pauses at end of each screenful of\n\
 its output and asks you whether to continue.\n\
 Turning pagination off is an alternative to \"set height unlimited\"."),
-			   NULL,
+			   set_pagination_enabled,
 			   show_pagination_enabled,
 			   &setlist, &showlist);
 

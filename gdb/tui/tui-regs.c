@@ -711,9 +711,13 @@ TUI command to control the register window."), tuicmd);
 static void
 tui_restore_gdbout (void *ui)
 {
+  ui_file_delete ((struct ui_file *) ui);
+
+#if 0
   ui_file_delete (gdb_stdout);
-  gdb_stdout = (struct ui_file*) ui;
+  gdb_stdout = (struct ui_file *) ui;
   pagination_enabled = 1;
+#endif
 }
 
 /* Get the register from the frame and return a printable
@@ -724,16 +728,19 @@ tui_register_format (struct frame_info *frame, int regnum)
 {
   struct gdbarch *gdbarch = get_frame_arch (frame);
   struct ui_file *stream;
-  struct ui_file *old_stdout;
+  //  struct ui_file *old_stdout;
   struct cleanup *cleanups;
   char *p, *s;
   char *ret;
 
-  pagination_enabled = 0;
+#if 0
+  set_pagination_enable (0);
   old_stdout = gdb_stdout;
+#endif
   stream = tui_sfileopen (256);
-  gdb_stdout = stream;
-  cleanups = make_cleanup (tui_restore_gdbout, (void*) old_stdout);
+  // gdb_stdout = stream;
+  //  cleanups = make_cleanup (tui_restore_gdbout, (void*) old_stdout);
+  cleanups = make_cleanup (tui_restore_gdbout, (void*) stream);
   gdbarch_print_registers_info (gdbarch, stream, frame, regnum, 1);
 
   /* Save formatted output in the buffer.  */

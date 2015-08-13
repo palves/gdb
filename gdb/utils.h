@@ -150,7 +150,7 @@ extern void wrap_here (char *);
 
 extern void reinitialize_more_filter (void);
 
-extern int pagination_enabled;
+extern int pagination_enabled (void);
 
 /* Global ui_file streams.  These are all defined in main.c.  */
 /* Normal results */
