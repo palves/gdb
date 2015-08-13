@@ -48,6 +48,7 @@
 #include "tui/tui-winsource.h"
 
 #include "gdb_curses.h"
+#include "terminal.h"
 
 /* This redefines CTRL if it is not already defined, so it must come
    after terminal state releated include files like <term.h> and
@@ -56,11 +57,36 @@
 
 int tui_target_has_run = 0;
 
+typedef void (*for_each_terminal_fn) (void *data);
+
 static void
-tui_new_objfile_hook (struct objfile* objfile)
+for_each_terminal (for_each_terminal_fn fn, void *data)
+{
+  struct terminal *prev_terminal = current_terminal;
+  struct terminal *t;
+  int ix;
+
+  for (ix = 0; VEC_iterate (terminal_ptr, terminals, ix, t); ++ix)
+    {
+      switch_to_terminal (t);
+
+      fn (data);
+    }
+
+  switch_to_terminal (prev_terminal);
+}
+
+static void
+tui_new_objfile_hook_1 (void *data)
 {
   if (tui_active)
     tui_display_main ();
+}
+
+static void
+tui_new_objfile_hook (struct objfile* objfile)
+{
+  for_each_terminal (tui_new_objfile_hook_1, NULL);
 }
 
 /* Prevent recursion of deprecated_register_changed_hook().  */
@@ -69,7 +95,7 @@ static int tui_refreshing_registers = 0;
 /* Observer for the register_changed notification.  */
 
 static void
-tui_register_changed (struct frame_info *frame, int regno)
+tui_register_changed_1 (void *data)
 {
   struct frame_info *fi;
 
@@ -78,6 +104,10 @@ tui_register_changed (struct frame_info *frame, int regno)
      And even if the frames differ a register change made in one can still show
      up in the other.  So we always use the selected frame here, and ignore
      FRAME.  */
+
+  if (!tui_active)
+    return;
+
   fi = get_selected_frame (NULL);
   if (tui_refreshing_registers == 0)
     {
@@ -87,12 +117,33 @@ tui_register_changed (struct frame_info *frame, int regno)
     }
 }
 
+static void
+tui_register_changed (struct frame_info *frame, int regno)
+{
+  for_each_terminal (tui_register_changed_1, NULL);
+}
+
 /* Breakpoint creation hook.
    Update the screen to show the new breakpoint.  */
 static void
+tui_update_all_breakpoint_info_wrapper (void *data)
+{
+  if (!tui_active)
+    return;
+
+  tui_update_all_breakpoint_info ();
+}
+
+static void
+for_each_terminal_update_all_breakpoint_info (void)
+{
+  for_each_terminal (tui_update_all_breakpoint_info_wrapper, NULL);
+}
+
+static void
 tui_event_create_breakpoint (struct breakpoint *b)
 {
-  tui_update_all_breakpoint_info ();
+  for_each_terminal_update_all_breakpoint_info ();
 }
 
 /* Breakpoint deletion hook.
@@ -100,13 +151,13 @@ tui_event_create_breakpoint (struct breakpoint *b)
 static void
 tui_event_delete_breakpoint (struct breakpoint *b)
 {
-  tui_update_all_breakpoint_info ();
+  for_each_terminal_update_all_breakpoint_info ();
 }
 
 static void
 tui_event_modify_breakpoint (struct breakpoint *b)
 {
-  tui_update_all_breakpoint_info ();
+  for_each_terminal_update_all_breakpoint_info ();
 }
 
 /* Called when a command is about to proceed the inferior.  */
@@ -135,6 +186,7 @@ tui_about_to_proceed (void)
 static void
 tui_refresh_frame_and_register_information (int registers_too_p)
 {
+  int level = *(int *) data;
   struct frame_info *fi;
   CORE_ADDR pc;
   struct cleanup *old_chain;
@@ -190,12 +242,12 @@ tui_dummy_print_frame_info_listing_hook (struct symtab *s,
 {
 }
 
-/* Perform all necessary cleanups regarding our module's inferior data
-   that is required after the inferior INF just exited.  */
-
 static void
-tui_inferior_exit (struct inferior *inf)
+tui_inferior_exit_1 (void *data)
 {
+  if (!tui_active)
+    return;
+
   /* Leave the SingleKey mode to make sure the gdb prompt is visible.  */
   tui_set_key_mode (TUI_COMMAND_MODE);
   tui_show_frame_info (0);
@@ -235,10 +287,17 @@ static struct observer *tui_before_prompt_observer;
 static struct observer *tui_normal_stop_observer;
 static struct observer *tui_register_changed_observer;
 
+/* Number of active TUI instances.  We keep the event hooks installed
+   as long as there are TUI instances.  */
+static int tui_active_instances;
+
 /* Install the TUI specific hooks.  */
 void
 tui_install_hooks (void)
 {
+  if (tui_active_instances++ > 0)
+    return;
+
   /* If this hook is not set to something then print_frame_info will
      assume that the CLI, not the TUI, is active, and will print the frame info
      for us in such a way that we are not prepared to handle.  This hook is
@@ -269,6 +328,9 @@ tui_install_hooks (void)
 void
 tui_remove_hooks (void)
 {
+  if (--tui_active_instances > 0)
+    return;
+
   deprecated_print_frame_info_listing_hook = 0;
   deprecated_query_hook = 0;
   /* Remove our observers.  */
