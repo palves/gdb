@@ -268,4 +268,8 @@ extern void throw_quit (const char *fmt, ...)
 /* A pre-defined non-exception.  */
 extern const struct gdb_exception exception_none;
 
+/* This is called by a thread just before shutdown to free any
+   per-thread exception information.  */
+extern void clear_exception_cache (void);
+
 #endif /* COMMON_EXCEPTIONS_H */
