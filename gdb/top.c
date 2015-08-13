@@ -2059,6 +2059,7 @@ gdb_init (char *argv0)
 
   /* Now call the initialization routines that have dependencies.  */
 
+  init_terminal ();
   /* This creates the current_program_space.  Do this after all the
      _initialize_foo routines have had a chance to install their
      per-sspace data keys.  Also do this before
@@ -2068,7 +2069,6 @@ gdb_init (char *argv0)
   initialize_inferiors ();
   initialize_current_architecture ();
   init_cli_cmds();
-  init_terminal ();
   init_main ();
 
   /* Take a snapshot of our tty state before readline/ncurses have had a chance
