@@ -432,6 +432,8 @@ tui_set_screen (void)
   if (current_terminal->tui != NULL
       && current_terminal->tui->screen != NULL)
     set_term (current_terminal->tui->screen);
+  else
+    set_term (NULL);
 }
 
 /* Enter in the tui mode (curses).
