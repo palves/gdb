@@ -754,6 +754,8 @@ tui_resize_all (void)
   int height_diff, width_diff;
   int screenheight, screenwidth;
 
+  tui_set_screen ();
+
   rl_get_screen_size (&screenheight, &screenwidth);
   width_diff = screenwidth - tui_term_width ();
   height_diff = screenheight - tui_term_height ();

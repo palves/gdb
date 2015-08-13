@@ -26,25 +26,58 @@
 #include "tui/tui-wingeneral.h"
 #include "gdb_curses.h"
 
-/****************************
-** GLOBAL DECLARATIONS
-****************************/
-struct tui_win_info *(tui_win_list[MAX_MAJOR_WINDOWS]);
+#undef tui_win_list
 
-/***************************
-** Private data
-****************************/
-static enum tui_layout_type current_layout = UNDEFINED_LAYOUT;
-static int term_height, term_width;
-static struct tui_gen_win_info _locator;
-static struct tui_gen_win_info exec_info[2];
-static struct tui_win_info *src_win_list[2];
-static struct tui_list source_windows = {src_win_list, 0};
-static int default_tab_len = DEFAULT_TAB_LEN;
-static struct tui_win_info *win_with_focus = NULL;
-static struct tui_layout_def layout_def = {
-  SRC_WIN,			/* DISPLAY_MODE */
-  FALSE};			/* SPLIT */
+struct tui_data
+{
+  /****************************
+   ** GLOBAL DECLARATIONS
+   ****************************/
+  struct tui_win_info *(tui_win_list[MAX_MAJOR_WINDOWS]);
+
+  enum tui_layout_type current_layout;
+  int term_height, term_width;
+  struct tui_gen_win_info _locator;
+  struct tui_gen_win_info exec_info[2];
+  struct tui_win_info *src_win_list[2];
+  struct tui_list source_windows;
+  int default_tab_len;
+  struct tui_win_info *win_with_focus;
+  struct tui_layout_def layout_def;
+};
+
+static void
+tui_data_ctor (struct tui_data *d)
+{
+  d->current_layout = UNDEFINED_LAYOUT;
+
+  d->source_windows.list = d->src_win_list;
+  d->source_windows.count = 0;
+
+  d->default_tab_len = DEFAULT_TAB_LEN;
+
+  d->layout_def.display_mode = SRC_WIN;
+  d->layout_def.split = FALSE;
+}
+
+static struct tui_data *
+tui_d (void)
+{
+  struct tui_terminal_state *tts = tui_ts ();
+
+  if (tts->tui_data == NULL)
+    {
+      tts->tui_data = XCNEW (struct tui_data);
+      tui_data_ctor (tts->tui_data);
+    }
+  return tts->tui_data;
+}
+
+struct tui_win_info **
+get_tui_win_list (void)
+{
+  return tui_d ()->tui_win_list;
+}
 
 static int win_resized = FALSE;
 
@@ -116,7 +149,7 @@ tui_set_win_resized_to (int resized)
 struct tui_layout_def *
 tui_layout_def (void)
 {
-  return &layout_def;
+  return &tui_d ()->layout_def;
 }
 
 
@@ -124,7 +157,7 @@ tui_layout_def (void)
 struct tui_win_info *
 tui_win_with_focus (void)
 {
-  return win_with_focus;
+  return tui_d ()->win_with_focus;
 }
 
 
@@ -132,7 +165,7 @@ tui_win_with_focus (void)
 void
 tui_set_win_with_focus (struct tui_win_info *win_info)
 {
-  win_with_focus = win_info;
+  tui_d ()->win_with_focus = win_info;
 }
 
 
@@ -140,7 +173,7 @@ tui_set_win_with_focus (struct tui_win_info *win_info)
 int
 tui_default_tab_len (void)
 {
-  return default_tab_len;
+  return tui_d ()->default_tab_len;
 }
 
 
@@ -148,7 +181,7 @@ tui_default_tab_len (void)
 void
 tui_set_default_tab_len (int len)
 {
-  default_tab_len = len;
+  tui_d ()->default_tab_len = len;
 }
 
 
@@ -158,7 +191,7 @@ tui_set_default_tab_len (int len)
 struct tui_list *
 tui_source_windows (void)
 {
-  return &source_windows;
+  return &tui_d ()->source_windows;
 }
 
 
@@ -168,9 +201,9 @@ tui_source_windows (void)
 void
 tui_clear_source_windows (void)
 {
-  source_windows.list[0] = NULL;
-  source_windows.list[1] = NULL;
-  source_windows.count = 0;
+  tui_d ()->source_windows.list[0] = NULL;
+  tui_d ()->source_windows.list[1] = NULL;
+  tui_d ()->source_windows.count = 0;
 }
 
 
@@ -191,8 +224,9 @@ tui_clear_source_windows_detail (void)
 void
 tui_add_to_source_windows (struct tui_win_info *win_info)
 {
-  if (source_windows.count < 2)
-    source_windows.list[source_windows.count++] = (void *) win_info;
+  if (tui_d ()->source_windows.count < 2)
+    tui_d ()->source_windows.list[tui_d ()->source_windows.count++]
+      = (void *) win_info;
 }
 
 
@@ -235,7 +269,7 @@ tui_clear_win_detail (struct tui_win_info *win_info)
 struct tui_gen_win_info *
 tui_source_exec_info_win_ptr (void)
 {
-  return &exec_info[0];
+  return &tui_d ()->exec_info[0];
 }
 
 
@@ -243,7 +277,7 @@ tui_source_exec_info_win_ptr (void)
 struct tui_gen_win_info *
 tui_disassem_exec_info_win_ptr (void)
 {
-  return &exec_info[1];
+  return &tui_d ()->exec_info[1];
 }
 
 
@@ -252,7 +286,7 @@ tui_disassem_exec_info_win_ptr (void)
 struct tui_gen_win_info *
 tui_locator_win_info_ptr (void)
 {
-  return &_locator;
+  return &tui_d ()->_locator;
 }
 
 
@@ -260,7 +294,7 @@ tui_locator_win_info_ptr (void)
 int
 tui_term_height (void)
 {
-  return term_height;
+  return tui_d ()->term_height;
 }
 
 
@@ -268,7 +302,7 @@ tui_term_height (void)
 void
 tui_set_term_height_to (int h)
 {
-  term_height = h;
+  tui_d ()->term_height = h;
 }
 
 
@@ -276,7 +310,7 @@ tui_set_term_height_to (int h)
 int
 tui_term_width (void)
 {
-  return term_width;
+  return tui_d ()->term_width;
 }
 
 
@@ -284,7 +318,7 @@ tui_term_width (void)
 void
 tui_set_term_width_to (int w)
 {
-  term_width = w;
+  tui_d ()->term_width = w;
 }
 
 
@@ -292,7 +326,7 @@ tui_set_term_width_to (int w)
 enum tui_layout_type
 tui_current_layout (void)
 {
-  return current_layout;
+  return tui_d ()->current_layout;
 }
 
 
@@ -300,7 +334,7 @@ tui_current_layout (void)
 void
 tui_set_current_layout_to (enum tui_layout_type new_layout)
 {
-  current_layout = new_layout;
+  tui_d ()->current_layout = new_layout;
 }
 
 
@@ -314,6 +348,8 @@ tui_set_current_layout_to (enum tui_layout_type new_layout)
 struct tui_win_info *
 tui_next_win (struct tui_win_info *cur_win)
 {
+  struct tui_data *d = tui_d ();
+
   int type = cur_win->generic.type;
   struct tui_win_info *next_win = NULL;
 
@@ -323,9 +359,9 @@ tui_next_win (struct tui_win_info *cur_win)
     type = cur_win->generic.type + 1;
   while (type != cur_win->generic.type && (next_win == NULL))
     {
-      if (tui_win_list[type]
-	  && tui_win_list[type]->generic.is_visible)
-	next_win = tui_win_list[type];
+      if (d->tui_win_list[type]
+	  && d->tui_win_list[type]->generic.is_visible)
+	next_win = d->tui_win_list[type];
       else
 	{
 	  if (type == CMD_WIN)
@@ -344,6 +380,7 @@ tui_next_win (struct tui_win_info *cur_win)
 struct tui_win_info *
 tui_prev_win (struct tui_win_info *cur_win)
 {
+  struct tui_data *d = tui_d ();
   int type = cur_win->generic.type;
   struct tui_win_info *prev = NULL;
 
@@ -353,9 +390,9 @@ tui_prev_win (struct tui_win_info *cur_win)
     type = cur_win->generic.type - 1;
   while (type != cur_win->generic.type && (prev == NULL))
     {
-      if (tui_win_list[type]
-	  && tui_win_list[type]->generic.is_visible)
-	prev = tui_win_list[type];
+      if (d->tui_win_list[type]
+	  && d->tui_win_list[type]->generic.is_visible)
+	prev = d->tui_win_list[type];
       else
 	{
 	  if (type == SRC_WIN)
@@ -373,6 +410,7 @@ tui_prev_win (struct tui_win_info *cur_win)
 struct tui_win_info *
 tui_partial_win_by_name (char *name)
 {
+  struct tui_data *d = tui_d ();
   struct tui_win_info *win_info = NULL;
 
   if (name != (char *) NULL)
@@ -381,14 +419,14 @@ tui_partial_win_by_name (char *name)
 
       while (i < MAX_MAJOR_WINDOWS && win_info == NULL)
 	{
-          if (tui_win_list[i] != 0)
+          if (d->tui_win_list[i] != 0)
             {
               const char *cur_name =
-		tui_win_name (&tui_win_list[i]->generic);
+		tui_win_name (&d->tui_win_list[i]->generic);
 
               if (strlen (name) <= strlen (cur_name)
 		  && startswith (cur_name, name))
-                win_info = tui_win_list[i];
+                win_info = d->tui_win_list[i];
             }
 	  i++;
 	}

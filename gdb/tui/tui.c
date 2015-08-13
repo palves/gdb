@@ -55,12 +55,6 @@
    "gdb_curses.h".  */
 #include "readline/readline.h"
 
-/* Tells whether the TUI is active or not.  */
-int tui_active = 0;
-static int tui_finish_init = 1;
-
-enum tui_key_mode tui_current_key_mode = TUI_COMMAND_MODE;
-
 struct tui_char_command
 {
   unsigned char key;
@@ -395,6 +389,24 @@ gdb_getenv_term (void)
   return "<unset>";
 }
 
+struct tui_terminal_state *
+tui_ts (void)
+{
+  if (current_terminal->tui == NULL)
+    {
+      current_terminal->tui = XCNEW (struct tui_terminal_state);
+      current_terminal->tui->tui_finish_init = 1;
+      tui_current_key_mode = TUI_COMMAND_MODE;
+    }
+  return current_terminal->tui;
+}
+
+void
+tui_set_screen (void)
+{
+  set_term (tui_ts ()->screen);
+}
+
 /* Enter in the tui mode (curses).
    When in normal mode, it installs the tui hooks in gdb, redirects
    the gdb output, configures the readline to work in tui mode.
@@ -410,7 +422,7 @@ tui_enable (void)
   /* To avoid to initialize curses when gdb starts, there is a defered
      curses initialization.  This initialization is made only once
      and the first time the curses mode is entered.  */
-  if (tui_finish_init)
+  if (tui_ts ()->tui_finish_init)
     {
       WINDOW *w;
       SCREEN *s;
@@ -460,6 +472,8 @@ tui_enable (void)
 	}
 #endif
 
+      tui_ts ()->screen = s;
+
       cbreak ();
       noecho ();
       /* timeout (1); */
@@ -476,7 +490,7 @@ tui_enable (void)
       tui_set_win_focus_to (TUI_SRC_WIN);
       keypad (TUI_CMD_WIN->generic.handle, TRUE);
       wrefresh (TUI_CMD_WIN->generic.handle);
-      tui_finish_init = 0;
+      tui_ts ()->tui_finish_init = 0;
     }
   else
     {
@@ -527,6 +541,8 @@ tui_disable (void)
 {
   if (!tui_active)
     return;
+
+  tui_set_screen ();
 
   /* Restore initial readline keymap.  */
   rl_set_keymap (tui_readline_standard_keymap);

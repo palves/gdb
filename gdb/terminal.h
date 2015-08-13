@@ -160,6 +160,8 @@ struct terminal
   struct term_state *term_state;
 
   struct target_term_state *target_term_state;
+
+  struct tui_terminal_state *tui;
 };
 
 typedef struct terminal *terminal_ptr;

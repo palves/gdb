@@ -29,10 +29,6 @@
 #include <sys/resource.h>
 #endif /* HAVE_SYS_RESOURCE_H */
 
-#ifdef TUI
-#include "tui/tui.h"		/* For tui_get_command_dimension.   */
-#endif
-
 #ifdef __GO32__
 #include <pc.h>
 #endif
@@ -1653,9 +1649,6 @@ init_page_info (void)
       chars_per_line = UINT_MAX;
     }
   else
-#if defined(TUI)
-  if (!tui_get_command_dimension (&chars_per_line, &lines_per_page))
-#endif
     {
       int rows, cols;
 
