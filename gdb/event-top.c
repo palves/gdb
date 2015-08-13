@@ -550,14 +550,6 @@ command_handler (char *command)
 
 #include "cli-out.h"
 
-/* The readline streams we interact with.  These are supposedly
-   private to readline, but I'm seeing no way to flip them without
-   losing line state, with a public interface.  */
-extern FILE *_rl_in_stream, *_rl_out_stream;
-
-/* Readline doesn't swap this one for us.   */
-extern rl_vcpfunc_t *rl_linefunc;
-
 void
 switch_to_terminal (struct terminal *terminal)
 {
@@ -576,7 +568,6 @@ switch_to_terminal (struct terminal *terminal)
   current_terminal->rl->input_handler = input_handler;
   current_terminal->rl->call_readline = call_readline;
   current_terminal->rl->async_command_editing_p = async_command_editing_p;
-  current_terminal->rl->rl_linefunc = rl_linefunc;
   rl_save_state (&current_terminal->rl->readline_state);
 
   current_terminal->sync_execution = sync_execution;
@@ -603,21 +594,7 @@ switch_to_terminal (struct terminal *terminal)
 
   sync_execution = terminal->sync_execution;
 
-  rl_linefunc = terminal->rl->rl_linefunc;
   rl_restore_state (&terminal->rl->readline_state);
-
-  /* Tell readline to use the same input stream that gdb uses.  */
-  rl_instream = instream;
-  rl_outstream = terminal->outstream;
-
-  /* Must do these directly instead of waiting for
-     rl_callback_handler_install to them up on next prompt display,
-     which would be too late -- we need to echo the just-pressed key
-     to _rl_out_stream.  */
-  _rl_in_stream = instream;
-  _rl_out_stream = terminal->outstream;
-
-  gdb_assert (instream == rl_instream);
 
   current_terminal = terminal;
 }
@@ -1203,6 +1180,8 @@ init_terminal (void)
 {
   struct terminal *terminal;
 
+  rl_save_state (&initial_readline_state);
+
   gdb_assert (current_terminal == NULL);
   gdb_assert (main_terminal == NULL);
 
@@ -1212,8 +1191,6 @@ init_terminal (void)
   terminal->out = gdb_stdout;
   terminal->err = gdb_stderr;
 #endif
-
-  rl_save_state (&initial_readline_state);
 
   current_terminal = terminal;
   main_terminal = terminal;
@@ -1297,6 +1274,10 @@ static struct terminal *
 new_terminal (FILE *instream, FILE *outstream, FILE *errstream)
 {
   struct terminal *terminal;
+  // FIXME: can we really assume current realine users zero memory?
+  // we must do this because parts of the state are xmalloced iff not
+  // already malloced.
+  struct readline_state prev_readline_state = {0};
 
   terminal = xcalloc (1, sizeof *terminal);
 
@@ -1306,7 +1287,15 @@ new_terminal (FILE *instream, FILE *outstream, FILE *errstream)
   terminal->errstream = errstream;
 
   terminal->rl = XCNEW (struct terminal_readline_state);
-  terminal->rl->readline_state = initial_readline_state;
+
+  /* We can't just copy the readline state object directly.  Restore
+     the initial state, and save it to the new terminal.  */
+  rl_save_state (&prev_readline_state);
+
+  rl_restore_state (&initial_readline_state);
+  rl_save_state (&terminal->rl->readline_state);
+
+  rl_restore_state (&prev_readline_state);
 
   terminal->term_state = new_term_state ();
   initialize_stdin_serial (terminal);
@@ -1348,7 +1337,7 @@ new_console_command (char *args, int from_tty)
 
   //  interp = interp_create (INTERP_CONSOLE);
   interp = interp_create (INTERP_TUI, terminal);
-  interp_set (interp, 0);
+  interp_set (interp, 1);
 
   printf_unfiltered ("Hello from new GDB console\n");
   display_gdb_prompt (NULL);
