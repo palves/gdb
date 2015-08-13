@@ -563,7 +563,7 @@ run_inferior_call (struct call_thread_fsm *sm,
   int saved_interpreter_async = interpreter_async;
 
   /* Infcalls run synchronously, in the foreground.  */
-  sync_execution = 1;
+  async_disable_stdin ();
   /* So that we don't print the prompt prematurely in
      fetch_inferior_event.  */
   interpreter_async = 0;
@@ -642,6 +642,9 @@ run_inferior_call (struct call_thread_fsm *sm,
 
   if (call_thread != NULL)
     call_thread->control.in_infcall = saved_in_infcall;
+
+  if (!saved_sync_execution)
+    async_enable_stdin ();
 
   return caught_error;
 }

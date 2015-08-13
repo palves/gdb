@@ -3929,14 +3929,16 @@ fetch_inferior_event (void *client_data)
   /* No error, don't finish the thread states yet.  */
   discard_cleanups (ts_old_chain);
 
-  /* Revert thread and frame.  */
-  do_cleanups (old_chain);
-
   /* If the inferior was in sync execution mode, and now isn't,
      restore the prompt (a synchronous execution command has finished,
      and we're ready for input).  */
-  if (interpreter_async /* && was_sync && !sync_execution */ && cmd_done)
+  if (interpreter_async /* && was_sync && !sync_execution */ && cmd_done
+      && (ptid_equal (inferior_ptid, null_ptid)
+	  || !is_running (inferior_ptid)))
     observer_notify_sync_execution_done ();
+
+  /* Revert thread and frame.  */
+  do_cleanups (old_chain);
 
   if (cmd_done
       && !was_sync
@@ -8056,7 +8058,7 @@ normal_stop (void)
   if (stopped_by_random_signal)
     disable_current_display ();
 
-  target_terminal_ours ();
+  // target_terminal_ours ();
   //  async_enable_stdin ();
 
   /* Let the user/frontend see the threads as stopped.  */

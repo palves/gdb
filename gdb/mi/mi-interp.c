@@ -297,8 +297,10 @@ mi_on_sync_execution_done (void)
      ready for further input.  */
   struct interp *interp = current_interpreter;
 
-  if (sync_execution)
-    async_enable_stdin ();
+  if (!sync_execution)
+    return;
+
+  async_enable_stdin ();
 
   if (!mi_async_p ())
     {
