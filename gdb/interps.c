@@ -140,6 +140,34 @@ interp_add (struct interp *interp)
   interp_list = interp;
 }
 
+static void
+interp_remove (struct interp *todel)
+{
+  struct interp *interp, *prev;
+
+  prev = NULL;
+
+  for (interp = interp_list;
+       interp != NULL;
+       prev = interp, interp = interp->next)
+    if (interp == todel)
+      break;
+
+  if (prev != NULL)
+    prev->next = interp->next;
+  else
+    interp_list = interp->next;
+}
+
+/* Add interpreter INTERP to the gdb interpreter list.  The
+   interpreter must not have previously been added.  */
+static void
+interp_delete (struct interp *interp)
+{
+  /* FIXME: should call dtor method.  */
+  xfree (interp);
+}
+
 /* This sets the current interpreter to be INTERP.  If INTERP has not
    been initialized, then this will also run the init proc.  If the
    init proc is successful, return 1, if it fails, set the old
@@ -429,6 +457,9 @@ interpreter_exec_cmd (char *args, int from_tty)
   interp_set (old_interp, 0);
   interp_set_quiet (interp_to_use, use_quiet);
   interp_set_quiet (old_interp, old_quiet);
+
+  interp_remove (interp_to_use);
+  interp_delete (interp_to_use);
 
   do_cleanups (cleanup);
 }
