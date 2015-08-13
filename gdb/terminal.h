@@ -158,6 +158,4 @@ DEF_VEC_P(terminal_ptr);
 
 extern VEC(terminal_ptr) *terminals;
 
-extern struct terminal *current_terminal;
-
 #endif /* !defined (TERMINAL_H) */

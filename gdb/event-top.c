@@ -1163,7 +1163,8 @@ set_async_editing_command (char *args, int from_tty,
 }
 
 static struct terminal *new_terminal (FILE *instream,
-				    FILE *outstream, FILE *errstream);
+				      FILE *outstream,
+				      FILE *errstream);
 
 /* A few readline variables are default initialized, and there's no
    way to set/reset them back to the defaults (e.g., to set
@@ -1277,29 +1278,6 @@ gdb_disable_readline (void)
   delete_file_handler (input_fd);
 }
 
-/* Scratch area where 'set terminal-tty' will store user-provided value.
-   We'll immediate copy it into per-interpreter storage.  */
-
-static char *terminal_tty_scratch;
-
-static void
-set_terminal_tty_command (char *args, int from_tty,
-			 struct cmd_list_element *c)
-{
-  new_tty (terminal_tty_scratch);
-}
-
-static void
-show_terminal_tty_command (struct ui_file *file, int from_tty,
-			  struct cmd_list_element *c, const char *value)
-{
-  if (terminal_tty_scratch == NULL)
-    terminal_tty_scratch = "";
-  fprintf_filtered (gdb_stdout,
-		    _("Terminal for the CLI terminal is \"%s\".\n"),
-		    terminal_tty_scratch);
-}
-
 /* Non-zero means we have been called at least once before. */
 extern int rl_initialized;
 
@@ -1376,16 +1354,6 @@ void
 _initialize_event_top (void)
 {
   struct cmd_list_element *c = NULL;
-
-  /* Add the filename of the terminal connected to inferior I/O.  */
-  add_setshow_filename_cmd ("console-tty", class_run,
-			    &terminal_tty_scratch, _("\
-Set terminal used by GDB's CLI."), _("\
-Show terminal for GDB's CLI."), _("\
-Usage: set console-tty /dev/pts/1"),
-			    set_terminal_tty_command,
-			    show_terminal_tty_command,
-			    &setlist, &showlist);
 
   add_com ("new-console", class_support, new_console_command,
 	   _("Create new console."));
