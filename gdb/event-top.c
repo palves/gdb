@@ -1331,9 +1331,7 @@ new_console_command (char *args, int from_tty)
 
   switch_to_terminal (terminal);
 
-  /* This isn't swapped, but we need to clear it so that the new
-     readline instance initializes.  XXX should swap it.  */
-  rl_initialized = 0;
+  init_readline ();
 
   //  interp = interp_create (INTERP_CONSOLE);
   interp = interp_create (INTERP_TUI, terminal);

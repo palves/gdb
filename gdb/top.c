@@ -1900,6 +1900,23 @@ set_history_filename (char *args, int from_tty, struct cmd_list_element *c)
 				 history_filename, (char *) NULL);
 }
 
+void
+init_readline (void)
+{
+  /* Setup important stuff for command line editing.  */
+  rl_completion_word_break_hook = gdb_completion_word_break_characters;
+  rl_completion_entry_function = readline_line_completion_function;
+  rl_completer_word_break_characters = default_word_break_characters ();
+  rl_completer_quote_characters = get_gdb_completer_quote_characters ();
+  rl_completion_display_matches_hook = cli_display_match_list;
+  rl_readline_name = "gdb";
+  rl_terminal_name = getenv ("TERM");
+
+  /* The name for this defun comes from Bash, where it originated.
+     15 is Control-o, the same binding this function has in Bash.  */
+  rl_add_defun ("operate-and-get-next", gdb_rl_operate_and_get_next, 15);
+}
+
 static void
 init_main (void)
 {
@@ -1916,18 +1933,7 @@ init_main (void)
   history_expansion_p = 0;
   write_history_p = 0;
 
-  /* Setup important stuff for command line editing.  */
-  rl_completion_word_break_hook = gdb_completion_word_break_characters;
-  rl_completion_entry_function = readline_line_completion_function;
-  rl_completer_word_break_characters = default_word_break_characters ();
-  rl_completer_quote_characters = get_gdb_completer_quote_characters ();
-  rl_completion_display_matches_hook = cli_display_match_list;
-  rl_readline_name = "gdb";
-  rl_terminal_name = getenv ("TERM");
-
-  /* The name for this defun comes from Bash, where it originated.
-     15 is Control-o, the same binding this function has in Bash.  */
-  rl_add_defun ("operate-and-get-next", gdb_rl_operate_and_get_next, 15);
+  init_readline ();
 
   add_setshow_string_cmd ("prompt", class_support,
 			  &top_prompt,
