@@ -414,6 +414,8 @@ struct readline_input_state
   char *linebuffer_ptr;
 };
 
+struct gdb_readline2_state;
+
 struct terminal_readline_state
 {
   struct line_buffer line_buffer;
@@ -433,6 +435,9 @@ struct terminal_readline_state
   /* More state, that isn't saved/restored automatically (a readline
      bug)...  */
   rl_vcpfunc_t *rl_linefunc;
+
+  /* gdb_readline2 state.  */
+  struct gdb_readline2_state *rl2;
 };
 
 struct terminal *main_terminal;
@@ -838,6 +843,20 @@ command_line_handler (char *rl)
   return;
 }
 
+struct gdb_readline2_state
+{
+  char *result;
+
+  int input_index;
+  int result_size;
+};
+
+struct gdb_readline2_state *rl2;
+
+#include "serial.h"
+
+struct serial *terminal_stdin_serial (struct terminal *terminal);
+
 /* Does reading of input from terminal w/o the editing features
    provided by the readline library.  */
 
@@ -848,67 +867,73 @@ void
 gdb_readline2 (gdb_client_data client_data)
 {
   int c;
-  char *result;
-  int input_index = 0;
-  int result_size = 80;
-  static int done_once = 0;
+  char *r;
 
-  /* Unbuffer the input stream, so that, later on, the calls to fgetc
-     fetch only one char at the time from the stream.  The fgetc's will
-     get up to the first newline, but there may be more chars in the
-     stream after '\n'.  If we buffer the input and fgetc drains the
-     stream, getting stuff beyond the newline as well, a select, done
-     afterwards will not trigger.  */
-  if (!done_once && !ISATTY (instream))
+  if (rl2 == NULL)
+    rl2 = XCNEW (struct gdb_readline2_state);
+
+  if (rl2->result == NULL)
     {
-      setbuf (instream, NULL);
-      done_once = 1;
+      rl2->result_size = 80;
+      rl2->result = (char *) xmalloc (rl2->result_size);
+      rl2->input_index = 0;
     }
-
-  result = (char *) xmalloc (result_size);
 
   /* We still need the while loop here, even though it would seem
      obvious to invoke gdb_readline2 at every character entered.  If
      not using the readline library, the terminal is in cooked mode,
-     which sends the characters all at once.  Poll will notice that the
-     input fd has changed state only after enter is pressed.  At this
-     point we still need to fetch all the chars entered.  */
+     which sends the characters all at once.  Poll will notice that
+     the input fd has changed state only after enter is pressed.  At
+     this point we still need to fetch all the chars entered.  */
 
   while (1)
     {
-      /* Read from stdin if we are executing a user defined command.
-         This is the right thing for prompt_for_continue, at least.  */
-      c = fgetc (instream ? instream : stdin);
+      c = serial_readchar (terminal_stdin_serial (current_terminal), 0);
 
-      if (c == EOF)
+      if (c == SERIAL_ERROR)
 	{
-	  if (input_index > 0)
-	    /* The last line does not end with a newline.  Return it,
-	       and if we are called again fgetc will still return EOF
-	       and we'll return NULL then.  */
-	    break;
-	  xfree (result);
+	  /* No chars left.  Go back to event loop.  */
+	  return;
+	}
+
+      if (c == SERIAL_EOF)
+	{
+	  if (rl2->input_index > 0)
+	    {
+	      /* The last line does not end with a newline.  Return
+		 it, and if we are called again serial_readchar will
+		 still return EOF and we'll signal error then.  */
+	      break;
+	    }
+	  xfree (rl2->result);
+	  rl2->result = NULL;
 	  (*input_handler) (0);
 	  return;
 	}
 
       if (c == '\n')
 	{
-	  if (input_index > 0 && result[input_index - 1] == '\r')
-	    input_index--;
+	  if (rl2->input_index > 0 && rl2->result[rl2->input_index - 1] == '\r')
+	    rl2->input_index--;
 	  break;
 	}
 
-      result[input_index++] = c;
-      while (input_index >= result_size)
+      rl2->result[rl2->input_index++] = c;
+      while (rl2->input_index >= rl2->result_size)
 	{
-	  result_size *= 2;
-	  result = (char *) xrealloc (result, result_size);
+	  rl2->result_size *= 2;
+	  rl2->result = (char *) xrealloc (rl2->result, rl2->result_size);
 	}
     }
 
-  result[input_index++] = '\0';
-  (*input_handler) (result);
+  rl2->result[rl2->input_index++] = '\0';
+
+  /* input_handler frees the passed in buffer.  Clear the result
+     buffer before passing it to input_handler, as that throws on
+     command error.  */
+  r = rl2->result;
+  rl2->result = NULL;
+  (*input_handler) (r);
 }
 
 

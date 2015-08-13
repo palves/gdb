@@ -983,6 +983,16 @@ initialize_stdin_serial (struct terminal *terminal)
   ts->stdin_serial = serial_fdopen (fileno (terminal->instream));
 }
 
+struct serial *terminal_stdin_serial (struct terminal *terminal);
+
+struct serial *
+terminal_stdin_serial (struct terminal *terminal)
+{
+  struct term_state *ts = terminal->term_state;
+
+  return ts->stdin_serial;
+}
+
 void
 _initialize_inflow (void)
 {
