@@ -550,6 +550,25 @@ command_handler (char *command)
 
 #include "cli-out.h"
 
+static void
+save_env_var (const char *var, char **here)
+{
+  char *value;
+
+  xfree (*here);
+  value = getenv (var);
+  *here = value ? xstrdup (value) : NULL;
+}
+
+static void
+restore_env_var (const char *var, char *value)
+{
+  if (value != NULL)
+    setenv (var, value, 1);
+  else
+    unsetenv (var);
+}
+
 void
 switch_to_terminal (struct terminal *terminal)
 {
@@ -571,6 +590,9 @@ switch_to_terminal (struct terminal *terminal)
   rl_save_state (&current_terminal->rl->readline_state);
 
   current_terminal->sync_execution = sync_execution;
+
+  save_env_var ("LINES", &current_terminal->env_lines);
+  save_env_var ("COLUMNS", &current_terminal->env_columns);
 
   /* We're just saving the current state.  No need to switch it
      back.  */
@@ -595,6 +617,9 @@ switch_to_terminal (struct terminal *terminal)
   sync_execution = terminal->sync_execution;
 
   rl_restore_state (&terminal->rl->readline_state);
+
+  restore_env_var ("LINES", terminal->env_lines);
+  restore_env_var ("COLUMNS", terminal->env_columns);
 
   current_terminal = terminal;
 

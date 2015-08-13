@@ -165,6 +165,11 @@ struct terminal
   struct target_term_state *target_term_state;
 
   struct tui_terminal_state *tui;
+
+  /* Per-terminal environment variables.  Readline, ncurses and
+     termcap all read/write these.  */
+  char *env_lines;
+  char *env_columns;
 };
 
 typedef struct terminal *terminal_ptr;
