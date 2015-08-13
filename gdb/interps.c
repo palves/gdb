@@ -564,14 +564,19 @@ interp_ ## method params						\
 									\
       if (interp->procs-> method != NULL)				\
 	{								\
-	  current_interpreter = interp;					\
+	  struct interp *prev_interp;					\
+									\
 	  switch_to_terminal (interp->terminal);			\
+									\
+	  prev_interp = current_interpreter;				\
+	  current_interpreter = interp;					\
 	  interp->procs-> method args;					\
+	  current_interpreter = prev_interp;				\
 	}								\
     }									\
 									\
-  current_interpreter = prev_interp;					\
   switch_to_terminal (prev_terminal);					\
+  current_interpreter = prev_interp;					\
 }
 
 GEN_INTERP_CALL (on_normal_stop, (struct bpstats *bs,
