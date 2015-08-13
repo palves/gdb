@@ -534,15 +534,23 @@ mi_on_normal_stop (struct bpstats *bs, int print_frame)
 {
   struct interp *interp = current_interpreter;
   struct mi_interp *mi = interp->data;
-  struct thread_info *tp;
-
-  tp = inferior_thread ();
 
   if (print_frame)
     {
+      struct thread_info *tp;
       int core;
       struct interp *console_interp;
 
+      tp = inferior_thread ();
+      if (tp->thread_fsm != NULL
+	  && thread_fsm_finished_p (tp->thread_fsm))
+	{
+	  enum async_reply_reason reason;
+
+	  reason = thread_fsm_async_reply_reason (tp->thread_fsm);
+	  ui_out_field_string (mi->mi_uiout, "reason",
+			       async_reason_lookup (reason));
+	}
       print_stop_event (mi->mi_uiout);
 
       console_interp = interp_lookup (current_terminal, INTERP_CONSOLE);
