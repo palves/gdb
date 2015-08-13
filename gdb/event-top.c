@@ -1181,7 +1181,7 @@ init_terminal (void)
   gdb_assert (current_terminal == NULL);
   gdb_assert (main_terminal == NULL);
 
-  terminal = new_terminal (instream, stdout, stderr);
+  terminal = new_terminal (stdin, stdout, stderr);
 
 #if 0
   terminal->out = gdb_stdout;
@@ -1201,19 +1201,6 @@ init_terminal (void)
 void
 gdb_setup_readline (void)
 {
-  /* This function is a noop for the sync case.  The assumption is
-     that the sync setup is ALL done in gdb_init, and we would only
-     mess it up here.  The sync stuff should really go away over
-     time.  */
-  if (!batch_silent)
-    gdb_stdout = stdio_fileopen (current_terminal->outstream);
-  /* FIXME */
-  gdb_stderr = stdio_fileopen (current_terminal->errstream);
-  //  gdb_stderr = stderr_fileopen ();
-  gdb_stdlog = gdb_stderr;  /* for moment */
-  gdb_stdtarg = gdb_stderr; /* for moment */
-  gdb_stdtargerr = gdb_stderr; /* for moment */
-
   /* If the input stream is connected to a terminal, turn on
      editing.  */
   if (ISATTY (instream))
@@ -1243,7 +1230,7 @@ gdb_setup_readline (void)
 
   /* Get a file descriptor for the input stream, so that we can
      register it with the event loop.  */
-  input_fd = fileno (current_terminal->instream);
+  input_fd = fileno (instream);
 
   /* Now we need to create the event sources for the input file
      descriptor.  */

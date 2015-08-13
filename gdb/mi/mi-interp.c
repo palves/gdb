@@ -39,6 +39,7 @@
 #include "cli-out.h"
 #include "thread-fsm.h"
 #include "terminal.h"
+#include "readline/readline.h"
 
 /* These are the interpreter setup, etc. functions for the MI
    interpreter.  */
@@ -145,15 +146,26 @@ mi_interpreter_resume (struct interp *self)
 {
   struct mi_interp *mi = (struct mi_interp *) self->data;
 
-  /* As per hack note in mi_interpreter_init, swap in the output
-     channels... */
-  gdb_setup_readline ();
-
-  /* These overwrite some of the initialization done in
-     _initialize_event_loop.  */
   call_readline = gdb_readline2;
   input_handler = mi_execute_command_input_handler;
   async_command_editing_p = 0;
+
+  /* Tell readline to use the same input stream that gdb uses.  */
+  rl_instream = instream;
+
+  /* Get a file descriptor for the input stream, so that we can
+     register it with the event loop.  */
+  input_fd = fileno (instream);
+
+  /* Now we need to create the event sources for the input file
+     descriptor.  */
+  /* At this point in time, this is the only event source that we
+     register with the even loop.  Another source is going to be the
+     target program (inferior), but that must be registered only when
+     it actually exists (I.e. after we say 'run' or after we connect
+     to a remote target.  */
+  add_file_handler (input_fd, stdin_event_handler, current_terminal);
+
   /* FIXME: This is a total hack for now.  PB's use of the MI
      implicitly relies on a bug in the async support which allows
      asynchronous commands to leak through the commmand loop.  The bug

@@ -205,21 +205,7 @@ tui_resume (struct interp *self)
   struct ui_file *stream;
   struct tui_interp *tui = (struct tui_interp *) self;
 
-  /* gdb_setup_readline will change gdb_stdout.  If the TUI was
-     previously writing to gdb_stdout, then set it to the new
-     gdb_stdout afterwards.  */
-
-  stream = cli_out_set_stream (tui_io_old_uiout (tui->io_data), gdb_stdout);
-  if (stream != gdb_stdout)
-    {
-      cli_out_set_stream (tui_io_old_uiout (tui->io_data), stream);
-      stream = NULL;
-    }
-
   gdb_setup_readline ();
-
-  if (stream != NULL)
-    cli_out_set_stream (tui_io_old_uiout (tui->io_data), gdb_stdout);
 
   if (tui_start_enabled)
     tui_enable ();
