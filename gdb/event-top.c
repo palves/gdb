@@ -1277,8 +1277,9 @@ gdb_setup_readline (void)
      function that does this.  */
   input_handler = command_line_handler;
 
-  /* Tell readline to use the same input stream that gdb uses.  */
+  /* Tell readline to use the same input/output streams that gdb uses.  */
   rl_instream = instream;
+  rl_outstream = current_terminal->outstream;
 
   /* Get a file descriptor for the input stream, so that we can
      register it with the event loop.  */
@@ -1419,8 +1420,8 @@ new_console_command (char *args, int from_tty)
 
   /* Must set this already, do that init_page_info has readline query
      the correct terminal.  */
-  rl_instream = stream;
-  rl_outstream = stream;
+  rl_instream = terminal->instream;
+  rl_outstream = terminal->outstream;
 
   init_readline ();
   init_page_info ();

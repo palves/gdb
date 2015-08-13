@@ -67,12 +67,14 @@ extern void cli_on_command_error (void);
 static void *
 tui_init (struct interp *self, int top_level)
 {
+  gdb_setup_readline ();
+
   tui_initialize_static_data ();
 
   tui_initialize_io ();
   tui_initialize_win ();
   if (ui_file_isatty (gdb_stdout))
-    tui_initialize_readline ();
+    tui_initialize_readline_keymaps ();
 
   return NULL;
 }
@@ -85,8 +87,13 @@ tui_resume (struct interp *self)
 
   gdb_setup_readline ();
 
+  /* The else here is necessary otherwise we'd call tui_setup_io twice
+     which would be wrong as we'd save the new state as old state to
+     restore when the tui is next disabled.  */
   if (tui_start_enabled)
     tui_enable ();
+  else
+    tui_setup_io (tui_active);
   return 1;
 }
 

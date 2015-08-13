@@ -455,6 +455,26 @@ tui_rl_display_match_list (char **matches, int len, int max)
   gdb_display_match_list (matches, len, max, &displayer);
 }
 
+static void
+tui_save_old (void)
+{
+  extern int _rl_echoing_p;
+
+  /* readline stuff.  */
+  tui_io ()->tui_old_rl_redisplay_function = rl_redisplay_function;
+  tui_io ()->tui_old_rl_deprep_terminal = rl_deprep_term_function;
+  tui_io ()->tui_old_rl_prep_terminal = rl_prep_term_function;
+  tui_io ()->tui_old_rl_getc_function = rl_getc_function;
+  tui_io ()->tui_old_rl_display_matches_hook = rl_completion_display_matches_hook;
+  tui_io ()->tui_old_rl_outstream = rl_outstream;
+  tui_io ()->tui_old_rl_echoing_p = _rl_echoing_p;
+
+  /* Keep track of previous gdb output.  */
+  tui_io ()->tui_old_stdout = gdb_stdout;
+  tui_io ()->tui_old_stderr = gdb_stderr;
+  tui_io ()->tui_old_uiout = current_uiout;
+}
+
 /* Setup the IO for curses or non-curses mode.
    - In non-curses mode, readline and gdb use the standard input and
    standard output/error directly.
@@ -470,14 +490,10 @@ tui_setup_io (int mode)
 
   if (mode)
     {
+      /* Keep track of previous readline state / gdb output.  */
+      tui_save_old ();
+
       /* Redirect readline to TUI.  */
-      tui_io ()->tui_old_rl_redisplay_function = rl_redisplay_function;
-      tui_io ()->tui_old_rl_deprep_terminal = rl_deprep_term_function;
-      tui_io ()->tui_old_rl_prep_terminal = rl_prep_term_function;
-      tui_io ()->tui_old_rl_getc_function = rl_getc_function;
-      tui_io ()->tui_old_rl_display_matches_hook = rl_completion_display_matches_hook;
-      tui_io ()->tui_old_rl_outstream = rl_outstream;
-      tui_io ()->tui_old_rl_echoing_p = _rl_echoing_p;
       rl_redisplay_function = tui_redisplay_readline;
       rl_deprep_term_function = tui_deprep_terminal;
       rl_prep_term_function = tui_prep_terminal;
@@ -487,11 +503,6 @@ tui_setup_io (int mode)
       rl_prompt = 0;
       rl_completion_display_matches_hook = tui_rl_display_match_list;
       rl_already_prompted = 0;
-
-      /* Keep track of previous gdb output.  */
-      tui_io ()->tui_old_stdout = gdb_stdout;
-      tui_io ()->tui_old_stderr = gdb_stderr;
-      tui_io ()->tui_old_uiout = current_uiout;
 
       /* Reconfigure gdb output.  */
       gdb_stdout = tui_io ()->tui_stdout;
@@ -556,6 +567,9 @@ tui_initialize_io (void)
 #ifdef SIGCONT
   signal (SIGCONT, tui_cont_sig);
 #endif
+
+  /* Save initial readline state / gdb output.  */
+  tui_save_old ();
 
   /* Create tui output streams.  */
   tui_io ()->tui_stdout = tui_fileopen (terminal_outstream (current_terminal));

@@ -62,7 +62,7 @@ extern int tui_get_command_dimension (unsigned int *width,
 
 /* Initialize readline and configure the keymap for the switching
    key shortcut.  */
-extern void tui_initialize_readline (void);
+extern void tui_initialize_readline_keymaps (void);
 
 /* Enter in the tui mode (curses).  */
 extern void tui_enable (void);

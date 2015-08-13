@@ -341,15 +341,11 @@ tui_set_key_mode (enum tui_key_mode mode)
 /* Initialize readline and configure the keymap for the switching
    key shortcut.  */
 void
-tui_initialize_readline (void)
+tui_initialize_readline_keymaps (void)
 {
   int i;
   Keymap tui_ctlx_keymap;
   struct tui *tui = get_tui ();
-
-  /* Tell readline to use the same input stream that gdb uses.  */
-  rl_instream = instream;
-  rl_outstream = current_terminal->outstream;
 
   rl_initialize ();
 
