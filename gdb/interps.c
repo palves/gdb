@@ -553,8 +553,7 @@ top_level_interpreter_data (void)
   do									\
     {									\
       if (the_interp != NULL						\
-	  && the_interp->procs->method != NULL				\
-	  && !interp_quiet_p (the_interp))				\
+	  && the_interp->procs->method != NULL)				\
 	{								\
 	  struct interp *prev_interp;					\
 									\
