@@ -371,7 +371,7 @@ void
 wait_sync_command_done (void)
 {
   while (gdb_do_one_event () >= 0)
-    while (sync_execution <= 0)
+    if (sync_execution <= 0)
       break;
 }
 
