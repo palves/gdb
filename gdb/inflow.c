@@ -333,13 +333,16 @@ child_terminal_inferior (struct target_ops *self)
       && tinfo->run_terminal == NULL)
     {
       int result;
+      int fd = fileno (current_terminal->instream);
+
+      gdb_assert (fd >= 0);
 
 #ifdef F_GETFL
       /* Is there a reason this is being done twice?  It happens both
          places we use F_SETFL, so I'm inclined to think perhaps there
          is some reason, however perverse.  Perhaps not though...  */
-      result = fcntl (0, F_SETFL, tinfo->tflags);
-      result = fcntl (0, F_SETFL, tinfo->tflags);
+      result = fcntl (fd, F_SETFL, tinfo->tflags);
+      result = fcntl (fd, F_SETFL, tinfo->tflags);
       OOPSY ("fcntl F_SETFL");
 #endif
 
@@ -373,13 +376,13 @@ child_terminal_inferior (struct target_ops *self)
       if (job_control)
 	{
 #ifdef HAVE_TERMIOS
-	  result = tcsetpgrp (0, tinfo->process_group);
+	  result = tcsetpgrp (fd, tinfo->process_group);
 	  if (!inf->attach_flag)
 	    OOPSY ("tcsetpgrp");
 #endif
 
 #ifdef HAVE_SGTTY
-	  result = ioctl (0, TIOCSPGRP, &tinfo->process_group);
+	  result = ioctl (fd, TIOCSPGRP, &tinfo->process_group);
 	  if (!inf->attach_flag)
 	    OOPSY ("TIOCSPGRP");
 #endif
@@ -454,6 +457,9 @@ child_terminal_ours_1 (int output_only)
       sighandler_t osigttou = NULL;
 #endif
       int result;
+      int fd = fileno (current_terminal->instream);
+
+      gdb_assert (fd >= 0);
 
 #ifdef SIGTTOU
       if (job_control)
@@ -492,7 +498,7 @@ child_terminal_ours_1 (int output_only)
       if (job_control)
 	{
 #ifdef HAVE_TERMIOS
-	  result = tcsetpgrp (0, ts->our_terminal_info.process_group);
+	  result = tcsetpgrp (fd, ts->our_terminal_info.process_group);
 #if 0
 	  /* This fails on Ultrix with EINVAL if you run the testsuite
 	     in the background with nohup, and then log out.  GDB never
@@ -506,7 +512,7 @@ child_terminal_ours_1 (int output_only)
 #endif /* termios */
 
 #ifdef HAVE_SGTTY
-	  result = ioctl (0, TIOCSPGRP, &our_terminal_info.process_group);
+	  result = ioctl (fd, TIOCSPGRP, &our_terminal_info.process_group);
 #endif
 	}
 
@@ -524,13 +530,13 @@ child_terminal_ours_1 (int output_only)
 	}
 
 #ifdef F_GETFL
-      tinfo->tflags = fcntl (0, F_GETFL, 0);
+      tinfo->tflags = fcntl (fd, F_GETFL, 0);
 
       /* Is there a reason this is being done twice?  It happens both
          places we use F_SETFL, so I'm inclined to think perhaps there
          is some reason, however perverse.  Perhaps not though...  */
-      result = fcntl (0, F_SETFL, ts->our_terminal_info.tflags);
-      result = fcntl (0, F_SETFL, ts->our_terminal_info.tflags);
+      result = fcntl (fd, F_SETFL, ts->our_terminal_info.tflags);
+      result = fcntl (fd, F_SETFL, ts->our_terminal_info.tflags);
 #endif
     }
 }
