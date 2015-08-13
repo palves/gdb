@@ -613,12 +613,17 @@ GEN_INTERP_CALL (on_solib_unloaded, (struct so_list *solib), (solib))
 GEN_INTERP_CALL (on_traceframe_changed, (int tfnum, int tpnum), (tfnum, tpnum))
 GEN_INTERP_CALL (on_command_param_changed,
 		 (const char *param, const char *value), (param, value))
-GEN_INTERP_CALL (on_command_error, (void), ())
 
 GEN_INTERP_CALL (on_memory_changed,
 		 (struct inferior *inferior, CORE_ADDR addr,
 		  ssize_t len, const bfd_byte *data),
 		 (inferior, addr, len, data))
+
+static void
+interp_on_command_error (void)
+{
+  current_interpreter->procs->on_command_error ();
+}
 
 void
 _initialize_interpreter (void)
