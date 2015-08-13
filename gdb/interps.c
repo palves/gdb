@@ -91,7 +91,7 @@ void _initialize_interpreter (void);
 /* Variables local to this file: */
 
 static struct interp *interp_list = NULL;
-static struct interp *current_interpreter = NULL;
+struct interp *current_interpreter = NULL;
 static struct interp *top_level_interpreter_ptr = NULL;
 
 /* interp_init - This fills the fields from the inputs.  */

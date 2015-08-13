@@ -41,6 +41,7 @@
 #include "completer.h"
 #include "gdb_curses.h"
 #include "interps.h"
+#include "terminal.h"
 
 /* This redefines CTRL if it is not already defined, so it must come
    after terminal state releated include files like <term.h> and
@@ -204,9 +205,8 @@ tui_puts (const char *string)
 static struct tui_io_data *
 tui_io (void)
 {
-  struct interp *interp = top_level_interpreter ();
-  struct tui_interp *tui_interp = (struct tui_interp *) interp;
-  
+  struct tui_interp *tui_interp = (struct tui_interp *) current_interpreter;
+
   return tui_interp->io_data;
 }
 
@@ -558,8 +558,8 @@ tui_initialize_io (void)
 #endif
 
   /* Create tui output streams.  */
-  tui_io ()->tui_stdout = tui_fileopen (stdout);
-  tui_io ()->tui_stderr = tui_fileopen (stderr);
+  tui_io ()->tui_stdout = tui_fileopen (terminal_outstream (current_terminal));
+  tui_io ()->tui_stderr = tui_fileopen (terminal_errstream (current_terminal));
   tui_io ()->tui_out = tui_out_new (tui_io ()->tui_stdout);
 
   /* Create the default UI.  */
@@ -587,7 +587,7 @@ tui_initialize_io (void)
 #endif
   add_file_handler (tui_io ()->tui_readline_pipe[0], tui_readline_output, 0);
 #else
-  tui_rl_outstream = stdout;
+  tui_rl_outstream = terminal_outstream (current_terminal);
 #endif
 }
 

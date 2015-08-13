@@ -136,25 +136,12 @@ tui_on_command_error (void)
 static void *
 tui_init (struct interp *self, int top_level)
 {
-  /* Install exit handler to leave the screen in a good shape.  */
-  atexit (tui_exit);
-
   tui_initialize_static_data ();
 
   tui_initialize_io ();
   tui_initialize_win ();
   if (ui_file_isatty (gdb_stdout))
     tui_initialize_readline ();
-
-  /* If changing this, remember to update cli-interp.c as well.  */
-  observer_attach_normal_stop (tui_on_normal_stop);
-  observer_attach_signal_received (tui_on_signal_received);
-  observer_attach_end_stepping_range (tui_on_end_stepping_range);
-  observer_attach_signal_exited (tui_on_signal_exited);
-  observer_attach_exited (tui_on_exited);
-  observer_attach_no_history (tui_on_no_history);
-  observer_attach_sync_execution_done (tui_on_sync_execution_done);
-  observer_attach_command_error (tui_on_command_error);
 
   return NULL;
 }
@@ -256,4 +243,17 @@ _initialize_tui_interp (void)
       xfree (interpreter_p);
       interpreter_p = xstrdup (INTERP_TUI);
     }
+
+  /* Install exit handler to leave the screen in a good shape.  */
+  atexit (tui_exit);
+
+  /* If changing this, remember to update cli-interp.c as well.  */
+  observer_attach_normal_stop (tui_on_normal_stop);
+  observer_attach_signal_received (tui_on_signal_received);
+  observer_attach_end_stepping_range (tui_on_end_stepping_range);
+  observer_attach_signal_exited (tui_on_signal_exited);
+  observer_attach_exited (tui_on_exited);
+  observer_attach_no_history (tui_on_no_history);
+  observer_attach_sync_execution_done (tui_on_sync_execution_done);
+  observer_attach_command_error (tui_on_command_error);
 }

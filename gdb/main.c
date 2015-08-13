@@ -44,6 +44,7 @@
 #include <signal.h>
 #include "event-top.h"
 #include "infrun.h"
+#include "terminal.h"
 
 /* The selected interpreter.  This will be used as a set command
    variable, so it should always be malloc'ed - since
@@ -525,6 +526,8 @@ captured_main (void *data)
   gdb_stdtargerr = gdb_stderr;	/* for moment */
   gdb_stdtargin = gdb_stdin;	/* for moment */
 
+  init_terminal ();
+
 #ifdef __MINGW32__
   /* On Windows, argv[0] is not necessarily set to absolute form when
      GDB is found along PATH, without which relocation doesn't work.  */
@@ -970,6 +973,7 @@ captured_main (void *data)
 
     if (interp == NULL)
       error (_("Interpreter `%s' unrecognized"), interpreter_p);
+
     /* Install it.  */
     if (!interp_set (interp, 1))
       error (_("Interpreter `%s' failed to initialize."), interpreter_p);
