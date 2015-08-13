@@ -38,6 +38,8 @@
 #include "completer.h"
 #include "top.h"		/* For command_loop.  */
 #include "continuations.h"
+#include "terminal.h"
+#include "observer.h"
 
 /* True if the current interpreter in is async mode.  See interps.h
    for more details.  This starts out disabled, until all the explicit
@@ -477,7 +479,66 @@ top_level_interpreter_data (void)
   return top_level_interpreter_ptr->data;  
 }
 
-/* This just adds the "interpreter-exec" command.  */
+#define GEN_INTERP_CALL(method, params, args)				\
+static void								\
+interp_ ## method params						\
+{									\
+  struct terminal *prev_terminal = current_terminal;			\
+  struct terminal *terminal;						\
+  int ix;								\
+									\
+  for (ix = 0; VEC_iterate (terminal_ptr, terminals, ix, terminal); ++ix) \
+    {									\
+      switch_to_terminal (terminal);					\
+									\
+      if (current_interpreter->procs-> method != NULL)			\
+	current_interpreter->procs-> method args;			\
+    }									\
+									\
+  switch_to_terminal (prev_terminal);					\
+}
+
+GEN_INTERP_CALL (on_normal_stop, (struct bpstats *bs,
+				  int print_frame), (bs, print_frame))
+GEN_INTERP_CALL (on_signal_received, (enum gdb_signal siggnal), (siggnal))
+GEN_INTERP_CALL (on_end_stepping_range, (void), ())
+GEN_INTERP_CALL (on_signal_exited, (enum gdb_signal siggnal), (siggnal))
+GEN_INTERP_CALL (on_exited, (int exitstatus), (exitstatus))
+GEN_INTERP_CALL (on_no_history, (void), ())
+GEN_INTERP_CALL (on_sync_execution_done, (void), ())
+GEN_INTERP_CALL (on_new_thread, (struct thread_info *t), (t))
+GEN_INTERP_CALL (on_thread_exit,
+		 (struct thread_info *t, int silent), (t, silent))
+GEN_INTERP_CALL (on_target_resumed, (ptid_t ptid), (ptid))
+GEN_INTERP_CALL (on_about_to_proceed, (void), ())
+GEN_INTERP_CALL (on_breakpoint_created, (struct breakpoint *b), (b))
+GEN_INTERP_CALL (on_breakpoint_deleted, (struct breakpoint *b), (b))
+GEN_INTERP_CALL (on_breakpoint_modified, (struct breakpoint *b), (b))
+GEN_INTERP_CALL (on_inferior_added, (struct inferior *inf), (inf))
+GEN_INTERP_CALL (on_inferior_appeared, (struct inferior *inf), (inf))
+GEN_INTERP_CALL (on_inferior_exit, (struct inferior *inf), (inf))
+GEN_INTERP_CALL (on_inferior_removed, (struct inferior *inf), (inf))
+GEN_INTERP_CALL (on_tsv_created,
+		 (const struct trace_state_variable *tsv), (tsv))
+GEN_INTERP_CALL (on_tsv_deleted,
+		 (const struct trace_state_variable *tsv), (tsv))
+GEN_INTERP_CALL (on_tsv_modified,
+		 (const struct trace_state_variable *tsv), (tsv))
+GEN_INTERP_CALL (on_record_changed,
+		 (struct inferior *inferior, int started),
+		 (inferior, started))
+GEN_INTERP_CALL (on_solib_loaded, (struct so_list *solib), (solib))
+GEN_INTERP_CALL (on_solib_unloaded, (struct so_list *solib), (solib))
+GEN_INTERP_CALL (on_traceframe_changed, (int tfnum, int tpnum), (tfnum, tpnum))
+GEN_INTERP_CALL (on_command_param_changed,
+		 (const char *param, const char *value), (param, value))
+GEN_INTERP_CALL (on_command_error, (void), ())
+
+GEN_INTERP_CALL (on_memory_changed,
+		 (struct inferior *inferior, CORE_ADDR addr,
+		  ssize_t len, const bfd_byte *data),
+		 (inferior, addr, len, data))
+
 void
 _initialize_interpreter (void)
 {
@@ -489,4 +550,33 @@ Execute a command in an interpreter.  It takes two arguments:\n\
 The first argument is the name of the interpreter to use.\n\
 The second argument is the command to execute.\n"), &cmdlist);
   set_cmd_completer (c, interpreter_completer);
+
+  observer_attach_signal_received (interp_on_signal_received);
+  observer_attach_end_stepping_range (interp_on_end_stepping_range);
+  observer_attach_signal_exited (interp_on_signal_exited);
+  observer_attach_exited (interp_on_exited);
+  observer_attach_no_history (interp_on_no_history);
+  observer_attach_new_thread (interp_on_new_thread);
+  observer_attach_thread_exit (interp_on_thread_exit);
+  observer_attach_inferior_added (interp_on_inferior_added);
+  observer_attach_inferior_appeared (interp_on_inferior_appeared);
+  observer_attach_inferior_exit (interp_on_inferior_exit);
+  observer_attach_inferior_removed (interp_on_inferior_removed);
+  observer_attach_record_changed (interp_on_record_changed);
+  observer_attach_normal_stop (interp_on_normal_stop);
+  observer_attach_target_resumed (interp_on_target_resumed);
+  observer_attach_solib_loaded (interp_on_solib_loaded);
+  observer_attach_solib_unloaded (interp_on_solib_unloaded);
+  observer_attach_about_to_proceed (interp_on_about_to_proceed);
+  observer_attach_traceframe_changed (interp_on_traceframe_changed);
+  observer_attach_tsv_created (interp_on_tsv_created);
+  observer_attach_tsv_deleted (interp_on_tsv_deleted);
+  observer_attach_tsv_modified (interp_on_tsv_modified);
+  observer_attach_breakpoint_created (interp_on_breakpoint_created);
+  observer_attach_breakpoint_deleted (interp_on_breakpoint_deleted);
+  observer_attach_breakpoint_modified (interp_on_breakpoint_modified);
+  observer_attach_command_param_changed (interp_on_command_param_changed);
+  observer_attach_memory_changed (interp_on_memory_changed);
+  observer_attach_sync_execution_done (interp_on_sync_execution_done);
+  observer_attach_command_error (interp_on_command_error);
 }

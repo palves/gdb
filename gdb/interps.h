@@ -22,8 +22,14 @@
 #ifndef INTERPS_H
 #define INTERPS_H
 
-struct ui_out;
 struct interp;
+struct ui_out;
+struct thread_info;
+struct inferior;
+struct trace_state_variable;
+struct bpstats;
+struct breakpoint;
+struct so_list;
 
 typedef struct interp *(*interp_factory_func) (const char *interp);
 
@@ -48,6 +54,37 @@ typedef int (interp_set_logging_ftype) (struct interp *self, int start_log,
 					struct ui_file *out,
 					struct ui_file *logfile);
 
+typedef void (interp_on_normal_stop_ftype) (struct bpstats *bs, int print_frame);
+typedef void (interp_on_signal_received_ftype) (enum gdb_signal siggnal);
+typedef void (interp_on_end_stepping_range_ftype) (void);
+typedef void (interp_on_signal_exited_ftype) (enum gdb_signal siggnal);
+typedef void (interp_on_exited_ftype) (int exitstatus);
+typedef void (interp_on_no_history_ftype) (void);
+typedef void (interp_on_sync_execution_done_ftype) (void);
+typedef void (interp_on_new_thread_ftype) (struct thread_info *t);
+typedef void (interp_on_thread_exit_ftype) (struct thread_info *t, int silent);
+typedef void (interp_on_target_resumed_ftype) (ptid_t ptid);
+typedef void (interp_on_about_to_proceed_ftype) (void);
+typedef void (interp_on_breakpoint_created_ftype) (struct breakpoint *b);
+typedef void (interp_on_breakpoint_deleted_ftype) (struct breakpoint *b);
+typedef void (interp_on_breakpoint_modified_ftype) (struct breakpoint *b);
+typedef void (interp_on_inferior_added_ftype) (struct inferior *inf);
+typedef void (interp_on_inferior_appeared_ftype) (struct inferior *inf);
+typedef void (interp_on_inferior_exit_ftype) (struct inferior *inf);
+typedef void (interp_on_inferior_removed_ftype) (struct inferior *inf);
+typedef void (interp_on_tsv_created_ftype) (const struct trace_state_variable *tsv);
+typedef void (interp_on_tsv_deleted_ftype) (const struct trace_state_variable *tsv);
+typedef void (interp_on_tsv_modified_ftype) (const struct trace_state_variable *tsv);
+typedef void (interp_on_record_changed_ftype) (struct inferior *inferior, int started);
+typedef void (interp_on_solib_loaded_ftype) (struct so_list *solib);
+typedef void (interp_on_solib_unloaded_ftype) (struct so_list *solib);
+typedef void (interp_on_traceframe_changed_ftype) (int tfnum, int tpnum);
+typedef void (interp_on_command_param_changed_ftype) (const char *param, const char *value);
+typedef void (interp_on_command_error_ftype) (void);
+typedef void (interp_on_memory_changed_ftype) (struct inferior *inferior,
+					       CORE_ADDR addr, ssize_t len,
+					       const bfd_byte *data);
+
 struct interp_procs
 {
   interp_init_ftype *init_proc;
@@ -67,6 +104,35 @@ struct interp_procs
   interp_set_logging_ftype *set_logging_proc;
 
   interp_command_loop_ftype *command_loop_proc;
+
+  interp_on_normal_stop_ftype *on_normal_stop;
+  interp_on_signal_received_ftype *on_signal_received;
+  interp_on_end_stepping_range_ftype *on_end_stepping_range;
+  interp_on_signal_exited_ftype *on_signal_exited;
+  interp_on_exited_ftype *on_exited;
+  interp_on_no_history_ftype *on_no_history;
+  interp_on_sync_execution_done_ftype *on_sync_execution_done;
+  interp_on_new_thread_ftype *on_new_thread;
+  interp_on_thread_exit_ftype *on_thread_exit;
+  interp_on_target_resumed_ftype *on_target_resumed;
+  interp_on_about_to_proceed_ftype *on_about_to_proceed;
+  interp_on_breakpoint_created_ftype *on_breakpoint_created;
+  interp_on_breakpoint_deleted_ftype *on_breakpoint_deleted;
+  interp_on_breakpoint_modified_ftype *on_breakpoint_modified;
+  interp_on_inferior_added_ftype *on_inferior_added;
+  interp_on_inferior_appeared_ftype *on_inferior_appeared;
+  interp_on_inferior_exit_ftype *on_inferior_exit;
+  interp_on_inferior_removed_ftype *on_inferior_removed;
+  interp_on_tsv_created_ftype *on_tsv_created;
+  interp_on_tsv_deleted_ftype *on_tsv_deleted;
+  interp_on_tsv_modified_ftype *on_tsv_modified;
+  interp_on_record_changed_ftype *on_record_changed;
+  interp_on_solib_loaded_ftype *on_solib_loaded;
+  interp_on_solib_unloaded_ftype *on_solib_unloaded;
+  interp_on_traceframe_changed_ftype *on_traceframe_changed;
+  interp_on_command_param_changed_ftype *on_command_param_changed;
+  interp_on_command_error_ftype *on_command_error;
+  interp_on_memory_changed_ftype *on_memory_changed;
 };
 
 struct interp
