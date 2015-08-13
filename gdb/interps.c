@@ -45,28 +45,6 @@
    processed.  */
 int interpreter_async = 0;
 
-struct interp
-{
-  /* This is the name in "-i=" and set interpreter.  */
-  const char *name;
-
-  /* Interpreters are stored in a linked list, this is the next
-     one...  */
-  struct interp *next;
-
-  /* This is a cookie that an instance of the interpreter can use.
-     This is a bit confused right now as the exact initialization
-     sequence for it, and how it relates to the interpreter's uiout
-     object is a bit confused.  */
-  void *data;
-
-  /* Has the init_proc been run?  */
-  int inited;
-
-  const struct interp_procs *procs;
-  int quiet_p;
-};
-
 struct interp_factory
 {
   /* This is the name in "-i=" and set interpreter.  */
@@ -116,25 +94,33 @@ static struct interp *interp_list = NULL;
 static struct interp *current_interpreter = NULL;
 static struct interp *top_level_interpreter_ptr = NULL;
 
+/* interp_init - This fills the fields from the inputs.  */
+
+void
+interp_init (struct interp *self,
+	     const char *name, const struct interp_procs *procs)
+{
+  self->name = xstrdup (name);
+  self->data = NULL;
+  self->quiet_p = 0;
+  self->procs = procs;
+  self->inited = 0;
+
+  /* Check for required procs.  */
+  gdb_assert (procs->command_loop_proc != NULL);
+}
+
 /* interp_new - This allocates space for a new interpreter,
    fills the fields from the inputs, and returns a pointer to the
    interpreter.  */
+
 struct interp *
 interp_new (const char *name, const struct interp_procs *procs)
 {
   struct interp *new_interp;
 
   new_interp = XNEW (struct interp);
-
-  new_interp->name = xstrdup (name);
-  new_interp->data = NULL;
-  new_interp->quiet_p = 0;
-  new_interp->procs = procs;
-  new_interp->inited = 0;
-
-  /* Check for required procs.  */
-  gdb_assert (procs->command_loop_proc != NULL);
-
+  interp_init (new_interp, name, procs);
   return new_interp;
 }
 
@@ -179,8 +165,7 @@ interp_set (struct interp *interp, int top_level)
     {
       ui_out_flush (current_uiout);
       if (current_interpreter->procs->suspend_proc
-	  && !current_interpreter->procs->suspend_proc (current_interpreter->
-							data))
+	  && !current_interpreter->procs->suspend_proc (current_interpreter))
 	{
 	  error (_("Could not suspend interpreter \"%s\"."),
 		 current_interpreter->name);
@@ -223,7 +208,7 @@ interp_set (struct interp *interp, int top_level)
   clear_interpreter_hooks ();
 
   if (interp->procs->resume_proc != NULL
-      && (!interp->procs->resume_proc (interp->data)))
+      && (!interp->procs->resume_proc (interp)))
     {
       if (old_interp == NULL || !interp_set (old_interp, 0))
 	internal_error (__FILE__, __LINE__,

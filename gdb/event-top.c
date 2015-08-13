@@ -164,7 +164,7 @@ rl_callback_read_char_wrapper (gdb_client_data client_data)
    interpreter data cookie, ignored for now.  */
 
 void
-cli_command_loop (void *data)
+cli_command_loop (struct interp *interp)
 {
   display_gdb_prompt (0);
 

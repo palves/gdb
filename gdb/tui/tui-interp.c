@@ -29,6 +29,7 @@
 #include "tui/tui-win.h"
 #include "tui/tui.h"
 #include "tui/tui-io.h"
+#include "tui/tui-interp.h"
 #include "infrun.h"
 #include "observer.h"
 
@@ -159,25 +160,26 @@ tui_init (struct interp *self, int top_level)
 }
 
 static int
-tui_resume (void *data)
+tui_resume (struct interp *self)
 {
   struct ui_file *stream;
+  struct tui_interp *tui = (struct tui_interp *) self;
 
   /* gdb_setup_readline will change gdb_stdout.  If the TUI was
      previously writing to gdb_stdout, then set it to the new
      gdb_stdout afterwards.  */
 
-  stream = cli_out_set_stream (tui_old_uiout, gdb_stdout);
+  stream = cli_out_set_stream (tui_io_old_uiout (tui->io_data), gdb_stdout);
   if (stream != gdb_stdout)
     {
-      cli_out_set_stream (tui_old_uiout, stream);
+      cli_out_set_stream (tui_io_old_uiout (tui->io_data), stream);
       stream = NULL;
     }
 
   gdb_setup_readline ();
 
   if (stream != NULL)
-    cli_out_set_stream (tui_old_uiout, gdb_stdout);
+    cli_out_set_stream (tui_io_old_uiout (tui->io_data), gdb_stdout);
 
   if (tui_start_enabled)
     tui_enable ();
@@ -185,7 +187,7 @@ tui_resume (void *data)
 }
 
 static int
-tui_suspend (void *data)
+tui_suspend (struct interp *self)
 {
   tui_start_enabled = tui_active;
   tui_disable ();
@@ -195,14 +197,16 @@ tui_suspend (void *data)
 static struct ui_out *
 tui_ui_out (struct interp *self)
 {
+  struct tui_interp *tui_interp = (struct tui_interp *) self;
+
   if (tui_active)
-    return tui_out;
+    return tui_io_out (tui_interp->io_data);
   else
-    return tui_old_uiout;
+    return tui_io_old_uiout (tui_interp->io_data);
 }
 
 static struct gdb_exception
-tui_exec (void *data, const char *command_str)
+tui_exec (struct interp *self, const char *command_str)
 {
   internal_error (__FILE__, __LINE__, _("tui_exec called"));
 }
@@ -220,8 +224,17 @@ static const struct interp_procs tui_procs = {
 static struct interp *
 tui_interp_factory (const char *name)
 {
+  struct tui_interp *tui_interp;
+  struct interp *interp;
+
+  tui_interp = XNEW (struct tui_interp);
+  tui_interp->io_data = tui_io_data_new ();
+
+  interp = &tui_interp->interp;
   /* Create a default uiout builder for the TUI.  */
-  return interp_new (INTERP_TUI, &tui_procs);
+  interp_init (interp, INTERP_TUI, &tui_procs);
+
+  return interp;
 }
 
 /* Provide a prototype to silence -Wmissing-prototypes.  */
@@ -233,7 +246,7 @@ _initialize_tui_interp (void)
   interp_factory_register (INTERP_CONSOLE, tui_interp_factory);
 
   /* Create a default uiout builder for the TUI.  */
-  tui_interp = interp_new (INTERP_TUI, &tui_procs);
+  tui_interp = tui_interp_factory (NULL);
   interp_add (tui_interp);
   if (interpreter_p && strcmp (interpreter_p, INTERP_TUI) == 0)
     tui_start_enabled = 1;

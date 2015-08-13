@@ -37,11 +37,11 @@ extern struct gdb_exception interp_exec (struct interp *interp,
 extern int interp_quiet_p (struct interp *interp);
 
 typedef void *(interp_init_ftype) (struct interp *self, int top_level);
-typedef int (interp_resume_ftype) (void *data);
-typedef int (interp_suspend_ftype) (void *data);
-typedef struct gdb_exception (interp_exec_ftype) (void *data,
+typedef int (interp_resume_ftype) (struct interp *self);
+typedef int (interp_suspend_ftype) (struct interp *self);
+typedef struct gdb_exception (interp_exec_ftype) (struct interp *self,
 						  const char *command);
-typedef void (interp_command_loop_ftype) (void *data);
+typedef void (interp_command_loop_ftype) (struct interp *self);
 typedef struct ui_out *(interp_ui_out_ftype) (struct interp *self);
 
 typedef int (interp_set_logging_ftype) (struct interp *self, int start_log,
@@ -69,7 +69,31 @@ struct interp_procs
   interp_command_loop_ftype *command_loop_proc;
 };
 
+struct interp
+{
+  /* This is the name in "-i=" and set interpreter.  */
+  const char *name;
+
+  /* Interpreters are stored in a linked list, this is the next
+     one...  */
+  struct interp *next;
+
+  /* This is a cookie that an instance of the interpreter can use.
+     This is a bit confused right now as the exact initialization
+     sequence for it, and how it relates to the interpreter's uiout
+     object is a bit confused.  */
+  void *data;
+
+  /* Has the init_proc been run?  */
+  int inited;
+
+  const struct interp_procs *procs;
+  int quiet_p;
+};
+
 extern struct interp *interp_new (const char *name, const struct interp_procs *procs);
+extern void interp_init (struct interp *self, const char *name,
+			 const struct interp_procs *procs);
 extern void interp_add (struct interp *interp);
 extern int interp_set (struct interp *interp, int top_level);
 extern struct interp *interp_lookup (const char *name);

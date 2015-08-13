@@ -44,7 +44,7 @@
 
 static void mi_execute_command_wrapper (const char *cmd);
 static void mi_execute_command_input_handler (char *cmd);
-static void mi_command_loop (void *data);
+static void mi_command_loop (struct interp *self);
 
 /* These are hooks that we put in place while doing interpreter_exec
    so we can report interesting things that happened "behind the MI's
@@ -171,9 +171,9 @@ mi_interpreter_init (struct interp *interp, int top_level)
 }
 
 static int
-mi_interpreter_resume (void *data)
+mi_interpreter_resume (struct interp *self)
 {
-  struct mi_interp *mi = (struct mi_interp *) data;
+  struct mi_interp *mi = (struct mi_interp *) self->data;
 
   /* As per hack note in mi_interpreter_init, swap in the output
      channels... */
@@ -211,14 +211,14 @@ mi_interpreter_resume (void *data)
 }
 
 static int
-mi_interpreter_suspend (void *data)
+mi_interpreter_suspend (struct interp *self)
 {
   gdb_disable_readline ();
   return 1;
 }
 
 static struct gdb_exception
-mi_interpreter_exec (void *data, const char *command)
+mi_interpreter_exec (struct interp *self, const char *command)
 {
   mi_execute_command_wrapper (command);
   return exception_none;
@@ -339,7 +339,7 @@ mi_execute_command_input_handler (char *cmd)
 }
 
 static void
-mi_command_loop (void *data)
+mi_command_loop (struct interp *self)
 {
   /* Turn off 8 bit strings in quoted output.  Any character with the
      high bit set is printed using C's octal format.  */

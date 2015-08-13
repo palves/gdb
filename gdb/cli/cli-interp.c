@@ -134,7 +134,7 @@ cli_interpreter_init (struct interp *self, int top_level)
 }
 
 static int
-cli_interpreter_resume (void *data)
+cli_interpreter_resume (struct interp *self)
 {
   struct ui_file *stream;
 
@@ -160,14 +160,14 @@ cli_interpreter_resume (void *data)
 }
 
 static int
-cli_interpreter_suspend (void *data)
+cli_interpreter_suspend (struct interp *self)
 {
   gdb_disable_readline ();
   return 1;
 }
 
 static struct gdb_exception
-cli_interpreter_exec (void *data, const char *command_str)
+cli_interpreter_exec (struct interp *self, const char *command_str)
 {
   struct ui_file *old_stream;
   struct gdb_exception result;

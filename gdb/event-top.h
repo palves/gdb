@@ -23,6 +23,7 @@
 #define EVENT_TOP_H
 
 struct cmd_list_element;
+struct interp;
 
 /* Exported functions from event-top.c.
    FIXME: these should really go into top.h.  */
@@ -74,6 +75,6 @@ extern void gdb_rl_callback_handler_install (const char *prompt);
    currently installed.  */
 extern void gdb_rl_callback_handler_reinstall (void);
 
-extern void cli_command_loop (void *);
+extern void cli_command_loop (struct interp *);
 
 #endif
