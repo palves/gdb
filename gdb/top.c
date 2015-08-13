@@ -2052,8 +2052,12 @@ gdb_init (char *argv0)
 
   init_page_info ();
 
-  /* Here is where we call all the _initialize_foo routines.  */
+  /* Here is where we call all the _initialize_foo routines.  Note the
+     initialization order for these is not defined, so none should
+     depend on another having been already called.  */
   initialize_all_files ();
+
+  /* Now call the initialization routines that have dependencies.  */
 
   /* This creates the current_program_space.  Do this after all the
      _initialize_foo routines have had a chance to install their
@@ -2064,9 +2068,8 @@ gdb_init (char *argv0)
   initialize_inferiors ();
   initialize_current_architecture ();
   init_cli_cmds();
-  init_main ();			/* But that omits this file!  Do it now.  */
-
-  initialize_stdin_serial ();
+  init_terminal ();
+  init_main ();
 
   /* Take a snapshot of our tty state before readline/ncurses have had a chance
      to alter it.  */

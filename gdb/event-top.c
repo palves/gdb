@@ -431,6 +431,7 @@ struct terminal_readline_state
   struct readline_state readline_state;
 };
 
+struct terminal *main_terminal;
 struct terminal *current_terminal;
 
 FILE *
@@ -1168,6 +1169,7 @@ init_terminal (void)
   struct terminal *terminal;
 
   gdb_assert (current_terminal == NULL);
+  gdb_assert (main_terminal == NULL);
 
   terminal = new_terminal (instream, stdout, stderr);
 
@@ -1179,6 +1181,7 @@ init_terminal (void)
   rl_save_state (&initial_readline_state);
 
   current_terminal = terminal;
+  main_terminal = terminal;
 }
 
 /* Set things up for readline to be invoked via the alternate
@@ -1307,6 +1310,7 @@ new_terminal (FILE *instream, FILE *outstream, FILE *errstream)
   terminal->rl->readline_state = initial_readline_state;
 
   terminal->term_state = new_term_state ();
+  initialize_stdin_serial (terminal);
 
   VEC_safe_push (terminal_ptr, terminals, terminal);
 

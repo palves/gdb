@@ -526,8 +526,6 @@ captured_main (void *data)
   gdb_stdtargerr = gdb_stderr;	/* for moment */
   gdb_stdtargin = gdb_stdin;	/* for moment */
 
-  init_terminal ();
-
 #ifdef __MINGW32__
   /* On Windows, argv[0] is not necessarily set to absolute form when
      GDB is found along PATH, without which relocation doesn't work.  */

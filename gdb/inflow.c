@@ -54,21 +54,24 @@ static void child_terminal_ours_1 (int);
    inferior when it resumes.  */
 struct terminal_info
 {
+#if 0
   /* The name of the tty (from the `tty' command) that we gave to the
      inferior when it was started.  */
   char *run_terminal;
+#endif
 
   /* TTY state.  We save it whenever the inferior stops, and restore
      it when it resumes.  */
   serial_ttystate ttystate;
 
-#ifdef PROCESS_GROUP_TYPE
-  /* Process group.  Saved and restored just like ttystate.  */
-  PROCESS_GROUP_TYPE process_group;
-#endif
-
   /* fcntl flags.  Saved and restored just like ttystate.  */
   int tflags;
+
+#ifdef PROCESS_GROUP_TYPE
+  /* The terminal's foreground process group.  Saved and restored just
+     like ttystate.  */
+  PROCESS_GROUP_TYPE fg_process_group;
+#endif
 };
 
 enum gdb_has_a_terminal_flag_enum
@@ -84,6 +87,13 @@ struct term_state
      terminal=.  The settings of flags which readline saves and
      restores and unimportant.  */
   struct terminal_info our_terminal_info;
+
+  /* Our own tty state, which we restore every time we need to deal
+     with the terminal.  This is only set once, when we first attach
+     to the terminal (or when GDB first starts for the initial
+     terminal=.  The settings of flags which readline saves and
+     restores and unimportant.  */
+  struct terminal_info inferior_terminal_info;
 
   struct serial *stdin_serial;
 
@@ -101,6 +111,10 @@ new_term_state (void)
 
   term_state->gdb_has_a_terminal_flag = have_not_checked;
   term_state->terminal_is_ours = 1;
+#ifdef PROCESS_GROUP_TYPE
+  term_state->our_terminal_info.fg_process_group = -1;
+  term_state->inferior_terminal_info.fg_process_group = -1;
+#endif
 
   return term_state;
 }
@@ -118,7 +132,8 @@ static struct terminal_info *get_inflow_inferior_data (struct inferior *);
 PROCESS_GROUP_TYPE
 inferior_process_group (void)
 {
-  return get_inflow_inferior_data (current_inferior ())->process_group;
+  /* We assume INFERIOR_PID is also the child's process group.  */
+  return current_inferior ()->pid;
 }
 #endif
 
@@ -143,18 +158,18 @@ static const char *inferior_thisrun_terminal;
 
 #ifdef PROCESS_GROUP_TYPE
 static PROCESS_GROUP_TYPE
-gdb_getpgrp (void)
+gdb_tcgetpgrp (int term_fd)
 {
   int process_group = -1;
 
 #ifdef HAVE_TERMIOS
-  process_group = tcgetpgrp (0);
+  process_group = tcgetpgrp (term_fd);
 #endif
 #ifdef HAVE_TERMIO
   process_group = getpgrp ();
 #endif
 #ifdef HAVE_SGTTY
-  ioctl (0, TIOCGPGRP, &process_group);
+  ioctl (term_fd, TIOCGPGRP, &process_group);
 #endif
   return process_group;
 }
@@ -193,11 +208,13 @@ set_initial_gdb_ttystate (void)
     = serial_get_tty_state (cur_term_state ()->stdin_serial);
 }
 
-/* Does GDB have a terminal (on stdin)?  */
+/* Does GDB have a terminal (on the current terminal's stdin)?  */
+
 int
 gdb_has_a_terminal (void)
 {
   struct term_state *ts = current_terminal->term_state;
+  int fd;
 
   if (interactive_mode != AUTO_BOOLEAN_AUTO)
     return interactive_mode == AUTO_BOOLEAN_TRUE;
@@ -214,8 +231,11 @@ gdb_has_a_terminal (void)
          serial_fdopen() won't work until the serial_ops_list is
          initialized.  */
 
+      gdb_assert (ts->terminal_is_ours);
+
+      fd = fileno (current_terminal->instream);
 #ifdef F_GETFL
-      ts->our_terminal_info.tflags = fcntl (0, F_GETFL, 0);
+      ts->our_terminal_info.tflags = fcntl (fd, F_GETFL, 0);
 #endif
 
       ts->gdb_has_a_terminal_flag = no;
@@ -228,7 +248,7 @@ gdb_has_a_terminal (void)
 	    {
 	      ts->gdb_has_a_terminal_flag = yes;
 #ifdef PROCESS_GROUP_TYPE
-	      ts->our_terminal_info.process_group = gdb_getpgrp ();
+	      ts->our_terminal_info.fg_process_group = gdb_tcgetpgrp (fd);
 #endif
 	    }
 	}
@@ -254,22 +274,17 @@ void
 child_terminal_init_with_pgrp (int pgrp)
 {
   struct inferior *inf = current_inferior ();
-  struct terminal_info *tinfo = get_inflow_inferior_data (inf);
-
-#ifdef PROCESS_GROUP_TYPE
-  /* Store the process group even without a terminal as it is used not
-     only to reset the tty foreground process group, but also to
-     interrupt the inferior.  */
-  tinfo->process_group = pgrp;
-#endif
 
   if (gdb_has_a_terminal ())
     {
       struct term_state *ts = current_terminal->term_state;
 
-      xfree (tinfo->ttystate);
-      tinfo->ttystate = serial_copy_tty_state (ts->stdin_serial,
-					       initial_gdb_ttystate);
+      xfree (ts->inferior_terminal_info.ttystate);
+      ts->inferior_terminal_info.ttystate
+	= serial_copy_tty_state (ts->stdin_serial,
+				 initial_gdb_ttystate);
+
+      ts->inferior_terminal_info.fg_process_group = pgrp;
 
       /* Make sure that next time we call terminal_inferior (which will be
          before the program runs, as it needs to be), we install the new
@@ -298,11 +313,6 @@ void
 child_terminal_init (struct target_ops *self)
 {
 #ifdef PROCESS_GROUP_TYPE
-  /* This is for Lynx, and should be cleaned up by having Lynx be a
-     separate debugging target with a version of target_terminal_init
-     which passes in the process group to a generic routine which does
-     all the work (and the non-threaded child_terminal_init can just
-     pass in inferior_ptid to the same routine).  */
   /* We assume INFERIOR_PID is also the child's process group.  */
   child_terminal_init_with_pgrp (ptid_get_pid (inferior_ptid));
 #endif /* PROCESS_GROUP_TYPE */
@@ -318,19 +328,26 @@ child_terminal_init (struct target_ops *self)
 void
 child_terminal_inferior (struct target_ops *self)
 {
+#if 0
   struct inferior *inf;
   struct terminal_info *tinfo;
+#endif
   struct term_state *ts = current_terminal->term_state;
 
   if (!ts->terminal_is_ours)
     return;
 
+#if 0
   inf = current_inferior ();
   tinfo = get_inflow_inferior_data (inf);
+#endif
 
   if (gdb_has_a_terminal ()
+#if 0
       && tinfo->ttystate != NULL
-      && tinfo->run_terminal == NULL)
+      && tinfo->run_terminal == NULL
+#endif
+      )
     {
       int result;
       int fd = fileno (current_terminal->instream);
@@ -341,16 +358,16 @@ child_terminal_inferior (struct target_ops *self)
       /* Is there a reason this is being done twice?  It happens both
          places we use F_SETFL, so I'm inclined to think perhaps there
          is some reason, however perverse.  Perhaps not though...  */
-      result = fcntl (fd, F_SETFL, tinfo->tflags);
-      result = fcntl (fd, F_SETFL, tinfo->tflags);
+      result = fcntl (fd, F_SETFL, ts->inferior_terminal_info.tflags);
+      result = fcntl (fd, F_SETFL, ts->inferior_terminal_info.tflags);
       OOPSY ("fcntl F_SETFL");
 #endif
 
       /* Because we were careful to not change in or out of raw mode in
-         terminal_ours, we will not change in our out of raw mode with
+         terminal_ours, we will not change in or out of raw mode with
          this call, so we don't flush any input.  */
       result = serial_set_tty_state (ts->stdin_serial,
-				     tinfo->ttystate);
+				     ts->inferior_terminal_info.ttystate);
       OOPSY ("setting tty state");
 
       if (!job_control)
@@ -361,30 +378,35 @@ child_terminal_inferior (struct target_ops *self)
 #endif
 	}
 
-      /* If attach_flag is set, we don't know whether we are sharing a
-         terminal with the inferior or not.  (attaching a process
-         without a terminal is one case where we do not; attaching a
-         process which we ran from the same shell as GDB via `&' is
-         one case where we do, I think (but perhaps this is not
-         `sharing' in the sense that we need to save and restore tty
-         state)).  I don't know if there is any way to tell whether we
-         are sharing a terminal.  So what we do is to go through all
-         the saving and restoring of the tty state, but ignore errors
+      /* We don't know whether we are sharing a terminal with the
+         inferior or not.  (attaching a process without a terminal is
+         one case where we do not; attaching a process which we ran
+         from the same shell as GDB via `&' is one case where we do.  
+         I don't know if there is any way to tell whether we are
+         sharing a terminal.  So what we do is to go through all the
+         saving and restoring of the tty state, but ignore errors
          setting the process group, which will happen if we are not
          sharing a terminal).  */
 
       if (job_control)
 	{
 #ifdef HAVE_TERMIOS
-	  result = tcsetpgrp (fd, tinfo->process_group);
+	  result = tcsetpgrp (fd,
+			      ts->inferior_terminal_info.fg_process_group);
+#if 0
+	  XXX warn instead?
 	  if (!inf->attach_flag)
 	    OOPSY ("tcsetpgrp");
 #endif
+#endif
 
 #ifdef HAVE_SGTTY
-	  result = ioctl (fd, TIOCSPGRP, &tinfo->process_group);
+	  result = ioctl (fd, TIOCSPGRP,
+			  ts->inferior_terminal_info.fg_process_group);
+#if 0
 	  if (!inf->attach_flag)
 	    OOPSY ("TIOCSPGRP");
+#endif
 #endif
 	}
 
@@ -430,8 +452,7 @@ child_terminal_ours (struct target_ops *self)
 static void
 child_terminal_ours_1 (int output_only)
 {
-  struct inferior *inf;
-  struct terminal_info *tinfo;
+  //  struct inferior *inf;
   struct term_state *ts = current_terminal->term_state;
 
   if (ts->terminal_is_ours)
@@ -439,16 +460,21 @@ child_terminal_ours_1 (int output_only)
 
   ts->terminal_is_ours = 1;
 
-  /* Checking inferior->run_terminal is necessary so that
-     if GDB is running in the background, it won't block trying
-     to do the ioctl()'s below.  Checking gdb_has_a_terminal
-     avoids attempting all the ioctl's when running in batch.  */
+  /* Avoid attempting all the ioctl's when running in batch.  */
+  if (gdb_has_a_terminal () == 0)
+    return;
+
+#if 0
+  /* Checking inferior->run_terminal is necessary so that if GDB is
+     running in the background, it won't block trying to do the
+     ioctl()'s below.  XXX what?  */
 
   inf = current_inferior ();
   tinfo = get_inflow_inferior_data (inf);
 
-  if (tinfo->run_terminal != NULL || gdb_has_a_terminal () == 0)
+  if (tinfo->run_terminal != NULL)
     return;
+#endif
 
     {
 #ifdef SIGTTOU
@@ -458,6 +484,9 @@ child_terminal_ours_1 (int output_only)
 #endif
       int result;
       int fd = fileno (current_terminal->instream);
+      struct terminal_info *tinfo;
+
+      tinfo = &ts->inferior_terminal_info;
 
       gdb_assert (fd >= 0);
 
@@ -470,21 +499,10 @@ child_terminal_ours_1 (int output_only)
       tinfo->ttystate = serial_get_tty_state (ts->stdin_serial);
 
 #ifdef PROCESS_GROUP_TYPE
-      if (!inf->attach_flag)
-	/* If setpgrp failed in terminal_inferior, this would give us
-	   our process group instead of the inferior's.  See
-	   terminal_inferior for details.  */
-	tinfo->process_group = gdb_getpgrp ();
+      tinfo->fg_process_group = gdb_tcgetpgrp (fd);
 #endif
 
-      /* Here we used to set ICANON in our ttystate, but I believe this
-         was an artifact from before when we used readline.  Readline sets
-         the tty state when it needs to.
-         FIXME-maybe: However, query() expects non-raw mode and doesn't
-         use readline.  Maybe query should use readline (on the other hand,
-         this only matters for HAVE_SGTTY, not termio or termios, I think).  */
-
-      /* Set tty state to our_ttystate.  We don't change in our out of raw
+      /* Set tty state to our_ttystate.  We don't change in or out of raw
          mode, to avoid flushing input.  We need to do the same thing
          regardless of output_only, because we don't have separate
          terminal_is_ours and terminal_is_ours_for_output flags.  It's OK,
@@ -498,7 +516,7 @@ child_terminal_ours_1 (int output_only)
       if (job_control)
 	{
 #ifdef HAVE_TERMIOS
-	  result = tcsetpgrp (fd, ts->our_terminal_info.process_group);
+	  result = tcsetpgrp (fd, ts->our_terminal_info.fg_process_group);
 #if 0
 	  /* This fails on Ultrix with EINVAL if you run the testsuite
 	     in the background with nohup, and then log out.  GDB never
@@ -512,7 +530,7 @@ child_terminal_ours_1 (int output_only)
 #endif /* termios */
 
 #ifdef HAVE_SGTTY
-	  result = ioctl (fd, TIOCSPGRP, &our_terminal_info.process_group);
+	  result = ioctl (fd, TIOCSPGRP, &ts->our_terminal_info.fg_process_group);
 #endif
 	}
 
@@ -549,8 +567,10 @@ inflow_inferior_data_cleanup (struct inferior *inf, void *arg)
 {
   struct terminal_info *info = (struct terminal_info *) arg;
 
+#if 0
   xfree (info->run_terminal);
   xfree (info->ttystate);
+#endif
   xfree (info);
 }
 
@@ -586,8 +606,10 @@ inflow_inferior_exit (struct inferior *inf)
   info = (struct terminal_info *) inferior_data (inf, inflow_inferior_data);
   if (info != NULL)
     {
+#if 0
       xfree (info->run_terminal);
       xfree (info->ttystate);
+#endif
       xfree (info);
       set_inferior_data (inf, inflow_inferior_data, NULL);
     }
@@ -596,6 +618,7 @@ inflow_inferior_exit (struct inferior *inf)
 void
 copy_terminal_info (struct inferior *to, struct inferior *from)
 {
+#if 0
   struct terminal_info *tinfo_to, *tinfo_from;
   struct term_state *ts = current_terminal->term_state;
 
@@ -614,6 +637,7 @@ copy_terminal_info (struct inferior *to, struct inferior *from)
   if (tinfo_from->ttystate)
     tinfo_to->ttystate
       = serial_copy_tty_state (ts->stdin_serial, tinfo_from->ttystate);
+#endif
 }
 
 void
@@ -625,21 +649,33 @@ term_info (char *arg, int from_tty)
 void
 child_terminal_info (struct target_ops *self, const char *args, int from_tty)
 {
-  struct inferior *inf;
-  struct terminal_info *tinfo;
+  //  struct inferior *inf;
+  //  struct terminal_info *tinfo;
   struct term_state *ts = current_terminal->term_state;
 
   if (!gdb_has_a_terminal ())
     {
-      printf_filtered (_("This GDB does not control a terminal.\n"));
+      printf_filtered (_("This GDB terminal does not control a terminal.\n"));
       return;
     }
 
+  if (ts->inferior_terminal_info.ttystate == NULL)
+    {
+      /* Print "No saved ..."  */
+      self->beneath->to_terminal_info (self->beneath, args, from_tty);
+      return;
+    }
+
+  /// XXX should find the terminal associated with the inferior??
+#if 0
   if (ptid_equal (inferior_ptid, null_ptid))
     return;
+#endif
 
+#if 0
   inf = current_inferior ();
   tinfo = get_inflow_inferior_data (inf);
+#endif
 
   printf_filtered (_("Inferior's terminal status "
 		     "(currently saved by GDB):\n"));
@@ -648,7 +684,7 @@ child_terminal_info (struct target_ops *self, const char *args, int from_tty)
   {
     int flags;
 
-    flags = tinfo->tflags;
+    flags = ts->inferior_terminal_info.tflags;
 
     printf_filtered ("File descriptor flags = ");
 
@@ -701,10 +737,12 @@ child_terminal_info (struct target_ops *self, const char *args, int from_tty)
   }
 
 #ifdef PROCESS_GROUP_TYPE
-  printf_filtered ("Process group = %d\n", (int) tinfo->process_group);
+  printf_filtered ("Foreground process group = %d\n",
+		   (int) ts->inferior_terminal_info.fg_process_group);
 #endif
 
-  serial_print_tty_state (ts->stdin_serial, tinfo->ttystate, gdb_stdout);
+  serial_print_tty_state (ts->stdin_serial,
+			  ts->inferior_terminal_info.ttystate, gdb_stdout);
 }
 
 /* NEW_TTY_PREFORK is called before forking a new child process,
@@ -801,11 +839,12 @@ new_tty (const char *tty_name)
 
 /* NEW_TTY_POSTFORK is called after forking a new child process, and
    adding it to the inferior table, to store the TTYNAME being used by
-   the child, or null if it sharing the terminal with gdb.  */
+   the child, or null if its sharing the terminal with gdb.  */
 
 void
 new_tty_postfork (void)
 {
+#if 0
   /* Save the name for later, for determining whether we and the child
      are sharing a tty.  */
 
@@ -816,6 +855,7 @@ new_tty_postfork (void)
 
       tinfo->run_terminal = xstrdup (inferior_thisrun_terminal);
     }
+#endif
 
   inferior_thisrun_terminal = NULL;
 }
@@ -841,7 +881,11 @@ set_sigint_trap (void)
   struct inferior *inf = current_inferior ();
   struct terminal_info *tinfo = get_inflow_inferior_data (inf);
 
-  if (inf->attach_flag || tinfo->run_terminal)
+  if (0
+#if 0
+      inf->attach_flag || tinfo->run_terminal
+#endif
+      )
     {
       osig = signal (SIGINT, pass_signal);
       osig_set = 1;
@@ -932,11 +976,11 @@ gdb_setpgid (void)
    that we can guarantee stdin_serial is opened if there is
    a terminal.  */
 void
-initialize_stdin_serial (void)
+initialize_stdin_serial (struct terminal *terminal)
 {
-  struct term_state *ts = current_terminal->term_state;
+  struct term_state *ts = terminal->term_state;
 
-  ts->stdin_serial = serial_fdopen (fileno (current_terminal->instream));
+  ts->stdin_serial = serial_fdopen (fileno (terminal->instream));
 }
 
 void
