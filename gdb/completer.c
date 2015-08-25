@@ -649,11 +649,22 @@ expression_completer (struct cmd_list_element *ignore,
   return location_completer (ignore, p, word);
 }
 
+void assert_not_mi (void);
+
+void
+assert_not_mi (void)
+{
+  if (ui_out_is_mi_like_p (current_uiout))
+    abort ();
+}
+
 /* See definition in completer.h.  */
 
 void
 set_gdb_completion_word_break_characters (completer_ftype *fn)
 {
+  assert_not_mi ();
+
   /* So far we are only interested in differentiating filename
      completers from everything else.  */
   if (fn == filename_completer)
@@ -735,6 +746,11 @@ complete_line_internal (const char *text,
   /* Pointer within tmp_command which corresponds to text.  */
   char *word;
   struct cmd_list_element *c, *result_list;
+  {
+    extern void assert_not_mi (void);
+
+    assert_not_mi ();
+  }
 
   /* Choose the default set of word break characters to break
      completions.  If we later find out that we are doing completions
@@ -1231,6 +1247,11 @@ gdb_completion_word_break_characters (void)
 {
   VEC (char_ptr) *list;
 
+  {
+    extern void assert_not_mi (void);
+
+    assert_not_mi ();
+  }
   list = complete_line_internal (rl_line_buffer, rl_line_buffer, rl_point,
 				 handle_brkchars);
   gdb_assert (list == NULL);
@@ -1266,6 +1287,11 @@ line_completion_function (const char *text, int matches,
   static int index;			/* Next cached completion.  */
   char *output = NULL;
 
+  {
+    extern void assert_not_mi (void);
+
+    assert_not_mi ();
+  }
   if (matches == 0)
     {
       /* The caller is beginning to accumulate a new set of
@@ -1410,6 +1436,12 @@ gdb_get_y_or_n (int for_pager, const struct match_list_displayer *displayer)
 {
   int c;
 
+  {
+    extern void assert_not_mi (void);
+
+    assert_not_mi ();
+  }
+  
   for (;;)
     {
       RL_SETSTATE (RL_STATE_MOREINPUT);
@@ -1785,6 +1817,11 @@ gdb_display_match_list_1 (char **matches, int len, int max,
   char *temp, *t;
   int page_completions = displayer->height != INT_MAX && pagination_enabled ();
 
+  {
+    extern void assert_not_mi (void);
+
+    assert_not_mi ();
+  }
   /* Find the length of the prefix common to all items: length as displayed
      characters (common_length) and as a byte index into the matches (sind) */
   common_length = sind = 0;
@@ -1910,6 +1947,12 @@ gdb_display_match_list (char **matches, int len, int max,
   /* complete_line will never return more than this.  */
   if (max_completions > 0)
     gdb_assert (len <= max_completions);
+
+  {
+    extern void assert_not_mi (void);
+
+    assert_not_mi ();
+  }
 
   if (rl_completion_query_items > 0 && len >= rl_completion_query_items)
     {

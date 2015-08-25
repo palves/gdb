@@ -1687,6 +1687,11 @@ init_page_info (void)
 #else
       /* Make sure Readline has initialized its terminal settings.  */
       rl_reset_terminal (NULL);
+  {
+    extern void assert_not_mi (void);
+
+    assert_not_mi ();
+  }
 
       /* Get the screen size from Readline.  */
       rl_get_screen_size (&rows, &cols);
@@ -1804,6 +1809,12 @@ set_readline_screen_size (void)
   int rows = pi->lines_per_page;
   int cols = pi->chars_per_line;
 
+  {
+    extern void assert_not_mi (void);
+
+    assert_not_mi ();
+  }
+
   if (rows <= 0)
     rows = INT_MAX;
 
@@ -1839,7 +1850,8 @@ static void
 set_width_command (char *args, int from_tty, struct cmd_list_element *c)
 {
   get_page_info ()->chars_per_line = chars_per_line_var;
-  set_readline_screen_size ();
+  if (async_command_editing_p)
+    set_readline_screen_size ();
   reinitialize_wrap_buffer ();
 }
 
@@ -1847,7 +1859,8 @@ static void
 set_height_command (char *args, int from_tty, struct cmd_list_element *c)
 {
   get_page_info ()->lines_per_page = lines_per_page_var;
-  set_readline_screen_size ();
+  if (async_command_editing_p)
+    set_readline_screen_size ();
 }
 
 /* See utils.h.  */
@@ -1860,7 +1873,8 @@ set_screen_width_and_height (int width, int height)
   pi->lines_per_page = height;
   pi->chars_per_line = width;
 
-  set_readline_screen_size ();
+  if (async_command_editing_p)
+    set_readline_screen_size ();
   reinitialize_wrap_buffer ();
 }
 

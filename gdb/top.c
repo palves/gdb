@@ -816,6 +816,13 @@ gdb_readline_wrapper_cleanup (void *arg)
   struct gdb_readline_wrapper_cleanup *cleanup
     = (struct gdb_readline_wrapper_cleanup *) arg;
 
+  {
+    extern void assert_not_mi (void);
+
+    assert_not_mi ();
+  }
+
+  
   rl_already_prompted = cleanup->already_prompted_orig;
 
   gdb_assert (input_handler == gdb_readline_wrapper_line);
@@ -852,6 +859,11 @@ gdb_readline_wrapper (const char *prompt)
   cleanup = XNEW (struct gdb_readline_wrapper_cleanup);
   cleanup->handler_orig = input_handler;
   input_handler = gdb_readline_wrapper_line;
+  {
+    extern void assert_not_mi (void);
+
+    assert_not_mi ();
+  }
 
   cleanup->already_prompted_orig = rl_already_prompted;
 
@@ -892,6 +904,11 @@ gdb_rl_operate_and_get_next_completion (void)
 {
   int delta = where_history () - operate_saved_history;
 
+  {
+    extern void assert_not_mi (void);
+
+    assert_not_mi ();
+  }
   /* The `key' argument to rl_get_previous_history is ignored.  */
   rl_get_previous_history (delta, 0);
   operate_saved_history = -1;
@@ -912,6 +929,11 @@ static int
 gdb_rl_operate_and_get_next (int count, int key)
 {
   int where;
+  {
+    extern void assert_not_mi (void);
+
+    assert_not_mi ();
+  }
 
   /* Use the async hook.  */
   after_char_processing_hook = gdb_rl_operate_and_get_next_completion;
@@ -1903,6 +1925,11 @@ set_history_filename (char *args, int from_tty, struct cmd_list_element *c)
 void
 init_readline (void)
 {
+  {
+    extern void assert_not_mi (void);
+
+    assert_not_mi ();
+  }
   /* Setup important stuff for command line editing.  */
   rl_completion_word_break_hook = gdb_completion_word_break_characters;
   rl_completion_entry_function = readline_line_completion_function;

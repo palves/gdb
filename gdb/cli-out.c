@@ -486,6 +486,11 @@ cli_display_match_list (char **matches, int len, int max)
 {
   struct match_list_displayer displayer;
 
+  {
+    extern void assert_not_mi (void);
+
+    assert_not_mi ();
+  }
   rl_get_screen_size (&displayer.height, &displayer.width);
   displayer.crlf = cli_mld_crlf;
   displayer.putch = cli_mld_putch;

@@ -265,6 +265,12 @@ complete_command (char *arg, int from_tty)
     arg = "";
   argpoint = strlen (arg);
 
+  {
+    extern void assert_not_mi (void);
+
+    assert_not_mi ();
+  }
+
   /* complete_line assumes that its first argument is somewhere
      within, and except for filenames at the beginning of, the word to
      be completed.  The following crude imitation of readline's

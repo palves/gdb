@@ -158,6 +158,12 @@ void (*after_char_processing_hook) (void);
 static void
 rl_callback_read_char_wrapper (gdb_client_data client_data)
 {
+  {
+    extern void assert_not_mi (void);
+
+    assert_not_mi ();
+  }
+
   rl_callback_read_char ();
   if (after_char_processing_hook)
     (*after_char_processing_hook) ();
@@ -194,6 +200,11 @@ change_line_handler (void)
   if (async_command_editing_p)
     {
       /* Turn on editing by using readline.  */
+  {
+    extern void assert_not_mi (void);
+
+    assert_not_mi ();
+  }
       call_readline = rl_callback_read_char_wrapper;
       input_handler = command_line_handler;
     }
@@ -238,6 +249,11 @@ gdb_rl_callback_handler_remove (void)
 void
 gdb_rl_callback_handler_install (const char *prompt)
 {
+  {
+    extern void assert_not_mi (void);
+
+    assert_not_mi ();
+  }
   /* Calling rl_callback_handler_install resets readline's input
      buffer.  Calling this when we were already processing input
      therefore loses input.  */
@@ -312,6 +328,11 @@ display_gdb_prompt (const char *new_prompt)
 	     handler change would happen exactly between the calls to
 	     the above two functions.  Calling
 	     rl_callback_handler_remove(), does the job.  */
+  {
+    extern void assert_not_mi (void);
+
+    assert_not_mi ();
+  }
 
 	  gdb_rl_callback_handler_remove ();
 	  do_cleanups (old_chain);
@@ -1252,6 +1273,11 @@ init_terminal (void)
 void
 gdb_setup_readline (void)
 {
+  {
+    extern void assert_not_mi (void);
+
+    assert_not_mi ();
+  }
   /* If the input stream is connected to a terminal, turn on
      editing.  */
   if (ISATTY (instream))
