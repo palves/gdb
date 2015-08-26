@@ -150,9 +150,6 @@ mi_interpreter_resume (struct interp *self)
   input_handler = mi_execute_command_input_handler;
   async_command_editing_p = 0;
 
-  /* Tell readline to use the same input stream that gdb uses.  */
-  rl_instream = instream;
-
   /* Get a file descriptor for the input stream, so that we can
      register it with the event loop.  */
   input_fd = fileno (instream);
