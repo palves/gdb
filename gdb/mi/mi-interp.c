@@ -317,6 +317,15 @@ mi_on_try_enable_input (void)
     }
 }
 
+/* Observer for the command_error notification.  */
+
+static void
+mi_on_command_error (void)
+{
+  sync_execution = 0;
+  gdb_flush (raw_stdout);
+}
+
 /* mi_execute_command_wrapper wrapper suitable for INPUT_HANDLER.  */
 
 static void
@@ -1209,7 +1218,7 @@ static const struct interp_procs mi_interp_procs =
     mi_solib_unloaded,
     mi_traceframe_changed,
     mi_command_param_changed,
-    NULL,			/* on_command_error*/
+    mi_on_command_error,
     mi_memory_changed,
   };
 
