@@ -1944,6 +1944,8 @@ init_readline (void)
   rl_add_defun ("operate-and-get-next", gdb_rl_operate_and_get_next, 15);
 }
 
+extern int dont_assert;
+
 static void
 init_main (void)
 {
@@ -1960,7 +1962,11 @@ init_main (void)
   history_expansion_p = 0;
   write_history_p = 0;
 
+  dont_assert = 1;
+
   init_readline ();
+
+  dont_assert = 0;
 
   add_setshow_string_cmd ("prompt", class_support,
 			  &top_prompt,

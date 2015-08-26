@@ -1661,8 +1661,11 @@ show_pagination_enabled (struct ui_file *file, int from_tty,
 void
 init_page_info (void)
 {
+  extern int dont_assert;
   struct terminal *term = current_terminal;
   struct page_info *pi;
+
+  dont_assert = 1;
 
   if (term->page_info == NULL)
     term->page_info = XCNEW (struct page_info);
@@ -1687,11 +1690,6 @@ init_page_info (void)
 #else
       /* Make sure Readline has initialized its terminal settings.  */
       rl_reset_terminal (NULL);
-  {
-    extern void assert_not_mi (void);
-
-    assert_not_mi ();
-  }
 
       /* Get the screen size from Readline.  */
       rl_get_screen_size (&rows, &cols);
@@ -1722,6 +1720,8 @@ init_page_info (void)
 
   set_readline_screen_size ();
   reinitialize_wrap_buffer ();
+
+  dont_assert = 0;
 }
 
 

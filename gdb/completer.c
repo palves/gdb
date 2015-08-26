@@ -649,12 +649,22 @@ expression_completer (struct cmd_list_element *ignore,
   return location_completer (ignore, p, word);
 }
 
+int dont_assert;
+
 void assert_not_mi (void);
+#include "interps.h"
 
 void
 assert_not_mi (void)
 {
-  if (ui_out_is_mi_like_p (current_uiout))
+  struct ui_out *uiout;
+
+  if (dont_assert)
+    return;
+  
+  uiout = interp_ui_out (top_level_interpreter ());
+
+  if (ui_out_is_mi_like_p (uiout))
     abort ();
 }
 
