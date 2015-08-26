@@ -645,11 +645,13 @@ switch_to_terminal (struct terminal *terminal)
 
   current_terminal = terminal;
 
+#ifdef TUI
   {
     extern void tui_set_screen ();
 
     tui_set_screen ();
   }
+#endif
 }
 
 VEC(terminal_ptr) *terminals;
