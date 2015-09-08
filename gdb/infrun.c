@@ -1,3 +1,4 @@
+int use_software_single_step = 1;
 /* Target-struct-independent code to start (run) and stop an inferior
    process.
 
@@ -2550,6 +2551,9 @@ resume (enum gdb_signal sig)
   else if (step)
     step = maybe_software_singlestep (gdbarch, pc);
 
+  if (use_software_single_step && execution_direction == EXEC_FORWARD)
+    gdb_assert (!step);
+
   /* Currently, our software single-step implementation leads to different
      results than hardware single-stepping in one situation: when stepping
      into delivering a signal which has an associated signal handler,
@@ -2600,7 +2604,8 @@ resume (enum gdb_signal sig)
   /* If STEP is set, it's a request to use hardware stepping
      facilities.  But in that case, we should never
      use singlestep breakpoint.  */
-  gdb_assert (!(thread_has_single_step_breakpoints_set (tp) && step));
+  if (use_software_single_step)
+    gdb_assert (!(thread_has_single_step_breakpoints_set (tp) && step));
 
   /* Decide the set of threads to ask the target to resume.  */
   if ((step || thread_has_single_step_breakpoints_set (tp))

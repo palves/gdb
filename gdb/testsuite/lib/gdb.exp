@@ -2150,10 +2150,16 @@ proc supports_get_siginfo_type {} {
     }
 }
 
+set use_software_single_step 1
+
 # Return 1 if target hardware or OS supports single stepping to signal
 # handler, otherwise, return 0.
 
 proc can_single_step_to_signal_handler {} {
+    global use_software_single_step
+    if {$use_software_single_step} {
+	return 0
+    }
 
     # Targets don't have hardware single step.  On these targets, when
     # a signal is delivered during software single step, gdb is unable
