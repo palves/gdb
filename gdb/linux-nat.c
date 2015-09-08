@@ -1,3 +1,4 @@
+extern int use_software_single_step;
 /* GNU/Linux native-dependent code common to multiple platforms.
 
    Copyright (C) 2001-2017 Free Software Foundation, Inc.
@@ -1741,6 +1742,9 @@ linux_nat_resume (struct target_ops *ops,
 {
   struct lwp_info *lp;
   int resume_many;
+
+  if (use_software_single_step)
+    gdb_assert (!step);
 
   if (debug_linux_nat)
     fprintf_unfiltered (gdb_stdlog,

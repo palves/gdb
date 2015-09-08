@@ -2289,9 +2289,15 @@ proc supports_get_siginfo_type {} {
     }
 }
 
+set use_software_single_step 1
+
 # Return 1 if the target supports hardware single stepping.
 
 proc can_hardware_single_step {} {
+    global use_software_single_step
+    if {$use_software_single_step} {
+	return 0
+    }
 
     if { [istarget "arm*-*-*"] || [istarget "mips*-*-*"]
 	 || [istarget "tic6x-*-*"] || [istarget "sparc*-*-linux*"]
