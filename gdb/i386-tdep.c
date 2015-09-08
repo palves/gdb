@@ -66,6 +66,8 @@
 #include "parser-defs.h"
 #include <ctype.h>
 
+#include "amd64-tdep.h"
+
 /* Register names.  */
 
 static const char *i386_register_names[] =
@@ -8097,6 +8099,559 @@ i386_fast_tracepoint_valid_at (struct gdbarch *gdbarch, CORE_ADDR addr,
     }
 }
 
+#define EFLAGS_CF (1 << 0)
+#define EFLAGS_PF (1 << 2)
+#define EFLAGS_AF (1 << 4)
+#define EFLAGS_ZF (1 << 6)
+#define EFLAGS_SF (1 << 7)
+#define EFLAGS_TF (1 << 8)
+#define EFLAGS_IF (1 << 9)
+#define EFLAGS_DF (1 << 10)
+#define EFLAGS_OF (1 << 11)
+#define EFLAGS_NT (1 << 14)
+#define EFLAGS_RF (1 << 16)
+#define EFLAGS_VM (1 << 17)
+#define EFLAGS_VM (1 << 17)
+#define EFLAGS_AC (1 << 18)
+#define EFLAGS_VIF (1 << 19)
+#define EFLAGS_ID (1 << 21)
+
+static ULONGEST
+get_eflags (struct frame_info *frame)
+{
+  struct gdbarch *gdbarch = get_frame_arch (frame);
+  int regnum;
+
+  regnum = (register_size (gdbarch, 0) == 8
+	    ? AMD64_EFLAGS_REGNUM
+	    : I386_EFLAGS_REGNUM);
+  return get_frame_register_unsigned (frame, regnum);
+}
+
+static CORE_ADDR
+get_sp (struct frame_info *frame)
+{
+  struct gdbarch *gdbarch = get_frame_arch (frame);
+  int regnum;
+
+  regnum = (register_size (gdbarch, 0) == 8
+	    ? AMD64_RSP_REGNUM
+	    : I386_ESP_REGNUM);
+  return get_frame_register_unsigned (frame, regnum);
+}
+
+/* If the instruction at PC is a jump, return the address of its
+   target.  Otherwise, return PC.  */
+
+static int
+i386_cond_jump_dest (struct frame_info *frame,
+		     const gdb_byte *insn, const CORE_ADDR pc, CORE_ADDR *dest)
+{
+  struct gdbarch *gdbarch = get_frame_arch (frame);
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
+  gdb_byte op;
+  int data16 = 0;
+  ULONGEST eflags;
+  int jump = 0;
+  int rel = 0;
+  LONGEST disp;
+  int offset = 0;
+
+  op = insn[offset++];
+
+  if (op == 0x66)
+    {
+      data16 = 1;
+      op = insn[offset++];
+    }
+
+  if (op == 0x0f)
+    {
+      op = insn[offset++];
+
+      /* The 16 and 32 offset encodings can be seen as '8-bit encoding
+	 + 0x0f10'.  */
+      op -= 0x10;
+
+      rel = data16 ? 16 : 32;
+    }
+  else
+    {
+      /* Relative jump, disp8 (ignore data16).  */
+      rel = 8;
+    }
+
+  switch (op)
+    {
+    case 0x70: /* jo */
+      eflags = get_eflags (frame);
+      jump = (eflags & EFLAGS_OF) != 0;
+      break;
+    case 0x71: /* jno */
+      eflags = get_eflags (frame);
+      jump = (eflags & EFLAGS_OF) == 0;
+      break;
+    case 0x72: /* jb/jc/jnae */
+      eflags = get_eflags (frame);
+      jump = (eflags & EFLAGS_CF) != 0;
+      break;
+    case 0x73: /* jnb/jnc/jae */
+      eflags = get_eflags (frame);
+      jump = (eflags & EFLAGS_CF) == 0;
+      break;
+    case 0x74: /* jz/je */
+      eflags = get_eflags (frame);
+      jump = (eflags & EFLAGS_ZF) != 0;
+      break;
+    case 0x75: /* jnz/jne */
+      eflags = get_eflags (frame);
+      jump = (eflags & EFLAGS_ZF) == 0;
+      break;
+    case 0x76: /* jbe/jna */
+      eflags = get_eflags (frame);
+      jump = (eflags & EFLAGS_CF) != 0 || (eflags & EFLAGS_ZF) != 0;
+      break;
+    case 0x77: /* jnbe/ja */
+      eflags = get_eflags (frame);
+      jump = (eflags & EFLAGS_CF) == 0 && (eflags & EFLAGS_ZF) == 0;
+      break;
+    case 0x78: /* js */
+      eflags = get_eflags (frame);
+      jump = (eflags & EFLAGS_SF) != 0;
+      break;
+    case 0x79: /* js */
+      eflags = get_eflags (frame);
+      jump = (eflags & EFLAGS_SF) == 0;
+      break;
+    case 0x7a: /* jp/jpe */
+      eflags = get_eflags (frame);
+      jump = (eflags & EFLAGS_PF) != 0;
+      break;
+    case 0x7b: /* jnp/jpo */
+      eflags = get_eflags (frame);
+      jump = (eflags & EFLAGS_PF) == 0;
+      break;
+    case 0x7c: /* jl/jnge */
+      eflags = get_eflags (frame);
+      jump = (eflags & EFLAGS_SF) != 0;
+      break;
+    case 0x7d: /* jnl/jge */
+      eflags = get_eflags (frame);
+      jump = (eflags & EFLAGS_SF) == 0;
+      break;
+    case 0x7e: /* jle/jng */
+      eflags = get_eflags (frame);
+      jump = (eflags & EFLAGS_ZF) != 0 || (eflags & EFLAGS_SF) != 0;
+      break;
+    case 0x7f: /* jnle/jg */
+      eflags = get_eflags (frame);
+      jump = (eflags & EFLAGS_ZF) == 0 && (eflags & EFLAGS_SF) == 0;
+      break;
+    }
+
+  if (!jump)
+    return 0;
+
+  switch (rel)
+    {
+    case 8:
+      disp = extract_signed_integer (&insn[offset], 1, byte_order);
+      offset += 1;
+      break;
+    case 16:
+      disp = extract_signed_integer (&insn[offset], 2, byte_order);
+      offset += 2;
+      break;
+    case 32:
+      disp = extract_signed_integer (&insn[offset], 4, byte_order);
+      offset += 4;
+      break;
+    default:
+      gdb_assert_not_reached ("unhandled rel width");
+    }
+
+  *dest = pc + offset + disp;
+  return 1;
+}
+
+static int
+rex_prefix_p (gdb_byte pfx)
+{
+  return REX_PREFIX_P (pfx);
+}
+
+/* Map architectural register numbers to gdb register numbers.  */
+
+static const int amd64_arch_regmap[16] =
+{
+  AMD64_RAX_REGNUM,	/* %rax */
+  AMD64_RCX_REGNUM,	/* %rcx */
+  AMD64_RDX_REGNUM,	/* %rdx */
+  AMD64_RBX_REGNUM,	/* %rbx */
+  AMD64_RSP_REGNUM,	/* %rsp */
+  AMD64_RBP_REGNUM,	/* %rbp */
+  AMD64_RSI_REGNUM,	/* %rsi */
+  AMD64_RDI_REGNUM,	/* %rdi */
+  AMD64_R8_REGNUM,	/* %r8 */
+  AMD64_R9_REGNUM,	/* %r9 */
+  AMD64_R10_REGNUM,	/* %r10 */
+  AMD64_R11_REGNUM,	/* %r11 */
+  AMD64_R12_REGNUM,	/* %r12 */
+  AMD64_R13_REGNUM,	/* %r13 */
+  AMD64_R14_REGNUM,	/* %r14 */
+  AMD64_R15_REGNUM	/* %r15 */
+};
+
+static const int amd64_arch_regmap_len =
+  (sizeof (amd64_arch_regmap) / sizeof (amd64_arch_regmap[0]));
+
+/* Convert architectural register number REG to the appropriate register
+   number used by GDB.  */
+
+static int
+amd64_arch_reg_to_regnum (int reg)
+{
+  gdb_assert (reg >= 0 && reg < amd64_arch_regmap_len);
+
+  return amd64_arch_regmap[reg];
+}
+
+/* Map architectural register numbers to gdb register numbers.  */
+
+static const int i386_arch_regmap[16] =
+{
+  I386_EAX_REGNUM,	/* %eax */
+  I386_ECX_REGNUM,	/* %ecx */
+  I386_EDX_REGNUM,	/* %edx */
+  I386_EBX_REGNUM,	/* %ebx */
+  I386_ESP_REGNUM,	/* %esp */
+  I386_EBP_REGNUM,	/* %ebp */
+  I386_ESI_REGNUM,	/* %esi */
+  I386_EDI_REGNUM,	/* %edi */
+};
+
+static const int i386_arch_regmap_len =
+  (sizeof (i386_arch_regmap) / sizeof (i386_arch_regmap[0]));
+
+/* Convert architectural register number REG to the appropriate register
+   number used by GDB.  */
+
+static int
+i386_arch_reg_to_regnum (int reg)
+{
+  gdb_assert (reg >= 0 && reg < i386_arch_regmap_len);
+
+  return i386_arch_regmap[reg];
+}
+
+static int
+arch_reg_to_regnum (struct gdbarch *gdbarch, int reg)
+{
+  if (register_size (gdbarch, 0) == 8)
+    return amd64_arch_reg_to_regnum (reg);
+  else
+    return i386_arch_reg_to_regnum (reg);
+}
+
+/* If the instruction at PC is a jump, write to *DEST the address of
+   its target and return true.  Otherwise, return false.  */
+
+static int
+i386_jump_dest (struct frame_info *frame,
+		const gdb_byte *insn, const CORE_ADDR pc, CORE_ADDR *dest)
+{
+  struct gdbarch *gdbarch = get_frame_arch (frame);
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
+  gdb_byte op;
+  long delta = 0;
+  int data16 = 0;
+  gdb_byte modrm;
+  gdb_byte rex;
+  int rex_p = 0;
+  int offset = 0;
+
+  op = insn[offset++];
+
+  /* Skip REX instruction prefix.  */
+  rex_p = rex_prefix_p (op);
+  if (rex_p)
+    {
+      rex = op;
+
+      op = insn[offset++];
+    }
+
+  if (op == 0x66)
+    {
+      data16 = 1;
+      op = insn[offset++];
+    }
+
+  switch (op)
+    {
+    case 0xff:
+      {
+	int mod, reg, rm, have_sib;
+
+	modrm = insn[offset++];
+
+	reg = MODRM_REG_FIELD (modrm);
+
+	/* jmp is ff /4, call is ff /2   */
+	if (reg != 4 && reg != 2)
+	  return 0;
+
+	mod = MODRM_MOD_FIELD (modrm);
+	rm = MODRM_RM_FIELD (modrm);
+	have_sib = mod != 3 && rm == 4;
+
+	if (rex_p && rex & 0x01 && !have_sib) /* b */
+	  rm += 8;
+	if (rex_p && (rex & (1 << 2))) /* r */
+	  reg += 8;
+
+	if (mod == 3 /* 11b */) /* register direct, register in r/m.  */
+	  {
+	    int regnum;
+
+	    regnum = arch_reg_to_regnum (gdbarch, rm);
+	    *dest = get_frame_register_unsigned (frame, regnum);
+	  }
+	else if (mod == 0 && rm == 5 /*101*/) /* disp32 */
+	  {
+	    LONGEST disp;
+
+	    disp = extract_signed_integer (&insn[offset], 4, byte_order);
+
+	    if (/* 64-bit mode && */ 1) /* rip-relative */
+	      {
+		CORE_ADDR addr = 4 + pc + offset + disp;
+
+		*dest = read_memory_integer (addr, 8, byte_order);
+	      }
+	    else
+	      *dest = disp;
+	  }
+	else
+	  {
+	    int regnum;
+
+	    if (rm == 4)
+	      {
+		gdb_byte sib;
+		int scale, index, base;
+		CORE_ADDR eaddress;
+		int i;
+		ULONGEST index_val, base_val;
+		LONGEST offset_val = 0;
+		static const unsigned char scale_factors[] = { 1, 2, 4, 8 };
+
+		sib = insn[offset++];
+
+		scale = scale_factors[SIB_SCALE_FIELD (sib)];
+
+		index = SIB_INDEX_FIELD (sib);
+
+		if (rex_p && (rex & (1 << 1))) /* x */
+		  index += 8;
+
+		if (index == 4)
+		  {
+		    scale = 0;
+		    index_val = 0;
+		  }
+		else
+		  {
+		    int index_reg;
+
+		    index_reg = arch_reg_to_regnum (gdbarch, index);
+		    index_val = get_frame_register_unsigned (frame, index_reg);
+		  }
+
+		base = SIB_BASE_FIELD (sib);
+		if (rex_p && (rex & (1 << 0))) /* b */
+		  base += 8;
+
+		if (base == 5 && mod == 0)
+		  {
+		    base_val = 0;
+		  }
+		else
+		  {
+		    int base_reg;
+
+		    base_reg = arch_reg_to_regnum (gdbarch, base);
+		    base_val = get_frame_register_unsigned (frame, base_reg);
+		  }
+
+		if (base == 5)
+		  {
+		    int dispb = 0;
+
+		    if (mod == 1)
+		      dispb = 1;
+		    else if (mod == 0 || mod == 4)
+		      dispb = 4;
+
+		    if (dispb > 0)
+		      {
+			offset_val = extract_signed_integer (&insn[offset], dispb,
+							     byte_order);
+			offset += dispb;
+		      }
+		  }
+
+		eaddress = scale * index_val + base_val + offset_val;
+
+		*dest = read_memory_unsigned_integer (eaddress,
+						      register_size (gdbarch, 0),
+						      byte_order);
+	      }
+	    else
+	      {
+		CORE_ADDR addr;
+		int dispb = 0;
+		LONGEST disp = 0;
+
+		if (mod == 1)
+		  dispb = 1;
+		else if (mod == 2)
+		  dispb = 4;
+		if (dispb > 0)
+		  {
+		    disp = extract_signed_integer (&insn[offset], dispb,
+						   byte_order);
+		    offset += dispb;
+		  }
+
+		regnum = arch_reg_to_regnum (gdbarch, rm);
+		addr = get_frame_register_unsigned (frame, regnum);
+		addr += disp;
+
+		*dest = read_memory_unsigned_integer (addr,
+						      register_size (gdbarch, 0),
+						      byte_order);
+	      }
+	  }
+	return 1;
+      }
+
+    case 0xe8:
+    case 0xe9:
+      /* Relative branch/jump: if data16 == 0, disp32, else disp16.  */
+      if (data16)
+	{
+	  delta = extract_signed_integer (&insn[offset], 2, byte_order);
+	  offset += 2;
+	}
+      else
+	{
+	  delta = extract_signed_integer (&insn[offset], 4, byte_order);
+	  offset += 4;
+	}
+      break;
+    case 0xeb:
+      /* Relative jump, disp8 (ignore data16).  */
+      delta = extract_signed_integer (&insn[offset], 1, byte_order);
+      offset += 1;
+      break;
+    default:
+      return 0;
+    }
+
+  *dest = pc + offset + delta;
+  return 1;
+}
+
+/* Determine where to set a single step breakpoint.  */
+
+static CORE_ADDR
+i386_get_next_pc_1 (struct frame_info *frame, CORE_ADDR pc)
+{
+  struct gdbarch *gdbarch = get_frame_arch (frame);
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
+  CORE_ADDR next_pc;
+  int len = gdbarch_max_insn_length (gdbarch);
+  /* Extra space for sentinels so fixup_{riprel,displaced_copy} don't have to
+     continually watch for running off the end of the buffer.  */
+  gdb_byte *buf = alloca (len * 2);
+  gdb_byte *insn = buf;
+  CORE_ADDR org_pc = pc;
+
+  read_memory (pc, buf, len);
+
+  /* Set up the sentinel space so we don't have to worry about running
+     off the end of the buffer.  An excessive number of leading
+     prefixes could otherwise cause this.  */
+  memset (buf + len, 0, len);
+
+  /* Skip legacy instruction prefixes.  */
+  insn = i386_skip_prefixes (buf, len);
+  pc += insn - buf;
+
+  if (i386_cond_jump_dest (frame, insn, pc, &next_pc)
+      || i386_jump_dest (frame, insn, pc, &next_pc))
+    return next_pc;
+
+  if (*insn == 0xc3)	/* 'ret' instruction.  */
+    {
+      gdb_byte buf[8];
+      CORE_ADDR sp;
+
+      sp = get_sp (frame);
+      return read_memory_unsigned_integer (sp,
+					   register_size (gdbarch, 0),
+					   byte_order);
+    }
+
+  if (i386_syscall_p (insn, &len))
+    {
+      CORE_ADDR return_addr;
+      struct gdbarch_tdep *tdep;
+
+      tdep = gdbarch_tdep (gdbarch);
+      if (tdep->syscall_next_pc != NULL
+	  && tdep->syscall_next_pc (frame, &return_addr))
+	return return_addr;
+
+      return org_pc + insn - buf + len;
+    }
+
+  len = gdb_insn_length (gdbarch, org_pc);
+  return org_pc + len;
+}
+
+static CORE_ADDR
+i386_get_next_pc (struct frame_info *frame, CORE_ADDR pc)
+{
+  struct gdbarch *gdbarch = get_frame_arch (frame);
+  CORE_ADDR next_pc = i386_get_next_pc_1 (frame, pc);
+
+  if (debug_infrun)
+    fprintf_unfiltered (gdb_stdlog, "next pc: %s ==> %s\n",
+			paddress (gdbarch, pc),
+			paddress (gdbarch, next_pc));
+  return next_pc;
+}
+
+/* software_single_step is called just before we want to resume the
+   inferior, if we want to single-step it but there is no hardware or
+   kernel single-step support.  We find the target of the coming
+   instruction and breakpoint it.  */
+
+int
+i386_software_single_step (struct frame_info *frame)
+{
+  struct gdbarch *gdbarch = get_frame_arch (frame);
+  struct address_space *aspace = get_frame_address_space (frame);
+  CORE_ADDR next_pc;
+
+  next_pc = i386_get_next_pc (frame, get_frame_pc (frame));
+  insert_single_step_breakpoint (gdbarch, aspace, next_pc);
+
+  return 1;
+}
+
 static int
 i386_validate_tdesc_p (struct gdbarch_tdep *tdep,
 		       struct tdesc_arch_data *tdesc_data)
@@ -8581,6 +9136,8 @@ i386_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 
   set_gdbarch_fast_tracepoint_valid_at (gdbarch,
 					i386_fast_tracepoint_valid_at);
+
+  set_gdbarch_software_single_step (gdbarch, i386_software_single_step);
 
   return gdbarch;
 }

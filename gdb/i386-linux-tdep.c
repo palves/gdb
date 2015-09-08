@@ -506,6 +506,38 @@ i386_linux_get_syscall_number (struct gdbarch *gdbarch,
   return i386_linux_get_syscall_number_from_regcache (regcache);
 }
 
+/* Copy the value of next pc of sigreturn and rt_sigrturn into PC,
+   return 1.  Return 0 if it is not a rt_sigreturn/sigreturn
+   syscall.  */
+
+static int
+i386_linux_sigreturn_return_addr (struct frame_info *frame,
+				 CORE_ADDR *pc)
+{
+  int syscall_num;
+
+  /* Is this a sigreturn or rt_sigreturn syscall?  */
+  syscall_num = get_frame_register_signed (frame, I386_EAX_REGNUM);
+  if ((syscall_num == i386_sys_sigreturn
+       || syscall_num == i386_sys_rt_sigreturn))
+    {
+      if (get_frame_type (frame) == SIGTRAMP_FRAME)
+	{
+	  *pc = frame_unwind_caller_pc (frame);
+	  return 1;
+	}
+    }
+  return 0;
+}
+
+/* Implement the 'syscall_next_pc' gdbarch_tdep hook.  */
+
+static int
+i386_linux_syscall_next_pc (struct frame_info *frame, CORE_ADDR *return_addr)
+{
+  return i386_linux_sigreturn_return_addr (frame, return_addr);
+}
+
 /* The register sets used in GNU/Linux ELF core-dumps are identical to
    the register sets in `struct user' that are used for a.out
    core-dumps.  These are also used by ptrace(2).  The corresponding
@@ -956,6 +988,8 @@ i386_linux_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
   tdep->i386_intx80_record = i386_linux_intx80_sysenter_syscall_record;
   tdep->i386_sysenter_record = i386_linux_intx80_sysenter_syscall_record;
   tdep->i386_syscall_record = i386_linux_intx80_sysenter_syscall_record;
+
+  tdep->syscall_next_pc = i386_linux_syscall_next_pc;
 
   /* N_FUN symbols in shared libaries have 0 for their values and need
      to be relocated.  */

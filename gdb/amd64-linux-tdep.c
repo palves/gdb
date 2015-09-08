@@ -244,6 +244,35 @@ amd64_linux_get_syscall_number (struct gdbarch *gdbarch,
   return ret;
 }
 
+/* Copy the value of next pc of rt_sigrturn into PC, return 1.  Return
+   0 if it is not a rt_sigreturn syscall.  */
+
+static int
+amd64_linux_sigreturn_return_addr (struct frame_info *frame,
+				   CORE_ADDR *pc)
+{
+  int syscall_num;
+
+  /* Is this a rt_sigreturn syscall?  */
+  syscall_num = get_frame_register_signed (frame, AMD64_RAX_REGNUM);
+  if (syscall_num == amd64_sys_rt_sigreturn)
+    {
+      if (get_frame_type (frame) == SIGTRAMP_FRAME)
+	{
+	  *pc = frame_unwind_caller_pc (frame);
+	  return 1;
+	}
+    }
+  return 0;
+}
+
+/* Implement the 'syscall_next_pc' gdbarch_tdep hook.  */
+
+static int
+amd64_linux_syscall_next_pc (struct frame_info *frame, CORE_ADDR *return_addr)
+{
+  return amd64_linux_sigreturn_return_addr (frame, return_addr);
+}
 
 /* From <asm/sigcontext.h>.  */
 static int amd64_linux_sc_reg_offset[] =
@@ -1826,6 +1855,9 @@ amd64_linux_init_abi_common(struct gdbarch_info info, struct gdbarch *gdbarch)
 
   set_gdbarch_core_read_description (gdbarch,
 				     amd64_linux_core_read_description);
+
+  /* Single stepping.  */
+  tdep->syscall_next_pc = amd64_linux_syscall_next_pc;
 
   /* Displaced stepping.  */
   set_gdbarch_displaced_step_copy_insn (gdbarch,

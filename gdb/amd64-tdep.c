@@ -3082,6 +3082,9 @@ amd64_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
   set_gdbarch_insn_is_call (gdbarch, amd64_insn_is_call);
   set_gdbarch_insn_is_ret (gdbarch, amd64_insn_is_ret);
   set_gdbarch_insn_is_jump (gdbarch, amd64_insn_is_jump);
+
+  /* Single stepping.  */
+  set_gdbarch_software_single_step (gdbarch, i386_software_single_step);
 }
 
 
