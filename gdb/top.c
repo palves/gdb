@@ -673,10 +673,8 @@ gdb_readline (const char *prompt_arg)
   return result;
 }
 
-/* Variables which control command line editing and history
-   substitution.  These variables are given default values at the end
-   of this file.  */
-static int command_editing_p;
+/* Variables which control history substitution.  These variables are
+   given default values at the end of this file.  */
 
 /* NOTE 1999-04-29: This variable will be static again, once we modify
    gdb to use the event loop as the default command loop and we merge
@@ -1143,7 +1141,7 @@ command_line_input (const char *prompt_arg, int repeat, char *annotation_suffix)
 	{
 	  rl = (*deprecated_readline_hook) (prompt);
 	}
-      else if (command_editing_p && input_from_terminal_p ())
+      else if (async_command_editing_p && input_from_terminal_p ())
 	{
 	  rl = gdb_readline_wrapper (prompt);
 	}
@@ -1958,7 +1956,6 @@ init_main (void)
   async_annotation_suffix = "prompt";
 
   /* Set the important stuff up for command editing.  */
-  command_editing_p = 1;
   history_expansion_p = 0;
   write_history_p = 0;
 
