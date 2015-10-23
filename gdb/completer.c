@@ -658,11 +658,15 @@ void
 assert_not_mi (void)
 {
   struct ui_out *uiout;
+  struct interp *interp;
 
   if (dont_assert)
     return;
-  
-  uiout = interp_ui_out (top_level_interpreter ());
+
+  interp = top_level_interpreter ();
+  if (!interp->inited)
+    return;
+  uiout = interp_ui_out (interp);
 
   if (ui_out_is_mi_like_p (uiout))
     abort ();
