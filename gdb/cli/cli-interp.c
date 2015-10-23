@@ -248,7 +248,7 @@ cli_interpreter_resume (struct interp *self)
   gdb_stdtarg = cli->targ;
   gdb_stdtargerr = cli->targ;
 
-  gdb_setup_readline ();
+  gdb_setup_readline (self == top_level_interpreter ());
 
 #if 0
   if (stream != NULL)

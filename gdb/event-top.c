@@ -1273,17 +1273,16 @@ init_terminal (void)
    and hook up instream to the event loop.  */
 
 void
-gdb_setup_readline (void)
+gdb_setup_readline (int toplevel)
 {
-  {
-    extern void assert_not_mi (void);
-
-    assert_not_mi ();
-  }
   /* If the input stream is connected to a terminal, turn on
      editing.  */
-  if (ISATTY (instream))
+  if (toplevel && ISATTY (instream))
     {
+      extern void assert_not_mi (void);
+
+      assert_not_mi ();
+
       /* Tell gdb that we will be using the readline library.  This
 	 could be overwritten by a command in .gdbinit like 'set
 	 editing on' or 'off'.  */
@@ -1292,6 +1291,11 @@ gdb_setup_readline (void)
       /* When a character is detected on instream by select or poll,
 	 readline will be invoked via this callback function.  */
       call_readline = rl_callback_read_char_wrapper;
+
+      /* Tell readline to use the same input/output streams that gdb
+	 uses.  */
+      rl_instream = instream;
+      rl_outstream = current_terminal->outstream;
     }
   else
     {
@@ -1303,10 +1307,6 @@ gdb_setup_readline (void)
      complete line to gdb for processing; command_line_handler is the
      function that does this.  */
   input_handler = command_line_handler;
-
-  /* Tell readline to use the same input/output streams that gdb uses.  */
-  rl_instream = instream;
-  rl_outstream = current_terminal->outstream;
 
   /* Get a file descriptor for the input stream, so that we can
      register it with the event loop.  */
@@ -1341,7 +1341,13 @@ gdb_disable_readline (void)
   gdb_stdtargerr = NULL;
 #endif
 
-  gdb_rl_callback_handler_remove ();
+  if (async_command_editing_p)
+    {
+      extern void assert_not_mi (void);
+      assert_not_mi ();
+
+      gdb_rl_callback_handler_remove ();
+    }
   delete_file_handler (input_fd);
 }
 

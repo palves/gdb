@@ -1766,13 +1766,14 @@ filtered_printing_initialized (void)
 static void
 do_restore_page_info_cleanup (void *arg)
 {
-  set_readline_screen_size ();
+  if (async_command_editing_p)
+    set_readline_screen_size ();
   reinitialize_wrap_buffer ();
 }
 
 /* Provide cleanup for restoring the terminal size.  */
 
-struct cleanup *
+static struct cleanup *
 make_cleanup_restore_page_info (void)
 {
   struct cleanup *back_to;

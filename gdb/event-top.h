@@ -29,7 +29,7 @@ struct interp;
    FIXME: these should really go into top.h.  */
 
 extern void display_gdb_prompt (const char *new_prompt);
-void gdb_setup_readline (void);
+void gdb_setup_readline (int);
 void gdb_disable_readline (void);
 extern void async_init_signals (void);
 extern void set_async_editing_command (char *args, int from_tty,

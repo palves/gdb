@@ -68,7 +68,7 @@ extern void cli_on_command_error (void);
 static void *
 tui_init (struct interp *self, int top_level)
 {
-  gdb_setup_readline ();
+  gdb_setup_readline (top_level);
 
   tui_initialize_static_data ();
 
@@ -86,7 +86,7 @@ tui_resume (struct interp *self)
   struct ui_file *stream;
   struct tui_interp *tui = (struct tui_interp *) self;
 
-  gdb_setup_readline ();
+  gdb_setup_readline (self == top_level_interpreter ());
 
   /* The else here is necessary otherwise we'd call tui_setup_io twice
      which would be wrong as we'd save the new state as old state to
