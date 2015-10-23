@@ -143,20 +143,6 @@ static struct async_signal_handler *sigtstp_token;
 #endif
 static struct async_signal_handler *async_sigterm_token;
 
-/* Structure to save a partially entered command.  This is used when
-   the user types '\' at the end of a command line.  This is necessary
-   because each line of input is handled by a different call to
-   command_line_handler, and normally there is no state retained
-   between different calls.  */
-static int more_to_come = 0;
-
-struct readline_input_state
-  {
-    char *linebuffer;
-    char *linebuffer_ptr;
-  }
-readline_input_state;
-
 /* This hook is called by rl_callback_read_char_wrapper after each
    character is processed.  */
 void (*after_char_processing_hook) (void);
@@ -408,6 +394,46 @@ top_level_prompt (void)
   return composed_prompt;
 }
 
+struct line_buffer
+{
+  char *buffer;
+  unsigned length;
+};
+
+/* Structure to save a partially entered command.  This is used when
+   the user types '\' at the end of a command line.  This is necessary
+   because each line of input is handled by a different call to
+   command_line_handler, and normally there is no state retained
+   between different calls.  */
+struct readline_input_state
+{
+  char *linebuffer;
+  char *linebuffer_ptr;
+};
+
+struct terminal
+{
+  int input_fd;
+  FILE *instream;
+  FILE *outstream;
+
+  struct line_buffer line_buffer;
+
+  int more_to_come;
+
+  struct readline_input_state readline_input_state;
+
+  /* Output channels */
+  struct ui_file *out;
+  struct ui_file *err;
+
+  struct readline_state readline_state;
+};
+
+struct terminal *current_terminal;
+
+extern void switch_to_terminal (struct terminal *terminal);
+
 /* When there is an event ready on the stdin file desriptor, instead
    of calling readline directly throught the callback function, or
    instead of calling gdb_readline2, give gdb a chance to detect
@@ -415,6 +441,10 @@ top_level_prompt (void)
 void
 stdin_event_handler (int error, gdb_client_data client_data)
 {
+  struct terminal *terminal = (struct terminal *) client_data;
+
+  switch_to_terminal (terminal);
+
   if (error)
     {
       printf_unfiltered (_("error detected on stdin\n"));
@@ -450,7 +480,7 @@ async_enable_stdin (void)
     }
 }
 
-/* Disable reads from stdin (the console) marking the command as
+/* Disable reads from stdin (the terminal) marking the command as
    synchronous.  */
 
 void
@@ -497,6 +527,69 @@ command_handler (char *command)
   do_cleanups (stat_chain);
 }
 
+#include "cli-out.h"
+
+/* The readline streams we interact with.  These are supposedly
+   private to readline, but I'm seeing no way to flip them without
+   losing line state, with a public interface.  */
+extern FILE *_rl_in_stream, *_rl_out_stream;
+
+void
+switch_to_terminal (struct terminal *terminal)
+{
+  if (current_terminal == terminal)
+    return;
+
+  rl_save_state (&current_terminal->readline_state);
+
+  input_fd = terminal->input_fd;
+  instream = terminal->instream;
+
+  gdb_stdout = terminal->out;
+  gdb_stderr = terminal->err;
+
+  /* HACK.  We should really do all this at the interpreter level.  */
+  current_uiout = cli_out_new (gdb_stdout);
+  
+  rl_restore_state (&terminal->readline_state);
+
+  /* Tell readline to use the same input stream that gdb uses.  */
+  rl_instream = instream;
+  rl_outstream = terminal->outstream;
+
+  /* Must do these directly instead of waiting for
+     rl_callback_handler_install to them up on next prompt display,
+     which would be too late -- we need to echo the just-pressed key
+     to _rl_out_stream.  */
+  _rl_in_stream = instream;
+  _rl_out_stream = terminal->outstream;
+
+  gdb_assert (instream == rl_instream);
+
+  current_terminal = terminal;
+}
+
+typedef struct terminal *terminal_p;
+
+DEF_VEC_P(terminal_p);
+
+static VEC(terminal_p) *terminals;
+
+#if 0
+static struct terminal *
+get_terminal (int fd)
+{
+  struct terminal *c;
+  int ix;
+
+  for (ix = 0; VEC_iterate (terminal_p, terminals, ix, c); ++ix)
+    if (c->input_fd == fd)
+      return c;
+
+  gdb_assert_not_reached ("unknown terminal descriptor\n");
+}
+#endif
+
 /* Handle a complete line of input.  This is called by the callback
    mechanism within the readline library.  Deal with incomplete
    commands as well, by saving the partial input in a global
@@ -509,8 +602,10 @@ command_handler (char *command)
 static void
 command_line_handler (char *rl)
 {
-  static char *linebuffer = 0;
-  static unsigned linelength = 0;
+  struct terminal *terminal = current_terminal;
+  struct line_buffer *line_buffer = &terminal->line_buffer;
+  struct readline_input_state *readline_input_state
+    = &terminal->readline_input_state;
   char *p;
   char *p1;
   char *nline;
@@ -523,21 +618,21 @@ command_line_handler (char *rl)
       printf_unfiltered (("\n"));
     }
 
-  if (linebuffer == 0)
+  if (line_buffer->buffer == NULL)
     {
-      linelength = 80;
-      linebuffer = (char *) xmalloc (linelength);
-      linebuffer[0] = '\0';
+      line_buffer->length = 80;
+      line_buffer->buffer = (char *) xmalloc (line_buffer->length);
+      line_buffer->buffer[0] = '\0';
     }
 
-  p = linebuffer;
+  p = line_buffer->buffer;
 
-  if (more_to_come)
+  if (terminal->more_to_come)
     {
-      strcpy (linebuffer, readline_input_state.linebuffer);
-      p = readline_input_state.linebuffer_ptr;
-      xfree (readline_input_state.linebuffer);
-      more_to_come = 0;
+      strcpy (line_buffer->buffer, readline_input_state->linebuffer);
+      p = readline_input_state->linebuffer_ptr;
+      xfree (readline_input_state->linebuffer);
+      terminal->more_to_come = 0;
     }
 
 #ifdef STOP_SIGNAL
@@ -562,12 +657,12 @@ command_line_handler (char *rl)
       command_handler (0);
       return;			/* Lint.  */
     }
-  if (strlen (rl) + 1 + (p - linebuffer) > linelength)
+  if (strlen (rl) + 1 + (p - line_buffer->buffer) > line_buffer->length)
     {
-      linelength = strlen (rl) + 1 + (p - linebuffer);
-      nline = (char *) xrealloc (linebuffer, linelength);
-      p += nline - linebuffer;
-      linebuffer = nline;
+      line_buffer->length = strlen (rl) + 1 + (p - line_buffer->buffer);
+      nline = (char *) xrealloc (line_buffer->buffer, line_buffer->length);
+      p += nline - line_buffer->buffer;
+      line_buffer->buffer = nline;
     }
   p1 = rl;
   /* Copy line.  Don't copy null at end.  (Leaves line alone
@@ -577,18 +672,18 @@ command_line_handler (char *rl)
 
   xfree (rl);			/* Allocated in readline.  */
 
-  if (p > linebuffer && *(p - 1) == '\\')
+  if (p > line_buffer->buffer && *(p - 1) == '\\')
     {
       *p = '\0';
       p--;			/* Put on top of '\'.  */
 
-      readline_input_state.linebuffer = xstrdup (linebuffer);
-      readline_input_state.linebuffer_ptr = p;
+      readline_input_state->linebuffer = xstrdup (line_buffer->buffer);
+      readline_input_state->linebuffer_ptr = p;
 
       /* We will not invoke a execute_command if there is more
 	 input expected to complete the command.  So, we need to
 	 print an empty prompt here.  */
-      more_to_come = 1;
+      terminal->more_to_come = 1;
       display_gdb_prompt ("");
       return;
     }
@@ -600,15 +695,15 @@ command_line_handler (char *rl)
 
 #define SERVER_COMMAND_LENGTH 7
   server_command =
-    (p - linebuffer > SERVER_COMMAND_LENGTH)
-    && strncmp (linebuffer, "server ", SERVER_COMMAND_LENGTH) == 0;
+    (p - line_buffer->buffer > SERVER_COMMAND_LENGTH)
+    && strncmp (line_buffer->buffer, "server ", SERVER_COMMAND_LENGTH) == 0;
   if (server_command)
     {
       /* Note that we don't set `line'.  Between this and the check in
          dont_repeat, this insures that repeating will still do the
          right thing.  */
       *p = '\0';
-      command_handler (linebuffer + SERVER_COMMAND_LENGTH);
+      command_handler (line_buffer->buffer + SERVER_COMMAND_LENGTH);
       display_gdb_prompt (0);
       return;
     }
@@ -621,7 +716,7 @@ command_line_handler (char *rl)
       int expanded;
 
       *p = '\0';		/* Insert null now.  */
-      expanded = history_expand (linebuffer, &history_value);
+      expanded = history_expand (line_buffer->buffer, &history_value);
       if (expanded)
 	{
 	  /* Print the changes.  */
@@ -633,27 +728,27 @@ command_line_handler (char *rl)
 	      xfree (history_value);
 	      return;
 	    }
-	  if (strlen (history_value) > linelength)
+	  if (strlen (history_value) > line_buffer->length)
 	    {
-	      linelength = strlen (history_value) + 1;
-	      linebuffer = (char *) xrealloc (linebuffer, linelength);
+	      line_buffer->length = strlen (history_value) + 1;
+	      line_buffer->buffer = (char *) xrealloc (line_buffer->buffer, line_buffer->length);
 	    }
-	  strcpy (linebuffer, history_value);
-	  p = linebuffer + strlen (linebuffer);
+	  strcpy (line_buffer->buffer, history_value);
+	  p = line_buffer->buffer + strlen (line_buffer->buffer);
 	}
       xfree (history_value);
     }
 
   /* If we just got an empty line, and that is supposed to repeat the
      previous command, return the value in the global buffer.  */
-  if (repeat && p == linebuffer && *p != '\\')
+  if (repeat && p == line_buffer->buffer && *p != '\\')
     {
       command_handler (saved_command_line);
       display_gdb_prompt (0);
       return;
     }
 
-  for (p1 = linebuffer; *p1 == ' ' || *p1 == '\t'; p1++);
+  for (p1 = line_buffer->buffer; *p1 == ' ' || *p1 == '\t'; p1++);
   if (repeat && !*p1)
     {
       command_handler (saved_command_line);
@@ -664,8 +759,8 @@ command_line_handler (char *rl)
   *p = 0;
 
   /* Add line to history if appropriate.  */
-  if (*linebuffer && input_from_terminal_p ())
-    gdb_add_history (linebuffer);
+  if (*line_buffer->buffer && input_from_terminal_p ())
+    gdb_add_history (line_buffer->buffer);
 
   /* Note: lines consisting solely of comments are added to the command
      history.  This is useful when you type a command, and then
@@ -679,14 +774,14 @@ command_line_handler (char *rl)
   /* Save into global buffer if appropriate.  */
   if (repeat)
     {
-      if (linelength > saved_command_line_size)
+      if (line_buffer->length > saved_command_line_size)
 	{
-	  saved_command_line
-	    = (char *) xrealloc (saved_command_line, linelength);
-	  saved_command_line_size = linelength;
+	  saved_command_line = (char *) xrealloc (saved_command_line,
+						  line_buffer->length);
+	  saved_command_line_size = line_buffer->length;
 	}
-      strcpy (saved_command_line, linebuffer);
-      if (!more_to_come)
+      strcpy (saved_command_line, line_buffer->buffer);
+      if (!terminal->more_to_come)
 	{
 	  command_handler (saved_command_line);
 	  display_gdb_prompt (0);
@@ -694,7 +789,7 @@ command_line_handler (char *rl)
       return;
     }
 
-  command_handler (linebuffer);
+  command_handler (line_buffer->buffer);
   display_gdb_prompt (0);
   return;
 }
@@ -1026,6 +1121,7 @@ set_async_editing_command (char *args, int from_tty,
 /* Set things up for readline to be invoked via the alternate
    interface, i.e. via a callback function (rl_callback_read_char),
    and hook up instream to the event loop.  */
+
 void
 gdb_setup_readline (void)
 {
@@ -1058,18 +1154,35 @@ gdb_setup_readline (void)
       async_command_editing_p = 0;
       call_readline = gdb_readline2;
     }
-  
+
   /* When readline has read an end-of-line character, it passes the
      complete line to gdb for processing; command_line_handler is the
      function that does this.  */
   input_handler = command_line_handler;
-      
+
   /* Tell readline to use the same input stream that gdb uses.  */
   rl_instream = instream;
 
   /* Get a file descriptor for the input stream, so that we can
      register it with the event loop.  */
   input_fd = fileno (instream);
+
+  /* XXX hack for now.  */
+  if (current_terminal == NULL)
+    {
+      struct terminal *terminal;
+
+      terminal = xcalloc (1, sizeof *terminal);
+
+      terminal->input_fd = input_fd;
+      terminal->instream = instream;
+      terminal->outstream = stdout;
+      terminal->out = gdb_stdout;
+      terminal->err = gdb_stderr;
+
+      current_terminal = terminal;
+      rl_save_state (&current_terminal->readline_state);
+    }
 
   /* Now we need to create the event sources for the input file
      descriptor.  */
@@ -1078,7 +1191,7 @@ gdb_setup_readline (void)
      target program (inferior), but that must be registered only when
      it actually exists (I.e. after we say 'run' or after we connect
      to a remote target.  */
-  add_file_handler (input_fd, stdin_event_handler, 0);
+  add_file_handler (input_fd, stdin_event_handler, current_terminal);
 }
 
 /* Disable command input through the standard CLI channels.  Used in
@@ -1102,4 +1215,91 @@ gdb_disable_readline (void)
 
   gdb_rl_callback_handler_remove ();
   delete_file_handler (input_fd);
+}
+
+/* Scratch area where 'set terminal-tty' will store user-provided value.
+   We'll immediate copy it into per-interpreter storage.  */
+
+static char *terminal_tty_scratch;
+
+static void
+set_terminal_tty_command (char *args, int from_tty,
+			 struct cmd_list_element *c)
+{
+  new_tty (terminal_tty_scratch);
+}
+
+static void
+show_terminal_tty_command (struct ui_file *file, int from_tty,
+			  struct cmd_list_element *c, const char *value)
+{
+  if (terminal_tty_scratch == NULL)
+    terminal_tty_scratch = "";
+  fprintf_filtered (gdb_stdout,
+		    _("Terminal for the CLI terminal is \"%s\".\n"),
+		    terminal_tty_scratch);
+}
+
+static void
+new_console_command (char *args, int from_tty)
+{
+  struct terminal *terminal;
+  struct terminal *prev_terminal = current_terminal;
+  FILE *stream;
+  int tty;
+
+  /* Now open the specified new terminal.  */
+  tty = open (args, O_RDWR | O_NOCTTY);
+  if (tty < 0)
+    perror_with_name  (_("opening terminal failed"));
+
+  stream = fdopen (tty, "w+");
+
+  terminal = xcalloc (1, sizeof *terminal);
+
+  terminal->out = stdio_fileopen (stream);
+  /* FIXME: misses disabling buffering.  */
+  terminal->err = stdio_fileopen (stream);
+  //  terminal->log = terminal->err;
+
+  terminal->input_fd = tty;
+  terminal->instream = stream;
+  terminal->outstream = stream;
+
+  /* Hack.  Otherwise, _rl_keymap is left NULL.  */
+  terminal->readline_state = current_terminal->readline_state;
+
+  switch_to_terminal (terminal);
+
+  /* Make sure Readline has initialized its terminal settings.  */
+  rl_reset_terminal (NULL);
+
+  add_file_handler (tty, stdin_event_handler, terminal);
+
+  display_gdb_prompt (NULL);
+
+  /* Switch back to the previous readline, before returning to it
+     (we're inside a readline callback.)  */
+  switch_to_terminal (prev_terminal);
+}
+
+extern void _initialize_event_top (void);
+
+void
+_initialize_event_top (void)
+{
+  struct cmd_list_element *c = NULL;
+
+  /* Add the filename of the terminal connected to inferior I/O.  */
+  add_setshow_filename_cmd ("console-tty", class_run,
+			    &terminal_tty_scratch, _("\
+Set terminal used by GDB's CLI."), _("\
+Show terminal for GDB's CLI."), _("\
+Usage: set console-tty /dev/pts/1"),
+			    set_terminal_tty_command,
+			    show_terminal_tty_command,
+			    &setlist, &showlist);
+
+  add_com ("new-console", class_support, new_console_command,
+	   _("Create new console."));
 }

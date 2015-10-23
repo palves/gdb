@@ -697,17 +697,18 @@ check_syscall (const char *msg, int result)
 #endif
 
 void
-new_tty (void)
+new_tty (const char *tty_name)
 {
   int tty;
 
-  if (inferior_thisrun_terminal == 0)
+  if (tty_name == NULL)
     return;
+
 #if !defined(__GO32__) && !defined(_WIN32)
 #ifdef TIOCNOTTY
-  /* Disconnect the child process from our controlling terminal.  On some
-     systems (SVR4 for example), this may cause a SIGTTOU, so temporarily
-     ignore SIGTTOU.  */
+  /* Disconnect from the current controlling terminal.  On some
+     systems (SVR4 for example), this may cause a SIGTTOU, so
+     temporarily ignore SIGTTOU.  */
   tty = open ("/dev/tty", O_RDWR);
   if (tty > 0)
     {
@@ -721,8 +722,8 @@ new_tty (void)
 #endif
 
   /* Now open the specified new terminal.  */
-  tty = open (inferior_thisrun_terminal, O_RDWR | O_NOCTTY);
-  check_syscall (inferior_thisrun_terminal, tty);
+  tty = open (tty_name, O_RDWR | O_NOCTTY);
+  check_syscall (tty_name, tty);
 
   /* Avoid use of dup2; doesn't exist on all systems.  */
   if (tty != 0)

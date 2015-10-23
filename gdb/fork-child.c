@@ -331,7 +331,7 @@ fork_inferior (char *exec_file_arg, char *allargs, char **env,
       /* Ask the tty subsystem to switch to the one we specified
          earlier (or to share the current terminal, if none was
          specified).  */
-      new_tty ();
+      new_tty (inferior_io_terminal);
 
       /* Changing the signal handlers for the inferior after
          a vfork can also change them for the superior, so we don't mess

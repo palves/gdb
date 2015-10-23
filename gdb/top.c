@@ -1620,13 +1620,13 @@ input_from_terminal_p (void)
   if (batch_flag)
     return 0;
 
-  if (gdb_has_a_terminal () && instream == stdin)
-    return 1;
-
   /* If INSTREAM is unset, and we are not in a user command, we
      must be in Insight.  That's like having a terminal, for our
      purposes.  */
   if (instream == NULL && !in_user_command)
+    return 1;
+
+  if (gdb_has_a_terminal () && instream != NULL && ISATTY (instream))
     return 1;
 
   return 0;

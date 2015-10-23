@@ -80,7 +80,7 @@ struct inferior;
 
 extern void new_tty_prefork (const char *);
 
-extern void new_tty (void);
+extern void new_tty (const char *tty_name);
 
 extern void new_tty_postfork (void);
 

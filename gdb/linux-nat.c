@@ -4652,6 +4652,9 @@ linux_nat_terminal_inferior (struct target_ops *self)
    We leave target_terminal_ours_for_output alone, leaving it to
    child_terminal_ours_for_output.  */
 
+struct terminal;
+extern struct terminal *current_terminal;
+
 static void
 linux_nat_terminal_ours (struct target_ops *self)
 {
@@ -4664,7 +4667,7 @@ linux_nat_terminal_ours (struct target_ops *self)
     return;
 
   clear_sigint_trap ();
-  add_file_handler (input_fd, stdin_event_handler, 0);
+  add_file_handler (input_fd, stdin_event_handler, current_terminal);
   async_terminal_is_ours = 1;
 }
 
