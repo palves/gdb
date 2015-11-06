@@ -660,6 +660,8 @@ assert_not_mi (void)
   struct ui_out *uiout;
   struct interp *interp;
 
+  return;
+
   if (dont_assert)
     return;
 
