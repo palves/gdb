@@ -1420,6 +1420,8 @@ create_console_thread (struct terminal *term)
   pthread_t child_thread;
   int res;
 
+  return 0;
+
   res = pthread_create (&child_thread, NULL, console_thread_entry, term);
 
   return res;

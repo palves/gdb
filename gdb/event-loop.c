@@ -271,16 +271,15 @@ static int update_wait_timeout (void);
 static int poll_timers (void);
 
 
-static struct event_loop event_loop;
-static struct event_loop *current_event_loop = &event_loop;
+static struct event_loop *current_event_loop;
 
 static struct event_loop *
 get_event_loop (void)
 {
-  if (current_terminal->event_loop == NULL)
-    current_terminal->event_loop = XCNEW (struct event_loop);
+  if (current_event_loop == NULL)
+    current_event_loop = XCNEW (struct event_loop);
 
-  return current_terminal->event_loop;
+  return current_event_loop;
 }
 
 /* Process one high level event.  If nothing is ready at this time,
