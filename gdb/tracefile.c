@@ -410,14 +410,14 @@ tracefile_fetch_registers (struct regcache *regcache, int regno)
       struct tracepoint *tp = get_tracepoint (get_tracepoint_number ());
       gdb_byte *regs;
 
-      if (tp && tp->base.loc)
+      if (tp && tp->loc)
 	{
 	  /* But don't try to guess if tracepoint is multi-location...  */
-	  if (tp->base.loc->next)
+	  if (tp->loc->next)
 	    {
 	      warning (_("Tracepoint %d has multiple "
 			 "locations, cannot infer $pc"),
-		       tp->base.number);
+		       tp->number);
 	      return;
 	    }
 	  /* ... or does while-stepping.  */
@@ -425,14 +425,14 @@ tracefile_fetch_registers (struct regcache *regcache, int regno)
 	    {
 	      warning (_("Tracepoint %d does while-stepping, "
 			 "cannot infer $pc"),
-		       tp->base.number);
+		       tp->number);
 	      return;
 	    }
 
 	  regs = (gdb_byte *) alloca (register_size (gdbarch, pc_regno));
 	  store_unsigned_integer (regs, register_size (gdbarch, pc_regno),
 				  gdbarch_byte_order (gdbarch),
-				  tp->base.loc->address);
+				  tp->loc->address);
 	  regcache_raw_supply (regcache, pc_regno, regs);
 	}
     }

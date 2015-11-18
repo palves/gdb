@@ -1727,7 +1727,7 @@ is_watchpoint (const struct breakpoint *bpt)
 static int
 watchpoint_in_thread_scope (struct watchpoint *b)
 {
-  return (b->base.pspace == current_program_space
+  return (b->pspace == current_program_space
 	  && (ptid_equal (b->watchpoint_thread, null_ptid)
 	      || (ptid_equal (inferior_ptid, b->watchpoint_thread)
 		  && !is_executing (inferior_ptid))));
@@ -1739,17 +1739,15 @@ watchpoint_in_thread_scope (struct watchpoint *b)
 static void
 watchpoint_del_at_next_stop (struct watchpoint *w)
 {
-  struct breakpoint *b = &w->base;
-
-  if (b->related_breakpoint != b)
+  if (w->related_breakpoint != w)
     {
-      gdb_assert (b->related_breakpoint->type == bp_watchpoint_scope);
-      gdb_assert (b->related_breakpoint->related_breakpoint == b);
-      b->related_breakpoint->disposition = disp_del_at_next_stop;
-      b->related_breakpoint->related_breakpoint = b->related_breakpoint;
-      b->related_breakpoint = b;
+      gdb_assert (w->related_breakpoint->type == bp_watchpoint_scope);
+      gdb_assert (w->related_breakpoint->related_breakpoint == w);
+      w->related_breakpoint->disposition = disp_del_at_next_stop;
+      w->related_breakpoint->related_breakpoint = w->related_breakpoint;
+      w->related_breakpoint = w;
     }
-  b->disposition = disp_del_at_next_stop;
+  w->disposition = disp_del_at_next_stop;
 }
 
 /* Extract a bitfield value from value VAL using the bit parameters contained in
@@ -1870,7 +1868,7 @@ update_watchpoint (struct watchpoint *b, int reparse)
   if (!watchpoint_in_thread_scope (b))
     return;
 
-  if (b->base.disposition == disp_del_at_next_stop)
+  if (b->disposition == disp_del_at_next_stop)
     return;
  
   frame_saved = 0;
@@ -1908,7 +1906,7 @@ update_watchpoint (struct watchpoint *b, int reparse)
   /* We don't free locations.  They are stored in the bp_location array
      and update_global_location_list will eventually delete them and
      remove breakpoints if needed.  */
-  b->base.loc = NULL;
+  b->loc = NULL;
 
   if (within_current_scope && reparse)
     {
@@ -1932,7 +1930,7 @@ update_watchpoint (struct watchpoint *b, int reparse)
       /* Note that unlike with breakpoints, the watchpoint's condition
 	 expression is stored in the breakpoint object, not in the
 	 locations (re)created below.  */
-      if (b->base.cond_string != NULL)
+      if (b->cond_string != NULL)
 	{
 	  if (b->cond_exp != NULL)
 	    {
@@ -1940,7 +1938,7 @@ update_watchpoint (struct watchpoint *b, int reparse)
 	      b->cond_exp = NULL;
 	    }
 
-	  s = b->base.cond_string;
+	  s = b->cond_string;
 	  b->cond_exp = parse_exp_1 (&s, 0, b->cond_exp_valid_block, 0);
 	}
     }
@@ -1957,8 +1955,8 @@ update_watchpoint (struct watchpoint *b, int reparse)
 	 the target gains execution, through breakpoint_re_set.  */
       if (!can_use_hw_watchpoints)
 	{
-	  if (b->base.ops->works_in_software_mode (&b->base))
-	    b->base.type = bp_watchpoint;
+	  if (b->ops->works_in_software_mode (b))
+	    b->type = bp_watchpoint;
 	  else
 	    error (_("Can't set read/access watchpoint when "
 		     "hardware watchpoints are disabled."));
@@ -1978,7 +1976,7 @@ update_watchpoint (struct watchpoint *b, int reparse)
 	 happens, the code that reports it updates b->val directly.
 	 We don't keep track of the memory value for masked
 	 watchpoints.  */
-      if (!b->val_valid && !is_masked_watchpoint (&b->base))
+      if (!b->val_valid && !is_masked_watchpoint (b))
 	{
 	  if (b->val_bitsize != 0)
 	    {
@@ -2041,13 +2039,13 @@ update_watchpoint (struct watchpoint *b, int reparse)
 		    }
 
 		  type = hw_write;
-		  if (b->base.type == bp_read_watchpoint)
+		  if (b->type == bp_read_watchpoint)
 		    type = hw_read;
-		  else if (b->base.type == bp_access_watchpoint)
+		  else if (b->type == bp_access_watchpoint)
 		    type = hw_access;
 
-		  loc = allocate_bp_location (&b->base);
-		  for (tmp = &(b->base.loc); *tmp != NULL; tmp = &((*tmp)->next))
+		  loc = allocate_bp_location (b);
+		  for (tmp = &(b->loc); *tmp != NULL; tmp = &((*tmp)->next))
 		    ;
 		  *tmp = loc;
 		  loc->gdbarch = get_type_arch (value_type (v));
@@ -2097,7 +2095,7 @@ update_watchpoint (struct watchpoint *b, int reparse)
 	      /* If this is a software watchpoint, we try to turn it
 		 to a hardware one -- count resources as if B was of
 		 hardware watchpoint type.  */
-	      type = b->base.type;
+	      type = b->type;
 	      if (type == bp_watchpoint)
 		type = bp_hardware_watchpoint;
 
@@ -2108,16 +2106,16 @@ update_watchpoint (struct watchpoint *b, int reparse)
 		 manually.  */
 
 	      /* Count resources used by all watchpoints except B.  */
-	      i = hw_watchpoint_used_count_others (&b->base, type, &other_type_used);
+	      i = hw_watchpoint_used_count_others (b, type, &other_type_used);
 
 	      /* Add in the resources needed for B.  */
-	      i += hw_watchpoint_use_count (&b->base);
+	      i += hw_watchpoint_use_count (b);
 
 	      target_resources_ok
 		= target_can_use_hardware_watchpoint (type, i, other_type_used);
 	      if (target_resources_ok <= 0)
 		{
-		  int sw_mode = b->base.ops->works_in_software_mode (&b->base);
+		  int sw_mode = b->ops->works_in_software_mode (b);
 
 		  if (target_resources_ok == 0 && !sw_mode)
 		    error (_("Target does not support this type of "
@@ -2127,7 +2125,7 @@ update_watchpoint (struct watchpoint *b, int reparse)
 			     "resources for this watchpoint."));
 
 		  /* Downgrade to software watchpoint.  */
-		  b->base.type = bp_watchpoint;
+		  b->type = bp_watchpoint;
 		}
 	      else
 		{
@@ -2135,10 +2133,10 @@ update_watchpoint (struct watchpoint *b, int reparse)
 		     found we have enough resources to turn it to a
 		     hardware watchpoint.  Otherwise, this is a
 		     nop.  */
-		  b->base.type = type;
+		  b->type = type;
 		}
 	    }
-	  else if (!b->base.ops->works_in_software_mode (&b->base))
+	  else if (!b->ops->works_in_software_mode (b))
 	    {
 	      if (!can_use_hw_watchpoints)
 		error (_("Can't set read/access watchpoint when "
@@ -2148,11 +2146,11 @@ update_watchpoint (struct watchpoint *b, int reparse)
 			 "read/access watchpoint."));
 	    }
 	  else
-	    b->base.type = bp_watchpoint;
+	    b->type = bp_watchpoint;
 
-	  loc_type = (b->base.type == bp_watchpoint? bp_loc_other
+	  loc_type = (b->type == bp_watchpoint? bp_loc_other
 		      : bp_loc_hardware_watchpoint);
-	  for (bl = b->base.loc; bl; bl = bl->next)
+	  for (bl = b->loc; bl; bl = bl->next)
 	    bl->loc_type = loc_type;
 	}
 
@@ -2167,15 +2165,15 @@ update_watchpoint (struct watchpoint *b, int reparse)
 	 above left it without any location set up.  But,
 	 bpstat_stop_status requires a location to be able to report
 	 stops, so make sure there's at least a dummy one.  */
-      if (b->base.type == bp_watchpoint && b->base.loc == NULL)
-	software_watchpoint_add_no_memory_location (&b->base, frame_pspace);
+      if (b->type == bp_watchpoint && b->loc == NULL)
+	software_watchpoint_add_no_memory_location (b, frame_pspace);
     }
   else if (!within_current_scope)
     {
       printf_filtered (_("\
 Watchpoint %d deleted because the program has left the block\n\
 in which its expression is valid.\n"),
-		       b->base.number);
+		       b->number);
       watchpoint_del_at_next_stop (b);
     }
 
@@ -5165,7 +5163,7 @@ watchpoint_check (void *p)
       struct value *mark;
       struct value *new_val;
 
-      if (is_masked_watchpoint (&b->base))
+      if (is_masked_watchpoint (b))
 	/* Since we don't know the exact trigger address (from
 	   stopped_data_address), just tell the user we've triggered
 	   a mask watchpoint.  */
@@ -5222,13 +5220,13 @@ watchpoint_check (void *p)
 	ui_out_field_string
 	  (uiout, "reason", async_reason_lookup (EXEC_ASYNC_WATCHPOINT_SCOPE));
       ui_out_text (uiout, "\nWatchpoint ");
-      ui_out_field_int (uiout, "wpnum", b->base.number);
+      ui_out_field_int (uiout, "wpnum", b->number);
       ui_out_text (uiout,
 		   " deleted because the program has left the block in\n\
 which its expression is valid.\n");     
 
       /* Make sure the watchpoint's commands aren't executed.  */
-      decref_counted_command_line (&b->base.commands);
+      decref_counted_command_line (&b->commands);
       watchpoint_del_at_next_stop (b);
 
       return WP_DELETED;
@@ -5270,7 +5268,7 @@ bpstat_check_watchpoint (bpstat bs)
     {
       int must_check_value = 0;
       
-      if (b->base.type == bp_watchpoint)
+      if (b->type == bp_watchpoint)
 	/* For a software watchpoint, we must always check the
 	   watched value.  */
 	must_check_value = 1;
@@ -5280,7 +5278,7 @@ bpstat_check_watchpoint (bpstat bs)
 	   this watchpoint.  */
 	must_check_value = 1;
       else if (b->watchpoint_triggered == watch_triggered_unknown
-	       && b->base.type == bp_hardware_watchpoint)
+	       && b->type == bp_hardware_watchpoint)
 	/* We were stopped by a hardware watchpoint, but the target could
 	   not report the data address.  We must check the watchpoint's
 	   value.  Access and read watchpoints are out of luck; without
@@ -5291,7 +5289,7 @@ bpstat_check_watchpoint (bpstat bs)
 	{
 	  char *message
 	    = xstrprintf ("Error evaluating expression for watchpoint %d\n",
-			  b->base.number);
+			  b->number);
 	  struct cleanup *cleanups = make_cleanup (xfree, message);
 	  int e = catch_errors (watchpoint_check, bs, message,
 				RETURN_MASK_ALL);
@@ -5308,7 +5306,7 @@ bpstat_check_watchpoint (bpstat bs)
 	      bs->stop = 0;
 	      break;
 	    case WP_VALUE_CHANGED:
-	      if (b->base.type == bp_read_watchpoint)
+	      if (b->type == bp_read_watchpoint)
 		{
 		  /* There are two cases to consider here:
 
@@ -5379,8 +5377,8 @@ bpstat_check_watchpoint (bpstat bs)
 		}
 	      break;
 	    case WP_VALUE_NOT_CHANGED:
-	      if (b->base.type == bp_hardware_watchpoint
-		  || b->base.type == bp_watchpoint)
+	      if (b->type == bp_hardware_watchpoint
+		  || b->type == bp_watchpoint)
 		{
 		  /* Don't stop: write watchpoints shouldn't fire if
 		     the value hasn't changed.  */
@@ -5393,7 +5391,7 @@ bpstat_check_watchpoint (bpstat bs)
 	      /* Can't happen.  */
 	    case 0:
 	      /* Error from catch_errors.  */
-	      printf_filtered (_("Watchpoint %d deleted.\n"), b->base.number);
+	      printf_filtered (_("Watchpoint %d deleted.\n"), b->number);
 	      watchpoint_del_at_next_stop (b);
 	      /* We've already printed what needs to be printed.  */
 	      bs->print_it = print_it_done;
@@ -8039,11 +8037,8 @@ disable_breakpoints_in_freed_objfile (struct objfile *objfile)
    breakpoint is really of this type iff its ops pointer points to
    CATCH_FORK_BREAKPOINT_OPS.  */
 
-struct fork_catchpoint
+struct fork_catchpoint : public breakpoint
 {
-  /* The base class.  */
-  struct breakpoint base;
-
   /* Process id of a child process whose forking triggered this
      catchpoint.  This field is only valid immediately after this
      catchpoint has triggered.  */
@@ -8289,11 +8284,8 @@ static struct breakpoint_ops catch_vfork_breakpoint_ops;
    really of this type iff its ops pointer points to
    CATCH_SOLIB_BREAKPOINT_OPS.  */
 
-struct solib_catchpoint
+struct solib_catchpoint : public breakpoint
 {
-  /* The base class.  */
-  struct breakpoint base;
-
   /* True for "catch load", false for "catch unload".  */
   unsigned char is_load;
 
@@ -8349,7 +8341,7 @@ breakpoint_hit_catch_solib (const struct bp_location *bl,
     if (other->type != bp_shlib_event)
       continue;
 
-    if (self->base.pspace != NULL && other->pspace != self->base.pspace)
+    if (self->pspace != NULL && other->pspace != self->pspace)
       continue;
 
     for (other_bl = other->loc; other_bl != NULL; other_bl = other_bl->next)
@@ -8523,13 +8515,12 @@ add_solib_catchpoint (char *arg, int is_load, int is_temp, int enabled)
     }
 
   c->is_load = is_load;
-  init_catchpoint (&c->base, gdbarch, is_temp, NULL,
-		   &catch_solib_breakpoint_ops);
+  init_catchpoint (c, gdbarch, is_temp, NULL, &catch_solib_breakpoint_ops);
 
-  c->base.enable_state = enabled ? bp_enabled : bp_disabled;
+  c->enable_state = enabled ? bp_enabled : bp_disabled;
 
   discard_cleanups (cleanup);
-  install_breakpoint (0, &c->base, 1);
+  install_breakpoint (0, c, 1);
 }
 
 /* A helper function that does all the work for "catch load" and
@@ -8605,11 +8596,11 @@ create_fork_vfork_event_catchpoint (struct gdbarch *gdbarch,
 {
   struct fork_catchpoint *c = XNEW (struct fork_catchpoint);
 
-  init_catchpoint (&c->base, gdbarch, tempflag, cond_string, ops);
+  init_catchpoint (c, gdbarch, tempflag, cond_string, ops);
 
   c->forked_inferior_pid = null_ptid;
 
-  install_breakpoint (0, &c->base, 1);
+  install_breakpoint (0, c, 1);
 }
 
 /* Exec catchpoints.  */
@@ -8620,11 +8611,8 @@ create_fork_vfork_event_catchpoint (struct gdbarch *gdbarch,
    really of this type iff its ops pointer points to
    CATCH_EXEC_BREAKPOINT_OPS.  */
 
-struct exec_catchpoint
+struct exec_catchpoint : public breakpoint
 {
-  /* The base class.  */
-  struct breakpoint base;
-
   /* Filename of a program whose exec triggered this catchpoint.
      This field is only valid immediately after this catchpoint has
      triggered.  */
@@ -9356,12 +9344,7 @@ create_breakpoint_sal (struct gdbarch *gdbarch,
   struct cleanup *old_chain;
 
   if (is_tracepoint_type (type))
-    {
-      struct tracepoint *t;
-
-      t = XCNEW (struct tracepoint);
-      b = &t->base;
-    }
+    b = XCNEW (struct tracepoint);
   else
     b = XNEW (struct breakpoint);
 
@@ -9868,12 +9851,7 @@ create_breakpoint (struct gdbarch *gdbarch,
       struct breakpoint *b;
 
       if (is_tracepoint_type (type_wanted))
-	{
-	  struct tracepoint *t;
-
-	  t = XCNEW (struct tracepoint);
-	  b = &t->base;
-	}
+	b = XCNEW (struct tracepoint);
       else
 	b = XNEW (struct breakpoint);
 
@@ -11322,7 +11300,7 @@ watch_command_1 (const char *arg, int accessflag, int from_tty,
     bp_type = bp_hardware_watchpoint;
 
   w = XCNEW (struct watchpoint);
-  b = &w->base;
+  b = w;
   if (use_mask)
     init_raw_breakpoint_without_location (b, NULL, bp_type,
 					  &masked_watchpoint_breakpoint_ops);
@@ -11877,11 +11855,10 @@ catch_exec_command_1 (char *arg, int from_tty,
     error (_("Junk at end of arguments."));
 
   c = XNEW (struct exec_catchpoint);
-  init_catchpoint (&c->base, gdbarch, tempflag, cond_string,
-		   &catch_exec_breakpoint_ops);
+  init_catchpoint (c, gdbarch, tempflag, cond_string, &catch_exec_breakpoint_ops);
   c->exec_pathname = NULL;
 
-  install_breakpoint (0, &c->base, 1);
+  install_breakpoint (0, c, 1);
 }
 
 void
@@ -13721,7 +13698,7 @@ strace_marker_create_breakpoints_sal (struct gdbarch *gdbarch,
       old_chain = make_cleanup_delete_event_location (location);
 
       tp = XCNEW (struct tracepoint);
-      init_breakpoint_sal (&tp->base, gdbarch, expanded,
+      init_breakpoint_sal (tp, gdbarch, expanded,
 			   location, NULL,
 			   cond_string, extra_string,
 			   type_wanted, disposition,
@@ -13736,7 +13713,7 @@ strace_marker_create_breakpoints_sal (struct gdbarch *gdbarch,
 	 corresponds to this one  */
       tp->static_trace_marker_id_idx = i;
 
-      install_breakpoint (internal, &tp->base, 0);
+      install_breakpoint (internal, tp, 0);
 
       discard_cleanups (old_chain);
     }
@@ -15294,7 +15271,7 @@ create_tracepoint_from_upload (struct uploaded_tp *utp)
   if (utp->pass > 0)
     {
       xsnprintf (small_buf, sizeof (small_buf), "%d %d", utp->pass,
-		 tp->base.number);
+		 tp->number);
 
       trace_pass_command (small_buf, 0);
     }
@@ -15312,7 +15289,7 @@ create_tracepoint_from_upload (struct uploaded_tp *utp)
 
       cmd_list = read_command_lines_1 (read_uploaded_action, 1, NULL, NULL);
 
-      breakpoint_set_commands (&tp->base, cmd_list);
+      breakpoint_set_commands (tp, cmd_list);
     }
   else if (!VEC_empty (char_ptr, utp->actions)
 	   || !VEC_empty (char_ptr, utp->step_actions))
@@ -15321,7 +15298,7 @@ create_tracepoint_from_upload (struct uploaded_tp *utp)
 	     utp->number);
 
   /* Copy any status information that might be available.  */
-  tp->base.hit_count = utp->hit_count;
+  tp->hit_count = utp->hit_count;
   tp->traceframe_usage = utp->traceframe_usage;
 
   return tp;
@@ -15407,10 +15384,10 @@ static void
 trace_pass_set_count (struct tracepoint *tp, int count, int from_tty)
 {
   tp->pass_count = count;
-  observer_notify_breakpoint_modified (&tp->base);
+  observer_notify_breakpoint_modified (tp);
   if (from_tty)
     printf_filtered (_("Setting tracepoint %d's passcount to %d\n"),
-		     tp->base.number, count);
+		     tp->number, count);
 }
 
 /* Set passcount for tracepoint.

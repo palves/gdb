@@ -772,11 +772,8 @@ struct breakpoint
    includes a "struct breakpoint" as a kind of base class; users
    downcast to "struct breakpoint *" when needed.  */
 
-struct watchpoint
+struct watchpoint : public breakpoint
 {
-  /* The base class.  */
-  struct breakpoint base;
-
   /* String form of exp to use for displaying to the user (malloc'd),
      or NULL if none.  */
   char *exp_string;
@@ -855,11 +852,8 @@ extern int is_watchpoint (const struct breakpoint *bpt);
    tracepoints.  It includes a "struct breakpoint" as a kind of base
    class; users downcast to "struct breakpoint *" when needed.  */
 
-struct tracepoint
+struct tracepoint : public breakpoint
 {
-  /* The base class.  */
-  struct breakpoint base;
-
   /* Number of times this tracepoint should single-step and collect
      additional data.  */
   long step_count;
