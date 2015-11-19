@@ -492,131 +492,6 @@ enum print_stop_action
   PRINT_NOTHING
 };
 
-/* This structure is a collection of function pointers that, if available,
-   will be called instead of the performing the default action for this
-   bptype.  */
-
-struct breakpoint_ops
-{
-  /* Destructor.  Releases everything from SELF (but not SELF
-     itself).  */
-  void (*dtor) (struct breakpoint *self);
-
-  /* Allocate a location for this breakpoint.  */
-  struct bp_location * (*allocate_location) (struct breakpoint *);
-
-  /* Reevaluate a breakpoint.  This is necessary after symbols change
-     (e.g., an executable or DSO was loaded, or the inferior just
-     started).  */
-  void (*re_set) (struct breakpoint *self);
-
-  /* Insert the breakpoint or watchpoint or activate the catchpoint.
-     Return 0 for success, 1 if the breakpoint, watchpoint or
-     catchpoint type is not supported, -1 for failure.  */
-  int (*insert_location) (struct bp_location *);
-
-  /* Remove the breakpoint/catchpoint that was previously inserted
-     with the "insert" method above.  Return 0 for success, 1 if the
-     breakpoint, watchpoint or catchpoint type is not supported,
-     -1 for failure.  */
-  int (*remove_location) (struct bp_location *);
-
-  /* Return true if it the target has stopped due to hitting
-     breakpoint location BL.  This function does not check if we
-     should stop, only if BL explains the stop.  ASPACE is the address
-     space in which the event occurred, BP_ADDR is the address at
-     which the inferior stopped, and WS is the target_waitstatus
-     describing the event.  */
-  int (*breakpoint_hit) (const struct bp_location *bl,
-			 struct address_space *aspace,
-			 CORE_ADDR bp_addr,
-			 const struct target_waitstatus *ws);
-
-  /* Check internal conditions of the breakpoint referred to by BS.
-     If we should not stop for this breakpoint, set BS->stop to 0.  */
-  void (*check_status) (struct bpstats *bs);
-
-  /* Tell how many hardware resources (debug registers) are needed
-     for this breakpoint.  If this function is not provided, then
-     the breakpoint or watchpoint needs one debug register.  */
-  int (*resources_needed) (const struct bp_location *);
-
-  /* Tell whether we can downgrade from a hardware watchpoint to a software
-     one.  If not, the user will not be able to enable the watchpoint when
-     there are not enough hardware resources available.  */
-  int (*works_in_software_mode) (const struct breakpoint *);
-
-  /* The normal print routine for this breakpoint, called when we
-     hit it.  */
-  enum print_stop_action (*print_it) (struct bpstats *bs);
-
-  /* Display information about this breakpoint, for "info
-     breakpoints".  */
-  void (*print_one) (struct breakpoint *, struct bp_location **);
-
-  /* Display extra information about this breakpoint, below the normal
-     breakpoint description in "info breakpoints".
-
-     In the example below, the "address range" line was printed
-     by print_one_detail_ranged_breakpoint.
-
-     (gdb) info breakpoints
-     Num     Type           Disp Enb Address    What
-     2       hw breakpoint  keep y              in main at test-watch.c:70
-	     address range: [0x10000458, 0x100004c7]
-
-   */
-  void (*print_one_detail) (const struct breakpoint *, struct ui_out *);
-
-  /* Display information about this breakpoint after setting it
-     (roughly speaking; this is called from "mention").  */
-  void (*print_mention) (struct breakpoint *);
-
-  /* Print to FP the CLI command that recreates this breakpoint.  */
-  void (*print_recreate) (struct breakpoint *, struct ui_file *fp);
-
-  /* Create SALs from location, storing the result in linespec_result.
-
-     For an explanation about the arguments, see the function
-     `create_sals_from_location_default'.
-
-     This function is called inside `create_breakpoint'.  */
-  void (*create_sals_from_location) (const struct event_location *location,
-				     struct linespec_result *canonical,
-				     enum bptype type_wanted);
-
-  /* This method will be responsible for creating a breakpoint given its SALs.
-     Usually, it just calls `create_breakpoints_sal' (for ordinary
-     breakpoints).  However, there may be some special cases where we might
-     need to do some tweaks, e.g., see
-     `strace_marker_create_breakpoints_sal'.
-
-     This function is called inside `create_breakpoint'.  */
-  void (*create_breakpoints_sal) (struct gdbarch *,
-				  struct linespec_result *,
-				  char *, char *,
-				  enum bptype, enum bpdisp, int, int,
-				  int, const struct breakpoint_ops *,
-				  int, int, int, unsigned);
-
-  /* Given the location (second parameter), this method decodes it
-     and provides the SAL locations related to it.  For ordinary breakpoints,
-     it calls `decode_line_full'.
-
-     This function is called inside `location_to_sals'.  */
-  void (*decode_location) (struct breakpoint *b,
-			   const struct event_location *location,
-			   struct symtabs_and_lines *sals);
-
-  /* Return true if this breakpoint explains a signal.  See
-     bpstat_explains_signal.  */
-  int (*explains_signal) (struct breakpoint *, enum gdb_signal);
-
-  /* Called after evaluating the breakpoint's condition,
-     and only if it evaluated true.  */
-  void (*after_condition_true) (struct bpstats *bs);
-};
-
 /* Helper for breakpoint_ops->print_recreate implementations.  Prints
    the "thread" or "task" condition of B, and then a newline.
 
@@ -663,9 +538,129 @@ extern int target_exact_watchpoints;
 /* This is for all kinds of breakpoints.  */
 
 struct breakpoint
-  {
-    /* Methods associated with this breakpoint.  */
-    const struct breakpoint_ops *ops;
+{
+  /* Methods associated with this breakpoint.  As a transition step,
+     this points to self (used to be a struct breakpoint_ops
+     pointer).  */
+  const struct breakpoint *ops;
+
+  /* Destructor.  Releases everything from SELF (but not SELF
+     itself).  */
+  void dtor (struct breakpoint *self);
+
+  /* Allocate a location for this breakpoint.  */
+  struct bp_location *allocate_location (struct breakpoint *);
+
+  /* Reevaluate a breakpoint.  This is necessary after symbols change
+     (e.g., an executable or DSO was loaded, or the inferior just
+     started).  */
+  void re_set (struct breakpoint *self);
+
+  /* Insert the breakpoint or watchpoint or activate the catchpoint.
+     Return 0 for success, 1 if the breakpoint, watchpoint or
+     catchpoint type is not supported, -1 for failure.  */
+  int insert_location (struct bp_location *);
+
+  /* Remove the breakpoint/catchpoint that was previously inserted
+     with the "insert" method above.  Return 0 for success, 1 if the
+     breakpoint, watchpoint or catchpoint type is not supported,
+     -1 for failure.  */
+  int remove_location (struct bp_location *);
+
+  /* Return true if it the target has stopped due to hitting
+     breakpoint location BL.  This function does not check if we
+     should stop, only if BL explains the stop.  ASPACE is the address
+     space in which the event occurred, BP_ADDR is the address at
+     which the inferior stopped, and WS is the target_waitstatus
+     describing the event.  */
+  int breakpoint_hit (const struct bp_location *bl,
+		      struct address_space *aspace,
+		      CORE_ADDR bp_addr,
+		      const struct target_waitstatus *ws);
+
+  /* Check internal conditions of the breakpoint referred to by BS.
+     If we should not stop for this breakpoint, set BS->stop to 0.  */
+  void check_status (struct bpstats *bs);
+
+  /* Tell how many hardware resources (debug registers) are needed
+     for this breakpoint.  If this function is not provided, then
+     the breakpoint or watchpoint needs one debug register.  */
+  int resources_needed (const struct bp_location *);
+
+  /* Tell whether we can downgrade from a hardware watchpoint to a software
+     one.  If not, the user will not be able to enable the watchpoint when
+     there are not enough hardware resources available.  */
+  int works_in_software_mode (const struct breakpoint *);
+
+  /* The normal print routine for this breakpoint, called when we
+     hit it.  */
+  enum print_stop_action print_it (struct bpstats *bs);
+
+  /* Display information about this breakpoint, for "info
+     breakpoints".  */
+  void print_one (struct breakpoint *, struct bp_location **);
+
+  /* Display extra information about this breakpoint, below the normal
+     breakpoint description in "info breakpoints".
+
+     In the example below, the "address range" line was printed
+     by print_one_detail_ranged_breakpoint.
+
+     (gdb) info breakpoints
+     Num     Type           Disp Enb Address    What
+     2       hw breakpoint  keep y              in main at test-watch.c:70
+	     address range: [0x10000458, 0x100004c7]
+
+   */
+  void print_one_detail (const struct breakpoint *, struct ui_out *);
+
+  /* Display information about this breakpoint after setting it
+     (roughly speaking; this is called from "mention").  */
+  void print_mention (struct breakpoint *);
+
+  /* Print to FP the CLI command that recreates this breakpoint.  */
+  void print_recreate (struct breakpoint *, struct ui_file *fp);
+
+  /* Create SALs from location, storing the result in linespec_result.
+
+     For an explanation about the arguments, see the function
+     `create_sals_from_location_default'.
+
+     This function is called inside `create_breakpoint'.  */
+  void create_sals_from_location (const struct event_location *location,
+				  struct linespec_result *canonical,
+				  enum bptype type_wanted);
+
+  /* This method will be responsible for creating a breakpoint given its SALs.
+     Usually, it just calls `create_breakpoints_sal' (for ordinary
+     breakpoints).  However, there may be some special cases where we might
+     need to do some tweaks, e.g., see
+     `strace_marker_create_breakpoints_sal'.
+
+     This function is called inside `create_breakpoint'.  */
+  void create_breakpoints_sal (struct gdbarch *,
+			       struct linespec_result *,
+			       char *, char *,
+			       enum bptype, enum bpdisp, int, int,
+			       int, const struct breakpoint_ops *,
+			       int, int, int, unsigned);
+
+  /* Given the location (second parameter), this method decodes it
+     and provides the SAL locations related to it.  For ordinary breakpoints,
+     it calls `decode_line_full'.
+
+     This function is called inside `location_to_sals'.  */
+  void decode_location (struct breakpoint *b,
+			const struct event_location *location,
+			struct symtabs_and_lines *sals);
+
+  /* Return true if this breakpoint explains a signal.  See
+     bpstat_explains_signal.  */
+  int explains_signal (struct breakpoint *, enum gdb_signal);
+
+  /* Called after evaluating the breakpoint's condition,
+     and only if it evaluated true.  */
+  void after_condition_true (struct bpstats *bs);
 
     struct breakpoint *next;
     /* Type of breakpoint.  */

@@ -301,29 +301,80 @@ static struct bp_location **get_first_locp_gte_addr (CORE_ADDR address);
 
 static int strace_marker_p (struct breakpoint *b);
 
-/* The breakpoint_ops structure to be inherited by all breakpoint_ops
-   that are implemented on top of software or hardware breakpoints
-   (user breakpoints, internal and momentary breakpoints, etc.).  */
-static struct breakpoint_ops bkpt_base_breakpoint_ops;
+/* The breakpoint structure to be inherited by all breakpoints that
+   are implemented on top of software or hardware breakpoints (user
+   breakpoints, internal and momentary breakpoints, etc.).  */
+struct bkpt_base_breakpoint : public breakpoint
+{
+};
+
+/* The breakpoint structure to be used in regular user created
+   breakpoints.  */
+struct bkpt_breakpoint : public bkpt_base_breakpoint
+{
+};
+
+struct ranged_breakpoint : public bkpt_breakpoint
+{
+};
 
 /* Internal breakpoints class type.  */
-static struct breakpoint_ops internal_breakpoint_ops;
+struct internal_bkpt : public bkpt_base_breakpoint
+{
+};
 
 /* Momentary breakpoints class type.  */
-static struct breakpoint_ops momentary_breakpoint_ops;
+struct momentary_bkpt : public bkpt_base_breakpoint
+{
+};
 
-/* Momentary breakpoints for bp_longjmp and bp_exception class type.  */
-static struct breakpoint_ops longjmp_breakpoint_ops;
-
-/* The breakpoint_ops structure to be used in regular user created
-   breakpoints.  */
-struct breakpoint_ops bkpt_breakpoint_ops;
+/* Momentary breakpoints for bp_longjmp and bp_exception class
+   type.  */
+struct longjmp_bkpt : public momentary_breakpoint
+{
+};
 
 /* Breakpoints set on probes.  */
-static struct breakpoint_ops bkpt_probe_breakpoint_ops;
+struct bkpt_probe : public bkpt_breakpoint
+{
+};
+
+struct masked_watchpoint_breakpoint : public watchpoint_breakpoint
+{
+};
+
+struct tracepoint_probe : public tracepoint
+{
+};
+
+struct strace_marker_breakpoint : public tracepoint
+{
+};
+
+struct catch_fork_breakpoint : public breakpoint
+{
+};
+
+struct catch_vfork_breakpoint : public breakpoint
+{
+};
+
+struct catch_exec_breakpoint : public breakpoint
+{
+};
+
+struct catch_solib_breakpoint : public breakpoint
+{
+};
+
+struct catch_solib_breakpoint : public breakpoint
+{
+};
 
 /* Dynamic printf class type.  */
-struct breakpoint_ops dprintf_breakpoint_ops;
+struct dprintf : public bkpt_base_breakpoint
+{
+};
 
 /* The style in which to perform a dynamic printf.  This is a user
    option because different output options have different tradeoffs;
@@ -8304,7 +8355,7 @@ dtor_catch_solib (struct breakpoint *b)
     regfree (&self->compiled);
   xfree (self->regex);
 
-  base_breakpoint_ops.dtor (b);
+  breakpoint::dtor (b);
 }
 
 static int
@@ -8629,7 +8680,7 @@ dtor_catch_exec (struct breakpoint *b)
 
   xfree (c->exec_pathname);
 
-  base_breakpoint_ops.dtor (b);
+  breakpoint::dtor (b);
 }
 
 static int
@@ -10577,7 +10628,7 @@ dtor_watchpoint (struct breakpoint *self)
   xfree (w->exp_string_reparse);
   value_free (w->val);
 
-  base_breakpoint_ops.dtor (self);
+  breakpoint::dtor (self);
 }
 
 /* Implement the "re_set" breakpoint_ops method for watchpoints.  */
@@ -12839,7 +12890,7 @@ static const struct bp_location_ops bp_location_ops =
    inherit from.  */
 
 static void
-base_breakpoint_dtor (struct breakpoint *self)
+breakpoint::dtor (struct breakpoint *self)
 {
   decref_counted_command_line (&self->commands);
   xfree (self->cond_string);
@@ -12850,7 +12901,7 @@ base_breakpoint_dtor (struct breakpoint *self)
 }
 
 static struct bp_location *
-base_breakpoint_allocate_location (struct breakpoint *self)
+breakpoint::allocate_location (struct breakpoint *self)
 {
   struct bp_location *loc;
 
@@ -12860,7 +12911,7 @@ base_breakpoint_allocate_location (struct breakpoint *self)
 }
 
 static void
-base_breakpoint_re_set (struct breakpoint *b)
+breakpoint::re_set (struct breakpoint *b)
 {
   /* Nothing to re-set. */
 }
@@ -12869,28 +12920,28 @@ base_breakpoint_re_set (struct breakpoint *b)
   gdb_assert_not_reached ("pure virtual function called")
 
 static int
-base_breakpoint_insert_location (struct bp_location *bl)
+breakpoint::insert_location (struct bp_location *bl)
 {
   internal_error_pure_virtual_called ();
 }
 
 static int
-base_breakpoint_remove_location (struct bp_location *bl)
+breakpoint::remove_location (struct bp_location *bl)
 {
   internal_error_pure_virtual_called ();
 }
 
 static int
-base_breakpoint_breakpoint_hit (const struct bp_location *bl,
-				struct address_space *aspace,
-				CORE_ADDR bp_addr,
-				const struct target_waitstatus *ws)
+breakpoint::breakpoint_hit (const struct bp_location *bl,
+			    struct address_space *aspace,
+			    CORE_ADDR bp_addr,
+			    const struct target_waitstatus *ws)
 {
   internal_error_pure_virtual_called ();
 }
 
 static void
-base_breakpoint_check_status (bpstat bs)
+breakpoint::check_status (bpstat bs)
 {
   /* Always stop.   */
 }
@@ -12899,7 +12950,7 @@ base_breakpoint_check_status (bpstat bs)
    errors.  */
 
 static int
-base_breakpoint_works_in_software_mode (const struct breakpoint *b)
+breakpoint::works_in_software_mode (const struct breakpoint *b)
 {
   internal_error_pure_virtual_called ();
 }
@@ -12908,38 +12959,38 @@ base_breakpoint_works_in_software_mode (const struct breakpoint *b)
    errors.  */
 
 static int
-base_breakpoint_resources_needed (const struct bp_location *bl)
+breakpoint::resources_needed (const struct bp_location *bl)
 {
   internal_error_pure_virtual_called ();
 }
 
 static enum print_stop_action
-base_breakpoint_print_it (bpstat bs)
+breakpoint::print_it (bpstat bs)
 {
   internal_error_pure_virtual_called ();
 }
 
 static void
-base_breakpoint_print_one_detail (const struct breakpoint *self,
-				  struct ui_out *uiout)
+breakpoint::print_one_detail (const struct breakpoint *self,
+			      struct ui_out *uiout)
 {
   /* nothing */
 }
 
 static void
-base_breakpoint_print_mention (struct breakpoint *b)
+breakpoint::print_mention (struct breakpoint *b)
 {
   internal_error_pure_virtual_called ();
 }
 
 static void
-base_breakpoint_print_recreate (struct breakpoint *b, struct ui_file *fp)
+breakpoint::print_recreate (struct breakpoint *b, struct ui_file *fp)
 {
   internal_error_pure_virtual_called ();
 }
 
 static void
-base_breakpoint_create_sals_from_location
+breakpoint::create_sals_from_location
   (const struct event_location *location,
    struct linespec_result *canonical,
    enum bptype type_wanted)
@@ -12948,25 +12999,25 @@ base_breakpoint_create_sals_from_location
 }
 
 static void
-base_breakpoint_create_breakpoints_sal (struct gdbarch *gdbarch,
-					struct linespec_result *c,
-					char *cond_string,
-					char *extra_string,
-					enum bptype type_wanted,
-					enum bpdisp disposition,
-					int thread,
-					int task, int ignore_count,
-					const struct breakpoint_ops *o,
-					int from_tty, int enabled,
-					int internal, unsigned flags)
+breakpoint::create_breakpoints_sal (struct gdbarch *gdbarch,
+				    struct linespec_result *c,
+				    char *cond_string,
+				    char *extra_string,
+				    enum bptype type_wanted,
+				    enum bpdisp disposition,
+				    int thread,
+				    int task, int ignore_count,
+				    const struct breakpoint_ops *o,
+				    int from_tty, int enabled,
+				    int internal, unsigned flags)
 {
   internal_error_pure_virtual_called ();
 }
 
 static void
-base_breakpoint_decode_location (struct breakpoint *b,
-				 const struct event_location *location,
-				 struct symtabs_and_lines *sals)
+breakpoint::decode_location (struct breakpoint *b,
+			     const struct event_location *location,
+			     struct symtabs_and_lines *sals)
 {
   internal_error_pure_virtual_called ();
 }
@@ -12974,7 +13025,7 @@ base_breakpoint_decode_location (struct breakpoint *b,
 /* The default 'explains_signal' method.  */
 
 static int
-base_breakpoint_explains_signal (struct breakpoint *b, enum gdb_signal sig)
+breakpoint::explains_signal (struct breakpoint *b, enum gdb_signal sig)
 {
   return 1;
 }
@@ -12982,11 +13033,12 @@ base_breakpoint_explains_signal (struct breakpoint *b, enum gdb_signal sig)
 /* The default "after_condition_true" method.  */
 
 static void
-base_breakpoint_after_condition_true (struct bpstats *bs)
+breakpoint::after_condition_true (struct bpstats *bs)
 {
   /* Nothing to do.   */
 }
 
+#if 0
 struct breakpoint_ops base_breakpoint_ops =
 {
   base_breakpoint_dtor,
@@ -13009,11 +13061,12 @@ struct breakpoint_ops base_breakpoint_ops =
   base_breakpoint_explains_signal,
   base_breakpoint_after_condition_true,
 };
+#endif
 
 /* Default breakpoint_ops methods.  */
 
 static void
-bkpt_re_set (struct breakpoint *b)
+bkpt::re_set (struct breakpoint *b)
 {
   /* FIXME: is this still reachable?  */
   if (event_location_empty_p (b->location))
@@ -13027,7 +13080,7 @@ bkpt_re_set (struct breakpoint *b)
 }
 
 static int
-bkpt_insert_location (struct bp_location *bl)
+bkpt::insert_location (struct bp_location *bl)
 {
   if (bl->loc_type == bp_loc_hardware_breakpoint)
     return target_insert_hw_breakpoint (bl->gdbarch, &bl->target_info);
@@ -13036,7 +13089,7 @@ bkpt_insert_location (struct bp_location *bl)
 }
 
 static int
-bkpt_remove_location (struct bp_location *bl)
+bkpt::remove_location (struct bp_location *bl)
 {
   if (bl->loc_type == bp_loc_hardware_breakpoint)
     return target_remove_hw_breakpoint (bl->gdbarch, &bl->target_info);
@@ -13045,7 +13098,7 @@ bkpt_remove_location (struct bp_location *bl)
 }
 
 static int
-bkpt_breakpoint_hit (const struct bp_location *bl,
+bkpt::breakpoint_hit (const struct bp_location *bl,
 		     struct address_space *aspace, CORE_ADDR bp_addr,
 		     const struct target_waitstatus *ws)
 {
@@ -13066,7 +13119,7 @@ bkpt_breakpoint_hit (const struct bp_location *bl,
 }
 
 static int
-dprintf_breakpoint_hit (const struct bp_location *bl,
+dprintf::breakpoint_hit (const struct bp_location *bl,
 			struct address_space *aspace, CORE_ADDR bp_addr,
 			const struct target_waitstatus *ws)
 {
@@ -13079,11 +13132,11 @@ dprintf_breakpoint_hit (const struct bp_location *bl,
       return 0;
     }
 
-  return bkpt_breakpoint_hit (bl, aspace, bp_addr, ws);
+  return bkpt::breakpoint_hit (bl, aspace, bp_addr, ws);
 }
 
 static int
-bkpt_resources_needed (const struct bp_location *bl)
+bkpt::resources_needed (const struct bp_location *bl)
 {
   gdb_assert (bl->owner->type == bp_hardware_breakpoint);
 
@@ -13091,7 +13144,7 @@ bkpt_resources_needed (const struct bp_location *bl)
 }
 
 static enum print_stop_action
-bkpt_print_it (bpstat bs)
+bkpt::print_it (bpstat bs)
 {
   struct breakpoint *b;
   const struct bp_location *bl;
@@ -13126,7 +13179,7 @@ bkpt_print_it (bpstat bs)
 }
 
 static void
-bkpt_print_mention (struct breakpoint *b)
+bkpt::print_mention (struct breakpoint *b)
 {
   if (ui_out_is_mi_like_p (current_uiout))
     return;
@@ -13155,7 +13208,7 @@ bkpt_print_mention (struct breakpoint *b)
 }
 
 static void
-bkpt_print_recreate (struct breakpoint *tp, struct ui_file *fp)
+bkpt::print_recreate (struct breakpoint *tp, struct ui_file *fp)
 {
   if (tp->type == bp_breakpoint && tp->disposition == disp_del)
     fprintf_unfiltered (fp, "tbreak");
@@ -13182,7 +13235,7 @@ bkpt_print_recreate (struct breakpoint *tp, struct ui_file *fp)
 }
 
 static void
-bkpt_create_sals_from_location (const struct event_location *location,
+bkpt::create_sals_from_location (const struct event_location *location,
 				struct linespec_result *canonical,
 				enum bptype type_wanted)
 {
@@ -13190,7 +13243,7 @@ bkpt_create_sals_from_location (const struct event_location *location,
 }
 
 static void
-bkpt_create_breakpoints_sal (struct gdbarch *gdbarch,
+bkpt::create_breakpoints_sal (struct gdbarch *gdbarch,
 			     struct linespec_result *canonical,
 			     char *cond_string,
 			     char *extra_string,
@@ -13211,7 +13264,7 @@ bkpt_create_breakpoints_sal (struct gdbarch *gdbarch,
 }
 
 static void
-bkpt_decode_location (struct breakpoint *b,
+bkpt::decode_location (struct breakpoint *b,
 		      const struct event_location *location,
 		      struct symtabs_and_lines *sals)
 {
@@ -13221,7 +13274,7 @@ bkpt_decode_location (struct breakpoint *b,
 /* Virtual table for internal breakpoints.  */
 
 static void
-internal_bkpt_re_set (struct breakpoint *b)
+internal_bkpt::re_set (struct breakpoint *b)
 {
   switch (b->type)
     {
@@ -13246,7 +13299,7 @@ internal_bkpt_re_set (struct breakpoint *b)
 }
 
 static void
-internal_bkpt_check_status (bpstat bs)
+internal_bkpt::check_status (bpstat bs)
 {
   if (bs->breakpoint_at->type == bp_shlib_event)
     {
@@ -13262,7 +13315,7 @@ internal_bkpt_check_status (bpstat bs)
 }
 
 static enum print_stop_action
-internal_bkpt_print_it (bpstat bs)
+internal_bkpt::print_it (bpstat bs)
 {
   struct breakpoint *b;
 
@@ -13310,7 +13363,7 @@ internal_bkpt_print_it (bpstat bs)
 }
 
 static void
-internal_bkpt_print_mention (struct breakpoint *b)
+internal_bkpt::print_mention (struct breakpoint *b)
 {
   /* Nothing to mention.  These breakpoints are internal.  */
 }
@@ -13318,7 +13371,7 @@ internal_bkpt_print_mention (struct breakpoint *b)
 /* Virtual table for momentary breakpoints  */
 
 static void
-momentary_bkpt_re_set (struct breakpoint *b)
+momentary_bkpt::re_set (struct breakpoint *b)
 {
   /* Keep temporary breakpoints, which can be encountered when we step
      over a dlopen call and solib_add is resetting the breakpoints.
@@ -13327,19 +13380,19 @@ momentary_bkpt_re_set (struct breakpoint *b)
 }
 
 static void
-momentary_bkpt_check_status (bpstat bs)
+momentary_bkpt::check_status (bpstat bs)
 {
   /* Nothing.  The point of these breakpoints is causing a stop.  */
 }
 
 static enum print_stop_action
-momentary_bkpt_print_it (bpstat bs)
+momentary_bkpt::print_it (bpstat bs)
 {
   return PRINT_UNKNOWN;
 }
 
 static void
-momentary_bkpt_print_mention (struct breakpoint *b)
+momentary_bkpt::print_mention (struct breakpoint *b)
 {
   /* Nothing to mention.  These breakpoints are internal.  */
 }
@@ -13350,7 +13403,7 @@ momentary_bkpt_print_mention (struct breakpoint *b)
    breakpoints.  This is OK as they get all removed altogether.  */
 
 static void
-longjmp_bkpt_dtor (struct breakpoint *self)
+longjmp_bkpt::dtor (struct breakpoint *self)
 {
   struct thread_info *tp = find_thread_id (self->thread);
 
@@ -13363,7 +13416,7 @@ longjmp_bkpt_dtor (struct breakpoint *self)
 /* Specific methods for probe breakpoints.  */
 
 static int
-bkpt_probe_insert_location (struct bp_location *bl)
+bkpt_probe::insert_location (struct bp_location *bl)
 {
   int v = bkpt_insert_location (bl);
 
@@ -13381,7 +13434,7 @@ bkpt_probe_insert_location (struct bp_location *bl)
 }
 
 static int
-bkpt_probe_remove_location (struct bp_location *bl)
+bkpt_probe::remove_location (struct bp_location *bl)
 {
   /* Let's clear the semaphore before removing the location.  */
   if (bl->probe.probe->pops->clear_semaphore != NULL)
@@ -13393,7 +13446,7 @@ bkpt_probe_remove_location (struct bp_location *bl)
 }
 
 static void
-bkpt_probe_create_sals_from_location (const struct event_location *location,
+bkpt_probe::create_sals_from_location (const struct event_location *location,
 				      struct linespec_result *canonical,
 				      enum bptype type_wanted)
 {
@@ -13405,7 +13458,7 @@ bkpt_probe_create_sals_from_location (const struct event_location *location,
 }
 
 static void
-bkpt_probe_decode_location (struct breakpoint *b,
+bkpt_probe::decode_location (struct breakpoint *b,
 			    const struct event_location *location,
 			    struct symtabs_and_lines *sals)
 {
@@ -13417,13 +13470,13 @@ bkpt_probe_decode_location (struct breakpoint *b,
 /* The breakpoint_ops structure to be used in tracepoints.  */
 
 static void
-tracepoint_re_set (struct breakpoint *b)
+tracepoint::re_set (struct breakpoint *b)
 {
   breakpoint_re_set_default (b);
 }
 
 static int
-tracepoint_breakpoint_hit (const struct bp_location *bl,
+tracepoint::breakpoint_hit (const struct bp_location *bl,
 			   struct address_space *aspace, CORE_ADDR bp_addr,
 			   const struct target_waitstatus *ws)
 {
@@ -13433,7 +13486,7 @@ tracepoint_breakpoint_hit (const struct bp_location *bl,
 }
 
 static void
-tracepoint_print_one_detail (const struct breakpoint *self,
+tracepoint::print_one_detail (const struct breakpoint *self,
 			     struct ui_out *uiout)
 {
   struct tracepoint *tp = (struct tracepoint *) self;
@@ -13449,7 +13502,7 @@ tracepoint_print_one_detail (const struct breakpoint *self,
 }
 
 static void
-tracepoint_print_mention (struct breakpoint *b)
+tracepoint::print_mention (struct breakpoint *b)
 {
   if (ui_out_is_mi_like_p (current_uiout))
     return;
@@ -13477,7 +13530,7 @@ tracepoint_print_mention (struct breakpoint *b)
 }
 
 static void
-tracepoint_print_recreate (struct breakpoint *self, struct ui_file *fp)
+tracepoint::print_recreate (struct breakpoint *self, struct ui_file *fp)
 {
   struct tracepoint *tp = (struct tracepoint *) self;
 
@@ -13500,7 +13553,7 @@ tracepoint_print_recreate (struct breakpoint *self, struct ui_file *fp)
 }
 
 static void
-tracepoint_create_sals_from_location (const struct event_location *location,
+tracepoint::create_sals_from_location (const struct event_location *location,
 				      struct linespec_result *canonical,
 				      enum bptype type_wanted)
 {
@@ -13508,7 +13561,7 @@ tracepoint_create_sals_from_location (const struct event_location *location,
 }
 
 static void
-tracepoint_create_breakpoints_sal (struct gdbarch *gdbarch,
+tracepoint::create_breakpoints_sal (struct gdbarch *gdbarch,
 				   struct linespec_result *canonical,
 				   char *cond_string,
 				   char *extra_string,
@@ -13529,7 +13582,7 @@ tracepoint_create_breakpoints_sal (struct gdbarch *gdbarch,
 }
 
 static void
-tracepoint_decode_location (struct breakpoint *b,
+tracepoint::decode_location (struct breakpoint *b,
 			    const struct event_location *location,
 			    struct symtabs_and_lines *sals)
 {
@@ -13542,7 +13595,7 @@ struct breakpoint_ops tracepoint_breakpoint_ops;
    static probe.  */
 
 static void
-tracepoint_probe_create_sals_from_location
+tracepoint_probe::create_sals_from_location
   (const struct event_location *location,
    struct linespec_result *canonical,
    enum bptype type_wanted)
@@ -13552,12 +13605,12 @@ tracepoint_probe_create_sals_from_location
 }
 
 static void
-tracepoint_probe_decode_location (struct breakpoint *b,
+tracepoint_probe::decode_location (struct breakpoint *b,
 				  const struct event_location *location,
 				  struct symtabs_and_lines *sals)
 {
   /* We use the same method for breakpoint on probes.  */
-  bkpt_probe_decode_location (b, location, sals);
+  bkpt_probe::decode_location (b, location, sals);
 }
 
 static struct breakpoint_ops tracepoint_probe_breakpoint_ops;
@@ -13565,7 +13618,7 @@ static struct breakpoint_ops tracepoint_probe_breakpoint_ops;
 /* Dprintf breakpoint_ops methods.  */
 
 static void
-dprintf_re_set (struct breakpoint *b)
+dprintf::re_set (struct breakpoint *b)
 {
   breakpoint_re_set_default (b);
 
@@ -13589,7 +13642,7 @@ dprintf_re_set (struct breakpoint *b)
 /* Implement the "print_recreate" breakpoint_ops method for dprintf.  */
 
 static void
-dprintf_print_recreate (struct breakpoint *tp, struct ui_file *fp)
+dprintf::print_recreate (struct breakpoint *tp, struct ui_file *fp)
 {
   fprintf_unfiltered (fp, "dprintf %s,%s",
 		      event_location_to_string (tp->location),
@@ -13607,7 +13660,7 @@ dprintf_print_recreate (struct breakpoint *tp, struct ui_file *fp)
    address are all handled.  */
 
 static void
-dprintf_after_condition_true (struct bpstats *bs)
+dprintf::after_condition_true (struct bpstats *bs)
 {
   struct cleanup *old_chain;
   struct bpstats tmp_bs = { NULL };
@@ -13639,9 +13692,9 @@ dprintf_after_condition_true (struct bpstats *bs)
    markers (`-m').  */
 
 static void
-strace_marker_create_sals_from_location (const struct event_location *location,
-					 struct linespec_result *canonical,
-					 enum bptype type_wanted)
+strace_marker::create_sals_from_location (const struct event_location *location,
+					  struct linespec_result *canonical,
+					  enum bptype type_wanted)
 {
   struct linespec_sals lsal;
   const char *arg_start, *arg;
@@ -13661,17 +13714,17 @@ strace_marker_create_sals_from_location (const struct event_location *location,
 }
 
 static void
-strace_marker_create_breakpoints_sal (struct gdbarch *gdbarch,
-				      struct linespec_result *canonical,
-				      char *cond_string,
-				      char *extra_string,
-				      enum bptype type_wanted,
-				      enum bpdisp disposition,
-				      int thread,
-				      int task, int ignore_count,
-				      const struct breakpoint_ops *ops,
-				      int from_tty, int enabled,
-				      int internal, unsigned flags)
+strace_marker::create_breakpoints_sal (struct gdbarch *gdbarch,
+				       struct linespec_result *canonical,
+				       char *cond_string,
+				       char *extra_string,
+				       enum bptype type_wanted,
+				       enum bpdisp disposition,
+				       int thread,
+				       int task, int ignore_count,
+				       const struct breakpoint_ops *ops,
+				       int from_tty, int enabled,
+				       int internal, unsigned flags)
 {
   int i;
   struct linespec_sals *lsal = VEC_index (linespec_sals,
@@ -13720,9 +13773,9 @@ strace_marker_create_breakpoints_sal (struct gdbarch *gdbarch,
 }
 
 static void
-strace_marker_decode_location (struct breakpoint *b,
-			       const struct event_location *location,
-			       struct symtabs_and_lines *sals)
+strace_marker::decode_location (struct breakpoint *b,
+				const struct event_location *location,
+				struct symtabs_and_lines *sals)
 {
   struct tracepoint *tp = (struct tracepoint *) b;
   const char *s = get_linespec_location (location);
@@ -15837,6 +15890,70 @@ breakpoint_free_objfile (struct objfile *objfile)
       loc->symtab = NULL;
 }
 
+/* The breakpoint structure to be inherited by all kinds of
+   breakpoints (real breakpoints, i.e., user "break" breakpoints,
+   internal and momentary breakpoints, etc.).  */
+struct bkpt
+{
+  void re_set (struct breakpoint *self)
+  {
+    bkpt_re_set (this);
+  }
+
+  int insert_location (struct bp_location *bl)
+  {
+    return bkpt_insert_location (bl);
+  }
+
+  int remove_location (struct bp_location *bl)
+  {
+    bkpt_remove_location (bl);
+  }
+
+  int breakpoint_hit (const struct bp_location *bl,
+		      struct address_space *aspace,
+		      CORE_ADDR bp_addr,
+		      const struct target_waitstatus *ws)
+  {
+    return bkpt_breakpoint_hit (bl, aspace, bp_addr, ws);
+  }
+
+  void create_sals_from_location (const struct event_location *location,
+				  struct linespec_result *canonical,
+				  enum bptype type_wanted)
+  {
+    bkpt_create_sals_from_location (location, canonical, type_wanted);
+  }
+
+  void create_breakpoints_sal (struct gdbarch *gdbarch,
+			       struct linespec_result *c,
+			       char *cond_string,
+			       char *extra_string,
+			       enum bptype type_wanted,
+			       enum bpdisp disposition,
+			       int thread,
+			       int task, int ignore_count,
+			       const struct breakpoint_ops *o,
+			       int from_tty, int enabled,
+			       int internal, unsigned flags)
+  {
+    bkpt_create_breakpoints_sal (gdbarch, c, cond_string,
+				 extra_string,
+				 type_wanted,
+				 disposition,
+				 thread, task, ignore_count,
+				 o, from_tty, enabled,
+				 internal, flags);
+  }
+
+  void decode_location (struct breakpoint *b,
+			const struct event_location *location,
+			struct symtabs_and_lines *sals)
+  {
+    bkpt_decode_location (b, location, sals);
+  }
+};
+
 void
 initialize_breakpoint_ops (void)
 {
@@ -15851,6 +15968,7 @@ initialize_breakpoint_ops (void)
   /* The breakpoint_ops structure to be inherit by all kinds of
      breakpoints (real breakpoints, i.e., user "break" breakpoints,
      internal and momentary breakpoints, etc.).  */
+#if 0
   ops = &bkpt_base_breakpoint_ops;
   *ops = base_breakpoint_ops;
   ops->re_set = bkpt_re_set;
@@ -16019,6 +16137,7 @@ initialize_breakpoint_ops (void)
   ops->print_recreate = dprintf_print_recreate;
   ops->after_condition_true = dprintf_after_condition_true;
   ops->breakpoint_hit = dprintf_breakpoint_hit;
+#endif
 }
 
 /* Chain containing all defined "enable breakpoint" subcommands.  */
