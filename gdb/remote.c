@@ -139,6 +139,8 @@ static int remote_is_async_p (struct target_ops *);
 
 static void remote_async (struct target_ops *ops, int enable);
 
+static void remote_thread_events (struct target_ops *ops, int enable);
+
 static void sync_remote_interrupt_twice (int signo);
 
 static void interrupt_query (void);
@@ -1433,6 +1435,9 @@ enum {
 
   /* Support for the QNonStop packet.  */
   PACKET_QNonStop,
+
+  /* Support for the QThreadEvents packet.  */
+  PACKET_QThreadEvents,
 
   /* Support for multi-process extensions.  */
   PACKET_multiprocess_feature,
@@ -4494,7 +4499,8 @@ static const struct protocol_feature remote_protocol_features[] = {
     PACKET_exec_event_feature },
   { "Qbtrace-conf:pt:size", PACKET_DISABLE, remote_supported_packet,
     PACKET_Qbtrace_conf_pt_size },
-  { "vContSupported", PACKET_DISABLE, remote_supported_packet, PACKET_vContSupported }
+  { "vContSupported", PACKET_DISABLE, remote_supported_packet, PACKET_vContSupported },
+  { "QThreadEvents", PACKET_DISABLE, remote_supported_packet, PACKET_QThreadEvents },
 };
 
 static char *remote_support_xml;
@@ -4586,6 +4592,9 @@ remote_query_supported (void)
 
       if (packet_set_cmd_state (PACKET_vContSupported) != AUTO_BOOLEAN_FALSE)
 	q = remote_query_supported_append (q, "vContSupported+");
+
+      if (packet_set_cmd_state (PACKET_QThreadEvents) != AUTO_BOOLEAN_FALSE)
+	q = remote_query_supported_append (q, "QThreadEvents+");
 
       /* Keep this one last to work around a gdbserver <= 7.10 bug in
 	 the qSupported:xmlRegisters=i386 handling.  */
@@ -6018,10 +6027,9 @@ remove_child_of_pending_fork (QUEUE (stop_reply_p) *q,
     = (struct threads_listing_context *) param->input;
 
   if (event->ws.kind == TARGET_WAITKIND_FORKED
-      || event->ws.kind == TARGET_WAITKIND_VFORKED)
-    {
-      threads_listing_context_remove (&event->ws, context);
-    }
+      || event->ws.kind == TARGET_WAITKIND_VFORKED
+      || event->ws.kind == TARGET_WAITKIND_THREAD_EXITED)
+    threads_listing_context_remove (&event->ws, context);
 
   return 1;
 }
@@ -6419,6 +6427,11 @@ Packet: '%s'\n"),
 		 one used by the original program.  */
 	      skipregs = 1;
 	    }
+	  else if (strprefix (p, p1, "create"))
+	    {
+	      event->ws.kind = TARGET_WAITKIND_THREAD_CREATED;
+	      p = skip_to_semicolon (p1 + 1);
+	    }
 	  else
 	    {
 	      ULONGEST pnum;
@@ -6489,6 +6502,19 @@ Packet: '%s'\n"),
 	  event->ws.value.sig = GDB_SIGNAL_UNKNOWN;
       }
       break;
+    case 'w':		/* Thread exited.  */
+      {
+	char *p;
+	ULONGEST value;
+
+	event->ws.kind = TARGET_WAITKIND_THREAD_EXITED;
+	p = unpack_varlen_hex (&buf[1], &value);
+	event->ws.value.integer = value;
+	if (*p != ';')
+	  error (_("stop reply packet badly formatted: %s"), buf);
+	event->ptid = read_ptid (++p, &p);
+	break;
+      }
     case 'W':		/* Target exited.  */
     case 'X':
       {
@@ -12937,6 +12963,7 @@ Specify the serial device it is connected to\n\
   remote_ops.to_can_async_p = remote_can_async_p;
   remote_ops.to_is_async_p = remote_is_async_p;
   remote_ops.to_async = remote_async;
+  remote_ops.to_thread_events = remote_thread_events;
   remote_ops.to_can_do_single_step = remote_can_do_single_step;
   remote_ops.to_terminal_inferior = remote_terminal_inferior;
   remote_ops.to_terminal_ours = remote_terminal_ours;
@@ -13119,6 +13146,37 @@ remote_async (struct target_ops *ops, int enable)
       clear_async_event_handler (remote_async_inferior_event_token);
       if (target_is_non_stop_p ())
 	clear_async_event_handler (rs->notif_state->get_pending_events_token);
+    }
+}
+
+/* Implementation of the to_thread_events method.  */
+
+static void
+remote_thread_events (struct target_ops *ops, int enable)
+{
+  struct remote_state *rs = get_remote_state ();
+  size_t size = get_remote_packet_size ();
+  char *p = rs->buf;
+
+  if (packet_support (PACKET_QThreadEvents) == PACKET_DISABLE)
+    return;
+
+  xsnprintf (rs->buf, size, "QThreadEvents:%x", enable ? 1 : 0);
+  putpkt (rs->buf);
+  getpkt (&rs->buf, &rs->buf_size, 0);
+
+  switch (packet_ok (rs->buf,
+		     &remote_protocol_packets[PACKET_QThreadEvents]))
+    {
+    case PACKET_OK:
+      if (strcmp (rs->buf, "OK") != 0)
+	error (_("Remote refused setting thread events: %s"), rs->buf);
+      break;
+    case PACKET_ERROR:
+      warning (_("Remote failure reply: %s"), rs->buf);
+      break;
+    case PACKET_UNKNOWN:
+      break;
     }
 }
 
@@ -13665,6 +13723,9 @@ Show the maximum size of the address (in bits) in a memory packet."), NULL,
 
   add_packet_config_cmd (&remote_protocol_packets[PACKET_vCtrlC],
 			 "vCtrlC", "ctrl-c", 0);
+
+  add_packet_config_cmd (&remote_protocol_packets[PACKET_QThreadEvents],
+			 "QThreadEvents", "thread-events", 0);
 
   /* Assert that we've registered "set remote foo-packet" commands
      for all packet configs.  */
