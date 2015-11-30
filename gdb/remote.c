@@ -11620,6 +11620,20 @@ remote_supports_non_stop (struct target_ops *self)
   return 1;
 }
 
+/* to_always_non_stop_p implementation.  */
+
+static int
+remote_always_non_stop_p (struct target_ops *self)
+{
+  struct remote_state *rs = get_remote_state ();
+
+  /* Only enable if the stub supports the minimum set of optional
+     packets that make AS/NS possible.  */
+  return (packet_support (PACKET_QNonStop) == PACKET_ENABLE
+	  && packet_support (PACKET_no_resumed) == PACKET_ENABLE
+	  && packet_support (PACKET_QThreadEvents) == PACKET_ENABLE);
+}
+
 static int
 remote_supports_disable_randomization (struct target_ops *self)
 {
@@ -13009,6 +13023,7 @@ Specify the serial device it is connected to\n\
   remote_ops.to_terminal_inferior = remote_terminal_inferior;
   remote_ops.to_terminal_ours = remote_terminal_ours;
   remote_ops.to_supports_non_stop = remote_supports_non_stop;
+  remote_ops.to_always_non_stop_p = remote_always_non_stop_p;
   remote_ops.to_supports_multi_process = remote_supports_multi_process;
   remote_ops.to_supports_disable_randomization
     = remote_supports_disable_randomization;
