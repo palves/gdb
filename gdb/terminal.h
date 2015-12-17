@@ -173,11 +173,6 @@ struct terminal
 
   struct tui_terminal_state *tui;
 
-  /* Per-terminal environment variables.  Readline, ncurses and
-     termcap all read/write these.  */
-  char *env_lines;
-  char *env_columns;
-
   struct page_info *page_info;
 
   struct event_loop *event_loop;
