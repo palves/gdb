@@ -55,7 +55,7 @@ struct catcher
 };
 
 /* Where to go for throw_exception().  */
-static __thread struct catcher *current_catcher;
+static struct catcher *current_catcher;
 
 /* Return length of current_catcher list.  */
 
@@ -218,7 +218,7 @@ exceptions_state_mc_action_iter_1 (void)
 /* How many nested TRY blocks we have.  See exception_messages and
    throw_it.  */
 
-static __thread int try_scope_depth;
+static int try_scope_depth;
 
 /* Called on entry to a TRY scope.  */
 
@@ -309,10 +309,10 @@ throw_exception (struct gdb_exception exception)
    This is indexed by the size of the current_catcher list.
    It is a dynamically allocated array so that we don't care how deeply
    GDB nests its TRY_CATCHs.  */
-static __thread char **exception_messages;
+static char **exception_messages;
 
 /* The number of currently allocated entries in exception_messages.  */
-static __thread int exception_messages_size;
+static int exception_messages_size;
 
 static void ATTRIBUTE_NORETURN ATTRIBUTE_PRINTF (3, 0)
 throw_it (enum return_reason reason, enum errors error, const char *fmt,
