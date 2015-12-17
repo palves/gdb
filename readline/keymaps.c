@@ -35,6 +35,7 @@
 
 #include "readline.h"
 #include "rlconf.h"
+#include "rlprivate.h"
 
 #include "emacs_keymap.c"
 
@@ -43,6 +44,34 @@
 #endif
 
 #include "xmalloc.h"
+
+struct _rl_keymaps_state
+{
+  KEYMAP_ENTRY_ARRAY emacs_standard_keymap;
+  KEYMAP_ENTRY_ARRAY emacs_meta_keymap;
+  KEYMAP_ENTRY_ARRAY emacs_ctlx_keymap;
+#if defined (VI_MODE)
+  KEYMAP_ENTRY_ARRAY vi_movement_keymap;
+  KEYMAP_ENTRY_ARRAY vi_insertion_keymap;
+#endif
+};
+
+#define _RL_SAVE_RESTORE(WHAT) _RL_SAVE_RESTORE_1 (state->keymaps, WHAT)
+
+void
+_rl_keymaps_save_restore (struct _rl_state *state, int save)
+{
+  if (state->keymaps == NULL)
+    state->keymaps = xmalloc (sizeof (struct _rl_keymaps_state));
+
+  _RL_SAVE_RESTORE (emacs_standard_keymap);
+  _RL_SAVE_RESTORE (emacs_meta_keymap);
+  _RL_SAVE_RESTORE (emacs_ctlx_keymap);
+#if defined (VI_MODE)
+  _RL_SAVE_RESTORE (vi_movement_keymap);
+  _RL_SAVE_RESTORE (vi_insertion_keymap);
+#endif
+}
 
 /* **************************************************************** */
 /*								    */

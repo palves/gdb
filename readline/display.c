@@ -239,6 +239,10 @@ static int saved_local_length;
 static int saved_invis_chars_first_line;
 static int saved_physical_chars;
 
+/* How to print things in the "echo-area".  The prompt is treated as a
+   mini-modeline. */
+static int msg_saved_prompt = 0;
+
 /* Return a character indicating the editing mode, for use in the prompt. */
 static int
 prompt_modechar ()
@@ -249,6 +253,104 @@ prompt_modechar ()
     return '+';		/* vi insert mode */
   else
     return ':';		/* vi command mode */
+}
+
+struct _rl_display_state
+{
+  struct line_state line_state_array[2];
+  struct line_state *line_state_visible;
+  struct line_state *line_state_invisible;
+  int line_structures_initialized;
+  rl_voidfunc_t *rl_redisplay_function;
+  int rl_display_fixed;
+  int _rl_suppress_redisplay;
+  int _rl_want_redisplay;
+  char *rl_display_prompt;
+  int _rl_last_c_pos;
+  int _rl_last_v_pos;
+  int cpos_adjusted;
+  int cpos_buffer_position;
+  int displaying_prompt_first_line;
+  int prompt_multibyte_chars;
+  int _rl_vis_botlin;
+  int last_lmargin;
+  char msg_buf[128];
+  int msg_bufsiz;
+  int forced_display;
+  int line_size;
+  char *local_prompt, *local_prompt_prefix;
+  int local_prompt_len;
+  int prompt_visible_length, prompt_prefix_length;
+  int visible_wrap_offset;
+  int wrap_offset;
+  int prompt_last_invisible;
+  int visible_first_line_len;
+  int prompt_invis_chars_first_line;
+  int prompt_last_screen_line;
+  int prompt_physical_chars;
+  int modmark;
+  char *saved_local_prompt;
+  char *saved_local_prefix;
+  int saved_last_invisible;
+  int saved_visible_length;
+  int saved_prefix_length;
+  int saved_local_length;
+  int saved_invis_chars_first_line;
+  int saved_physical_chars;
+  int msg_saved_prompt;
+};
+
+#define _RL_SAVE_RESTORE(WHAT) _RL_SAVE_RESTORE_1 (state->display, WHAT)
+
+void
+_rl_display_save_restore (struct _rl_state *state, int save)
+{
+  if (state->display == NULL)
+    state->display = xmalloc (sizeof (struct _rl_display_state));
+
+  _RL_SAVE_RESTORE (line_state_array);
+  _RL_SAVE_RESTORE (line_state_visible);
+  _RL_SAVE_RESTORE (line_state_invisible);
+  _RL_SAVE_RESTORE (line_structures_initialized);
+  _RL_SAVE_RESTORE (rl_redisplay_function);
+  _RL_SAVE_RESTORE (rl_display_fixed);
+  _RL_SAVE_RESTORE (_rl_suppress_redisplay);
+  _RL_SAVE_RESTORE (_rl_want_redisplay);
+  _RL_SAVE_RESTORE (rl_display_prompt);
+  _RL_SAVE_RESTORE (_rl_last_c_pos);
+  _RL_SAVE_RESTORE (_rl_last_v_pos);
+  _RL_SAVE_RESTORE (cpos_adjusted);
+  _RL_SAVE_RESTORE (cpos_buffer_position);
+  _RL_SAVE_RESTORE (displaying_prompt_first_line);
+  _RL_SAVE_RESTORE (prompt_multibyte_chars);
+  _RL_SAVE_RESTORE (_rl_vis_botlin);
+  _RL_SAVE_RESTORE (last_lmargin);
+  _RL_SAVE_RESTORE (msg_buf);
+  _RL_SAVE_RESTORE (msg_bufsiz);
+  _RL_SAVE_RESTORE (forced_display);
+  _RL_SAVE_RESTORE (line_size);
+  _RL_SAVE_RESTORE (local_prompt);
+  _RL_SAVE_RESTORE (local_prompt_prefix);
+  _RL_SAVE_RESTORE (local_prompt_len);
+  _RL_SAVE_RESTORE (prompt_visible_length);
+  _RL_SAVE_RESTORE (prompt_prefix_length);
+  _RL_SAVE_RESTORE (visible_wrap_offset);
+  _RL_SAVE_RESTORE (wrap_offset);
+  _RL_SAVE_RESTORE (prompt_last_invisible);
+  _RL_SAVE_RESTORE (visible_first_line_len);
+  _RL_SAVE_RESTORE (prompt_invis_chars_first_line);
+  _RL_SAVE_RESTORE (prompt_last_screen_line);
+  _RL_SAVE_RESTORE (prompt_physical_chars);
+  _RL_SAVE_RESTORE (modmark);
+  _RL_SAVE_RESTORE (saved_local_prompt);
+  _RL_SAVE_RESTORE (saved_local_prefix);
+  _RL_SAVE_RESTORE (saved_last_invisible);
+  _RL_SAVE_RESTORE (saved_visible_length);
+  _RL_SAVE_RESTORE (saved_prefix_length);
+  _RL_SAVE_RESTORE (saved_local_length);
+  _RL_SAVE_RESTORE (saved_invis_chars_first_line);
+  _RL_SAVE_RESTORE (saved_physical_chars);
+  _RL_SAVE_RESTORE (msg_saved_prompt);
 }
 
 /* Expand the prompt string S and return the number of visible
@@ -2214,9 +2316,6 @@ rl_character_len (c, pos)
 
   return ((ISPRINT (uc)) ? 1 : 2);
 }
-/* How to print things in the "echo-area".  The prompt is treated as a
-   mini-modeline. */
-static int msg_saved_prompt = 0;
 
 #if defined (USE_VARARGS)
 int

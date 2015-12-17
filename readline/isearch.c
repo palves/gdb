@@ -76,6 +76,28 @@ static int _rl_isearch_cleanup PARAMS((_rl_search_cxt *, int));
 static char *last_isearch_string;
 static int last_isearch_string_len;
 
+struct _rl_isearch_state
+{
+  char *_rl_isearch_terminators;
+  _rl_search_cxt *_rl_iscxt;
+  char *last_isearch_string;
+  int last_isearch_string_len;
+};
+
+#define _RL_SAVE_RESTORE(WHAT) _RL_SAVE_RESTORE_1 (state->isearch, WHAT)
+
+void
+_rl_isearch_save_restore (struct _rl_state *state, int save)
+{
+  if (state->isearch == NULL)
+    state->isearch = xmalloc (sizeof (struct _rl_isearch_state));
+
+  _RL_SAVE_RESTORE (_rl_isearch_terminators);
+  _RL_SAVE_RESTORE (_rl_iscxt);
+  _RL_SAVE_RESTORE (last_isearch_string);
+  _RL_SAVE_RESTORE (last_isearch_string_len);
+}
+
 static char * const default_isearch_terminators = "\033\012";
 
 _rl_search_cxt *

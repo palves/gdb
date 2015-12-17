@@ -187,6 +187,118 @@ int _rl_enable_keypad;
 /* Non-zero means the user wants to enable a meta key. */
 int _rl_enable_meta = 1;
 
+static int enabled_meta = 0;	/* flag indicating we enabled meta mode */
+
+struct _rl_terminal_state
+{
+  int rl_prefer_env_winsize;
+  int rl_change_environment;
+#ifndef __MSDOS__
+  char *term_buffer;
+  char *term_string_buffer;
+#endif /* !__MSDOS__ */
+  int tcap_initialized;
+  char PC, *BC, *UP;
+  char *_rl_term_clreol;
+  char *_rl_term_clrpag;
+  char *_rl_term_cr;
+  char *_rl_term_backspace;
+  char *_rl_term_goto;
+  char *_rl_term_pc;
+  int _rl_terminal_can_insert;
+  char *_rl_term_im;
+  char *_rl_term_ei;
+  char *_rl_term_ic;
+  char *_rl_term_ip;
+  char *_rl_term_IC;
+  char *_rl_term_dc;
+  char *_rl_term_DC;
+  char *_rl_term_forward_char;
+  char *_rl_term_up;
+  char *_rl_visible_bell;
+  int _rl_term_autowrap;
+  int term_has_meta;
+  char *_rl_term_mm;
+  char *_rl_term_mo;
+  char *_rl_term_ku;
+  char *_rl_term_kd;
+  char *_rl_term_kr;
+  char *_rl_term_kl;
+  char *_rl_term_ks;
+  char *_rl_term_ke;
+  char *_rl_term_kh;
+  char *_rl_term_kH;
+  char *_rl_term_at7;
+  char *_rl_term_kD;
+  char *_rl_term_kI;
+  char *_rl_term_vs;
+  char *_rl_term_ve;
+  int _rl_screenwidth, _rl_screenheight, _rl_screenchars;
+  int _rl_enable_keypad;
+  int _rl_enable_meta;
+  int enabled_meta;
+};
+
+#define _RL_SAVE_RESTORE(WHAT) _RL_SAVE_RESTORE_1 (state->terminal, WHAT)
+
+void
+_rl_terminal_save_restore (struct _rl_state *state, int save)
+{
+  if (state->terminal == NULL)
+    state->terminal = xmalloc (sizeof (struct _rl_terminal_state));
+
+  _RL_SAVE_RESTORE (rl_prefer_env_winsize);
+  _RL_SAVE_RESTORE (rl_change_environment);
+#ifndef __MSDOS__
+  _RL_SAVE_RESTORE (term_buffer);
+  _RL_SAVE_RESTORE (term_string_buffer);
+#endif /* !__MSDOS__ */
+  _RL_SAVE_RESTORE (tcap_initialized);
+  _RL_SAVE_RESTORE (PC);
+  _RL_SAVE_RESTORE (BC);
+  _RL_SAVE_RESTORE (UP);
+  _RL_SAVE_RESTORE (_rl_term_clreol);
+  _RL_SAVE_RESTORE (_rl_term_clrpag);
+  _RL_SAVE_RESTORE (_rl_term_cr);
+  _RL_SAVE_RESTORE (_rl_term_backspace);
+  _RL_SAVE_RESTORE (_rl_term_goto);
+  _RL_SAVE_RESTORE (_rl_term_pc);
+  _RL_SAVE_RESTORE (_rl_terminal_can_insert);
+  _RL_SAVE_RESTORE (_rl_term_im);
+  _RL_SAVE_RESTORE (_rl_term_ei);
+  _RL_SAVE_RESTORE (_rl_term_ic);
+  _RL_SAVE_RESTORE (_rl_term_ip);
+  _RL_SAVE_RESTORE (_rl_term_IC);
+  _RL_SAVE_RESTORE (_rl_term_dc);
+  _RL_SAVE_RESTORE (_rl_term_DC);
+  _RL_SAVE_RESTORE (_rl_term_forward_char);
+  _RL_SAVE_RESTORE (_rl_term_up);
+  _RL_SAVE_RESTORE (_rl_visible_bell);
+  _RL_SAVE_RESTORE (_rl_term_autowrap);
+  _RL_SAVE_RESTORE (term_has_meta);
+  _RL_SAVE_RESTORE (_rl_term_mm);
+  _RL_SAVE_RESTORE (_rl_term_mo);
+  _RL_SAVE_RESTORE (_rl_term_ku);
+  _RL_SAVE_RESTORE (_rl_term_kd);
+  _RL_SAVE_RESTORE (_rl_term_kr);
+  _RL_SAVE_RESTORE (_rl_term_kl);
+  _RL_SAVE_RESTORE (_rl_term_ks);
+  _RL_SAVE_RESTORE (_rl_term_ke);
+  _RL_SAVE_RESTORE (_rl_term_kh);
+  _RL_SAVE_RESTORE (_rl_term_kH);
+  _RL_SAVE_RESTORE (_rl_term_at7);
+  _RL_SAVE_RESTORE (_rl_term_kD);
+  _RL_SAVE_RESTORE (_rl_term_kI);
+  _RL_SAVE_RESTORE (_rl_term_vs);
+  _RL_SAVE_RESTORE (_rl_term_ve);
+  _RL_SAVE_RESTORE (_rl_screenwidth);
+  _RL_SAVE_RESTORE (_rl_screenheight);
+  _RL_SAVE_RESTORE (_rl_screenchars);
+  _RL_SAVE_RESTORE (_rl_enable_keypad);
+  _RL_SAVE_RESTORE (_rl_enable_meta);
+  _RL_SAVE_RESTORE (enabled_meta);
+}
+
 #if defined (__EMX__)
 static void
 _emx_get_screensize (swp, shp)
@@ -726,8 +838,6 @@ rl_ding ()
 /*	 	Controlling the Meta Key and Keypad		    */
 /*								    */
 /* **************************************************************** */
-
-static int enabled_meta = 0;	/* flag indicating we enabled meta mode */
 
 void
 _rl_enable_meta_key ()

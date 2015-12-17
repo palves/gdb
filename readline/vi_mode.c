@@ -108,8 +108,74 @@ static const char * const vi_textmod = "_*\\AaIiCcDdPpYyRrSsXx~";
 /* Arrays for the saved marks. */
 static int vi_mark_chars['z' - 'a' + 1];
 
-static void _rl_vi_replace_insert PARAMS((int));
-static void _rl_vi_save_replace PARAMS((void));
+static int _rl_cs_dir, _rl_cs_orig_dir;
+
+struct _rl_vi_mode_state
+{
+  int _rl_vi_last_command;
+  _rl_vimotion_cxt *_rl_vimvcxt;
+  int _rl_vi_doing_insert;
+  Keymap vi_replace_map;
+  int vi_replace_count;
+
+  int vi_continued_command;
+  char *vi_insert_buffer;
+  int vi_insert_buffer_size;
+
+  int _rl_vi_last_repeat;
+  int _rl_vi_last_arg_sign;
+  int _rl_vi_last_motion;
+#if defined (HANDLE_MULTIBYTE)
+  char _rl_vi_last_search_mbchar[MB_LEN_MAX];
+  int _rl_vi_last_search_mblen;
+#else
+  int _rl_vi_last_search_char;
+#endif
+  int _rl_vi_last_replacement;
+
+  int _rl_vi_last_key_before_insert;
+
+  int vi_redoing;
+
+  /* Arrays for the saved marks. */
+  int vi_mark_chars['z' - 'a' + 1];
+
+  int _rl_cs_dir, _rl_cs_orig_dir;
+};
+
+#define _RL_SAVE_RESTORE(WHAT) _RL_SAVE_RESTORE_1 (state->vi_mode_state, WHAT)
+
+void
+_rl_vi_mode_save_restore (struct _rl_state *state, int save)
+{
+  if (state->vi_mode_state == NULL)
+    state->vi_mode_state = xmalloc (sizeof (struct _rl_vi_mode_state));
+
+  _RL_SAVE_RESTORE (_rl_vi_last_command);
+  _RL_SAVE_RESTORE (_rl_vimvcxt);
+  _RL_SAVE_RESTORE (_rl_vi_doing_insert);
+  _RL_SAVE_RESTORE (vi_replace_map);
+  _RL_SAVE_RESTORE (vi_replace_count);
+  _RL_SAVE_RESTORE (vi_continued_command);
+  _RL_SAVE_RESTORE (vi_insert_buffer);
+  _RL_SAVE_RESTORE (vi_insert_buffer_size);
+  _RL_SAVE_RESTORE (_rl_vi_last_repeat);
+  _RL_SAVE_RESTORE (_rl_vi_last_arg_sign);
+  _RL_SAVE_RESTORE (_rl_vi_last_motion);
+#if defined (HANDLE_MULTIBYTE)
+  _RL_SAVE_RESTORE (_rl_vi_last_search_mbchar);
+  _RL_SAVE_RESTORE (_rl_vi_last_search_mblen);
+#else
+  _RL_SAVE_RESTORE (_rl_vi_last_search_char);
+#endif
+  _RL_SAVE_RESTORE (_rl_vi_last_replacement);
+  _RL_SAVE_RESTORE (_rl_vi_last_key_before_insert);
+  _RL_SAVE_RESTORE (vi_redoing);
+  _RL_SAVE_RESTORE (vi_mark_chars);
+  _RL_SAVE_RESTORE (_rl_cs_dir);
+  _RL_SAVE_RESTORE (_rl_cs_orig_dir);
+}
+
 static void _rl_vi_stuff_insert PARAMS((int));
 static void _rl_vi_save_insert PARAMS((UNDO_LIST *));
 
@@ -1601,8 +1667,6 @@ rl_vi_first_print (count, key)
   return (rl_vi_back_to_indent (1, key));
 }
 
-static int _rl_cs_dir, _rl_cs_orig_dir;
-
 #if defined (READLINE_CALLBACKS)
 static int
 _rl_vi_callback_char_search (data)
@@ -1641,10 +1705,10 @@ rl_vi_char_search (count, key)
 {
   int c;
 #if defined (HANDLE_MULTIBYTE)
-  static char *target;
-  static int tlen;
+  char *target;
+  int tlen;
 #else
-  static char target;
+  char target;
 #endif
 
   if (key == ';' || key == ',')

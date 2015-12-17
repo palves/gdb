@@ -53,6 +53,7 @@
 
 #include "readline.h"
 #include "rldefs.h"
+#include "rlprivate.h"
 
 #ifdef COLOR_SUPPORT
 
@@ -63,6 +64,22 @@ static bool is_colored (enum indicator_no type);
 static void restore_default_color (void);
 
 COLOR_EXT_TYPE *_rl_color_ext_list = 0;
+
+struct _rl_colors_state
+{
+  COLOR_EXT_TYPE *_rl_color_ext_list;
+};
+
+#define _RL_SAVE_RESTORE(WHAT) _RL_SAVE_RESTORE_1 (state->colors, WHAT)
+
+void
+_rl_colors_save_restore (struct _rl_state *state, int save)
+{
+  if (state->colors == NULL)
+    state->colors = xmalloc (sizeof (struct _rl_colors_state));
+
+  _RL_SAVE_RESTORE (_rl_color_ext_list);
+}
 
 /* Output a color indicator (which may contain nulls).  */
 void
@@ -143,7 +160,7 @@ _rl_print_color_indicator (char *f)
     colored_filetype = C_MISSING;
   else if(stat_ok != 0)
     {
-      static enum indicator_no filetype_indicator[] = FILETYPE_INDICATORS;
+      const static enum indicator_no filetype_indicator[] = FILETYPE_INDICATORS;
       colored_filetype = filetype_indicator[normal]; //f->filetype];
     }
   else

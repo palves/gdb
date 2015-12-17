@@ -44,6 +44,7 @@
 #include "rltty.h"
 #include "readline.h"
 #include "rlprivate.h"
+#include "xmalloc.h"
 
 #if !defined (errno)
 extern int errno;
@@ -971,5 +972,42 @@ _rl_restore_tty_signals ()
   return r;
 }
 #endif /* !NEW_TTY_DRIVER */
+
+struct _rl_rltty_state
+{
+  rl_vintfunc_t *rl_prep_term_function;
+  rl_voidfunc_t *rl_deprep_term_function;
+  int terminal_prepped;
+  _RL_TTY_CHARS _rl_tty_chars, _rl_last_tty_chars;
+#if defined (__ksr1__)
+  int ksrflow;
+#endif
+
+  TIOTYPE otio;
+  TIOTYPE sigstty, nosigstty;
+  int tty_sigs_disabled;
+};
+
+#define _RL_SAVE_RESTORE(WHAT) _RL_SAVE_RESTORE_1 (state->rltty, WHAT)
+
+void
+_rl_rltty_save_restore (struct _rl_state *state, int save)
+{
+  if (state->rltty == NULL)
+    state->rltty = xmalloc (sizeof (struct _rl_rltty_state));
+
+  _RL_SAVE_RESTORE (rl_prep_term_function);
+  _RL_SAVE_RESTORE (rl_deprep_term_function);
+  _RL_SAVE_RESTORE (terminal_prepped);
+  _RL_SAVE_RESTORE (_rl_tty_chars);
+  _RL_SAVE_RESTORE (_rl_last_tty_chars);
+#if defined (__ksr1__)
+  _RL_SAVE_RESTORE (ksrflow);
+#endif
+  _RL_SAVE_RESTORE (otio);
+  _RL_SAVE_RESTORE (sigstty);
+  _RL_SAVE_RESTORE (nosigstty);
+  _RL_SAVE_RESTORE (tty_sigs_disabled);
+}
 
 #endif /* HANDLE_SIGNALS */

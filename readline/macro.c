@@ -83,6 +83,32 @@ struct saved_macro {
 /* The list of saved macros. */
 static struct saved_macro *macro_list = (struct saved_macro *)NULL;
 
+struct _rl_macro_state
+{
+  char *rl_executing_macro;
+  int executing_macro_index;
+  char *current_macro;
+  int current_macro_size;
+  int current_macro_index;
+  struct saved_macro *macro_list;
+};
+
+#define _RL_SAVE_RESTORE(WHAT) _RL_SAVE_RESTORE_1 (state->macro, WHAT)
+
+void
+_rl_macro_save_restore (struct _rl_state *state, int save)
+{
+  if (state->macro == NULL)
+    state->macro = xmalloc (sizeof (struct _rl_macro_state));
+
+  _RL_SAVE_RESTORE (rl_executing_macro);
+  _RL_SAVE_RESTORE (executing_macro_index);
+  _RL_SAVE_RESTORE (current_macro);
+  _RL_SAVE_RESTORE (current_macro_size);
+  _RL_SAVE_RESTORE (current_macro_index);
+  _RL_SAVE_RESTORE (macro_list);
+}
+
 /* Set up to read subsequent input from STRING.
    STRING is free ()'ed when we are done with it. */
 void

@@ -45,6 +45,7 @@
 #include "history.h"
 
 #include "rlprivate.h"
+#include "xmalloc.h"
 
 #if defined (HANDLE_SIGNALS)
 
@@ -99,7 +100,6 @@ int rl_catch_sigwinch = 0;	/* for the readline state struct in readline.c */
 #endif
 
 /* Private variables. */
-int _rl_interrupt_immediately = 0;
 int volatile _rl_caught_signal = 0;	/* should be sig_atomic_t, but that requires including <signal.h> everywhere */
 
 /* If non-zero, print characters corresponding to received signals as long as
@@ -112,6 +112,30 @@ int _rl_susp_char = 0;
 
 static int signals_set_flag;
 static int sigwinch_set_flag;
+
+/* Note we don't swap signal related globals, as signal handlers are
+   per-process.  */
+struct _rl_signals_state
+{
+  int _rl_echoctl;
+  int _rl_intr_char;
+  int _rl_quit_char;
+  int _rl_susp_char;
+};
+
+#define _RL_SAVE_RESTORE(WHAT) _RL_SAVE_RESTORE_1 (state->signals, WHAT)
+
+void
+_rl_signals_save_restore (struct _rl_state *state, int save)
+{
+  if (state->signals == NULL)
+    state->signals = xmalloc (sizeof (struct _rl_signals_state));
+
+  _RL_SAVE_RESTORE (_rl_echoctl);
+  _RL_SAVE_RESTORE (_rl_intr_char);
+  _RL_SAVE_RESTORE (_rl_quit_char);
+  _RL_SAVE_RESTORE (_rl_susp_char);
+}
 
 /* **************************************************************** */
 /*					        		    */
@@ -161,13 +185,7 @@ static RETSIGTYPE
 rl_signal_handler (sig)
      int sig;
 {
-  if (_rl_interrupt_immediately)
-    {
-      _rl_interrupt_immediately = 0;
-      _rl_handle_signal (sig);
-    }
-  else
-    _rl_caught_signal = sig;
+  _rl_caught_signal = sig;
 
   SIGHANDLER_RETURN;
 }

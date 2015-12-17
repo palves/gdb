@@ -492,7 +492,6 @@ extern int _rl_executing_keyseq_size;
 extern _rl_search_cxt *_rl_nscxt;
 
 /* signals.c */
-extern int _rl_interrupt_immediately;
 extern int volatile _rl_caught_signal;
 
 extern _rl_sigcleanup_func_t *_rl_sigcleanup;
@@ -531,5 +530,89 @@ extern int _rl_undo_group_level;
 /* vi_mode.c */
 extern int _rl_vi_last_command;
 extern _rl_vimotion_cxt *_rl_vimvcxt;
+
+struct _rl_bind_state;
+struct _rl_callback_state;
+struct _rl_complete_state;
+struct _rl_funmap_state;
+struct _rl_input_state;
+struct _rl_isearch_state;
+struct _rl_keymaps_state;
+struct _rl_kill_state;
+struct _rl_macro_state;
+struct _rl_misc_state;
+struct _rl_parens_state;
+struct _rl_readline_state;
+struct _rl_rltty_state;
+struct _rl_search_state;
+struct _rl_signals_state;
+struct _rl_terminal_state;
+struct _rl_text_state;
+struct _rl_tilde_state;
+struct _rl_undo_state;
+struct _rl_util_state;
+struct _rl_vi_mode_state;
+
+struct _rl_state
+{
+  struct _rl_bind_state *bind;
+  struct _rl_callback_state *callback;
+  struct _rl_colors_state *colors;
+  struct _rl_complete_state *complete;
+  struct _rl_display_state *display;
+  struct _rl_funmap_state *funmap;
+  struct _rl_input_state *input;
+  struct _rl_isearch_state *isearch;
+  struct _rl_keymaps_state *keymaps;
+  struct _rl_kill_state *kill;
+  struct _rl_macro_state *macro;
+  struct _rl_misc_state *misc;
+  struct _rl_parens_state *parens;
+  struct _rl_parse_colors_state *parse_colors;
+  struct _rl_readline_state *readline;
+  struct _rl_rltty_state *rltty;
+  struct _rl_search_state *search;
+  struct _rl_signals_state *signals;
+  struct _rl_terminal_state *terminal;
+  struct _rl_text_state *text;
+  struct _rl_tilde_state *tilde;
+  struct _rl_undo_state *undo;
+  struct _rl_util_state *util;
+  struct _rl_vi_mode_state *vi_mode_state;
+
+};
+
+#define _RL_SAVE_RESTORE_1(STATE, WHAT)					\
+  do									\
+    {									\
+      if (save)								\
+	memcpy (&STATE->WHAT, &WHAT, sizeof WHAT);			\
+      else								\
+	memcpy (&WHAT, &STATE->WHAT, sizeof WHAT);			\
+    } while (0)
+
+extern void _rl_bind_save_restore (struct _rl_state *state, int save);
+extern void _rl_callback_save_restore (struct _rl_state *state, int save);
+extern void _rl_colors_save_restore (struct _rl_state *state, int save);
+extern void _rl_complete_save_restore (struct _rl_state *state, int save);
+extern void _rl_display_save_restore (struct _rl_state *state, int save);
+extern void _rl_funmap_save_restore (struct _rl_state *state, int save);
+extern void _rl_input_save_restore (struct _rl_state *state, int save);
+extern void _rl_isearch_save_restore (struct _rl_state *state, int save);
+extern void _rl_keymaps_save_restore (struct _rl_state *state, int save);
+extern void _rl_kill_save_restore (struct _rl_state *state, int save);
+extern void _rl_macro_save_restore (struct _rl_state *state, int save);
+extern void _rl_misc_save_restore (struct _rl_state *state, int save);
+extern void _rl_parens_save_restore (struct _rl_state *state, int save);
+extern void _rl_parse_colors_save_restore (struct _rl_state *state, int save);
+extern void _rl_rltty_save_restore (struct _rl_state *state, int save);
+extern void _rl_search_save_restore (struct _rl_state *state, int save);
+extern void _rl_signals_save_restore (struct _rl_state *state, int save);
+extern void _rl_terminal_save_restore (struct _rl_state *state, int save);
+extern void _rl_text_save_restore (struct _rl_state *state, int save);
+extern void _rl_tilde_save_restore (struct _rl_state *state, int save);
+extern void _rl_undo_save_restore (struct _rl_state *state, int save);
+extern void _rl_util_save_restore (struct _rl_state *state, int save);
+extern void _rl_vi_mode_save_restore (struct _rl_state *state, int save);
 
 #endif /* _RL_PRIVATE_H_ */

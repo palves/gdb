@@ -404,6 +404,185 @@ static int completion_changed_buffer;
 /* The result of the query to the user about displaying completion matches */
 static int completion_y_or_n;
 
+struct _rl_menu_complete_state
+{
+  char *orig_text;
+  char **matches;
+  int match_list_index;
+  int match_list_size;
+  int nontrivial_lcd;
+  int full_completion;	/* set to 1 if menu completion should reinitialize on next call */
+  int orig_start, orig_end;
+  char quote_char;
+  int delimiter, cstate;
+};
+
+struct _rl_old_menu_complete_state
+{
+  char *orig_text;
+  char **matches;
+  int match_list_index;
+  int match_list_size;
+  int orig_start, orig_end;
+  char quote_char;
+  int delimiter;
+};
+
+struct _rl_username_compl_func_state
+{
+  char *username;
+  struct passwd *entry;
+  int namelen, first_char, first_char_loc;
+};
+
+struct _rl_filename_compl_func_state
+{
+  DIR *directory;
+  char *filename;
+  char *dirname;
+  char *users_dirname;
+  int filename_len;
+};
+
+static struct _rl_menu_complete_state _rl_menu_complete_state;
+static struct _rl_old_menu_complete_state _rl_old_menu_complete_state;
+static struct _rl_username_compl_func_state _rl_username_compl_func_state;
+static struct _rl_filename_compl_func_state _rl_filename_compl_func_state;
+
+struct _rl_complete_state
+{
+  rl_compdisp_func_t *rl_completion_display_matches_hook;
+  int _rl_complete_show_all;
+  int _rl_complete_show_unmodified;
+  int _rl_complete_mark_directories;
+  int _rl_complete_mark_symlink_dirs;
+  int _rl_print_completions_horizontally;
+  int _rl_completion_case_fold;
+  int _rl_completion_case_map;
+  int _rl_match_hidden_files;
+  int _rl_completion_prefix_display_length;
+  int _rl_completion_columns;
+#if defined (VISIBLE_STATS)
+  int rl_visible_stats;
+#endif /* VISIBLE_STATS */
+#if defined (COLOR_SUPPORT)
+  int _rl_colored_stats;
+#endif
+  int _rl_skip_completed_text;
+  int _rl_menu_complete_prefix_first;
+  rl_icppfunc_t *rl_directory_completion_hook;
+  rl_icppfunc_t *rl_directory_rewrite_hook;
+  rl_icppfunc_t *rl_filename_stat_hook;
+  rl_dequote_func_t *rl_filename_rewrite_hook;
+  int rl_complete_with_tilde_expansion;
+  rl_compentry_func_t *rl_completion_entry_function;
+  rl_compentry_func_t *rl_menu_completion_entry_function;
+  rl_completion_func_t *rl_attempted_completion_function;
+  int rl_attempted_completion_over;
+  int rl_completion_type;
+  int rl_completion_query_items;
+  int _rl_page_completions;
+  const char *rl_basic_word_break_characters;
+  const char *rl_basic_quote_characters;
+  /*const*/ char *rl_completer_word_break_characters;
+  rl_cpvfunc_t *rl_completion_word_break_hook;
+  const char *rl_completer_quote_characters;
+  const char *rl_filename_quote_characters;
+  const char *rl_special_prefixes;
+  int rl_ignore_completion_duplicates;
+  int rl_filename_completion_desired;
+  int rl_filename_quoting_desired;
+  rl_compignore_func_t *rl_ignore_some_completions_function;
+  rl_quote_func_t *rl_filename_quoting_function;
+  rl_dequote_func_t *rl_filename_dequoting_function;
+  rl_linebuf_func_t *rl_char_is_quoted_p;
+  int rl_completion_suppress_append;
+  int rl_completion_append_character;
+  int rl_completion_suppress_quote;
+  int rl_completion_quote_character;
+  int rl_completion_found_quote;
+  int rl_completion_mark_symlink_dirs;
+  int rl_inhibit_completion;
+  int rl_completion_invoking_key;
+  int rl_sort_completion_matches;
+  int completion_changed_buffer;
+  int completion_y_or_n;
+  struct _rl_menu_complete_state _rl_menu_complete_state;
+  struct _rl_old_menu_complete_state _rl_old_menu_complete_state;
+  struct _rl_username_compl_func_state _rl_username_compl_func_state;
+  struct _rl_filename_compl_func_state _rl_filename_compl_func_state;
+};
+
+#define _RL_SAVE_RESTORE(WHAT) _RL_SAVE_RESTORE_1 (state->complete, WHAT)
+
+void
+_rl_complete_save_restore (struct _rl_state *state, int save)
+{
+  if (state->complete == NULL)
+    state->complete = xmalloc (sizeof (struct _rl_complete_state));
+
+  _RL_SAVE_RESTORE (rl_completion_display_matches_hook);
+  _RL_SAVE_RESTORE (_rl_complete_show_all);
+  _RL_SAVE_RESTORE (_rl_complete_show_unmodified);
+  _RL_SAVE_RESTORE (_rl_complete_mark_directories);
+  _RL_SAVE_RESTORE (_rl_complete_mark_symlink_dirs);
+  _RL_SAVE_RESTORE (_rl_print_completions_horizontally);
+  _RL_SAVE_RESTORE (_rl_completion_case_fold);
+  _RL_SAVE_RESTORE (_rl_completion_case_map);
+  _RL_SAVE_RESTORE (_rl_match_hidden_files);
+  _RL_SAVE_RESTORE (_rl_completion_prefix_display_length);
+  _RL_SAVE_RESTORE (_rl_completion_columns);
+#if defined (VISIBLE_STATS)
+  _RL_SAVE_RESTORE (rl_visible_stats);
+#endif /* VISIBLE_STATS */
+#if defined (COLOR_SUPPORT)
+  _RL_SAVE_RESTORE (_rl_colored_stats);
+#endif
+  _RL_SAVE_RESTORE (_rl_skip_completed_text);
+  _RL_SAVE_RESTORE (_rl_menu_complete_prefix_first);
+  _RL_SAVE_RESTORE (rl_directory_completion_hook);
+  _RL_SAVE_RESTORE (rl_directory_rewrite_hook);
+  _RL_SAVE_RESTORE (rl_filename_stat_hook);
+  _RL_SAVE_RESTORE (rl_filename_rewrite_hook);
+  _RL_SAVE_RESTORE (rl_complete_with_tilde_expansion);
+  _RL_SAVE_RESTORE (rl_completion_entry_function);
+  _RL_SAVE_RESTORE (rl_menu_completion_entry_function);
+  _RL_SAVE_RESTORE (rl_attempted_completion_function);
+  _RL_SAVE_RESTORE (rl_attempted_completion_over);
+  _RL_SAVE_RESTORE (rl_completion_type);
+  _RL_SAVE_RESTORE (rl_completion_query_items);
+  _RL_SAVE_RESTORE (_rl_page_completions);
+  _RL_SAVE_RESTORE (rl_basic_word_break_characters);
+  _RL_SAVE_RESTORE (rl_basic_quote_characters);
+  _RL_SAVE_RESTORE (rl_completer_word_break_characters);
+  _RL_SAVE_RESTORE (rl_completion_word_break_hook);
+  _RL_SAVE_RESTORE (rl_completer_quote_characters);
+  _RL_SAVE_RESTORE (rl_filename_quote_characters);
+  _RL_SAVE_RESTORE (rl_special_prefixes);
+  _RL_SAVE_RESTORE (rl_ignore_completion_duplicates);
+  _RL_SAVE_RESTORE (rl_filename_completion_desired);
+  _RL_SAVE_RESTORE (rl_filename_quoting_desired);
+  _RL_SAVE_RESTORE (rl_ignore_some_completions_function);
+  _RL_SAVE_RESTORE (rl_filename_quoting_function);
+  _RL_SAVE_RESTORE (rl_filename_dequoting_function);
+  _RL_SAVE_RESTORE (rl_char_is_quoted_p);
+  _RL_SAVE_RESTORE (rl_completion_suppress_append);
+  _RL_SAVE_RESTORE (rl_completion_append_character);
+  _RL_SAVE_RESTORE (rl_completion_suppress_quote);
+  _RL_SAVE_RESTORE (rl_completion_quote_character);
+  _RL_SAVE_RESTORE (rl_completion_found_quote);
+  _RL_SAVE_RESTORE (rl_completion_mark_symlink_dirs);
+  _RL_SAVE_RESTORE (rl_inhibit_completion);
+  _RL_SAVE_RESTORE (rl_completion_invoking_key);
+  _RL_SAVE_RESTORE (rl_sort_completion_matches);
+  _RL_SAVE_RESTORE (completion_changed_buffer);
+  _RL_SAVE_RESTORE (completion_y_or_n);
+  _RL_SAVE_RESTORE (_rl_menu_complete_state);
+  _RL_SAVE_RESTORE (_rl_old_menu_complete_state);
+  _RL_SAVE_RESTORE (_rl_username_compl_func_state);
+  _RL_SAVE_RESTORE (_rl_filename_compl_func_state);
+}
+
 /*************************************/
 /*				     */
 /*    Bindable completion functions  */
@@ -2183,10 +2362,13 @@ rl_username_completion_function (text, state)
 #if defined (__WIN32__) || defined (__OPENNT)
   return (char *)NULL;
 #else /* !__WIN32__ && !__OPENNT) */
-  static char *username = (char *)NULL;
-  static struct passwd *entry;
-  static int namelen, first_char, first_char_loc;
   char *value;
+
+#define username _rl_username_compl_func_state.username
+#define entry _rl_username_compl_func_state.entry
+#define namelen _rl_username_compl_func_state.namelen
+#define first_char _rl_username_compl_func_state.first_char
+#define first_char_loc _rl_username_compl_func_state.first_char_loc
 
   if (state == 0)
     {
@@ -2232,6 +2414,12 @@ rl_username_completion_function (text, state)
       return (value);
     }
 #endif /* !__WIN32__ && !__OPENNT */
+
+#undef username
+#undef entry
+#undef namelen
+#undef first_char
+#undef first_char_loc
 }
 
 /* Return non-zero if CONVFN matches FILENAME up to the length of FILENAME
@@ -2376,14 +2564,15 @@ rl_filename_completion_function (text, state)
      const char *text;
      int state;
 {
-  static DIR *directory = (DIR *)NULL;
-  static char *filename = (char *)NULL;
-  static char *dirname = (char *)NULL;
-  static char *users_dirname = (char *)NULL;
-  static int filename_len;
   char *temp, *dentry, *convfn;
   int dirlen, dentlen, convlen;
   struct dirent *entry;
+
+#define directory _rl_filename_compl_func_state.directory
+#define filename _rl_filename_compl_func_state.filename
+#define dirname _rl_filename_compl_func_state.dirname
+#define users_dirname _rl_filename_compl_func_state.users_dirname
+#define filename_len _rl_filename_compl_func_state.filename_len
 
   /* If we don't have any state, then do some initialization. */
   if (state == 0)
@@ -2587,6 +2776,12 @@ rl_filename_completion_function (text, state)
 
       return (temp);
     }
+
+#undef directory
+#undef filename
+#undef dirname
+#undef users_dirname
+#undef filename_len
 }
 
 /* An initial implementation of a menu completion function a la tcsh.  The
@@ -2605,13 +2800,14 @@ rl_old_menu_complete (count, invoking_key)
   rl_compentry_func_t *our_func;
   int matching_filenames, found_quote;
 
-  static char *orig_text;
-  static char **matches = (char **)0;
-  static int match_list_index = 0;
-  static int match_list_size = 0;
-  static int orig_start, orig_end;
-  static char quote_char;
-  static int delimiter;
+#define orig_text _rl_old_menu_complete_state.orig_text
+#define matches _rl_old_menu_complete_state.matches
+#define match_list_index _rl_old_menu_complete_state.match_list_index
+#define match_list_size _rl_old_menu_complete_state.match_list_size
+#define orig_start _rl_old_menu_complete_state.orig_start
+#define orig_end _rl_old_menu_complete_state.orig_end
+#define quote_char _rl_old_menu_complete_state.quote_char
+#define delimiter _rl_old_menu_complete_state.delimiter
 
   /* The first time through, we generate the list of matches and set things
      up to insert them. */
@@ -2719,6 +2915,15 @@ rl_old_menu_complete (count, invoking_key)
 
   completion_changed_buffer = 1;
   return (0);
+
+#undef orig_text
+#undef matches
+#undef match_list_index
+#undef match_list_size
+#undef orig_start
+#undef orig_end
+#undef quote_char
+#undef delimiter
 }
 
 int
@@ -2728,15 +2933,17 @@ rl_menu_complete (count, ignore)
   rl_compentry_func_t *our_func;
   int matching_filenames, found_quote;
 
-  static char *orig_text;
-  static char **matches = (char **)0;
-  static int match_list_index = 0;
-  static int match_list_size = 0;
-  static int nontrivial_lcd = 0;
-  static int full_completion = 0;	/* set to 1 if menu completion should reinitialize on next call */
-  static int orig_start, orig_end;
-  static char quote_char;
-  static int delimiter, cstate;
+#define orig_text (_rl_menu_complete_state.orig_text)
+#define matches (_rl_menu_complete_state.matches)
+#define match_list_index (_rl_menu_complete_state.match_list_index)
+#define match_list_size (_rl_menu_complete_state.match_list_size)
+#define nontrivial_lcd (_rl_menu_complete_state.nontrivial_lcd)
+#define full_completion (_rl_menu_complete_state.full_completion)
+#define orig_start (_rl_menu_complete_state.orig_start)
+#define orig_end (_rl_menu_complete_state.orig_end)
+#define quote_char (_rl_menu_complete_state.quote_char)
+#define delimiter (_rl_menu_complete_state.delimiter)
+#define cstate (_rl_menu_complete_state.cstate)
 
   /* The first time through, we generate the list of matches and set things
      up to insert them. */
@@ -2892,6 +3099,18 @@ rl_menu_complete (count, ignore)
 
   completion_changed_buffer = 1;
   return (0);
+
+#undef orig_text
+#undef matches
+#undef match_list_index
+#undef match_list_size
+#undef nontrivial_lcd
+#undef full_completion
+#undef orig_start
+#undef orig_end
+#undef quote_char
+#undef delimiter
+#undef cstate
 }
 
 int

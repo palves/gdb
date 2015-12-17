@@ -70,6 +70,41 @@ static int rl_kill_index;
 /* How many slots we have in the kill ring. */
 static int rl_kill_ring_length;
 
+struct _rl_yank_last_arg_state
+{
+  int history_skip;
+  int explicit_arg_p;
+  int count_passed;
+  int direction;
+  int undo_needed;
+};
+
+static struct _rl_yank_last_arg_state _rl_yank_last_arg_state;
+
+struct _rl_kill_state
+{
+  int rl_max_kills;
+  char **rl_kill_ring;
+  int rl_kill_index;
+  int rl_kill_ring_length;
+  struct _rl_yank_last_arg_state _rl_yank_last_arg_state;
+};
+
+#define _RL_SAVE_RESTORE(WHAT) _RL_SAVE_RESTORE_1 (state->kill, WHAT)
+
+void
+_rl_kill_save_restore (struct _rl_state *state, int save)
+{
+  if (state->kill == NULL)
+    state->kill = xmalloc (sizeof (struct _rl_kill_state));
+
+  _RL_SAVE_RESTORE (rl_max_kills);
+  _RL_SAVE_RESTORE (rl_kill_ring);
+  _RL_SAVE_RESTORE (rl_kill_index);
+  _RL_SAVE_RESTORE (rl_kill_ring_length);
+  _RL_SAVE_RESTORE (_rl_yank_last_arg_state);
+}
+
 static int _rl_copy_to_kill_ring PARAMS((char *, int));
 static int region_kill_internal PARAMS((int));
 static int _rl_copy_word_as_kill PARAMS((int, int));
@@ -622,12 +657,13 @@ int
 rl_yank_last_arg (count, key)
      int count, key;
 {
-  static int history_skip = 0;
-  static int explicit_arg_p = 0;
-  static int count_passed = 1;
-  static int direction = 1;
-  static int undo_needed = 0;
   int retval;
+
+#define history_skip _rl_yank_last_arg_state.history_skip
+#define explicit_arg_p _rl_yank_last_arg_state.explicit_arg_p
+#define count_passed _rl_yank_last_arg_state.count_passed
+#define direction _rl_yank_last_arg_state.direction
+#define undo_needed _rl_yank_last_arg_state.undo_needed
 
   if (rl_last_func != rl_yank_last_arg)
     {
@@ -654,6 +690,12 @@ rl_yank_last_arg (count, key)
 
   undo_needed = retval == 0;
   return retval;
+
+#undef history_skip
+#undef explicit_arg_p
+#undef count_passed
+#undef direction
+#undef undo_needed
 }
 
 /* A special paste command for users of Cygnus's cygwin32. */

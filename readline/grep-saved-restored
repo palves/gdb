@@ -1,0 +1,3 @@
+#!/bin/bash
+
+grep _RL_SAVE_RESTORE * | grep -v define | awk '{print $3}' | sed 's/(\|)\|;//g' | sort

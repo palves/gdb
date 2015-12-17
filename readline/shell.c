@@ -122,6 +122,7 @@ sh_single_quote (string)
 
 /* Set the environment variables LINES and COLUMNS to lines and cols,
    respectively. */
+/* No need to swap these.  */
 static char setenv_buf[INT_STRLEN_BOUND (int) + 1];
 static char putenv_buf1[INT_STRLEN_BOUND (int) + 6 + 1];	/* sizeof("LINES=") == 6 */
 static char putenv_buf2[INT_STRLEN_BOUND (int) + 8 + 1];	/* sizeof("COLUMNS=") == 8 */

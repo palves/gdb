@@ -70,6 +70,28 @@ _rl_callback_generic_arg *_rl_callback_data = 0;
 rl_vcpfunc_t *rl_linefunc;		/* user callback function */
 static int in_handler;		/* terminal_prepped and signals set? */
 
+struct _rl_callback_state
+{
+  _rl_callback_func_t *_rl_callback_func;
+  _rl_callback_generic_arg *_rl_callback_data;
+  rl_vcpfunc_t *rl_linefunc;
+  int in_handler;
+};
+
+#define _RL_SAVE_RESTORE(WHAT) _RL_SAVE_RESTORE_1 (state->callback, WHAT)
+
+void
+_rl_callback_save_restore (struct _rl_state *state, int save)
+{
+  if (state->callback == NULL)
+    state->callback = xmalloc (sizeof (struct _rl_callback_state));
+
+  _RL_SAVE_RESTORE (_rl_callback_func);
+  _RL_SAVE_RESTORE (_rl_callback_data);
+  _RL_SAVE_RESTORE (rl_linefunc);
+  _RL_SAVE_RESTORE (in_handler);
+}
+
 /* Make sure the terminal is set up, initialize readline, and prompt. */
 static void
 _rl_callback_newline ()
