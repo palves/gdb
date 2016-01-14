@@ -2842,12 +2842,17 @@ programs:
 @item @samp{info threads}, a command to inquire about existing threads
 @item @samp{thread apply [@var{thread-id-list}] [@var{all}] @var{args}},
 a command to apply a command to a list of threads
+@item @samp{thread name}, a command to name a thread
+@item @samp{thread find}, a command to search for a thread
 @item thread-specific breakpoints
 @item @samp{set print thread-events}, which controls printing of 
 messages on thread start and exit.
 @item @samp{set libthread-db-search-path @var{path}}, which lets
 the user specify which @code{libthread_db} to use if the default choice
 isn't compatible with the program.
+@item @samp{$_thread} and @samp{$_gthread}, convenience variables that hold
+the thread numbers of the current thread.
+
 @end itemize
 
 @cindex focus of debugging
