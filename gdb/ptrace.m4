@@ -36,6 +36,12 @@ gdb_ptrace_headers='
 #if HAVE_UNISTD_H
 # include <unistd.h>
 #endif
+
+#ifdef __cplusplus
+#  define EXTERN_C extern "C"
+#else
+#  define EXTERN_C extern
+#endif
 '
 # There is no point in checking if we don't have a prototype.
 AC_CHECK_DECLS(ptrace, [], [
@@ -45,34 +51,37 @@ AC_CHECK_DECLS(ptrace, [], [
 # Check return type.  Varargs (used on GNU/Linux) conflict with the
 # empty argument list, so check for that explicitly.
 AC_CACHE_CHECK([return type of ptrace], gdb_cv_func_ptrace_ret,
-  AC_TRY_COMPILE($gdb_ptrace_headers,
-    [extern long ptrace (enum __ptrace_request, ...);],
+  AC_TRY_COMPILE($gdb_ptrace_headers [
+EXTERN_C long ptrace (enum __ptrace_request, ...);
+  ],,
     gdb_cv_func_ptrace_ret='long',
-    AC_TRY_COMPILE($gdb_ptrace_headers,
-      [extern int ptrace ();],
+    AC_TRY_COMPILE($gdb_ptrace_headers [
+EXTERN_C int ptrace ();
+    ],,
       gdb_cv_func_ptrace_ret='int',
       gdb_cv_func_ptrace_ret='long')))
 AC_DEFINE_UNQUOTED(PTRACE_TYPE_RET, $gdb_cv_func_ptrace_ret,
   [Define as the return type of ptrace.])
 # Check argument types.
 AC_CACHE_CHECK([types of arguments for ptrace], gdb_cv_func_ptrace_args, [
-  AC_TRY_COMPILE($gdb_ptrace_headers,
-    [extern long ptrace (enum __ptrace_request, ...);],
+  AC_TRY_COMPILE($gdb_ptrace_headers [
+EXTERN_C long ptrace (enum __ptrace_request, ...);
+    ],,
     [gdb_cv_func_ptrace_args='enum __ptrace_request,int,long,long'],[
 for gdb_arg1 in 'int' 'long'; do
  for gdb_arg2 in 'pid_t' 'int' 'long'; do
   for gdb_arg3 in 'int *' 'caddr_t' 'int' 'long' 'void *'; do
    for gdb_arg4 in 'int' 'long' 'void *'; do
-     AC_TRY_COMPILE($gdb_ptrace_headers, [
-extern $gdb_cv_func_ptrace_ret
+     AC_TRY_COMPILE($gdb_ptrace_headers [
+EXTERN_C $gdb_cv_func_ptrace_ret
   ptrace ($gdb_arg1, $gdb_arg2, $gdb_arg3, $gdb_arg4);
-], [gdb_cv_func_ptrace_args="$gdb_arg1,$gdb_arg2,$gdb_arg3,$gdb_arg4";
+], [], [gdb_cv_func_ptrace_args="$gdb_arg1,$gdb_arg2,$gdb_arg3,$gdb_arg4";
     break 4;])
     for gdb_arg5 in 'int *' 'int' 'long'; do
-     AC_TRY_COMPILE($gdb_ptrace_headers, [
-extern $gdb_cv_func_ptrace_ret
+     AC_TRY_COMPILE($gdb_ptrace_headers [
+EXTERN_C $gdb_cv_func_ptrace_ret
   ptrace ($gdb_arg1, $gdb_arg2, $gdb_arg3, $gdb_arg4, $gdb_arg5);
-], [
+],, [
 gdb_cv_func_ptrace_args="$gdb_arg1,$gdb_arg2,$gdb_arg3,$gdb_arg4,$gdb_arg5";
     break 5;])
     done

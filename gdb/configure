@@ -12382,6 +12382,12 @@ gdb_ptrace_headers='
 #if HAVE_UNISTD_H
 # include <unistd.h>
 #endif
+
+#ifdef __cplusplus
+#  define EXTERN_C extern "C"
+#else
+#  define EXTERN_C extern
+#endif
 '
 # There is no point in checking if we don't have a prototype.
 ac_fn_cxx_check_decl "$LINENO" "ptrace" "ac_cv_have_decl_ptrace" "$gdb_ptrace_headers
@@ -12414,10 +12420,12 @@ else
   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 $gdb_ptrace_headers
+EXTERN_C long ptrace (enum __ptrace_request, ...);
+
 int
 main ()
 {
-extern long ptrace (enum __ptrace_request, ...);
+
   ;
   return 0;
 }
@@ -12428,10 +12436,12 @@ else
   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 $gdb_ptrace_headers
+EXTERN_C int ptrace ();
+
 int
 main ()
 {
-extern int ptrace ();
+
   ;
   return 0;
 }
@@ -12462,10 +12472,12 @@ else
   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 $gdb_ptrace_headers
+EXTERN_C long ptrace (enum __ptrace_request, ...);
+
 int
 main ()
 {
-extern long ptrace (enum __ptrace_request, ...);
+
   ;
   return 0;
 }
@@ -12481,12 +12493,12 @@ for gdb_arg1 in 'int' 'long'; do
      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 $gdb_ptrace_headers
+EXTERN_C $gdb_cv_func_ptrace_ret
+  ptrace ($gdb_arg1, $gdb_arg2, $gdb_arg3, $gdb_arg4);
+
 int
 main ()
 {
-
-extern $gdb_cv_func_ptrace_ret
-  ptrace ($gdb_arg1, $gdb_arg2, $gdb_arg3, $gdb_arg4);
 
   ;
   return 0;
@@ -12501,12 +12513,12 @@ rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 $gdb_ptrace_headers
+EXTERN_C $gdb_cv_func_ptrace_ret
+  ptrace ($gdb_arg1, $gdb_arg2, $gdb_arg3, $gdb_arg4, $gdb_arg5);
+
 int
 main ()
 {
-
-extern $gdb_cv_func_ptrace_ret
-  ptrace ($gdb_arg1, $gdb_arg2, $gdb_arg3, $gdb_arg4, $gdb_arg5);
 
   ;
   return 0;
