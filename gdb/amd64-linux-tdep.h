@@ -312,13 +312,11 @@ enum amd64_syscall {
   amd64_sys_sync_file_range = 277,
   amd64_sys_vmsplice = 278,
   amd64_sys_move_pages = 279,
-};
 
-/* Enum that defines the syscall identifiers for x32 linux.
-   Used for process record/replay, these will be translated into
-   a gdb-canonical set of syscall ids in linux-record.c.  */
+  /* Enum that defines the syscall identifiers for x32 linux.
+     Used for process record/replay, these will be translated into
+     a gdb-canonical set of syscall ids in linux-record.c.  */
 
-enum amd64_x32_syscall {
   amd64_x32_syscall_bit = 0x40000000,
   amd64_x32_sys_read = (amd64_x32_syscall_bit + 0),
   amd64_x32_sys_write = (amd64_x32_syscall_bit + 1),
