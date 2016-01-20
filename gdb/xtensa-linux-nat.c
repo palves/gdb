@@ -175,7 +175,7 @@ static void
 fetch_gregs (struct regcache *regcache, int regnum)
 {
   int tid = ptid_get_lwp (inferior_ptid);
-  const gdb_gregset_t regs;
+  gdb_gregset_t regs;
   int areg;
   
   if (ptrace (PTRACE_GETREGS, tid, 0, (long) &regs) < 0)
@@ -184,7 +184,7 @@ fetch_gregs (struct regcache *regcache, int regnum)
       return;
     }
  
-  supply_gregset_reg (regcache, &regs, regnum);
+  supply_gregset_reg (regcache, (const gdb_gregset_t *) &regs, regnum);
 }
 
 /* Store greg-register(s) in GDB's register 
