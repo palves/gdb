@@ -99,6 +99,7 @@
 #define yystacksize ada_yystacksize
 #define yyvs	ada_yyvs
 #define yyvsp	ada_yyvsp
+#define yydefred ada_yydefred
 
 #ifndef YYDEBUG
 #define	YYDEBUG	1		/* Default to yydebug support */
