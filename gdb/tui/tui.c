@@ -438,7 +438,7 @@ tui_enable (void)
 
       /* Check required terminal capabilities.  The MinGW port of
 	 ncurses does have them, but doesn't expose them through "cup".  */
-#ifndef __MINGW32__
+#if !defined __MINGW32__ && HAVE_TIGETSTR
       cap = tigetstr ("cup");
       if (cap == NULL || cap == (char *) -1 || *cap == '\0')
 	{
