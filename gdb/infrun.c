@@ -3790,7 +3790,7 @@ wait_for_inferior (void)
 static void
 reinstall_readline_callback_handler_cleanup (void *arg)
 {
-  if (!interpreter_async)
+  if (!current_ui->async)
     {
       /* We're not going back to the top level event loop yet.  Don't
 	 install the readline callback, as it'd prep the terminal,
@@ -3977,7 +3977,7 @@ fetch_inferior_event (void *client_data)
   /* If the inferior was in sync execution mode, and now isn't,
      restore the prompt (a synchronous execution command has finished,
      and we're ready for input).  */
-  if (interpreter_async && was_sync && !sync_execution)
+  if (current_ui->async && was_sync && !sync_execution)
     observer_notify_sync_execution_done ();
 
   if (cmd_done

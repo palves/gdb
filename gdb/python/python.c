@@ -331,8 +331,8 @@ python_interactive_command (char *arg, int from_tty)
   struct cleanup *cleanup;
   int err;
 
-  cleanup = make_cleanup_restore_integer (&interpreter_async);
-  interpreter_async = 0;
+  cleanup = make_cleanup_restore_integer (&current_ui->async);
+  current_ui->async = 0;
 
   arg = skip_spaces (arg);
 
@@ -476,8 +476,8 @@ python_command (char *arg, int from_tty)
 
   cleanup = ensure_python_env (get_current_arch (), current_language);
 
-  make_cleanup_restore_integer (&interpreter_async);
-  interpreter_async = 0;
+  make_cleanup_restore_integer (&current_ui->async);
+  current_ui->async = 0;
 
   arg = skip_spaces (arg);
   if (arg && *arg)
@@ -659,8 +659,8 @@ execute_gdb_command (PyObject *self, PyObject *args, PyObject *kw)
       char *copy = xstrdup (arg);
       struct cleanup *cleanup = make_cleanup (xfree, copy);
 
-      make_cleanup_restore_integer (&interpreter_async);
-      interpreter_async = 0;
+      make_cleanup_restore_integer (&current_ui->async);
+      current_ui->async = 0;
 
       prevent_dont_repeat ();
       if (to_string)
