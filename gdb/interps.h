@@ -24,6 +24,13 @@
 
 struct ui_out;
 struct interp;
+struct ui;
+
+typedef struct interp *(*interp_factory_func) (const char *interp,
+					       struct ui *ui);
+
+extern void interp_factory_register (const char *name,
+				     interp_factory_func func);
 
 extern int interp_resume (struct interp *interp);
 extern int interp_suspend (struct interp *interp);
@@ -64,7 +71,9 @@ struct interp_procs
   interp_command_loop_ftype *command_loop_proc;
 };
 
-extern struct interp *interp_new (const char *name, const struct interp_procs *procs);
+extern struct interp *interp_new (const char *name,
+				  const struct interp_procs *procs,
+				  void *data);
 extern void interp_add (struct interp *interp);
 extern int interp_set (struct interp *interp, int top_level);
 extern struct interp *interp_lookup (const char *name);

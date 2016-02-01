@@ -1134,25 +1134,31 @@ mi_set_logging (struct interp *interp, int start_log,
   return 1;
 }
 
+static const struct interp_procs mi_interp_procs =
+{
+  mi_interpreter_init,		/* init_proc */
+  mi_interpreter_resume,	/* resume_proc */
+  mi_interpreter_suspend,	/* suspend_proc */
+  mi_interpreter_exec,		/* exec_proc */
+  mi_ui_out, 			/* ui_out_proc */
+  mi_set_logging,		/* set_logging_proc */
+  mi_command_loop		/* command_loop_proc */
+};
+
+static struct interp *
+mi_interp_factory (const char *name, struct ui *ui)
+{
+  return interp_new (name, &mi_interp_procs, NULL);
+}
+
 extern initialize_file_ftype _initialize_mi_interp; /* -Wmissing-prototypes */
 
 void
 _initialize_mi_interp (void)
 {
-  static const struct interp_procs procs =
-    {
-      mi_interpreter_init,	/* init_proc */
-      mi_interpreter_resume,	/* resume_proc */
-      mi_interpreter_suspend,	/* suspend_proc */
-      mi_interpreter_exec,	/* exec_proc */
-      mi_ui_out, 		/* ui_out_proc */
-      mi_set_logging,		/* set_logging_proc */
-      mi_command_loop		/* command_loop_proc */
-    };
-
   /* The various interpreter levels.  */
-  interp_add (interp_new (INTERP_MI1, &procs));
-  interp_add (interp_new (INTERP_MI2, &procs));
-  interp_add (interp_new (INTERP_MI3, &procs));
-  interp_add (interp_new (INTERP_MI, &procs));
+  interp_factory_register (INTERP_MI1, mi_interp_factory);
+  interp_factory_register (INTERP_MI2, mi_interp_factory);
+  interp_factory_register (INTERP_MI3, mi_interp_factory);
+  interp_factory_register (INTERP_MI, mi_interp_factory);
 }

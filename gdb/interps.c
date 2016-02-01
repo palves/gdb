@@ -89,18 +89,20 @@ struct interp
 
 void _initialize_interpreter (void);
 
+static struct interp *interp_lookup_existing (const char *name);
+
 /* interp_new - This allocates space for a new interpreter,
    fills the fields from the inputs, and returns a pointer to the
    interpreter.  */
 struct interp *
-interp_new (const char *name, const struct interp_procs *procs)
+interp_new (const char *name, const struct interp_procs *procs, void *data)
 {
   struct interp *new_interp;
 
   new_interp = XNEW (struct interp);
 
   new_interp->name = xstrdup (name);
-  new_interp->data = NULL;
+  new_interp->data = data;
   new_interp->quiet_p = 0;
   new_interp->procs = procs;
   new_interp->inited = 0;
@@ -111,6 +113,32 @@ interp_new (const char *name, const struct interp_procs *procs)
   return new_interp;
 }
 
+struct interp_factory
+{
+  /* This is the name in "-i=" and set interpreter.  */
+  const char *name;
+
+  /* The function that creates the interpreter.  */
+  interp_factory_func func;
+};
+
+typedef struct interp_factory *interp_factory_p;
+DEF_VEC_P(interp_factory_p);
+
+static VEC(interp_factory_p) *interpreter_factories = NULL;
+
+void
+interp_factory_register (const char *name, interp_factory_func func)
+{
+  struct interp_factory *f = XNEW (struct interp_factory);
+
+  f->name = name;
+  f->func = func;
+
+  /* FIXME: assert that no factory for NAME is already registered.  */
+  VEC_safe_push (interp_factory_p, interpreter_factories, f);
+}
+
 /* Add interpreter INTERP to the gdb interpreter list.  The
    interpreter must not have previously been added.  */
 void
@@ -118,7 +146,7 @@ interp_add (struct interp *interp)
 {
   struct ui_interp_info *ui_interp = get_current_interp_info ();
 
-  gdb_assert (interp_lookup (interp->name) == NULL);
+  gdb_assert (interp_lookup_existing (interp->name) == NULL);
 
   interp->next = ui_interp->interp_list;
   ui_interp->interp_list = interp;
@@ -217,17 +245,14 @@ interp_set (struct interp *interp, int top_level)
   return 1;
 }
 
-/* interp_lookup - Looks up the interpreter for NAME.  If no such
-   interpreter exists, return NULL, otherwise return a pointer to the
-   interpreter.  */
-struct interp *
-interp_lookup (const char *name)
+/* Look up the interpreter for NAME.  If no such interpreter exists,
+   return NULL, otherwise return a pointer to the interpreter.  */
+
+static struct interp *
+interp_lookup_existing (const char *name)
 {
   struct ui_interp_info *ui_interp = get_current_interp_info ();
   struct interp *interp;
-
-  if (name == NULL || strlen (name) == 0)
-    return NULL;
 
   for (interp = ui_interp->interp_list;
        interp != NULL;
@@ -236,6 +261,35 @@ interp_lookup (const char *name)
       if (strcmp (interp->name, name) == 0)
 	return interp;
     }
+
+  return NULL;
+}
+
+struct interp *
+interp_lookup (const char *name)
+{
+  struct ui *ui = current_ui;
+  struct interp_factory *factory;
+  struct interp *interp;
+  int ix;
+
+  if (name == NULL || strlen (name) == 0)
+    return NULL;
+
+  /* Only create each interpreter once per top level.  */
+  interp = interp_lookup_existing (name);
+  if (interp != NULL)
+    return interp;
+
+  for (ix = 0;
+       VEC_iterate (interp_factory_p, interpreter_factories, ix, factory);
+       ++ix)
+    if (strcmp (factory->name, name) == 0)
+      {
+	interp = factory->func (name, ui);
+	interp_add (interp);
+	return interp;
+      }
 
   return NULL;
 }
@@ -467,15 +521,15 @@ static VEC (char_ptr) *
 interpreter_completer (struct cmd_list_element *ignore,
 		       const char *text, const char *word)
 {
-  struct ui_interp_info *ui_interp = get_current_interp_info ();
+  struct interp_factory *interp;
   int textlen;
   VEC (char_ptr) *matches = NULL;
-  struct interp *interp;
+  int ix;
 
   textlen = strlen (text);
-  for (interp = ui_interp->interp_list;
-       interp != NULL;
-       interp = interp->next)
+  for (ix = 0;
+       VEC_iterate (interp_factory_p, interpreter_factories, ix, interp);
+       ++ix)
     {
       if (strncmp (interp->name, text, textlen) == 0)
 	{
