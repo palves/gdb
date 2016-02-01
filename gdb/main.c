@@ -507,6 +507,7 @@ captured_main (void *data)
   clear_quit_flag ();
   saved_command_line = (char *) xstrdup ("");
   ui->instream = stdin;
+  ui->input_fd = fileno (stdin);
 
 #ifdef __MINGW32__
   /* Ensure stderr is unbuffered.  A Cygwin pty or pipe is implemented

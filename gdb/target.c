@@ -43,6 +43,8 @@
 #include "agent.h"
 #include "auxv.h"
 #include "target-debug.h"
+#include "top.h"
+#include "event-top.h"
 
 static void target_info (char *, int);
 
@@ -477,12 +479,16 @@ target_terminal_is_ours (void)
 void
 target_terminal_inferior (void)
 {
+  struct ui *ui = current_ui;
+
   /* A background resume (``run&'') should leave GDB in control of the
      terminal.  Use target_can_async_p, not target_is_async_p, since at
      this point the target is not async yet.  However, if sync_execution
      is not set, we know it will become async prior to resume.  */
   if (target_can_async_p () && !sync_execution)
     return;
+
+  delete_file_handler (ui->input_fd);
 
   if (terminal_state == terminal_is_inferior)
     return;
@@ -498,6 +504,10 @@ target_terminal_inferior (void)
 void
 target_terminal_ours (void)
 {
+  struct ui *ui = current_ui;
+
+  add_file_handler (ui->input_fd, stdin_event_handler, ui);
+
   if (terminal_state == terminal_is_ours)
     return;
 

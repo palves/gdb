@@ -73,6 +73,10 @@ struct ui
      interacting via a GUI.  */
   FILE *instream;
 
+  /* The file descriptor for the input stream, so that we can register
+     it with the event loop.  */
+  int input_fd;
+
   /* The serial object that wraps stdin.  */
   struct serial *stdin_serial;
 
