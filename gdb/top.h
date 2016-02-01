@@ -67,6 +67,15 @@ struct ui
      "start" -ex "next"') are processed.  */
   int async;
 
+  /* stdio stream that command input is being read from.  Set to stdin
+     normally.  Set by source_command to the file we are sourcing.
+     Set to NULL if we are executing a user-defined command or
+     interacting via a GUI.  */
+  FILE *instream;
+
+  /* The serial object that wraps stdin.  */
+  struct serial *stdin_serial;
+
   /* The fields below that start with "m_" are "private".  They're
      meant to be accessed through wrapper macros that make them look
      like globals.  */
@@ -85,6 +94,7 @@ struct ui
   struct ui_file *m_gdb_stdlog;
 };
 
+extern struct ui *main_ui;
 extern struct ui *current_ui;
 extern struct ui *ui_list;
 
@@ -107,7 +117,6 @@ extern void switch_thru_all_uis_next (struct switch_thru_all_uis *state);
 
 /* From top.c.  */
 extern char *saved_command_line;
-extern FILE *instream;
 extern int in_user_command;
 extern int confirm;
 extern char gdb_dirbuf[1024];

@@ -328,6 +328,7 @@ eval_python_command (const char *command)
 static void
 python_interactive_command (char *arg, int from_tty)
 {
+  struct ui *ui = current_ui;
   struct cleanup *cleanup;
   int err;
 
@@ -351,7 +352,7 @@ python_interactive_command (char *arg, int from_tty)
     }
   else
     {
-      err = PyRun_InteractiveLoop (instream, "<stdin>");
+      err = PyRun_InteractiveLoop (ui->instream, "<stdin>");
       dont_repeat ();
     }
 

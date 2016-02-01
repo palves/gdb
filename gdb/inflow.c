@@ -31,6 +31,7 @@
 
 #include "inflow.h"
 #include "gdbcmd.h"
+#include "top.h"
 
 #ifdef HAVE_SYS_IOCTL_H
 #include <sys/ioctl.h>
@@ -47,8 +48,6 @@ static void pass_signal (int);
 static void child_terminal_ours_1 (int);
 
 /* Record terminal status separately for debugger and inferior.  */
-
-struct serial *stdin_serial;
 
 /* Terminal related info we need to keep track of.  Each inferior
    holds an instance of this structure --- we save it whenever the
@@ -165,13 +164,17 @@ show_interactive_mode (struct ui_file *file, int from_tty,
 void
 set_initial_gdb_ttystate (void)
 {
-  initial_gdb_ttystate = serial_get_tty_state (stdin_serial);
+  struct ui *ui = main_ui;
+
+  initial_gdb_ttystate = serial_get_tty_state (ui->stdin_serial);
 }
 
 /* Does GDB have a terminal (on stdin)?  */
 int
 gdb_has_a_terminal (void)
 {
+  struct ui *ui = main_ui;
+
   if (interactive_mode != AUTO_BOOLEAN_AUTO)
     return interactive_mode == AUTO_BOOLEAN_TRUE;
 
@@ -192,9 +195,10 @@ gdb_has_a_terminal (void)
 #endif
 
       gdb_has_a_terminal_flag = no;
-      if (stdin_serial != NULL)
+      if (ui->stdin_serial != NULL)
 	{
-	  our_terminal_info.ttystate = serial_get_tty_state (stdin_serial);
+	  our_terminal_info.ttystate
+	    = serial_get_tty_state (ui->stdin_serial);
 
 	  if (our_terminal_info.ttystate != NULL)
 	    {
@@ -225,6 +229,7 @@ gdb_has_a_terminal (void)
 void
 child_terminal_init_with_pgrp (int pgrp)
 {
+  struct ui *ui = main_ui;
   struct inferior *inf = current_inferior ();
   struct terminal_info *tinfo = get_inflow_inferior_data (inf);
 
@@ -238,7 +243,7 @@ child_terminal_init_with_pgrp (int pgrp)
   if (gdb_has_a_terminal ())
     {
       xfree (tinfo->ttystate);
-      tinfo->ttystate = serial_copy_tty_state (stdin_serial,
+      tinfo->ttystate = serial_copy_tty_state (ui->stdin_serial,
 					       initial_gdb_ttystate);
 
       /* Make sure that next time we call terminal_inferior (which will be
@@ -255,10 +260,12 @@ child_terminal_init_with_pgrp (int pgrp)
 void
 gdb_save_tty_state (void)
 {
+  struct ui *ui = main_ui;
+
   if (gdb_has_a_terminal ())
     {
       xfree (our_terminal_info.ttystate);
-      our_terminal_info.ttystate = serial_get_tty_state (stdin_serial);
+      our_terminal_info.ttystate = serial_get_tty_state (ui->stdin_serial);
     }
 }
 
@@ -286,6 +293,7 @@ child_terminal_init (struct target_ops *self)
 void
 child_terminal_inferior (struct target_ops *self)
 {
+  struct ui *ui = main_ui;
   struct inferior *inf;
   struct terminal_info *tinfo;
 
@@ -313,7 +321,7 @@ child_terminal_inferior (struct target_ops *self)
       /* Because we were careful to not change in or out of raw mode in
          terminal_ours, we will not change in our out of raw mode with
          this call, so we don't flush any input.  */
-      result = serial_set_tty_state (stdin_serial,
+      result = serial_set_tty_state (ui->stdin_serial,
 				     tinfo->ttystate);
       OOPSY ("setting tty state");
 
@@ -394,6 +402,7 @@ child_terminal_ours (struct target_ops *self)
 static void
 child_terminal_ours_1 (int output_only)
 {
+  struct ui *ui = main_ui;
   struct inferior *inf;
   struct terminal_info *tinfo;
 
@@ -427,7 +436,7 @@ child_terminal_ours_1 (int output_only)
 #endif
 
       xfree (tinfo->ttystate);
-      tinfo->ttystate = serial_get_tty_state (stdin_serial);
+      tinfo->ttystate = serial_get_tty_state (ui->stdin_serial);
 
 #ifdef PROCESS_GROUP_TYPE
       if (!inf->attach_flag)
@@ -451,7 +460,8 @@ child_terminal_ours_1 (int output_only)
          though, since readline will deal with raw mode when/if it needs
          to.  */
 
-      serial_noflush_set_tty_state (stdin_serial, our_terminal_info.ttystate,
+      serial_noflush_set_tty_state (ui->stdin_serial,
+				    our_terminal_info.ttystate,
 				    tinfo->ttystate);
 
       if (job_control)
@@ -555,6 +565,7 @@ inflow_inferior_exit (struct inferior *inf)
 void
 copy_terminal_info (struct inferior *to, struct inferior *from)
 {
+  struct ui *ui = main_ui;
   struct terminal_info *tinfo_to, *tinfo_from;
 
   tinfo_to = get_inflow_inferior_data (to);
@@ -571,7 +582,7 @@ copy_terminal_info (struct inferior *to, struct inferior *from)
 
   if (tinfo_from->ttystate)
     tinfo_to->ttystate
-      = serial_copy_tty_state (stdin_serial, tinfo_from->ttystate);
+      = serial_copy_tty_state (ui->stdin_serial, tinfo_from->ttystate);
 }
 
 void
@@ -583,6 +594,7 @@ term_info (char *arg, int from_tty)
 void
 child_terminal_info (struct target_ops *self, const char *args, int from_tty)
 {
+  struct ui *ui = main_ui;
   struct inferior *inf;
   struct terminal_info *tinfo;
 
@@ -661,7 +673,7 @@ child_terminal_info (struct target_ops *self, const char *args, int from_tty)
   printf_filtered ("Process group = %d\n", (int) tinfo->process_group);
 #endif
 
-  serial_print_tty_state (stdin_serial, tinfo->ttystate, gdb_stdout);
+  serial_print_tty_state (ui->stdin_serial, tinfo->ttystate, gdb_stdout);
 }
 
 /* NEW_TTY_PREFORK is called before forking a new child process,
@@ -888,9 +900,9 @@ gdb_setpgid (void)
    that we can guarantee stdin_serial is opened if there is
    a terminal.  */
 void
-initialize_stdin_serial (void)
+initialize_stdin_serial (struct ui *ui)
 {
-  stdin_serial = serial_fdopen (0);
+  ui->stdin_serial = serial_fdopen (fileno (ui->instream));
 }
 
 void

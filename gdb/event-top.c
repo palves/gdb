@@ -358,6 +358,7 @@ top_level_prompt (void)
 
 static struct ui main_ui_;
 
+struct ui *main_ui = &main_ui_;
 struct ui *current_ui = &main_ui_;
 struct ui *ui_list = &main_ui_;
 
@@ -418,7 +419,7 @@ stdin_event_handler (int error, gdb_client_data client_data)
       printf_unfiltered (_("error detected on stdin\n"));
       delete_file_handler (input_fd);
       /* If stdin died, we may as well kill gdb.  */
-      quit_command ((char *) 0, stdin == instream);
+      quit_command ((char *) 0, stdin == ui->instream);
     }
   else
     {
@@ -465,11 +466,12 @@ async_disable_stdin (void)
 void
 command_handler (char *command)
 {
+  struct ui *ui = current_ui;
   struct cleanup *stat_chain;
   char *c;
 
   clear_quit_flag ();
-  if (instream == stdin)
+  if (ui->instream == stdin)
     reinitialize_more_filter ();
 
   stat_chain = make_command_stats_cleanup (1);
@@ -479,7 +481,7 @@ command_handler (char *command)
     ;
   if (c[0] != '#')
     {
-      execute_command (command, instream == stdin);
+      execute_command (command, ui->instream == stdin);
 
       /* Do any commands attached to breakpoint we stopped at.  */
       bpstat_do_actions ();
@@ -544,6 +546,7 @@ char *
 handle_line_of_input (struct buffer *cmd_builder,
 		      char *rl, int repeat, char *annotation_suffix)
 {
+  struct ui *ui = current_ui;
   char *p1;
   char *cmd;
 
@@ -558,7 +561,7 @@ handle_line_of_input (struct buffer *cmd_builder,
      command, but leave ownership of memory to the buffer .  */
   cmd_builder->used_size = 0;
 
-  if (annotation_level > 1 && instream == stdin)
+  if (annotation_level > 1 && ui->instream == stdin)
     {
       printf_unfiltered (("\n\032\032post-"));
       puts_unfiltered (annotation_suffix);
@@ -575,8 +578,8 @@ handle_line_of_input (struct buffer *cmd_builder,
     }
 
   /* Do history expansion if that is wished.  */
-  if (history_expansion_p && instream == stdin
-      && ISATTY (instream))
+  if (history_expansion_p && ui->instream == stdin
+      && ISATTY (ui->instream))
     {
       char *history_value;
       int expanded;
@@ -645,10 +648,12 @@ handle_line_of_input (struct buffer *cmd_builder,
 void
 command_line_handler (char *rl)
 {
+  struct ui *ui = current_ui;
   struct buffer *cmd_builder = get_line_builder ();
   char *cmd;
 
-  cmd = handle_line_of_input (cmd_builder, rl, instream == stdin, "prompt");
+  cmd = handle_line_of_input (cmd_builder, rl,
+			      ui->instream == stdin, "prompt");
   if (cmd == (char *) EOF)
     {
       /* stdin closed.  The connection with the terminal is gone.
@@ -656,7 +661,7 @@ command_line_handler (char *rl)
 	 hung up but GDB is still alive.  In such a case, we just quit
 	 gdb killing the inferior program too.  */
       printf_unfiltered ("quit\n");
-      execute_command ("quit", stdin == instream);
+      execute_command ("quit", stdin == ui->instream);
     }
   else if (cmd == NULL)
     {
@@ -692,7 +697,7 @@ gdb_readline_callback_no_editing (gdb_client_data client_data)
   while (1)
     {
       /* A non-blocking read.  */
-      c = serial_readchar (stdin_serial, 0);
+      c = serial_readchar (ui->stdin_serial, 0);
 
       if (c == SERIAL_ERROR)
 	{
@@ -821,7 +826,14 @@ handle_sigint (int sig)
 static void
 async_sigterm_handler (gdb_client_data arg)
 {
-  quit_force (NULL, stdin == instream);
+  struct ui *ui;
+
+  /* Async signal handlers have no connection to whichever was the
+     current UI, and thus always run on the main one.  */
+  ui = main_ui;
+  current_ui = ui;
+
+  quit_force (NULL, stdin == ui->instream);
 }
 
 /* See defs.h.  */
@@ -1003,7 +1015,7 @@ gdb_setup_readline (void)
 
   /* If the input stream is connected to a terminal, turn on
      editing.  */
-  if (ISATTY (instream))
+  if (ISATTY (ui->instream))
     {
       /* Tell gdb that we will be using the readline library.  This
 	 could be overwritten by a command in .gdbinit like 'set
@@ -1026,11 +1038,11 @@ gdb_setup_readline (void)
   ui->input_handler = command_line_handler;
 
   /* Tell readline to use the same input stream that gdb uses.  */
-  rl_instream = instream;
+  rl_instream = ui->instream;
 
   /* Get a file descriptor for the input stream, so that we can
      register it with the event loop.  */
-  input_fd = fileno (instream);
+  input_fd = fileno (ui->instream);
 
   /* Now we need to create the event sources for the input file
      descriptor.  */

@@ -122,13 +122,6 @@ show_confirm (struct ui_file *file, int from_tty,
 		    value);
 }
 
-/* stdio stream that command input is being read from.  Set to stdin
-   normally.  Set by source_command to the file we are sourcing.  Set
-   to NULL if we are executing a user-defined command or interacting
-   via a GUI.  */
-
-FILE *instream;
-
 /* Flag to indicate whether a user defined command is currently running.  */
 
 int in_user_command;
@@ -285,18 +278,21 @@ quit_cover (void)
 void
 do_restore_instream_cleanup (void *stream)
 {
+  struct ui *ui = current_ui;
+
   /* Restore the previous input stream.  */
-  instream = (FILE *) stream;
+  ui->instream = (FILE *) stream;
 }
 
 /* Read commands from STREAM.  */
 void
 read_command_file (FILE *stream)
 {
+  struct ui *ui = current_ui;
   struct cleanup *cleanups;
 
-  cleanups = make_cleanup (do_restore_instream_cleanup, instream);
-  instream = stream;
+  cleanups = make_cleanup (do_restore_instream_cleanup, ui->instream);
+  ui->instream = stream;
   command_loop ();
   do_cleanups (cleanups);
 }
@@ -548,14 +544,16 @@ execute_command_to_string (char *p, int from_tty)
 void
 command_loop (void)
 {
-  while (instream && !feof (instream))
+  struct ui *ui = current_ui;
+
+  while (ui->instream && !feof (ui->instream))
     {
       char *command;
 
       /* Get a command-line.  This calls the readline package.  */
-      command = command_line_input (instream == stdin ?
-				    get_prompt () : (char *) NULL,
-				    instream == stdin, "prompt");
+      command = command_line_input (ui->instream == stdin
+				    ? get_prompt () : (char *) NULL,
+				    ui->instream == stdin, "prompt");
       if (command == NULL)
 	return;
       command_handler (command);
@@ -572,13 +570,15 @@ static int suppress_dont_repeat = 0;
 void
 dont_repeat (void)
 {
+  struct ui *ui = current_ui;
+
   if (suppress_dont_repeat || server_command)
     return;
 
   /* If we aren't reading from standard input, we are saving the last
      thing read from stdin in line and don't want to delete it.  Null
      lines won't repeat here in any case.  */
-  if (instream == stdin)
+  if (ui->instream == stdin)
     *saved_command_line = 0;
 }
 
@@ -606,6 +606,7 @@ prevent_dont_repeat (void)
 static char *
 gdb_readline_no_editing (const char *prompt)
 {
+  struct ui *ui = current_ui;
   struct buffer line_builder;
 
   buffer_init (&line_builder);
@@ -625,7 +626,7 @@ gdb_readline_no_editing (const char *prompt)
 
       /* Read from stdin if we are executing a user defined command.
          This is the right thing for prompt_for_continue, at least.  */
-      c = fgetc (instream ? instream : stdin);
+      c = fgetc (ui->instream ? ui->instream : stdin);
 
       if (c == EOF)
 	{
@@ -1030,6 +1031,7 @@ char *
 command_line_input (const char *prompt_arg, int repeat, char *annotation_suffix)
 {
   static struct buffer builder;
+  struct ui *ui = current_ui;
   const char *prompt = prompt_arg;
   char *cmd;
 
@@ -1040,7 +1042,7 @@ command_line_input (const char *prompt_arg, int repeat, char *annotation_suffix)
   if (annotation_suffix == NULL)
     annotation_suffix = "";
 
-  if (annotation_level > 1 && instream == stdin)
+  if (annotation_level > 1 && ui->instream == stdin)
     {
       char *local_prompt;
 
@@ -1081,7 +1083,7 @@ command_line_input (const char *prompt_arg, int repeat, char *annotation_suffix)
       if (source_file_name != NULL)
 	++source_line_number;
 
-      if (annotation_level > 1 && instream == stdin)
+      if (annotation_level > 1 && ui->instream == stdin)
 	{
 	  puts_unfiltered ("\n\032\032pre-");
 	  puts_unfiltered (annotation_suffix);
@@ -1492,16 +1494,18 @@ quit_force (char *args, int from_tty)
 int
 input_from_terminal_p (void)
 {
+  struct ui *ui = current_ui;
+
   if (batch_flag)
     return 0;
 
-  if (gdb_has_a_terminal () && instream == stdin)
+  if (gdb_has_a_terminal () && ui->instream == stdin)
     return 1;
 
   /* If INSTREAM is unset, and we are not in a user command, we
      must be in Insight.  That's like having a terminal, for our
      purposes.  */
-  if (instream == NULL && !in_user_command)
+  if (ui->instream == NULL && !in_user_command)
     return 1;
 
   return 0;
@@ -1937,7 +1941,7 @@ gdb_init (char *argv0)
   init_cli_cmds();
   init_main ();			/* But that omits this file!  Do it now.  */
 
-  initialize_stdin_serial ();
+  initialize_stdin_serial (current_ui);
 
   /* Take a snapshot of our tty state before readline/ncurses have had a chance
      to alter it.  */

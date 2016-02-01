@@ -77,6 +77,7 @@
 #endif
 
 struct inferior;
+struct ui;
 
 extern void new_tty_prefork (const char *);
 
@@ -96,8 +97,9 @@ extern pid_t create_tty_session (void);
    we lack job control.  */
 extern int gdb_setpgid (void);
 
-/* Set up a serial structure describing standard input.  In inflow.c.  */
-extern void initialize_stdin_serial (void);
+/* Set up a serial structure describing the UI's input.  In
+   inflow.c.  */
+extern void initialize_stdin_serial (struct ui *ui);
 
 extern int gdb_has_a_terminal (void);
 
