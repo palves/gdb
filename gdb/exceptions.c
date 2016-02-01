@@ -26,6 +26,7 @@
 #include "ui-out.h"
 #include "serial.h"
 #include "gdbthread.h"
+#include "top.h"
 
 void
 prepare_to_throw_exception (void)
@@ -37,6 +38,7 @@ prepare_to_throw_exception (void)
 static void
 print_flush (void)
 {
+  struct ui *ui = current_ui;
   struct serial *gdb_stdout_serial;
 
   if (deprecated_error_begin_hook)
@@ -59,7 +61,7 @@ print_flush (void)
   gdb_flush (gdb_stderr);
 
   /* 3.  The system-level buffer.  */
-  gdb_stdout_serial = serial_fdopen (1);
+  gdb_stdout_serial = serial_fdopen (fileno (ui->outstream));
   if (gdb_stdout_serial)
     {
       serial_drain_output (gdb_stdout_serial);
