@@ -76,28 +76,10 @@ static void async_stop_sig (gdb_client_data);
 #endif
 static void async_sigterm_handler (gdb_client_data arg);
 
-/* Readline offers an alternate interface, via callback
-   functions.  These are all included in the file callback.c in the
-   readline distribution.  This file provides (mainly) a function, which
-   the event loop uses as callback (i.e. event handler) whenever an event
-   is detected on the standard input file descriptor.
-   readline_callback_read_char is called (by the GDB event loop) whenever
-   there is a new character ready on the input stream.  This function
-   incrementally builds a buffer internal to readline where it
-   accumulates the line read up to the point of invocation.  In the
-   special case in which the character read is newline, the function
-   invokes a GDB supplied callback routine, which does the processing of
-   a full command line.  This latter routine is the asynchronous analog
-   of the old command_line_input in gdb.  Instead of invoking (and waiting
-   for) readline to read the command line and pass it back to
-   command_loop for processing, the new command_line_handler function has
-   the command line already available as its parameter.  INPUT_HANDLER is
-   to be set to the function that readline will invoke when a complete
-   line of input is ready.  CALL_READLINE is to be set to the function
-   that readline offers as callback to the event_loop.  */
-
-void (*input_handler) (char *);
-void (*call_readline) (gdb_client_data);
+/* Instead of invoking (and waiting for) readline to read the command
+   line and pass it back for processing, we use readline's alternate
+   interface, via callback functions, so that the event loop can react
+   to other event sources while we wait for input.  */
 
 /* Important variables for the event loop.  */
 
@@ -179,6 +161,8 @@ cli_command_loop (void *data)
 static void
 change_line_handler (void)
 {
+  struct ui *ui = current_ui;
+
   /* NOTE: this operates on input_fd, not instream.  If we are reading
      commands from a file, instream will point to the file.  However in
      async mode, we always read commands from a file with editing
@@ -188,18 +172,18 @@ change_line_handler (void)
   if (async_command_editing_p)
     {
       /* Turn on editing by using readline.  */
-      call_readline = rl_callback_read_char_wrapper;
-      input_handler = command_line_handler;
+      ui->call_readline = rl_callback_read_char_wrapper;
+      ui->input_handler = command_line_handler;
     }
   else
     {
       /* Turn off editing by using gdb_readline2.  */
       gdb_rl_callback_handler_remove ();
-      call_readline = gdb_readline_callback_no_editing;
+      ui->call_readline = gdb_readline_callback_no_editing;
 
       /* Set up the command handler as well, in case we are called as
          first thing from .gdbinit.  */
-      input_handler = command_line_handler;
+      ui->input_handler = command_line_handler;
     }
 }
 
@@ -232,12 +216,14 @@ gdb_rl_callback_handler_remove (void)
 void
 gdb_rl_callback_handler_install (const char *prompt)
 {
+  struct ui *ui = current_ui;
+
   /* Calling rl_callback_handler_install resets readline's input
      buffer.  Calling this when we were already processing input
      therefore loses input.  */
   gdb_assert (!callback_handler_installed);
 
-  rl_callback_handler_install (prompt, input_handler);
+  rl_callback_handler_install (prompt, ui->input_handler);
   callback_handler_installed = 1;
 }
 
@@ -370,15 +356,15 @@ top_level_prompt (void)
   return xstrdup (prompt);
 }
 
-/* Get a pointer to the command line builder.  This is to used to
-   construct a whole line of input from partial input.  */
+static struct ui current_ui_;
+struct ui *current_ui = &current_ui_;
+
+/* Get a pointer to the current UI's line builder.  */
 
 static struct buffer *
 get_line_builder (void)
 {
-  static struct buffer line_builder;
-
-  return &line_builder;
+  return &current_ui->line_builder;
 }
 
 /* When there is an event ready on the stdin file descriptor, instead
@@ -389,6 +375,8 @@ get_line_builder (void)
 void
 stdin_event_handler (int error, gdb_client_data client_data)
 {
+  struct ui *ui = current_ui;
+
   if (error)
     {
       printf_unfiltered (_("error detected on stdin\n"));
@@ -401,7 +389,7 @@ stdin_event_handler (int error, gdb_client_data client_data)
       do
 	{
 	  call_stdin_event_handler_again_p = 0;
-	  (*call_readline) (client_data);
+	  ui->call_readline (client_data);
 	} while (call_stdin_event_handler_again_p != 0);
     }
 }
@@ -653,6 +641,7 @@ command_line_handler (char *rl)
 void
 gdb_readline_callback_no_editing (gdb_client_data client_data)
 {
+  struct ui *ui = current_ui;
   struct buffer *builder = get_line_builder ();
   int c;
   char *r;
@@ -685,7 +674,7 @@ gdb_readline_callback_no_editing (gdb_client_data client_data)
 	      break;
 	    }
 	  xfree (buffer_finish (builder));
-	  (*input_handler) (NULL);
+	  ui->input_handler (NULL);
 	  return;
 	}
 
@@ -703,7 +692,7 @@ gdb_readline_callback_no_editing (gdb_client_data client_data)
   buffer_grow_char (builder, '\0');
 
   r = buffer_finish (builder);
-  (*input_handler) (r);
+  ui->input_handler (r);
 }
 
 
@@ -963,6 +952,8 @@ set_async_editing_command (char *args, int from_tty,
 void
 gdb_setup_readline (void)
 {
+  struct ui *ui = current_ui;
+
   /* This function is a noop for the sync case.  The assumption is
      that the sync setup is ALL done in gdb_init, and we would only
      mess it up here.  The sync stuff should really go away over
@@ -985,19 +976,19 @@ gdb_setup_readline (void)
 	  
       /* When a character is detected on instream by select or poll,
 	 readline will be invoked via this callback function.  */
-      call_readline = rl_callback_read_char_wrapper;
+      ui->call_readline = rl_callback_read_char_wrapper;
     }
   else
     {
       async_command_editing_p = 0;
-      call_readline = gdb_readline_callback_no_editing;
+      ui->call_readline = gdb_readline_callback_no_editing;
     }
   
   /* When readline has read an end-of-line character, it passes the
      complete line to gdb for processing; command_line_handler is the
      function that does this.  */
-  input_handler = command_line_handler;
-      
+  ui->input_handler = command_line_handler;
+
   /* Tell readline to use the same input stream that gdb uses.  */
   rl_instream = instream;
 

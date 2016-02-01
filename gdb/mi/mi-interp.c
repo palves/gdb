@@ -174,6 +174,7 @@ static int
 mi_interpreter_resume (void *data)
 {
   struct mi_interp *mi = (struct mi_interp *) data;
+  struct ui *ui = current_ui;
 
   /* As per hack note in mi_interpreter_init, swap in the output
      channels... */
@@ -181,8 +182,8 @@ mi_interpreter_resume (void *data)
 
   /* These overwrite some of the initialization done in
      _intialize_event_loop.  */
-  call_readline = gdb_readline_callback_no_editing;
-  input_handler = mi_execute_command_input_handler;
+  ui->call_readline = gdb_readline_callback_no_editing;
+  ui->input_handler = mi_execute_command_input_handler;
   async_command_editing_p = 0;
   /* FIXME: This is a total hack for now.  PB's use of the MI
      implicitly relies on a bug in the async support which allows
