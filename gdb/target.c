@@ -490,6 +490,9 @@ target_terminal_inferior (void)
 
   delete_file_handler (ui->input_fd);
 
+  if (ui != main_ui)
+    return;
+
   if (terminal_state == terminal_is_inferior)
     return;
 
@@ -508,6 +511,9 @@ target_terminal_ours (void)
 
   add_file_handler (ui->input_fd, stdin_event_handler, ui);
 
+  if (ui != main_ui)
+    return;
+
   if (terminal_state == terminal_is_ours)
     return;
 
@@ -520,6 +526,11 @@ target_terminal_ours (void)
 void
 target_terminal_ours_for_output (void)
 {
+  struct ui *ui = current_ui;
+
+  if (ui != main_ui)
+    return;
+
   if (terminal_state != terminal_is_inferior)
     return;
   (*current_target.to_terminal_ours_for_output) (&current_target);
