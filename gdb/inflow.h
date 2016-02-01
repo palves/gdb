@@ -33,4 +33,8 @@
 extern PROCESS_GROUP_TYPE inferior_process_group (void);
 #endif
 
+/* The serial object that wraps stdin.  */
+
+extern struct serial *stdin_serial;
+
 #endif /* inflow.h */

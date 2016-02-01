@@ -48,7 +48,7 @@ static void child_terminal_ours_1 (int);
 
 /* Record terminal status separately for debugger and inferior.  */
 
-static struct serial *stdin_serial;
+struct serial *stdin_serial;
 
 /* Terminal related info we need to keep track of.  Each inferior
    holds an instance of this structure --- we save it whenever the
