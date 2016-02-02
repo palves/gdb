@@ -133,19 +133,6 @@ rl_callback_read_char_wrapper (gdb_client_data client_data)
     (*after_char_processing_hook) ();
 }
 
-/* Initialize all the necessary variables, start the event loop,
-   register readline, and stdin, start the loop.  The DATA is the
-   interpreter data cookie, ignored for now.  */
-
-void
-cli_command_loop (void *data)
-{
-  display_gdb_prompt (0);
-
-  /* Now it's time to start the event loop.  */
-  start_event_loop ();
-}
-
 /* Change the function to be invoked every time there is a character
    ready on stdin.  This is used when the user sets the editing off,
    therefore bypassing readline, and letting gdb handle the input

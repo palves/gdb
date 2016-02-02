@@ -44,7 +44,6 @@
 
 static void mi_execute_command_wrapper (const char *cmd);
 static void mi_execute_command_input_handler (char *cmd);
-static void mi_command_loop (void *data);
 
 /* These are hooks that we put in place while doing interpreter_exec
    so we can report interesting things that happened "behind the MI's
@@ -323,7 +322,7 @@ mi_execute_command_input_handler (char *cmd)
 }
 
 static void
-mi_command_loop (void *data)
+mi_interpreter_pre_command_loop (struct interp *self)
 {
   /* Turn off 8 bit strings in quoted output.  Any character with the
      high bit set is printed using C's octal format.  */
@@ -331,8 +330,6 @@ mi_command_loop (void *data)
 
   /* Tell the world that we're alive.  */
   display_mi_prompt ();
-
-  start_event_loop ();
 }
 
 static void
@@ -1330,7 +1327,7 @@ static const struct interp_procs mi_interp_procs =
   mi_interpreter_exec,		/* exec_proc */
   mi_ui_out, 			/* ui_out_proc */
   mi_set_logging,		/* set_logging_proc */
-  mi_command_loop		/* command_loop_proc */
+  mi_interpreter_pre_command_loop /* pre_command_loop_proc */
 };
 
 static struct interp *
