@@ -54,6 +54,11 @@ struct ui
      processing.  */
   void (*input_handler) (char *);
 
+  /* True if this UI is using the readline library for command
+     editing; false if using GDB's own simplified form of readline,
+     with no editing support.  */
+  int command_editing;
+
   /* Each UI has its own independent set of interpreters.  */
   struct ui_interp_info *interp_info;
 
