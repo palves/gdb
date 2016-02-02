@@ -36,6 +36,8 @@ struct tl_interp_info;
 
 struct ui
 {
+  struct ui *next;
+
   /* The UI's line builder.  This is to used to accumulate input until
      we have a whole command line.  */
   struct buffer line_builder;
@@ -84,6 +86,24 @@ struct ui
 };
 
 extern struct ui *current_ui;
+extern struct ui *ui_list;
+
+struct switch_thru_all_uis
+{
+  struct ui *iter;
+  struct cleanup *old_chain;
+};
+
+extern void switch_thru_all_uis_init (struct switch_thru_all_uis *state);
+extern int switch_thru_all_uis_cond (struct switch_thru_all_uis *state);
+extern void switch_thru_all_uis_next (struct switch_thru_all_uis *state);
+
+  /* Traverse through all UI, and switch the current UI to the one
+     being iterated.  */
+#define SWITCH_THRU_ALL_UIS(STATE)		\
+  for (switch_thru_all_uis_init (&STATE);		\
+       switch_thru_all_uis_cond (&STATE);		\
+       switch_thru_all_uis_next (&STATE))		\
 
 /* From top.c.  */
 extern char *saved_command_line;

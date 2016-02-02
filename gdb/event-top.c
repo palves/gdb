@@ -356,8 +356,44 @@ top_level_prompt (void)
   return xstrdup (prompt);
 }
 
-static struct ui current_ui_;
-struct ui *current_ui = &current_ui_;
+static struct ui main_ui_;
+
+struct ui *current_ui = &main_ui_;
+struct ui *ui_list = &main_ui_;
+
+static void
+restore_ui_cleanup (void *data)
+{
+  current_ui = (struct ui *) data;
+}
+
+void
+switch_thru_all_uis_init (struct switch_thru_all_uis *state)
+{
+  state->iter = ui_list;
+  state->old_chain = make_cleanup (restore_ui_cleanup, current_ui);
+}
+
+int
+switch_thru_all_uis_cond (struct switch_thru_all_uis *state)
+{
+  if (state->iter != NULL)
+    {
+      current_ui = state->iter;
+      return 1;
+    }
+  else
+    {
+      do_cleanups (state->old_chain);
+      return 0;
+    }
+}
+
+void
+switch_thru_all_uis_next (struct switch_thru_all_uis *state)
+{
+  state->iter = state->iter->next;
+}
 
 /* Get a pointer to the current UI's line builder.  */
 
