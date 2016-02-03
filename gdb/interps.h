@@ -86,6 +86,7 @@ extern struct interp *interp_new (const char *name,
 extern void interp_add (struct interp *interp);
 extern int interp_set (struct interp *interp, int top_level);
 extern struct interp *interp_lookup (const char *name);
+extern void set_top_level_interpreter (const char *name);
 extern struct ui_out *interp_ui_out (struct interp *interp);
 extern void *interp_data (struct interp *interp);
 extern const char *interp_name (struct interp *interp);
@@ -118,6 +119,10 @@ extern int interp_supports_command_editing (struct interp *interp);
 /* Called before starting an event loop, to give the interpreter a
    chance to e.g., print a prompt.  */
 extern void interp_pre_command_loop (struct interp *interp);
+
+extern VEC (char_ptr) *interpreter_completer (struct cmd_list_element *ignore,
+					      const char *text,
+					      const char *word);
 
 /* well-known interpreters */
 #define INTERP_CONSOLE		"console"

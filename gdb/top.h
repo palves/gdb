@@ -160,6 +160,8 @@ extern void switch_thru_all_uis_next (struct switch_thru_all_uis *state);
 #define ALL_UIS(UI)				\
   for (UI = ui_list; UI; UI = UI->next)		\
 
+extern struct ui *new_ui (FILE *instream, FILE *outstream, FILE *errstream);
+
 extern void restore_ui_cleanup (void *data);
 
 /* From top.c.  */

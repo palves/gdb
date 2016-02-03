@@ -291,6 +291,19 @@ interp_lookup (const char *name)
   return NULL;
 }
 
+void
+set_top_level_interpreter (const char *name)
+{
+  /* Find it.  */
+  struct interp *interp = interp_lookup (name);
+
+  if (interp == NULL)
+    error (_("Interpreter `%s' unrecognized"), name);
+  /* Install it.  */
+  if (!interp_set (interp, 1))
+    error (_("Interpreter `%s' failed to initialize."), name);
+}
+
 /* Returns the current interpreter.  */
 
 struct ui_out *
@@ -523,7 +536,7 @@ interpreter_exec_cmd (char *args, int from_tty)
 }
 
 /* List the possible interpreters which could complete the given text.  */
-static VEC (char_ptr) *
+VEC (char_ptr) *
 interpreter_completer (struct cmd_list_element *ignore,
 		       const char *text, const char *word)
 {

@@ -364,11 +364,10 @@ top_level_prompt (void)
   return xstrdup (prompt);
 }
 
-static struct ui main_ui_;
 
-struct ui *main_ui = &main_ui_;
-struct ui *current_ui = &main_ui_;
-struct ui *ui_list = &main_ui_;
+struct ui *main_ui;
+struct ui *current_ui;
+struct ui *ui_list;
 
 void
 restore_ui_cleanup (void *data)

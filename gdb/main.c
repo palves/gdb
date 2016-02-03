@@ -441,7 +441,6 @@ DEF_VEC_O (cmdarg_s);
 static int
 captured_main (void *data)
 {
-  struct ui *ui = current_ui;
   struct captured_main_args *context = (struct captured_main_args *) data;
   int argc = context->argc;
   char **argv = context->argv;
@@ -513,26 +512,15 @@ captured_main (void *data)
   clear_quit_flag ();
   saved_command_line = (char *) xstrdup ("");
 
-  ui->instream = stdin;
-  ui->outstream = stdout;
-  ui->errstream = stderr;
-
-  ui->input_fd = fileno (stdin);
-
-  ui->prompt_state = PROMPT_NEEDED;
-
 #ifdef __MINGW32__
   /* Ensure stderr is unbuffered.  A Cygwin pty or pipe is implemented
      as a Windows pipe, and Windows buffers on pipes.  */
   setvbuf (stderr, NULL, _IONBF, BUFSIZ);
 #endif
 
-  gdb_stdout = stdio_fileopen (stdout);
-  gdb_stderr = stderr_fileopen (stderr);
+  main_ui = new_ui (stdin, stdout, stderr);
+  current_ui = main_ui;
 
-  gdb_stdlog = gdb_stderr;	/* for moment */
-  gdb_stdtarg = gdb_stderr;	/* for moment */
-  gdb_stdin = stdio_fileopen (stdin);
   gdb_stdtargerr = gdb_stderr;	/* for moment */
   gdb_stdtargin = gdb_stdin;	/* for moment */
 
@@ -974,17 +962,7 @@ captured_main (void *data)
 
   /* Install the default UI.  All the interpreters should have had a
      look at things by now.  Initialize the default interpreter.  */
-
-  {
-    /* Find it.  */
-    struct interp *interp = interp_lookup (interpreter_p);
-
-    if (interp == NULL)
-      error (_("Interpreter `%s' unrecognized"), interpreter_p);
-    /* Install it.  */
-    if (!interp_set (interp, 1))
-      error (_("Interpreter `%s' failed to initialize."), interpreter_p);
-  }
+  set_top_level_interpreter (interpreter_p);
 
   /* FIXME: cagney/2003-02-03: The big hack (part 2 of 2) that lets
      GDB retain the old MI1 interpreter startup behavior.  Output the
@@ -1173,7 +1151,16 @@ captured_main (void *data)
 int
 gdb_main (struct captured_main_args *args)
 {
-  catch_errors (captured_main, args, "", RETURN_MASK_ALL);
+  TRY
+    {
+      captured_main (args);
+    }
+  CATCH (ex, RETURN_MASK_ALL)
+    {
+      exception_print (gdb_stderr, ex);
+    }
+  END_CATCH
+
   /* The only way to end up here is by an error (normal exit is
      handled by quit_force()), hence always return an error status.  */
   return 1;
