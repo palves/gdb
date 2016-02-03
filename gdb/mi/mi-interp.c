@@ -38,6 +38,7 @@
 #include "tracepoint.h"
 #include "cli-out.h"
 #include "thread-fsm.h"
+#include "cli/cli-interp.h"
 
 /* These are the interpreter setup, etc. functions for the MI
    interpreter.  */
@@ -617,12 +618,14 @@ mi_on_normal_stop_1 (struct bpstats *bs, int print_frame)
   /* Since this can be called when CLI command is executing,
      using cli interpreter, be sure to use MI uiout for output,
      not the current one.  */
-  struct ui_out *mi_uiout = interp_ui_out (top_level_interpreter ());
+  struct mi_interp *mi = as_mi_interp (top_level_interpreter ());
+  struct ui_out *mi_uiout = mi->mi_uiout;
 
   if (print_frame)
     {
       struct thread_info *tp;
       int core;
+      struct interp *console_interp;
 
       tp = inferior_thread ();
 
@@ -637,36 +640,10 @@ mi_on_normal_stop_1 (struct bpstats *bs, int print_frame)
 	}
       print_stop_event (mi_uiout);
 
-      /* Breakpoint hits should always be mirrored to the console.
-	 Deciding what to mirror to the console wrt to breakpoints and
-	 random stops gets messy real fast.  E.g., say "s" trips on a
-	 breakpoint.  We'd clearly want to mirror the event to the
-	 console in this case.  But what about more complicated cases
-	 like "s&; thread n; s&", and one of those steps spawning a
-	 new thread, and that thread hitting a breakpoint?  It's
-	 impossible in general to track whether the thread had any
-	 relation to the commands that had been executed.  So we just
-	 simplify and always mirror breakpoints and random events to
-	 the console.
+      console_interp = interp_lookup (INTERP_CONSOLE);
+      if (should_print_stop_to_console (console_interp, tp))
+	print_stop_event (mi->cli_uiout);
 
-	 OTOH, we should print the source line to the console when
-	 stepping or other similar commands, iff the step was started
-	 by a console command, but not if it was started with
-	 -exec-step or similar.  */
-      if ((bpstat_what (tp->control.stop_bpstat).main_action
-	   == BPSTAT_WHAT_STOP_NOISY)
-	  || !(tp->thread_fsm != NULL
-	       && thread_fsm_finished_p (tp->thread_fsm))
-	  || (tp->control.command_interp != NULL
-	      && tp->control.command_interp != top_level_interpreter ()))
-	{
-	  struct mi_interp *mi
-	    = (struct mi_interp *) top_level_interpreter_data ();
-
-	  print_stop_event (mi->cli_uiout);
-	}
-
-      tp = inferior_thread ();
       ui_out_field_int (mi_uiout, "thread-id", tp->global_num);
       if (non_stop)
 	{
