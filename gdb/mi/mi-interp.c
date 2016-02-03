@@ -90,8 +90,11 @@ static int report_initial_inferior (struct inferior *inf, void *closure);
 static void
 display_mi_prompt (void)
 {
+  struct ui *ui = current_ui;
+
   fputs_unfiltered ("(gdb) \n", raw_stdout);
   gdb_flush (raw_stdout);
+  ui->prompt_state = PROMPTED;
 }
 
 static struct mi_interp *
@@ -165,13 +168,6 @@ mi_interpreter_resume (void *data)
 
   ui->call_readline = gdb_readline_callback_no_editing;
   ui->input_handler = mi_execute_command_input_handler;
-  /* FIXME: This is a total hack for now.  PB's use of the MI
-     implicitly relies on a bug in the async support which allows
-     asynchronous commands to leak through the commmand loop.  The bug
-     involves (but is not limited to) the fact that sync_execution was
-     erroneously initialized to 0.  Duplicate by initializing it thus
-     here...  */
-  sync_execution = 0;
 
   gdb_stdout = mi->out;
   /* Route error and log output through the MI.  */
@@ -310,6 +306,10 @@ mi_on_sync_execution_done (void)
 static void
 mi_execute_command_input_handler (char *cmd)
 {
+  struct ui *ui = current_ui;
+
+  ui->prompt_state = PROMPT_NEEDED;
+
   mi_execute_command_wrapper (cmd);
 
   /* Print a prompt, indicating we're ready for further input, unless
@@ -317,7 +317,7 @@ mi_execute_command_input_handler (char *cmd)
      to go back to the event loop and will output the prompt in the
      'synchronous_command_done' observer when the target next
      stops.  */
-  if (!sync_execution)
+  if (ui->prompt_state == PROMPT_NEEDED)
     display_mi_prompt ();
 }
 
@@ -1051,12 +1051,10 @@ mi_on_resume_1 (ptid_t ptid)
   if (!running_result_record_printed && mi_proceeded)
     {
       running_result_record_printed = 1;
-      /* This is what gdb used to do historically -- printing prompt even if
-	 it cannot actually accept any input.  This will be surely removed
-	 for MI3, and may be removed even earlier.  SYNC_EXECUTION is
-	 checked here because we only need to emit a prompt if a
-	 synchronous command was issued when the target is async.  */
-      if (!target_is_async_p () || sync_execution)
+      /* This is what gdb used to do historically -- printing prompt
+	 even if it cannot actually accept any input.  This will be
+	 surely removed for MI3, and may be removed even earlier.  */
+      if (current_ui->prompt_state == PROMPT_BLOCKED)
 	fputs_unfiltered ("(gdb) \n", raw_stdout);
     }
   gdb_flush (raw_stdout);

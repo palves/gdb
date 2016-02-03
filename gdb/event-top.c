@@ -277,7 +277,11 @@ display_gdb_prompt (const char *new_prompt)
      IE, displayed but not set.  */
   if (! new_prompt)
     {
-      if (sync_execution)
+      struct ui *ui = current_ui;
+
+      if (ui->prompt_state == PROMPTED)
+	internal_error (__FILE__, __LINE__, _("double prompt"));
+      else if (ui->prompt_state == PROMPT_BLOCKED)
 	{
 	  /* This is to trick readline into not trying to display the
 	     prompt.  Even though we display the prompt using this
@@ -300,10 +304,11 @@ display_gdb_prompt (const char *new_prompt)
 	  do_cleanups (old_chain);
 	  return;
 	}
-      else
+      else if (ui->prompt_state == PROMPT_NEEDED)
 	{
 	  /* Display the top level prompt.  */
 	  actual_gdb_prompt = top_level_prompt ();
+	  ui->prompt_state = PROMPTED;
 	}
     }
   else
@@ -445,14 +450,12 @@ stdin_event_handler (int error, gdb_client_data client_data)
 void
 async_enable_stdin (void)
 {
-  if (sync_execution)
+  struct ui *ui = current_ui;
+
+  if (ui->prompt_state == PROMPT_BLOCKED)
     {
-      /* See NOTE in async_disable_stdin().  */
-      /* FIXME: cagney/1999-09-27: Call this before clearing
-	 sync_execution.  Current target_terminal_ours() implementations
-	 check for sync_execution before switching the terminal.  */
       target_terminal_ours ();
-      sync_execution = 0;
+      ui->prompt_state = PROMPT_NEEDED;
     }
 }
 
@@ -462,7 +465,9 @@ async_enable_stdin (void)
 void
 async_disable_stdin (void)
 {
-  sync_execution = 1;
+  struct ui *ui = current_ui;
+
+  ui->prompt_state = PROMPT_BLOCKED;
 }
 
 
@@ -677,8 +682,12 @@ command_line_handler (char *rl)
     }
   else
     {
+      ui->prompt_state = PROMPT_NEEDED;
+
       command_handler (cmd);
-      display_gdb_prompt (0);
+
+      if (ui->prompt_state != PROMPTED)
+	display_gdb_prompt (0);
     }
 }
 
