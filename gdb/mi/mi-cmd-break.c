@@ -185,6 +185,7 @@ mi_cmd_break_insert_1 (int dprintf, char *command, char **argv, int argc)
   int is_explicit = 0;
   struct explicit_location explicit_loc;
   char *extra_string = NULL;
+  struct itset *trigger_set, *suspend_set;
 
   enum opt
     {
@@ -351,7 +352,11 @@ mi_cmd_break_insert_1 (int dprintf, char *command, char **argv, int argc)
 
   make_cleanup_delete_event_location (location);
 
-  create_breakpoint (get_current_arch (), location, condition, thread,
+  default_breakpoint_itsets (&trigger_set, &suspend_set);
+
+  create_breakpoint (get_current_arch (), location, condition,
+		     trigger_set, suspend_set,
+		     thread,
 		     extra_string,
 		     0 /* condition and thread are valid.  */,
 		     temp_p, type_wanted,

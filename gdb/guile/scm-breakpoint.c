@@ -415,6 +415,7 @@ gdbscm_register_breakpoint_x (SCM self)
   char *location, *copy;
   struct event_location *eloc;
   struct cleanup *cleanup;
+  struct itset *trigger_set, *suspend_set;
 
   /* We only support registering breakpoints created with make-breakpoint.  */
   if (!bp_smob->is_scheme_bkpt)
@@ -429,6 +430,8 @@ gdbscm_register_breakpoint_x (SCM self)
   eloc = new_linespec_location (&copy);
   cleanup = make_cleanup_delete_event_location (eloc);
 
+  default_breakpoint_itsets (&trigger_set, &suspend_set);
+
   TRY
     {
       int internal = bp_smob->spec.is_internal;
@@ -438,7 +441,9 @@ gdbscm_register_breakpoint_x (SCM self)
 	case bp_breakpoint:
 	  {
 	    create_breakpoint (get_current_arch (),
-			       eloc, NULL, -1, NULL,
+			       eloc, NULL,
+			       trigger_set, suspend_set,
+			       -1, NULL,
 			       0,
 			       0, bp_breakpoint,
 			       0,

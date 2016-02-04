@@ -295,12 +295,16 @@ bpfinishpy_init (PyObject *self, PyObject *args, PyObject *kwargs)
     {
       struct event_location *location;
       struct cleanup *back_to;
+      struct itset *trigger_set, *suspend_set;
 
       /* Set a breakpoint on the return address.  */
+      back_to = default_breakpoint_itsets (&trigger_set, &suspend_set);
       location = new_address_location (get_frame_pc (prev_frame), NULL, 0);
-      back_to = make_cleanup_delete_event_location (location);
+      make_cleanup_delete_event_location (location);
       create_breakpoint (python_gdbarch,
-                         location, NULL, thread, NULL,
+                         location, NULL,
+			 trigger_set, suspend_set,
+			 thread, NULL,
                          0,
                          1 /*temp_flag*/,
                          bp_breakpoint,

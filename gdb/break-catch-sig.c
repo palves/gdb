@@ -369,14 +369,17 @@ signal_catchpoint_explains_signal (struct breakpoint *b, enum gdb_signal sig)
    then internal signals like SIGTRAP are not caught.  */
 
 static void
-create_signal_catchpoint (int tempflag, VEC (gdb_signal_type) *filter,
+create_signal_catchpoint (struct itset *trigger_set, struct itset *suspend_set,
+			  int tempflag,
+			  VEC (gdb_signal_type) *filter,
 			  int catch_all)
 {
   struct signal_catchpoint *c;
   struct gdbarch *gdbarch = get_current_arch ();
 
   c = XNEW (struct signal_catchpoint);
-  init_catchpoint (&c->base, gdbarch, tempflag, NULL, &signal_catchpoint_ops);
+  init_catchpoint (&c->base, trigger_set, suspend_set,
+		   gdbarch, tempflag, NULL, &signal_catchpoint_ops);
   c->signals_to_be_caught = filter;
   c->catch_all = catch_all;
 
@@ -449,8 +452,12 @@ catch_signal_command (char *arg, int from_tty,
 {
   int tempflag, catch_all = 0;
   VEC (gdb_signal_type) *filter;
+  struct itset *trigger_set, *suspend_set;
+  struct cleanup *old_chain;
 
   tempflag = get_cmd_context (command) == CATCH_TEMPORARY;
+
+  old_chain = parse_breakpoint_args (&arg, &trigger_set, &suspend_set);
 
   arg = skip_spaces (arg);
 
@@ -465,7 +472,10 @@ catch_signal_command (char *arg, int from_tty,
   else
     filter = NULL;
 
-  create_signal_catchpoint (tempflag, filter, catch_all);
+  create_signal_catchpoint (trigger_set, suspend_set,
+			    tempflag, filter, catch_all);
+
+  discard_cleanups (old_chain);
 }
 
 static void

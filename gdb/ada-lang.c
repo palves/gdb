@@ -60,6 +60,7 @@
 #include "mi/mi-common.h"
 #include "arch-utils.h"
 #include "cli/cli-utils.h"
+#include "itset.h"
 
 /* Define whether or not the C operator '/' truncates towards zero for
    differently signed operands (truncation direction is undefined in C).
@@ -13067,7 +13068,9 @@ ada_exception_sal (enum ada_exception_catchpoint_kind ex, char *excep_string,
    FROM_TTY is the usual argument passed to all commands implementations.  */
 
 void
-create_ada_exception_catchpoint (struct gdbarch *gdbarch,
+create_ada_exception_catchpoint (struct itset *trigger_set,
+				 struct itset *suspend_set,
+				 struct gdbarch *gdbarch,
 				 enum ada_exception_catchpoint_kind ex_kind,
 				 char *excep_string,
 				 char *cond_string,
@@ -13082,7 +13085,8 @@ create_ada_exception_catchpoint (struct gdbarch *gdbarch,
     = ada_exception_sal (ex_kind, excep_string, &addr_string, &ops);
 
   c = XNEW (struct ada_catchpoint);
-  init_ada_exception_breakpoint (&c->base, gdbarch, sal, addr_string,
+  init_ada_exception_breakpoint (&c->base, trigger_set, suspend_set,
+				 gdbarch, sal, addr_string,
 				 ops, tempflag, disabled, from_tty);
   c->excep_string = excep_string;
   create_excep_cond_exprs (c);
@@ -13102,17 +13106,24 @@ catch_ada_exception_command (char *arg, int from_tty,
   enum ada_exception_catchpoint_kind ex_kind;
   char *excep_string = NULL;
   char *cond_string = NULL;
+  struct itset *trigger_set, *suspend_set;
+  struct cleanup *old_chain;
 
   tempflag = get_cmd_context (command) == CATCH_TEMPORARY;
+
+  old_chain = parse_breakpoint_args (&arg, &trigger_set, &suspend_set);
 
   if (!arg)
     arg = "";
   catch_ada_exception_command_split (arg, &ex_kind, &excep_string,
 				     &cond_string);
-  create_ada_exception_catchpoint (gdbarch, ex_kind,
+  create_ada_exception_catchpoint (trigger_set, suspend_set,
+				   gdbarch, ex_kind,
 				   excep_string, cond_string,
 				   tempflag, 1 /* enabled */,
 				   from_tty);
+
+  discard_cleanups (old_chain);
 }
 
 /* Split the arguments specified in a "catch assert" command.
@@ -13154,16 +13165,23 @@ catch_assert_command (char *arg, int from_tty,
   struct gdbarch *gdbarch = get_current_arch ();
   int tempflag;
   char *cond_string = NULL;
+  struct itset *trigger_set, *suspend_set;
+  struct cleanup *old_chain;
 
   tempflag = get_cmd_context (command) == CATCH_TEMPORARY;
+
+  old_chain = parse_breakpoint_args (&arg, &trigger_set, &suspend_set);
 
   if (!arg)
     arg = "";
   catch_ada_assert_command_split (arg, &cond_string);
-  create_ada_exception_catchpoint (gdbarch, ada_catch_assert,
+  create_ada_exception_catchpoint (trigger_set, suspend_set,
+				   gdbarch, ada_catch_assert,
 				   NULL, cond_string,
 				   tempflag, 1 /* enabled */,
 				   from_tty);
+
+  discard_cleanups (old_chain);
 }
 
 /* Return non-zero if the symbol SYM is an Ada exception object.  */
