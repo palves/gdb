@@ -22,6 +22,7 @@
 #include "defs.h"
 #include "top.h"
 #include "inferior.h"
+#include "itset.h"
 #include "infrun.h"
 #include "target.h"
 #include "terminal.h"		/* for job_control */
@@ -40,6 +41,7 @@
 #include "inflow.h"
 #include "serial.h"
 #include "buffer.h"
+#include "gdb_obstack.h"
 
 /* readline include files.  */
 #include "readline/readline.h"
@@ -242,6 +244,55 @@ gdb_rl_callback_handler_reinstall (void)
     }
 }
 
+static char *
+expand_gdb_prompt (char *prompt)
+{
+  struct obstack obstack;
+  char *p;
+
+  obstack_init (&obstack);
+
+  p = prompt;
+  while (*p)
+    {
+      if (CONST_STRNEQ (p, "%ITSET%"))
+	{
+	  if (itset_name (current_itset) != NULL)
+	    obstack_grow_str (&obstack, itset_name (current_itset));
+	  else
+	    obstack_grow_str (&obstack, itset_spec (current_itset));
+	  p += sizeof ("%ITSET%") - 1;
+	  continue;
+	}
+
+      if (CONST_STRNEQ (p, "%THREAD%"))
+	{
+	  char buf[100];
+
+	  if (!ptid_equal (inferior_ptid, null_ptid))
+	    {
+	      xsnprintf (buf, sizeof (buf), "i%s",
+			 print_thread_id (inferior_thread ()));
+	    }
+	  else
+	    {
+	      xsnprintf (buf, sizeof (buf), "i%d", current_inferior ()->num);
+	    }
+	  obstack_grow_str (&obstack, buf);
+
+	  p += sizeof ("%THREAD%") - 1;
+	  continue;
+	}
+
+      obstack_1grow (&obstack, *p);
+      p++;
+    }
+
+  obstack_1grow (&obstack, '\0');
+
+  return xstrdup (obstack_finish (&obstack));
+}
+
 /* Displays the prompt.  If the argument NEW_PROMPT is NULL, the
    prompt that is displayed is the current top level prompt.
    Otherwise, it displays whatever NEW_PROMPT is as a local/secondary
@@ -306,8 +357,12 @@ display_gdb_prompt (const char *new_prompt)
 	}
       else if (ui->prompt_state == PROMPT_NEEDED)
 	{
+	  char *top;
+
 	  /* Display the top level prompt.  */
-	  actual_gdb_prompt = top_level_prompt ();
+	  top = top_level_prompt ();
+	  actual_gdb_prompt = expand_gdb_prompt (top);
+	  xfree (top);
 	  ui->prompt_state = PROMPTED;
 	}
     }
