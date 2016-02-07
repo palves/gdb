@@ -1815,6 +1815,22 @@ itset_create_const (const char **specp)
   return result;
 }
 
+static struct itset *
+itset_create_spec (const char *spec)
+{
+  struct itset *itset;
+
+  itset = itset_create_const (&spec);
+
+  if (!valid_spec_end (spec))
+    {
+      itset_free (itset);
+      error (_("Invalid I/T syntax at `%s'"), spec);
+    }
+
+  return itset;
+}
+
 struct itset *
 itset_create (char **specp)
 {
@@ -1829,9 +1845,7 @@ itset_create (char **specp)
 struct itset *
 itset_create_empty (void)
 {
-  const char *spec = "";
-
-  return itset_create_const (&spec);
+  return itset_create_spec ("");
 }
 
 /* Create a new I/T set which represents the current inferior and all
@@ -1840,9 +1854,7 @@ itset_create_empty (void)
 static struct itset *
 itset_create_curinf (void)
 {
-  const char *spec = "I";
-
-  return itset_create_const (&spec);
+  return itset_create_spec ("I");
 }
 
 /* Create a new I/T set which represents the current thread.  */
@@ -1850,33 +1862,25 @@ itset_create_curinf (void)
 static struct itset *
 itset_create_curthr (void)
 {
-  const char *spec = "T";
-
-  return itset_create_const (&spec);
+  return itset_create_spec ("T");
 }
 
 static struct itset *
 itset_create_all (void)
 {
-  const char *spec = "all";
-
-  return itset_create_const (&spec);
+  return itset_create_spec ("all");
 }
 
 static struct itset *
 itset_create_running (void)
 {
-  const char *spec = "running";
-
-  return itset_create_const (&spec);
+  return itset_create_spec ("running");
 }
 
 static struct itset *
 itset_create_stopped (void)
 {
-  const char *spec = "stopped";
-
-  return itset_create_const (&spec);
+  return itset_create_spec ("stopped");
 }
 
 /* Return 1 if SET contains INF, 0 otherwise.  */
