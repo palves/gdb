@@ -1498,21 +1498,20 @@ make_cleanup_itset_free (struct itset *itset)
 
 /*
 
-  ',' (union) has precedence over '.' (intersect).
+  ',' (union) has precedence over '&' (intersect).
 
   ELEM = RANGE | NEG | PARENS_SET | '$' | NAME
   NEG = '~' ELEM
   PARENS_SET = '(' ITSET_ONE ')'
-  INTERS = ELEM ('.' ELEM)*
-  ITSET_ONE = INTERS (',' INTERS)*
+  INTERS = ELEM ('&' ELEM)*
+  ITSET_ONE = INTERS ('&' INTERS)*
   ITSET = | ('!' ITSET_ONE) | ITSET_ONE
 
   E.g.,:
 
-  c1-3.~i1.(t1,other),foo is transformed to a tree like:
+  c1-3&~i1&(t1,other),foo is transformed to a tree like:
 
    UNION
-     foo
      INTERS
        c1-3
        NEG
@@ -1520,6 +1519,7 @@ make_cleanup_itset_free (struct itset *itset)
        UNION
          t1-1
 	 other
+     foo
 
 */
 
@@ -1640,7 +1640,7 @@ parse_inters (const char **spec)
 
   old_chain = make_cleanup_itset_elt_free (elt1);
 
-  if (**spec == '.')
+  if (**spec == '&')
     {
       intersect = create_intersect_itset ();
       VEC_safe_push (itset_elt_ptr, intersect->elements, elt1);
@@ -1650,7 +1650,7 @@ parse_inters (const char **spec)
       old_chain = make_cleanup_itset_elt_free (elt1);
     }
 
-  while (**spec == '.')
+  while (**spec == '&')
     {
       (*spec)++;
 
