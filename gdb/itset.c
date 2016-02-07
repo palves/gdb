@@ -36,6 +36,7 @@ static struct itset *empty_itset;
 static struct itset *running_itset;
 static struct itset *stopped_itset;
 static struct itset *curinf_itset;
+static struct itset *curthr_itset;
 
 /* Forward declaration of the base class.  */
 
@@ -1122,7 +1123,7 @@ create_state_itset (int thread_state)
 /* Implementation of `contains_inferior' method.  */
 
 static int
-current_contains_inferior (struct itset_elt *base, struct inferior *inf)
+curinf_contains_inferior (struct itset_elt *base, struct inferior *inf)
 {
   return current_inferior () == inf;
 }
@@ -1130,7 +1131,7 @@ current_contains_inferior (struct itset_elt *base, struct inferior *inf)
 /* Implementation of `contains_thread' method.  */
 
 static int
-current_contains_thread (struct itset_elt *base, struct thread_info *thr)
+curinf_contains_thread (struct itset_elt *base, struct thread_info *thr)
 {
   struct inferior *inf;
 
@@ -1141,34 +1142,81 @@ current_contains_thread (struct itset_elt *base, struct thread_info *thr)
 /* Implementation of `is_empty' method.  */
 
 static int
-current_is_empty (struct itset_elt *base)
+curinf_is_empty (struct itset_elt *base)
 {
   /* There's always a current inferior.  */
   return 0;
 }
 
-static const struct itset_elt_vtable current_vtable =
+static const struct itset_elt_vtable curinf_vtable =
 {
   NULL,
-  current_contains_inferior,
-  current_contains_thread,
-  current_is_empty
+  curinf_contains_inferior,
+  curinf_contains_thread,
+  curinf_is_empty
 };
 
 /* Create a new I/T set element representing just the current
    inferior.  */
 
 static struct itset_elt *
-create_current_itset (void)
+create_curinf_itset (void)
 {
   struct itset_elt *elt;
 
   elt = XNEW (struct itset_elt);
-  elt->vtable = &current_vtable;
+  elt->vtable = &curinf_vtable;
 
   return elt;
 }
 
+
+
+/* Implementation of `contains_inferior' method.  */
+
+static int
+curthr_contains_inferior (struct itset_elt *base, struct inferior *inf)
+{
+  return current_inferior () == inf;
+}
+
+/* Implementation of `contains_thread' method.  */
+
+static int
+curthr_contains_thread (struct itset_elt *base, struct thread_info *thr)
+{
+  return ptid_equal (inferior_ptid, thr->ptid);
+}
+
+/* Implementation of `is_empty' method.  */
+
+static int
+curthr_is_empty (struct itset_elt *base)
+{
+  return ptid_equal (inferior_ptid, null_ptid);
+}
+
+static const struct itset_elt_vtable curthr_vtable =
+{
+  NULL,
+  curthr_contains_inferior,
+  curthr_contains_thread,
+  curthr_is_empty
+};
+
+/* Create a new I/T set element representing just the current
+   inferior.  */
+
+static struct itset_elt *
+create_curthr_itset (void)
+{
+  struct itset_elt *elt;
+
+  elt = XNEW (struct itset_elt);
+  elt->vtable = &curthr_vtable;
+
+  return elt;
+}
 
 
 /* An I/T set element representing a static list of inferiors.  */
@@ -1442,8 +1490,10 @@ parse_named_or_throw (const char **textp)
     elt = create_state_itset (THREAD_STOPPED);
   else if (strncmp ("running", name, text - name) == 0)
     elt = create_state_itset (THREAD_RUNNING);
-  else if (strncmp ("curinf", name, text - name) == 0)
-    elt = create_current_itset ();
+  else if (strncmp ("I", name, text - name) == 0)
+    elt = create_curinf_itset ();
+  else if (strncmp ("T", name, text - name) == 0)
+    elt = create_curthr_itset ();
   else if (strncmp ("exec", name, text - name) == 0)
     {
       char *tem;
@@ -1790,7 +1840,17 @@ itset_create_empty (void)
 static struct itset *
 itset_create_curinf (void)
 {
-  const char *spec = "curinf";
+  const char *spec = "I";
+
+  return itset_create_const (&spec);
+}
+
+/* Create a new I/T set which represents the current thread.  */
+
+static struct itset *
+itset_create_curthr (void)
+{
+  const char *spec = "T";
 
   return itset_create_const (&spec);
 }
@@ -2526,12 +2586,14 @@ _initialize_itset (void)
   running_itset = itset_create_running ();
   stopped_itset = itset_create_stopped ();
   curinf_itset = itset_create_curinf ();
+  curthr_itset = itset_create_curthr ();
 
   make_internal_itset (all_itset, "all");
   make_internal_itset (empty_itset, "empty");
   make_internal_itset (running_itset, "running");
   make_internal_itset (stopped_itset, "stopped");
-  make_internal_itset (curinf_itset, "curinf");
+  make_internal_itset (curinf_itset, "I");
+  make_internal_itset (curthr_itset, "T");
 
   current_itset = itset_reference (all_itset);
 
