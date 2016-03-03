@@ -3856,6 +3856,27 @@ restore_execution_direction (void *arg)
   execution_direction = *save_exec_dir;
 }
 
+/* The quit handler installed while handling a target event.  A QUIT
+   call done while the program is stopped momentarily for some
+   internal event, should not abort an ongoing background run control
+   command.  Instead, if the target owns the terminal, pass it the
+   Ctrl-C, otherwise, do nothing for now and let the event loop
+   process the Ctrl-C later, when it's safe to throw.  */
+
+static void
+fetch_inferior_event_quit_handler (void)
+{
+  if (target_terminal_is_ours ())
+    {
+      /* Do nothing, let the event loop handle the Ctrl-C, when it's
+	 safe.  */
+      return;
+    }
+
+  if (check_quit_flag ())
+    target_interrupt (inferior_ptid);
+}
+
 /* Asynchronous version of wait_for_inferior.  It is called by the
    event loop whenever a change of state is detected on the file
    descriptor corresponding to the target.  It can be called more than
@@ -3878,6 +3899,8 @@ fetch_inferior_event (void *client_data)
   ptid_t waiton_ptid = minus_one_ptid;
 
   memset (ecs, 0, sizeof (*ecs));
+
+  make_cleanup_override_quit_handler (fetch_inferior_event_quit_handler);
 
   /* End up with readline processing input, if necessary.  */
   make_cleanup (reinstall_readline_callback_handler_cleanup, NULL);
