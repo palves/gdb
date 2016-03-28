@@ -965,10 +965,11 @@ libpthread_solib_p (struct so_list *so)
    FROM_TTY and TARGET are as described for update_solib_list, above.  */
 
 void
-solib_add (const char *pattern, int from_tty,
-	   struct target_ops *target, int readsyms)
+solib_add (const char *pattern, enum symfile_add_flags add_flags,
+	   struct target_ops *target)
 {
   struct so_list *gdb;
+  int from_tty = (add_flags & SYMFILE_VERBOSE) != 0;
 
   if (print_symbol_loading_p (from_tty, 0, 0))
     {
@@ -999,19 +1000,20 @@ solib_add (const char *pattern, int from_tty,
   {
     int any_matches = 0;
     int loaded_any_symbols = 0;
-    const int flags =
-        SYMFILE_DEFER_BP_RESET | (from_tty ? SYMFILE_VERBOSE : 0);
+    enum symfile_add_flags flags = add_flags | SYMFILE_DEFER_BP_RESET;
 
     for (gdb = so_list_head; gdb; gdb = gdb->next)
       if (! pattern || re_exec (gdb->so_name))
 	{
           /* Normally, we would read the symbols from that library
-             only if READSYMS is set.  However, we're making a small
-             exception for the pthread library, because we sometimes
-             need the library symbols to be loaded in order to provide
-             thread support (x86-linux for instance).  */
-          const int add_this_solib =
-            (readsyms || libpthread_solib_p (gdb));
+             only if SYMFILE_NO_READ is not set.  However, we're
+             making a small exception for the pthread library, because
+             we sometimes need the library symbols to be loaded in
+             order to provide thread support (x86-linux for
+             instance).  */
+          const int add_this_solib
+	    = ((add_flags & SYMFILE_NO_READ) == 0
+	       || libpthread_solib_p (gdb));
 
 	  any_matches = 1;
 	  if (add_this_solib)
@@ -1029,7 +1031,8 @@ solib_add (const char *pattern, int from_tty,
 	    }
 	}
 
-    if (loaded_any_symbols)
+    if ((add_flags & SYMFILE_DEFER_BP_RESET) == 0
+	&& loaded_any_symbols)
       breakpoint_re_set ();
 
     if (from_tty && pattern && ! any_matches)
@@ -1293,7 +1296,7 @@ static void
 sharedlibrary_command (char *args, int from_tty)
 {
   dont_repeat ();
-  solib_add (args, from_tty, (struct target_ops *) 0, 1);
+  solib_add (args, from_tty ? SYMFILE_VERBOSE : 0, (struct target_ops *) 0);
 }
 
 /* Implements the command "nosharedlibrary", which discards symbols
@@ -1340,7 +1343,8 @@ handle_solib_event (void)
      be adding them automatically.  Switch terminal for any messages
      produced by breakpoint_re_set.  */
   target_terminal_ours_for_output ();
-  solib_add (NULL, 0, &current_target, auto_solib_add);
+  solib_add (NULL, auto_solib_add ? 0 : SYMFILE_NO_READ,
+	     &current_target);
   target_terminal_inferior ();
 }
 
@@ -1423,6 +1427,7 @@ reload_shared_libraries (char *ignored, int from_tty,
 			 struct cmd_list_element *e)
 {
   const struct target_so_ops *ops;
+  enum symfile_add_flags add_flags = auto_solib_add ? 0 : SYMFILE_NO_READ;
 
   reload_shared_libraries_1 (from_tty);
 
@@ -1458,7 +1463,7 @@ reload_shared_libraries (char *ignored, int from_tty,
      removed.  Call it only after the solib target has been initialized by
      solib_create_inferior_hook.  */
 
-  solib_add (NULL, 0, NULL, auto_solib_add);
+  solib_add (NULL, add_flags, NULL);
 
   breakpoint_re_set ();
 
