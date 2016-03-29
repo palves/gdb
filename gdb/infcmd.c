@@ -455,7 +455,8 @@ post_create_inferior (struct target_ops *target, int from_tty)
 	    {
 	      enum symfile_add_flags add_flags;
 
-	      add_flags = auto_solib_add ? 0 : SYMFILE_NO_READ;
+	      add_flags = (SYMFILE_DEFER_BP_RESET
+			   | (auto_solib_add ? 0 : SYMFILE_NO_READ));
 	      solib_add (NULL, add_flags, target);
 	    }
 	}

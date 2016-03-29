@@ -2254,7 +2254,8 @@ enable_break (struct svr4_info *info, int from_tty)
   CORE_ADDR sym_addr;
   enum symfile_add_flags add_flags;
 
-  add_flags = ((auto_solib_add ? 0 : SYMFILE_NO_READ)
+  add_flags = (SYMFILE_DEFER_BP_RESET
+	       | (auto_solib_add ? 0 : SYMFILE_NO_READ)
 	       | (from_tty ? SYMFILE_VERBOSE : 0));
 
   info->interp_text_sect_low = info->interp_text_sect_high = 0;

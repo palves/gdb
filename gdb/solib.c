@@ -1427,7 +1427,10 @@ reload_shared_libraries (char *ignored, int from_tty,
 			 struct cmd_list_element *e)
 {
   const struct target_so_ops *ops;
-  enum symfile_add_flags add_flags = auto_solib_add ? 0 : SYMFILE_NO_READ;
+  enum symfile_add_flags add_flags;
+
+  add_flags = (SYMFILE_DEFER_BP_RESET
+	       | (auto_solib_add ? 0 : SYMFILE_NO_READ));
 
   reload_shared_libraries_1 (from_tty);
 
