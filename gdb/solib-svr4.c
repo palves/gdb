@@ -2105,7 +2105,7 @@ svr4_create_probe_breakpoints (struct gdbarch *gdbarch,
 	{
 	  CORE_ADDR address = get_probe_address (probe, objfile);
 
-	  create_solib_event_breakpoint (gdbarch, address);
+	  create_solib_event_breakpoint (gdbarch, objfile, address);
 	  register_solib_event_probe (probe, address, action);
 	}
     }
@@ -2127,6 +2127,7 @@ svr4_create_probe_breakpoints (struct gdbarch *gdbarch,
 
 static void
 svr4_create_solib_event_breakpoints (struct gdbarch *gdbarch,
+				     struct objfile *objfile,
 				     CORE_ADDR address)
 {
   struct obj_section *os;
@@ -2201,7 +2202,7 @@ svr4_create_solib_event_breakpoints (struct gdbarch *gdbarch,
 	}
     }
 
-  create_solib_event_breakpoint (gdbarch, address);
+  create_solib_event_breakpoint (gdbarch, objfile, address);
 }
 
 /* Helper function for gdb_bfd_lookup_symbol.  */
@@ -2330,7 +2331,8 @@ enable_break (struct svr4_info *info, int from_tty)
 		+ bfd_section_size (tmp_bfd, interp_sect);
 	    }
 
-	  svr4_create_solib_event_breakpoints (target_gdbarch (), sym_addr);
+	  svr4_create_solib_event_breakpoints (target_gdbarch (), os->objfile,
+					       sym_addr);
 	  return 1;
 	}
     }
@@ -2493,6 +2495,7 @@ enable_break (struct svr4_info *info, int from_tty)
       if (sym_addr != 0)
 	{
 	  svr4_create_solib_event_breakpoints (target_gdbarch (),
+					       symfile_objfile,
 					       load_addr + sym_addr);
 	  xfree (interp_name);
 	  return 1;
@@ -2520,7 +2523,8 @@ enable_break (struct svr4_info *info, int from_tty)
 	  sym_addr = gdbarch_convert_from_func_ptr_addr (target_gdbarch (),
 							 sym_addr,
 							 &current_target);
-	  svr4_create_solib_event_breakpoints (target_gdbarch (), sym_addr);
+	  svr4_create_solib_event_breakpoints (target_gdbarch (),
+					       msymbol.objfile, sym_addr);
 	  return 1;
 	}
     }
@@ -2537,7 +2541,8 @@ enable_break (struct svr4_info *info, int from_tty)
 	      sym_addr = gdbarch_convert_from_func_ptr_addr (target_gdbarch (),
 							     sym_addr,
 							     &current_target);
-	      svr4_create_solib_event_breakpoints (target_gdbarch (), sym_addr);
+	      svr4_create_solib_event_breakpoints (target_gdbarch (),
+						   msymbol.objfile, sym_addr);
 	      return 1;
 	    }
 	}

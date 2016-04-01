@@ -1116,7 +1116,7 @@ finish_new_objfile (struct objfile *objfile, int add_flags)
     }
   else if ((add_flags & SYMFILE_DEFER_BP_RESET) == 0)
     {
-      breakpoint_re_set ();
+      breakpoint_re_set_objfile (objfile);
     }
 
   /* We're done reading the symbol file; finish off complaints.  */
@@ -2154,7 +2154,7 @@ generic_load (const char *args, int from_tty)
      breakpoint locations.  Loading has changed the contents of that
      memory.  */
 
-  breakpoint_re_set ();
+  breakpoint_re_set_program_space (current_program_space);
 
   print_transfer_performance (gdb_stdout, total_progress.data_count,
 			      total_progress.write_count,
@@ -3023,7 +3023,7 @@ clear_symtab_users (int add_flags)
   /* Now that the various caches have been cleared, we can re_set
      our breakpoints without risking it using stale data.  */
   if ((add_flags & SYMFILE_DEFER_BP_RESET) == 0)
-    breakpoint_re_set ();
+    breakpoint_re_set_program_space (current_program_space);
 }
 
 static void
