@@ -14246,16 +14246,92 @@ locations_are_equal (struct bp_location *a, struct bp_location *b)
   return 1;
 }
 
-static int
-msymbol_name_is (struct minimal_symbol *msymbol, const char *function_name)
-{
-  int (*cmp) (const char *, const char *);
+enum sal_class
+  {
+    /* Lowest priority.  */
+    SAL_CLASS_NONE,
+    SAL_CLASS_MINSYM_TRAMPOLINE,
+    SAL_CLASS_MINSYM_TEXT_STATIC,
+    SAL_CLASS_MINSYM_TEXT,
+    SAL_CLASS_SYMBOL_FUNCTION,
+    SAL_CLASS_SYMBOL_LABEL,
+    /* Highest priority.  */
+  };
 
-  cmp = (case_sensitivity == case_sensitive_on ? strcmp : strcasecmp);
-  if (cmp (MSYMBOL_LINKAGE_NAME (msymbol), function_name) == 0)
+static int
+classify_sal (struct symtab_and_line *sal)
+{
+  if (sal->symbol != NULL)
+    {
+      if (SYMBOL_CLASS (sal->symbol) == LOC_LABEL)
+	return SAL_CLASS_SYMBOL_LABEL;
+      else if (SYMBOL_CLASS (sal->symbol) == LOC_BLOCK)
+	return SAL_CLASS_SYMBOL_FUNCTION;
+      else
+	gdb_assert_not_reached ("unexpected symbol class");
+    }
+
+  if (sal->msymbol != NULL)
+    {
+      enum minimal_symbol_type t = MSYMBOL_TYPE (sal->msymbol);
+
+      switch (t)
+	{
+	case mst_file_text:
+	  return SAL_CLASS_MINSYM_TEXT_STATIC;
+
+	case mst_solib_trampoline:
+	  return SAL_CLASS_MINSYM_TRAMPOLINE;
+
+	default:
+	  return SAL_CLASS_MINSYM_TEXT;
+	}
+    }
+
+  return SAL_CLASS_NONE;
+}
+
+/* Add SAL to SALS.  */
+
+static void
+sals_add_sal (struct symtabs_and_lines *sals,
+	      struct symtab_and_line *sal)
+{
+  ++sals->nelts;
+  sals->sals = XRESIZEVEC (struct symtab_and_line, sals->sals, sals->nelts);
+  sals->sals[sals->nelts - 1] = *sal;
+}
+
+static const char *
+sal_func_linkage_name (struct symtab_and_line *sal)
+{
+  if (sal->symbol != NULL && SYMBOL_CLASS (sal->symbol) == LOC_BLOCK)
+    return SYMBOL_LINKAGE_NAME (sal->symbol);
+
+  if (sal->msymbol != NULL)
+    return MSYMBOL_LINKAGE_NAME (sal->msymbol);
+
+  return NULL;
+}
+
+static int
+bp_location_matches_sal (struct bp_location *bl, struct symtab_and_line *new_sal)
+{
+  const char *bl_name;
+  const char *new_sal_name;
+
+  if (bl->sal.pc == new_sal->pc)
     return 1;
 
-  if (MSYMBOL_MATCHES_SEARCH_NAME (msymbol, function_name))
+  bl_name = sal_func_linkage_name (&bl->sal);
+  if (bl_name == NULL)
+    return 0;
+
+  new_sal_name = sal_func_linkage_name (new_sal);
+  if (new_sal_name == NULL)
+    return 0;
+
+  if (strcmp (bl_name, new_sal_name) == 0)
     return 1;
 
   return 0;
@@ -14263,7 +14339,8 @@ msymbol_name_is (struct minimal_symbol *msymbol, const char *function_name)
 
 static int
 should_hoist_location (struct bp_location *bl,
-		       struct symtabs_and_lines new_sals,
+		       struct symtabs_and_lines *new_sals,
+		       struct symtabs_and_lines *masked_sals,
 		       struct sym_search_scope *search_scope)
 {
   if (bp_location_matches_search_scope (bl, search_scope))
@@ -14275,34 +14352,45 @@ should_hoist_location (struct bp_location *bl,
   if (search_scope->objfile != NULL
       && search_scope->pspace == bl->pspace)
     {
+      int loc_class;
+      int i;
+
       /* We've now resolved the location.  Remove previously pending
 	 ones.  */
       if (bl->shlib_disabled)
 	return 1;
 
-      /* If we had a plt symbol set on another objfile, and we now
-	 found the matching text symbol, we'll no longer need the plt
-	 symbol location.  */
-      if (bl->sal.msymbol != NULL
-	  && MSYMBOL_TYPE (bl->sal.msymbol) == mst_solib_trampoline
-	  && bl->function_name != NULL)
+      loc_class = classify_sal (&bl->sal);
+
+      /* If we have multiple sals for the same address, prefer the one
+	 with highest classification.  Generally, that means prefer
+	 symbols over minsyms, and text minsyms over trampoline
+	 minsyms.  E.g., if we had found plt minsym on another objfile
+	 previously, and we now found the matching text symbol/minsym,
+	 we'll no longer want the plt location.  */
+      for (i = 0; i < new_sals->nelts;)
 	{
-	  int i;
+	  struct symtab_and_line *new_sal = &new_sals->sals[i];
 
-	  for (i = 0; i < new_sals.nelts; i++)
+	  if (bp_location_matches_sal (bl, new_sal))
 	    {
-	      struct symbol *symbol = new_sals.sals[i].symbol;
-	      struct minimal_symbol *msymbol = new_sals.sals[i].msymbol;
+	      int new_sal_class = classify_sal (new_sal);
 
-	      if (symbol != NULL
-		  && SYMBOL_CLASS (symbol) == LOC_BLOCK
-		  && strcmp (SYMBOL_LINKAGE_NAME (symbol), bl->function_name))
-		return 1;
-
-	      if (msymbol != NULL
-		  && msymbol_name_is (msymbol, bl->function_name))
-		return 1;
+	      if (new_sal_class >= loc_class)
+		{
+		  sals_add_sal (masked_sals, &bl->sal);
+		  return 1;
+		}
+	      else
+		{
+		  sals_add_sal (masked_sals, new_sal);
+		  if (--new_sals->nelts > 0)
+		    *new_sal = new_sals->sals[new_sals->nelts];
+		  continue;
+		}
 	    }
+
+	  i++;
 	}
     }
 
@@ -14315,7 +14403,8 @@ should_hoist_location (struct bp_location *bl,
 
 static struct bp_location *
 hoist_existing_locations (struct breakpoint *b,
-			  struct symtabs_and_lines new_sals,
+			  struct symtabs_and_lines *new_sals,
+			  struct symtabs_and_lines *masked_sals,
 			  struct sym_search_scope *search_scope)
 {
   struct bp_location head;
@@ -14334,7 +14423,7 @@ hoist_existing_locations (struct breakpoint *b,
 
   while (i != NULL)
     {
-      if (should_hoist_location (i, new_sals, search_scope))
+      if (should_hoist_location (i, new_sals, masked_sals, search_scope))
 	{
 	  *i_link = i->next;
 	  i->next = NULL;
@@ -14384,33 +14473,13 @@ update_breakpoint_locations (struct breakpoint *b,
   if (all_locations_are_pending (b, search_scope) && sals.nelts == 0)
     return;
 
-  existing_locations = hoist_existing_locations (b, sals, search_scope);
+  existing_locations = hoist_existing_locations (b, &sals,
+						 &b->masked_locs,
+						 search_scope);
 
   for (i = 0; i < sals.nelts; ++i)
     {
       struct bp_location *new_loc;
-      struct symtab_and_line *sal = &sals.sals[i];
-      struct minimal_symbol *msymbol = sal->msymbol;
-
-      /* If we found a new location, then we no longer need the one
-	 previously set on a plt symbol (usually in the main
-	 executable).  */
-      if (msymbol != NULL
-	  && MSYMBOL_TYPE (msymbol) == mst_solib_trampoline)
-	{
-	  struct bp_location *bl;
-
-	  for (bl = b->loc; bl != NULL; bl = bl->next)
-	    {
-	      if (bl->pspace == sal->pspace
-		  && bl->function_name != NULL
-		  && msymbol_name_is (msymbol, bl->function_name))
-		break;
-	    }
-
-	  if (bl != NULL)
-	    continue;
-	}
 
       switch_to_program_space_and_thread (sals.sals[i].pspace);
 
