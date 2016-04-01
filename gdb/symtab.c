@@ -3686,6 +3686,7 @@ find_function_start_sal (struct symbol *sym, int funfirstline)
       sal.pc = BLOCK_START (SYMBOL_BLOCK_VALUE (sym));
       if (gdbarch_skip_entrypoint_p (gdbarch))
 	sal.pc = gdbarch_skip_entrypoint (gdbarch, sal.pc);
+      sal.symbol = sym;
       return sal;
     }
 
@@ -3705,6 +3706,7 @@ find_function_start_sal (struct symbol *sym, int funfirstline)
   if (funfirstline)
     skip_prologue_sal (&sal);
 
+  sal.symbol = sym;
   return sal;
 }
 

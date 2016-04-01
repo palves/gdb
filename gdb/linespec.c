@@ -3980,7 +3980,6 @@ symbol_to_sal (struct symtab_and_line *result,
   if (SYMBOL_CLASS (sym) == LOC_BLOCK)
     {
       *result = find_function_start_sal (sym, funfirstline);
-      result->symbol = sym;
       return 1;
     }
   else
