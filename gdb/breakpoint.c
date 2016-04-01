@@ -14291,17 +14291,6 @@ classify_sal (struct symtab_and_line *sal)
   return SAL_CLASS_NONE;
 }
 
-/* Add SAL to SALS.  */
-
-static void
-sals_add_sal (struct symtabs_and_lines *sals,
-	      struct symtab_and_line *sal)
-{
-  ++sals->nelts;
-  sals->sals = XRESIZEVEC (struct symtab_and_line, sals->sals, sals->nelts);
-  sals->sals[sals->nelts - 1] = *sal;
-}
-
 static const char *
 sal_func_linkage_name (struct symtab_and_line *sal)
 {
@@ -14315,23 +14304,24 @@ sal_func_linkage_name (struct symtab_and_line *sal)
 }
 
 static int
-bp_location_matches_sal (struct bp_location *bl, struct symtab_and_line *new_sal)
+sals_same_function (struct symtab_and_line *sal1,
+		    struct symtab_and_line *sal2)
 {
-  const char *bl_name;
-  const char *new_sal_name;
+  const char *sal1_name;
+  const char *sal2_name;
 
-  if (bl->sal.pc == new_sal->pc)
+  if (sal1->pc == sal2->pc)
     return 1;
 
-  bl_name = sal_func_linkage_name (&bl->sal);
-  if (bl_name == NULL)
+  sal1_name = sal_func_linkage_name (sal1);
+  if (sal1_name == NULL)
     return 0;
 
-  new_sal_name = sal_func_linkage_name (new_sal);
-  if (new_sal_name == NULL)
+  sal2_name = sal_func_linkage_name (sal2);
+  if (sal2_name == NULL)
     return 0;
 
-  if (strcmp (bl_name, new_sal_name) == 0)
+  if (strcmp (sal1_name, sal2_name) == 0)
     return 1;
 
   return 0;
@@ -14340,7 +14330,6 @@ bp_location_matches_sal (struct bp_location *bl, struct symtab_and_line *new_sal
 static int
 should_hoist_location (struct bp_location *bl,
 		       struct symtabs_and_lines *new_sals,
-		       struct symtabs_and_lines *masked_sals,
 		       struct sym_search_scope *search_scope)
 {
   if (bp_location_matches_search_scope (bl, search_scope))
@@ -14372,21 +14361,21 @@ should_hoist_location (struct bp_location *bl,
 	{
 	  struct symtab_and_line *new_sal = &new_sals->sals[i];
 
-	  if (bp_location_matches_sal (bl, new_sal))
+	  if (sals_same_function (&bl->sal, new_sal))
 	    {
 	      int new_sal_class = classify_sal (new_sal);
 
-	      if (new_sal_class >= loc_class)
+	      if (new_sal_class < loc_class)
 		{
-		  sals_add_sal (masked_sals, &bl->sal);
-		  return 1;
-		}
-	      else
-		{
-		  sals_add_sal (masked_sals, new_sal);
+		  /* New sal is masked.  Remove it from NEWS_SALS.  */
 		  if (--new_sals->nelts > 0)
 		    *new_sal = new_sals->sals[new_sals->nelts];
 		  continue;
+		}
+	      else
+		{
+		  /* Old location is masked.  Hoist it out.  */
+		  return 1;
 		}
 	    }
 
@@ -14404,7 +14393,6 @@ should_hoist_location (struct bp_location *bl,
 static struct bp_location *
 hoist_existing_locations (struct breakpoint *b,
 			  struct symtabs_and_lines *new_sals,
-			  struct symtabs_and_lines *masked_sals,
 			  struct sym_search_scope *search_scope)
 {
   struct bp_location head;
@@ -14423,7 +14411,7 @@ hoist_existing_locations (struct breakpoint *b,
 
   while (i != NULL)
     {
-      if (should_hoist_location (i, new_sals, masked_sals, search_scope))
+      if (should_hoist_location (i, new_sals, search_scope))
 	{
 	  *i_link = i->next;
 	  i->next = NULL;
@@ -14473,9 +14461,7 @@ update_breakpoint_locations (struct breakpoint *b,
   if (all_locations_are_pending (b, search_scope) && sals.nelts == 0)
     return;
 
-  existing_locations = hoist_existing_locations (b, &sals,
-						 &b->masked_locs,
-						 search_scope);
+  existing_locations = hoist_existing_locations (b, &sals, search_scope);
 
   for (i = 0; i < sals.nelts; ++i)
     {

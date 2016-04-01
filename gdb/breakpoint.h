@@ -688,12 +688,6 @@ struct breakpoint
     /* Location(s) associated with this high-level breakpoint.  */
     struct bp_location *loc;
 
-    /* Location(s) associated with this high-level breakpoint that are
-       masked by other locations.  For example, plt symbols once a
-       shared library is resolved.  We keep these around in case a
-       shared library is unloaded and they become unmasked.  */
-    struct symtabs_and_lines masked_locs;
-
     /* Non-zero means a silent breakpoint (don't print frame info
        if we stop here).  */
     unsigned char silent;
