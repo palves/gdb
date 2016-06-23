@@ -62,6 +62,26 @@ int _rl_undo_group_level = 0;
 /* The current undo list for THE_LINE. */
 UNDO_LIST *rl_undo_list = (UNDO_LIST *)NULL;
 
+struct _rl_undo_state
+{
+  int _rl_doing_an_undo;
+  int _rl_undo_group_level;
+  UNDO_LIST *rl_undo_list;
+};
+
+#define _RL_SAVE_RESTORE(WHAT) _RL_SAVE_RESTORE_1 (state->undo, WHAT)
+
+void
+_rl_undo_save_restore (struct _rl_state *state, int save)
+{
+  if (state->undo == NULL)
+    state->undo = xmalloc (sizeof (struct _rl_undo_state));
+
+  _RL_SAVE_RESTORE (_rl_doing_an_undo);
+  _RL_SAVE_RESTORE (_rl_undo_group_level);
+  _RL_SAVE_RESTORE (rl_undo_list);
+}
+
 /* **************************************************************** */
 /*								    */
 /*			Undo, and Undoing			    */

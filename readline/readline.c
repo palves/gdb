@@ -306,14 +306,136 @@ int _rl_echo_control_chars = 1;
    the editing mode: @ for emacs, : for vi-command, + for vi-insert. */
 int _rl_show_mode_in_prompt = 0;
 
+/* Non-zero means treat 0200 bit in terminal input as Meta bit. */
+int _rl_meta_flag = 0;	/* Forward declaration */
+
+/* A capture of this file's local state.  */
+struct _rl_readline_state
+{
+  Keymap _rl_keymap;
+  int rl_editing_mode;
+  int rl_insert_mode;
+  int rl_dispatching;
+  int _rl_last_command_was_kill;
+  int rl_numeric_arg;
+  int rl_explicit_arg;
+  int rl_arg_sign;
+  int rl_initialized;
+  int rl_readline_state;
+  int rl_point;
+  int rl_mark;
+  int rl_end;
+  int rl_done;
+  rl_command_func_t *rl_last_func;
+  procenv_t _rl_top_level;
+  FILE *_rl_in_stream, *_rl_out_stream;
+  FILE *rl_instream;
+  FILE *rl_outstream;
+  int _rl_echoing_p;
+  char *rl_prompt;
+  int rl_visible_prompt_length;
+  int rl_already_prompted;
+  int rl_key_sequence_length;
+  rl_hook_func_t *rl_startup_hook;
+  rl_hook_func_t *rl_pre_input_hook;
+  char *the_line;
+  int _rl_eof_char;
+  int rl_pending_input;
+  const char *rl_terminal_name;
+  int _rl_horizontal_scroll_mode;
+  int _rl_mark_modified_lines;
+  int _rl_bell_preference;
+  char *_rl_comment_begin;
+  Keymap rl_executing_keymap;
+  Keymap _rl_dispatching_keymap;
+  int rl_erase_empty_line;
+  int rl_num_chars_to_read;
+  char *rl_line_buffer;
+  int rl_line_buffer_len;
+  _rl_keyseq_cxt *_rl_kscxt;
+  int rl_executing_key;
+  char *rl_executing_keyseq;
+  int _rl_executing_keyseq_size;
+  int _rl_keyseq_timeout;
+  unsigned char _rl_parsing_conditionalized_out;
+  int _rl_convert_meta_chars_to_ascii;
+  int _rl_output_meta_chars;
+  int _rl_bind_stty_chars;
+  int _rl_revert_all_at_newline;
+  int _rl_echo_control_chars;
+  int _rl_show_mode_in_prompt;
+  int _rl_meta_flag;
+};
+
+#define _RL_SAVE_RESTORE(WHAT) _RL_SAVE_RESTORE_1 (state->readline, WHAT)
+
+static void
+_rl_readline_save_restore (struct _rl_state *state, int save)
+{
+  if (state->readline == NULL)
+    state->readline = xmalloc (sizeof (struct _rl_readline_state));
+
+  _RL_SAVE_RESTORE (_rl_keymap);
+  _RL_SAVE_RESTORE (rl_editing_mode);
+  _RL_SAVE_RESTORE (rl_insert_mode);
+  _RL_SAVE_RESTORE (rl_dispatching);
+  _RL_SAVE_RESTORE (_rl_last_command_was_kill);
+  _RL_SAVE_RESTORE (rl_numeric_arg);
+  _RL_SAVE_RESTORE (rl_explicit_arg);
+  _RL_SAVE_RESTORE (rl_arg_sign);
+  _RL_SAVE_RESTORE (rl_initialized);
+  _RL_SAVE_RESTORE (rl_readline_state);
+  _RL_SAVE_RESTORE (rl_point);
+  _RL_SAVE_RESTORE (rl_mark);
+  _RL_SAVE_RESTORE (rl_end);
+  _RL_SAVE_RESTORE (rl_done);
+  _RL_SAVE_RESTORE (rl_last_func);
+  _RL_SAVE_RESTORE (_rl_top_level);
+  _RL_SAVE_RESTORE (_rl_in_stream);
+  _RL_SAVE_RESTORE (_rl_out_stream);
+  _RL_SAVE_RESTORE (rl_instream);
+  _RL_SAVE_RESTORE (rl_outstream);
+  _RL_SAVE_RESTORE (_rl_echoing_p);
+  _RL_SAVE_RESTORE (rl_prompt);
+  _RL_SAVE_RESTORE (rl_visible_prompt_length);
+  _RL_SAVE_RESTORE (rl_already_prompted);
+  _RL_SAVE_RESTORE (rl_key_sequence_length);
+  _RL_SAVE_RESTORE (rl_startup_hook);
+  _RL_SAVE_RESTORE (rl_pre_input_hook);
+  _RL_SAVE_RESTORE (the_line);
+  _RL_SAVE_RESTORE (_rl_eof_char);
+  _RL_SAVE_RESTORE (rl_pending_input);
+  _RL_SAVE_RESTORE (rl_terminal_name);
+  _RL_SAVE_RESTORE (_rl_horizontal_scroll_mode);
+  _RL_SAVE_RESTORE (_rl_mark_modified_lines);
+  _RL_SAVE_RESTORE (_rl_bell_preference);
+  _RL_SAVE_RESTORE (_rl_comment_begin);
+  _RL_SAVE_RESTORE (rl_executing_keymap);
+  _RL_SAVE_RESTORE (_rl_dispatching_keymap);
+  _RL_SAVE_RESTORE (rl_erase_empty_line);
+  _RL_SAVE_RESTORE (rl_num_chars_to_read);
+  _RL_SAVE_RESTORE (rl_line_buffer);
+  _RL_SAVE_RESTORE (rl_line_buffer_len);
+  _RL_SAVE_RESTORE (_rl_kscxt);
+  _RL_SAVE_RESTORE (rl_executing_key);
+  _RL_SAVE_RESTORE (rl_executing_keyseq);
+  _RL_SAVE_RESTORE (_rl_executing_keyseq_size);
+  _RL_SAVE_RESTORE (_rl_keyseq_timeout);
+  _RL_SAVE_RESTORE (_rl_parsing_conditionalized_out);
+  _RL_SAVE_RESTORE (_rl_convert_meta_chars_to_ascii);
+  _RL_SAVE_RESTORE (_rl_output_meta_chars);
+  _RL_SAVE_RESTORE (_rl_bind_stty_chars);
+  _RL_SAVE_RESTORE (_rl_revert_all_at_newline);
+  _RL_SAVE_RESTORE (_rl_echo_control_chars);
+  _RL_SAVE_RESTORE (_rl_show_mode_in_prompt);
+  _RL_SAVE_RESTORE (_rl_meta_flag);
+}
+
 /* **************************************************************** */
 /*								    */
 /*			Top Level Functions			    */
 /*								    */
 /* **************************************************************** */
-
-/* Non-zero means treat 0200 bit in terminal input as Meta bit. */
-int _rl_meta_flag = 0;	/* Forward declaration */
 
 /* Set up the prompt and expand it.  Called from readline() and
    rl_callback_handler_install (). */
@@ -522,7 +644,7 @@ readline_internal_char ()
 readline_internal_charloop ()
 #endif
 {
-  static int lastc, eof_found;
+  int lastc, eof_found;
   int c, code, lk;
 
   lastc = -1;
@@ -1295,12 +1417,50 @@ bind_arrow_keys ()
 /*								    */
 /* **************************************************************** */
 
+static void
+_rl_save_restore (struct _rl_state *state, int save)
+{
+  _rl_bind_save_restore (state, save);
+  _rl_callback_save_restore (state, save);
+#ifdef COLOR_SUPPORT
+  _rl_colors_save_restore (state, save);
+#endif
+  _rl_complete_save_restore (state, save);
+  _rl_display_save_restore (state, save);
+  _rl_funmap_save_restore (state, save);
+  _rl_input_save_restore (state, save);
+  _rl_isearch_save_restore (state, save);
+  _rl_keymaps_save_restore (state, save);
+  _rl_kill_save_restore (state, save);
+  _rl_macro_save_restore (state, save);
+  _rl_misc_save_restore (state, save);
+  _rl_parens_save_restore (state, save);
+  _rl_parse_colors_save_restore (state, save);
+  _rl_readline_save_restore (state, save);
+  _rl_rltty_save_restore (state, save);
+  _rl_search_save_restore (state, save);
+  _rl_signals_save_restore (state, save);
+  _rl_terminal_save_restore (state, save);
+  _rl_text_save_restore (state, save);
+  _rl_undo_save_restore (state, save);
+  _rl_util_save_restore (state, save);
+  _rl_vi_mode_save_restore (state, save);
+}
+
 int
 rl_save_state (sp)
      struct readline_state *sp;
 {
   if (sp == 0)
     return -1;
+
+  if (sp->_rl_state == NULL)
+    {
+      sp->_rl_state = xmalloc (sizeof (*sp->_rl_state));
+      memset (sp->_rl_state, 0, sizeof (*sp->_rl_state));
+    }
+
+  _rl_save_restore (sp->_rl_state, 1);
 
   sp->point = rl_point;
   sp->end = rl_end;
@@ -1359,6 +1519,8 @@ rl_restore_state (sp)
 
   rl_catch_signals = sp->catchsigs;
   rl_catch_sigwinch = sp->catchsigwinch;
+
+  _rl_save_restore (sp->_rl_state, 0);
 
   return (0);
 }

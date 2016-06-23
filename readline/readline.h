@@ -874,6 +874,8 @@ extern int rl_inhibit_completion;
 #define RL_UNSETSTATE(x)	(rl_readline_state &= ~(x))
 #define RL_ISSTATE(x)		(rl_readline_state & (x))
 
+struct _rl_state;
+
 struct readline_state {
   /* line state */
   int point;
@@ -909,8 +911,9 @@ struct readline_state {
 
   /* options state */
 
+  struct _rl_state *_rl_state;
   /* reserved for future expansion, so the struct size doesn't change */
-  char reserved[64];
+  char reserved[64 - sizeof (struct _rl_state *)];
 };
 
 extern int rl_save_state PARAMS((struct readline_state *));

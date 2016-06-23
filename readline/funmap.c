@@ -37,8 +37,8 @@
 
 #include "rlconf.h"
 #include "readline.h"
-
 #include "xmalloc.h"
+#include "rlprivate.h"
 
 #ifdef __STDC__
 typedef int QSFUNC (const void *, const void *);
@@ -55,6 +55,32 @@ static int funmap_entry;
 /* After initializing the function map, this is the index of the first
    program specific function. */
 int funmap_program_specific_entry_start;
+
+static int funmap_initialized;
+
+struct _rl_funmap_state
+{
+  FUNMAP **funmap;
+  int funmap_size;
+  int funmap_entry;
+  int funmap_program_specific_entry_start;
+  int funmap_initialized;
+};
+
+#define _RL_SAVE_RESTORE(WHAT) _RL_SAVE_RESTORE_1 (state->funmap, WHAT)
+
+void
+_rl_funmap_save_restore (struct _rl_state *state, int save)
+{
+  if (state->funmap == NULL)
+    state->funmap = xmalloc (sizeof (struct _rl_funmap_state));
+
+  _RL_SAVE_RESTORE (funmap);
+  _RL_SAVE_RESTORE (funmap_size);
+  _RL_SAVE_RESTORE (funmap_entry);
+  _RL_SAVE_RESTORE (funmap_program_specific_entry_start);
+  _RL_SAVE_RESTORE (funmap_initialized);
+}
 
 static const FUNMAP default_funmap[] = {
   { "abort", rl_abort },
@@ -218,8 +244,6 @@ rl_add_funmap_entry (name, function)
   funmap[++funmap_entry] = (FUNMAP *)NULL;
   return funmap_entry;
 }
-
-static int funmap_initialized;
 
 /* Make the funmap contain all of the default entries. */
 void

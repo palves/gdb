@@ -56,6 +56,25 @@
 #include "rlprivate.h"
 #include "xmalloc.h"
 
+int _rl_allow_pathname_alphabetic_chars = 0;
+static const char * const pathname_alphabetic_chars = "/-_=~.#$";
+
+struct _rl_util_state
+{
+  int _rl_allow_pathname_alphabetic_chars;
+};
+
+#define _RL_SAVE_RESTORE(WHAT) _RL_SAVE_RESTORE_1 (state->util, WHAT)
+
+void
+_rl_util_save_restore (struct _rl_state *state, int save)
+{
+  if (state->util == NULL)
+    state->util = xmalloc (sizeof (struct _rl_util_state));
+
+  _RL_SAVE_RESTORE (_rl_allow_pathname_alphabetic_chars);
+}
+
 /* **************************************************************** */
 /*								    */
 /*			Utility Functions			    */
@@ -64,9 +83,6 @@
 
 /* Return 0 if C is not a member of the class of characters that belong
    in words, or 1 if it is. */
-
-int _rl_allow_pathname_alphabetic_chars = 0;
-static const char * const pathname_alphabetic_chars = "/-_=~.#$";
 
 int
 rl_alphabetic (c)

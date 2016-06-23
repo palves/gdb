@@ -52,6 +52,7 @@ extern char *strchr (), *strrchr ();
 
 #include "readline.h"
 #include "rlprivate.h"
+#include "xmalloc.h"
 
 static int find_matching_open PARAMS((char *, int, int));
 
@@ -64,6 +65,25 @@ int rl_blink_matching_paren = 0;
 #endif /* !HAVE_SELECT */
 
 static int _paren_blink_usec = 500000;
+
+struct _rl_parens_state
+{
+  int rl_blink_matching_paren;
+  int _paren_blink_usec;
+};
+
+
+#define _RL_SAVE_RESTORE(WHAT) _RL_SAVE_RESTORE_1 (state->parens, WHAT)
+
+void
+_rl_parens_save_restore (struct _rl_state *state, int save)
+{
+  if (state->parens == NULL)
+    state->parens = xmalloc (sizeof (struct _rl_parens_state));
+
+  _RL_SAVE_RESTORE (rl_blink_matching_paren);
+  _RL_SAVE_RESTORE (_paren_blink_usec);
+}
 
 /* Change emacs_standard_keymap to have bindings for paren matching when
    ON_OR_OFF is 1, change them back to self_insert when ON_OR_OFF == 0. */

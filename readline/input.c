@@ -103,9 +103,40 @@ static int rl_gather_tyi PARAMS((void));
 
 static int pop_index, push_index;
 static unsigned char ibuffer[512];
-static int ibuffer_len = sizeof (ibuffer) - 1;
+#define ibuffer_len (sizeof (ibuffer) - 1)
 
 #define any_typein (push_index != pop_index)
+
+
+struct _rl_input_state
+{
+  rl_hook_func_t *rl_event_hook;
+  rl_hook_func_t *rl_signal_event_hook;
+  rl_hook_func_t *rl_input_available_hook;
+  rl_getc_func_t *rl_getc_function;
+  int _keyboard_input_timeout;
+
+  int pop_index, push_index;
+  unsigned char ibuffer[512];
+};
+
+#define _RL_SAVE_RESTORE(WHAT) _RL_SAVE_RESTORE_1 (state->input, WHAT)
+
+void
+_rl_input_save_restore (struct _rl_state *state, int save)
+{
+  if (state->input == NULL)
+    state->input = xmalloc (sizeof (struct _rl_input_state));
+
+  _RL_SAVE_RESTORE (rl_event_hook);
+  _RL_SAVE_RESTORE (rl_signal_event_hook);
+  _RL_SAVE_RESTORE (rl_input_available_hook);
+  _RL_SAVE_RESTORE (rl_getc_function);
+  _RL_SAVE_RESTORE (_keyboard_input_timeout);
+  _RL_SAVE_RESTORE (pop_index);
+  _RL_SAVE_RESTORE (push_index);
+  _RL_SAVE_RESTORE (ibuffer);
+}
 
 int
 _rl_any_typein ()

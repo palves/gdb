@@ -90,6 +90,42 @@ static int currently_reading_init_file;
 /* used only in this file */
 static int _rl_prefer_visible_bell = 1;
 
+/* The last key bindings file read. */
+static char *last_readline_init_file = (char *)NULL;
+
+/* The file we're currently reading key bindings from. */
+static const char *current_readline_init_file;
+static int current_readline_init_include_level;
+static int current_readline_init_lineno;
+
+struct _rl_bind_state
+{
+  Keymap rl_binding_keymap;
+  int currently_reading_init_file;
+  int _rl_prefer_visible_bell;
+  char *last_readline_init_file;
+  const char *current_readline_init_file;
+  int current_readline_init_include_level;
+  int current_readline_init_lineno;
+};
+
+#define _RL_SAVE_RESTORE(WHAT) _RL_SAVE_RESTORE_1 (state->bind, WHAT)
+
+void
+_rl_bind_save_restore (struct _rl_state *state, int save)
+{
+  if (state->complete == NULL)
+    state->bind = xmalloc (sizeof (struct _rl_bind_state));
+
+  _RL_SAVE_RESTORE (rl_binding_keymap);
+  _RL_SAVE_RESTORE (currently_reading_init_file);
+  _RL_SAVE_RESTORE (_rl_prefer_visible_bell);
+  _RL_SAVE_RESTORE (last_readline_init_file);
+  _RL_SAVE_RESTORE (current_readline_init_file);
+  _RL_SAVE_RESTORE (current_readline_init_include_level);
+  _RL_SAVE_RESTORE (current_readline_init_lineno);
+}
+
 /* **************************************************************** */
 /*								    */
 /*			Binding keys				    */
@@ -798,14 +834,6 @@ rl_function_of_keyseq (keyseq, map, type)
     }
   return ((rl_command_func_t *) NULL);
 }
-
-/* The last key bindings file read. */
-static char *last_readline_init_file = (char *)NULL;
-
-/* The file we're currently reading key bindings from. */
-static const char *current_readline_init_file;
-static int current_readline_init_include_level;
-static int current_readline_init_lineno;
 
 /* Read FILENAME into a locally-allocated buffer and return the buffer.
    The size of the buffer is returned in *SIZEP.  Returns NULL if any

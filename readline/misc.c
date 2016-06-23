@@ -67,9 +67,35 @@ int _rl_history_preserve_point = 0;
 
 _rl_arg_cxt _rl_argcxt;
 
+/* While we are editing the history, this is the saved
+   version of the original line. */
+HIST_ENTRY *_rl_saved_line_for_history = (HIST_ENTRY *)NULL;
+
 /* Saved target point for when _rl_history_preserve_point is set.  Special
    value of -1 means that point is at the end of the line. */
 int _rl_history_saved_point = -1;
+
+struct _rl_misc_state
+{
+  int _rl_history_preserve_point;
+  _rl_arg_cxt _rl_argcxt;
+  int _rl_history_saved_point;
+  HIST_ENTRY *_rl_saved_line_for_history;
+};
+
+#define _RL_SAVE_RESTORE(WHAT) _RL_SAVE_RESTORE_1 (state->misc, WHAT)
+
+void
+_rl_misc_save_restore (struct _rl_state *state, int save)
+{
+  if (state->misc == NULL)
+    state->misc = xmalloc (sizeof (struct _rl_misc_state));
+
+  _RL_SAVE_RESTORE (_rl_history_preserve_point);
+  _RL_SAVE_RESTORE (_rl_argcxt);
+  _RL_SAVE_RESTORE (_rl_history_saved_point);
+  _RL_SAVE_RESTORE (_rl_saved_line_for_history);
+}
 
 /* **************************************************************** */
 /*								    */
@@ -303,10 +329,6 @@ rl_discard_argument ()
 /* We already have a history library, and that is what we use to control
    the history features of readline.  This is our local interface to
    the history mechanism. */
-
-/* While we are editing the history, this is the saved
-   version of the original line. */
-HIST_ENTRY *_rl_saved_line_for_history = (HIST_ENTRY *)NULL;
 
 /* Set the history pointer back to the last entry in the history. */
 void

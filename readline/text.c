@@ -58,6 +58,42 @@
 #include "rlshell.h"
 #include "xmalloc.h"
 
+#ifdef HANDLE_MULTIBYTE
+static char pending_bytes[MB_LEN_MAX];
+static int pending_bytes_length = 0;
+static mbstate_t ps = {0};
+
+static int _rl_insert_char_stored_count = 0;
+#endif
+
+struct _rl_text_state
+{
+#ifdef HANDLE_MULTIBYTE
+  char pending_bytes[MB_LEN_MAX];
+  int pending_bytes_length;
+  mbstate_t ps;
+  int _rl_insert_char_stored_count;
+#else
+  char dummy; /* avoid empty struct.  */
+#endif
+};
+
+#define _RL_SAVE_RESTORE(WHAT) _RL_SAVE_RESTORE_1 (state->text, WHAT)
+
+void
+_rl_text_save_restore (struct _rl_state *state, int save)
+{
+  if (state->text == NULL)
+    state->text = xmalloc (sizeof (struct _rl_text_state));
+
+#ifdef HANDLE_MULTIBYTE
+  _RL_SAVE_RESTORE (pending_bytes);
+  _RL_SAVE_RESTORE (pending_bytes_length);
+  _RL_SAVE_RESTORE (ps);
+  _RL_SAVE_RESTORE (_rl_insert_char_stored_count);
+#endif
+}
+
 /* Forward declarations. */
 static int rl_change_case PARAMS((int, int));
 static int _rl_char_search PARAMS((int, int, int));
@@ -658,12 +694,6 @@ rl_arrow_keys (count, c)
 /*								    */
 /* **************************************************************** */
 
-#ifdef HANDLE_MULTIBYTE
-static char pending_bytes[MB_LEN_MAX];
-static int pending_bytes_length = 0;
-static mbstate_t ps = {0};
-#endif
-
 /* Insert the character C at the current location, moving point forward.
    If C introduces a multibyte sequence, we read the whole sequence and
    then insert the multibyte char into the line buffer. */
@@ -678,8 +708,9 @@ _rl_insert_char (count, c)
   char incoming[MB_LEN_MAX + 1];
   int incoming_length = 0;
   mbstate_t ps_back;
-  static int stored_count = 0;
 #endif
+
+#define stored_count _rl_insert_char_stored_count
 
   if (count <= 0)
     return 0;
@@ -847,6 +878,8 @@ _rl_insert_char (count, c)
 #endif
 
   return 0;
+
+#undef stored_count
 }
 
 /* Overwrite the character at point (or next COUNT characters) with C.

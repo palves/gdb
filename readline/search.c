@@ -72,6 +72,38 @@ static int rl_history_search_flags;
 static char *history_search_string;
 static int history_string_size;
 
+struct _rl_search_state
+{
+  _rl_search_cxt *_rl_nscxt;
+  char *noninc_search_string;
+  int noninc_history_pos;
+  char *prev_line_found;
+  int rl_history_search_len;
+  int rl_history_search_pos;
+  int rl_history_search_flags;
+  char *history_search_string;
+  int history_string_size;
+};
+
+#define _RL_SAVE_RESTORE(WHAT) _RL_SAVE_RESTORE_1 (state->search, WHAT)
+
+void
+_rl_search_save_restore (struct _rl_state *state, int save)
+{
+  if (state->search == NULL)
+    state->search = xmalloc (sizeof (struct _rl_search_state));
+
+  _RL_SAVE_RESTORE (_rl_nscxt);
+  _RL_SAVE_RESTORE (noninc_search_string);
+  _RL_SAVE_RESTORE (noninc_history_pos);
+  _RL_SAVE_RESTORE (prev_line_found);
+  _RL_SAVE_RESTORE (rl_history_search_len);
+  _RL_SAVE_RESTORE (rl_history_search_pos);
+  _RL_SAVE_RESTORE (rl_history_search_flags);
+  _RL_SAVE_RESTORE (history_search_string);
+  _RL_SAVE_RESTORE (history_string_size);
+}
+
 static void make_history_line_current PARAMS((HIST_ENTRY *));
 static int noninc_search_from_pos PARAMS((char *, int, int));
 static int noninc_dosearch PARAMS((char *, int));

@@ -87,6 +87,26 @@ struct bin_str _rl_color_indicator[] =
     { LEN_STR_PAIR ("\033[K") },        //  cl: clear to end of line
   };
 
+#define ARRAY_SIZE(ARRAY) sizeof (ARRAY) / sizeof (ARRAY[0])
+
+struct _rl_parse_colors_state
+{
+  char *color_buf;
+  struct bin_str _rl_color_indicator[ARRAY_SIZE (_rl_color_indicator)];
+};
+
+#define _RL_SAVE_RESTORE(WHAT) _RL_SAVE_RESTORE_1 (state->parse_colors, WHAT)
+
+void
+_rl_parse_colors_save_restore (struct _rl_state *state, int save)
+{
+  if (state->parse_colors == NULL)
+    state->parse_colors = xmalloc (sizeof (struct _rl_parse_colors_state));
+
+  _RL_SAVE_RESTORE (color_buf);
+  _RL_SAVE_RESTORE (_rl_color_indicator);
+}
+
 /* Parse a string as part of the LS_COLORS variable; this may involve
    decoding all kinds of escape characters.  If equals_end is set an
    unescaped equal sign ends the string, otherwise only a : or \0
