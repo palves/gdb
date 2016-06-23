@@ -254,12 +254,29 @@ void (*deprecated_context_hook) (int id);
 /* The highest UI number ever assigned.  */
 static int highest_ui_num;
 
+/* A few readline variables are default initialized, and there's no
+   way to set/reset them back to the defaults (e.g., to set
+   rl_editing_mode to emacs_mode), which we need to do for new
+   heap-allocated readline instances.  We copy the default state here
+   early, before readline has a chance to read the inputrc files.  */
+static struct readline_state initial_readline_state;
+
+void
+save_initial_readline_state (void)
+{
+  rl_save_state (&initial_readline_state);
+}
+
 /* See top.h.  */
 
 struct ui *
 new_ui (FILE *instream, FILE *outstream, FILE *errstream)
 {
   struct ui *ui;
+  // FIXME: can we really assume current realine users zero memory?
+  // we must do this because parts of the state are xmalloced iff not
+  // already malloced.
+  struct readline_state prev_readline_state = {0};
 
   ui = XCNEW (struct ui);
 
@@ -280,6 +297,17 @@ new_ui (FILE *instream, FILE *outstream, FILE *errstream)
 
   ui->prompt_state = PROMPT_NEEDED;
 
+  ui->readline_state = XNEW (struct readline_state);
+
+  /* We can't just copy the readline state object directly.  Restore
+     the initial state, and save it to the new UI.  */
+  rl_save_state (&prev_readline_state);
+
+  rl_restore_state (&initial_readline_state);
+  rl_save_state (ui->readline_state);
+
+  rl_restore_state (&prev_readline_state);
+
   if (ui_list == NULL)
     ui_list = ui;
   else
@@ -294,10 +322,58 @@ new_ui (FILE *instream, FILE *outstream, FILE *errstream)
   return ui;
 }
 
+#include "cli-out.h"
+
+static void
+save_env_var (const char *var, char **here)
+{
+  char *value;
+
+  xfree (*here);
+  value = getenv (var);
+  *here = value ? xstrdup (value) : NULL;
+}
+
+static void
+restore_env_var (const char *var, char *value)
+{
+  if (value != NULL)
+    setenv (var, value, 1);
+  else
+    unsetenv (var);
+}
+
 void
 set_current_ui (struct ui *ui)
 {
+  /* Save.  */
+  save_env_var ("LINES", &current_ui->env_lines);
+  save_env_var ("COLUMNS", &current_ui->env_columns);
+
+  rl_save_state (current_ui->readline_state);
+
+  /* We're just saving the current state.  No need to switch it
+     back.  */
+  if (current_ui == ui)
+    return;
+
+  /* Restore.  */
+  rl_restore_state (ui->readline_state);
+
+  restore_env_var ("LINES", ui->env_lines);
+  restore_env_var ("COLUMNS", ui->env_columns);
+
   current_ui = ui;
+
+#if 0
+#ifdef TUI
+  {
+    extern void tui_set_screen ();
+
+    tui_set_screen ();
+  }
+#endif
+#endif
 }
 
 static void
@@ -306,6 +382,8 @@ free_ui (struct ui *ui)
   ui_file_delete (ui->m_gdb_stdin);
   ui_file_delete (ui->m_gdb_stdout);
   ui_file_delete (ui->m_gdb_stderr);
+
+  xfree (ui->readline_state);
 
   xfree (ui);
 }
@@ -419,7 +497,14 @@ new_ui_command (char *args, int from_tty)
   ui->async = 1;
 
   make_cleanup (restore_ui_cleanup, current_ui);
-  current_ui = ui;
+  set_current_ui (ui);
+
+  /* Tell readline to use the same input/output streams that gdb
+     uses.  */
+  rl_instream = ui->instream;
+  rl_outstream = ui->outstream;
+
+  init_readline ();
 
   set_top_level_interpreter (interpreter_name);
 
@@ -1618,14 +1703,14 @@ undo_terminal_modifications_before_exit (void)
 
   target_terminal_ours ();
 
-  current_ui = main_ui;
+  set_current_ui (main_ui);
 
 #if defined(TUI)
   tui_disable ();
 #endif
   gdb_disable_readline ();
 
-  current_ui = saved_top_level;
+  set_current_ui (saved_top_level);
 }
 
 
@@ -2033,6 +2118,23 @@ set_history_filename (char *args, int from_tty, struct cmd_list_element *c)
 				 history_filename, (char *) NULL);
 }
 
+void
+init_readline (void)
+{
+  /* Setup important stuff for command line editing.  */
+  rl_completion_word_break_hook = gdb_completion_word_break_characters;
+  rl_completion_entry_function = readline_line_completion_function;
+  rl_completer_word_break_characters = default_word_break_characters ();
+  rl_completer_quote_characters = get_gdb_completer_quote_characters ();
+  rl_completion_display_matches_hook = cli_display_match_list;
+  rl_readline_name = "gdb";
+  rl_terminal_name = getenv ("TERM");
+
+  /* The name for this defun comes from Bash, where it originated.
+     15 is Control-o, the same binding this function has in Bash.  */
+  rl_add_defun ("operate-and-get-next", gdb_rl_operate_and_get_next, 15);
+}
+
 static void
 init_main (void)
 {
@@ -2047,18 +2149,7 @@ init_main (void)
   history_expansion_p = 0;
   write_history_p = 0;
 
-  /* Setup important stuff for command line editing.  */
-  rl_completion_word_break_hook = gdb_completion_word_break_characters;
-  rl_completion_entry_function = readline_line_completion_function;
-  rl_completer_word_break_characters = default_word_break_characters ();
-  rl_completer_quote_characters = get_gdb_completer_quote_characters ();
-  rl_completion_display_matches_hook = cli_display_match_list;
-  rl_readline_name = "gdb";
-  rl_terminal_name = getenv ("TERM");
-
-  /* The name for this defun comes from Bash, where it originated.
-     15 is Control-o, the same binding this function has in Bash.  */
-  rl_add_defun ("operate-and-get-next", gdb_rl_operate_and_get_next, 15);
+  init_readline ();
 
   add_setshow_string_cmd ("prompt", class_support,
 			  &top_prompt,

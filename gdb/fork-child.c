@@ -321,7 +321,7 @@ fork_inferior (char *exec_file_arg, char *allargs, char **env,
 	 child are mapped to std{in/out/err}.  This makes it possible
 	 to use fprintf_unfiltered/warning/error/etc. in the child
 	 from here on.  */
-      current_ui = main_ui;
+      set_current_ui (main_ui);
 
       /* Close all file descriptors except those that gdb inherited
 	 (usually 0/1/2), so they don't leak to the inferior.  Note
@@ -394,7 +394,7 @@ fork_inferior (char *exec_file_arg, char *allargs, char **env,
   environ = save_our_env;
 
   /* Likewise the current UI.  */
-  current_ui = save_ui;
+  set_current_ui (save_ui);
 
   if (!have_inferiors ())
     init_thread_list ();

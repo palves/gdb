@@ -235,11 +235,6 @@ change_line_handler (int editing)
 {
   struct ui *ui = current_ui;
 
-  /* We can only have one instance of readline, so we only allow
-     editing on the main UI.  */
-  if (ui != main_ui)
-    return;
-
   /* Don't try enabling editing if the interpreter doesn't support it
      (e.g., MI).  */
   if (!interp_supports_command_editing (top_level_interpreter ())
@@ -248,8 +243,6 @@ change_line_handler (int editing)
 
   if (editing)
     {
-      gdb_assert (ui == main_ui);
-
       /* Turn on editing by using readline.  */
       ui->call_readline = gdb_rl_callback_read_char_wrapper;
     }
@@ -273,18 +266,13 @@ change_line_handler (int editing)
    that also clears the line buffer, thus installing it while the user
    is typing would lose input.  */
 
-/* Whether we've registered a callback handler with readline.  */
-static int callback_handler_installed;
-
 /* See event-top.h, and above.  */
 
 void
 gdb_rl_callback_handler_remove (void)
 {
-  gdb_assert (current_ui == main_ui);
-
   rl_callback_handler_remove ();
-  callback_handler_installed = 0;
+  current_ui->callback_handler_installed = 0;
 }
 
 /* See event-top.h, and above.  Note this wrapper doesn't have an
@@ -294,15 +282,13 @@ gdb_rl_callback_handler_remove (void)
 void
 gdb_rl_callback_handler_install (const char *prompt)
 {
-  gdb_assert (current_ui == main_ui);
-
   /* Calling rl_callback_handler_install resets readline's input
      buffer.  Calling this when we were already processing input
      therefore loses input.  */
-  gdb_assert (!callback_handler_installed);
+  gdb_assert (!current_ui->callback_handler_installed);
 
   rl_callback_handler_install (prompt, gdb_rl_callback_handler);
-  callback_handler_installed = 1;
+  current_ui->callback_handler_installed = 1;
 }
 
 /* See event-top.h, and above.  */
@@ -310,9 +296,7 @@ gdb_rl_callback_handler_install (const char *prompt)
 void
 gdb_rl_callback_handler_reinstall (void)
 {
-  gdb_assert (current_ui == main_ui);
-
-  if (!callback_handler_installed)
+  if (!current_ui->callback_handler_installed)
     {
       /* Passing NULL as prompt argument tells readline to not display
 	 a prompt.  */
@@ -453,7 +437,7 @@ struct ui *ui_list;
 void
 restore_ui_cleanup (void *data)
 {
-  current_ui = (struct ui *) data;
+  set_current_ui ((struct ui *) data);
 }
 
 /* See top.h.  */
@@ -472,7 +456,7 @@ switch_thru_all_uis_cond (struct switch_thru_all_uis *state)
 {
   if (state->iter != NULL)
     {
-      current_ui = state->iter;
+      set_current_ui (state->iter);
       return 1;
     }
   else
@@ -512,7 +496,7 @@ stdin_event_handler (int error, gdb_client_data client_data)
   if (error)
     {
       /* Switch to the main UI, so diagnostics always go there.  */
-      current_ui = main_ui;
+      set_current_ui (main_ui);
 
       delete_file_handler (ui->input_fd);
       if (main_ui == ui)
@@ -531,7 +515,7 @@ stdin_event_handler (int error, gdb_client_data client_data)
     {
       /* Switch to the UI whose input descriptor woke up the event
 	 loop.  */
-      current_ui = ui;
+      set_current_ui (ui);
 
       /* This makes sure a ^C immediately followed by further input is
 	 always processed in that order.  E.g,. with input like
@@ -1283,7 +1267,7 @@ gdb_setup_readline (int editing)
   /* If the input stream is connected to a terminal, turn on editing.
      However, that is only allowed on the main UI, as we can only have
      one instance of readline.  */
-  if (ISATTY (ui->instream) && editing && ui == main_ui)
+  if (ISATTY (ui->instream) && editing)
     {
       /* Tell gdb that we will be using the readline library.  This
 	 could be overwritten by a command in .gdbinit like 'set

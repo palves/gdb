@@ -532,7 +532,7 @@ call_thread_fsm_should_stop (struct thread_fsm *self,
 
       /* Break out of wait_sync_command_done.  */
       old_chain = make_cleanup (restore_ui_cleanup, current_ui);
-      current_ui = f->waiting_ui;
+      set_current_ui (f->waiting_ui);
       target_terminal_ours ();
       f->waiting_ui->prompt_state = PROMPT_NEEDED;
 

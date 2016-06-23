@@ -1005,7 +1005,7 @@ invoke_async_signal_handlers (void)
       async_handler_ptr->ready = 0;
       /* Async signal handlers have no connection to whichever was the
 	 current UI, and thus always run on the main one.  */
-      current_ui = main_ui;
+      set_current_ui (main_ui);
       (*async_handler_ptr->proc) (async_handler_ptr->client_data);
     }
 

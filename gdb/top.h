@@ -25,6 +25,7 @@
 
 struct tl_interp_info;
 struct event_loop;
+struct readline_state;
 
 /* Prompt state.  */
 
@@ -144,7 +145,21 @@ struct ui
   /* The current ui_out.  */
   struct ui_out *m_current_uiout;
 
+  /* Per-terminal environment variables.  Readline, ncurses and
+     termcap all read/write these.  */
+  char *env_lines;
+  char *env_columns;
+
   struct event_loop *event_loop;
+
+  /* readline state, saved/restored with
+     rl_save_state/rl_restore_state.  */
+  struct readline_state *readline_state;
+
+  /* Whether we've registered a callback handler with readline.  */
+  int callback_handler_installed;
+
+  struct tui_terminal_state *tui;
 };
 
 /* The main UI.  This is the UI that is bound to stdin/stdout/stderr.
@@ -277,5 +292,8 @@ extern char *handle_line_of_input (struct buffer *cmd_line_buffer,
 extern void ggl_lock (void);
 extern void ggl_unlock (void);
 extern void init_ggl_lock (void);
+
+extern void init_readline (void);
+extern void save_initial_readline_state (void);
 
 #endif

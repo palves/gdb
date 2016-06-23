@@ -519,10 +519,12 @@ captured_main (void *data)
   setvbuf (stderr, NULL, _IONBF, BUFSIZ);
 #endif
 
+  init_ggl_lock ();
+
+  save_initial_readline_state ();
+
   main_ui = new_ui (stdin, stdout, stderr);
   current_ui = main_ui;
-
-  init_ggl_lock ();
 
   gdb_stdtargerr = gdb_stderr;	/* for moment */
   gdb_stdtargin = gdb_stdin;	/* for moment */
