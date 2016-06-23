@@ -40,6 +40,7 @@
 #include "buffer.h"
 #include "ser-event.h"
 #include "gdb_select.h"
+#include <pthread.h>
 
 /* readline include files.  */
 #include "readline/readline.h"
@@ -1235,6 +1236,28 @@ async_float_handler (gdb_client_data arg)
   error (_("Erroneous arithmetic operation."));
 }
 
+
+static pthread_mutex_t gdb_global_lock;
+
+void
+ggl_lock (void)
+{
+  pthread_mutex_lock (&gdb_global_lock);
+}
+
+void
+ggl_unlock (void)
+{
+  pthread_mutex_unlock (&gdb_global_lock);
+}
+
+void
+init_ggl_lock (void)
+{
+  pthread_mutex_init (&gdb_global_lock, NULL);
+
+  ggl_lock ();
+}
 
 /* Set things up for readline to be invoked via the alternate
    interface, i.e. via a callback function

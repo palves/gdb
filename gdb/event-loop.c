@@ -294,13 +294,13 @@ initialize_async_signal_handlers (void)
 		    async_signals_handler, NULL);
 }
 
-static struct event_loop event_loop;
-static struct event_loop *current_event_loop = &event_loop;
-
 static struct event_loop *
 get_event_loop (void)
 {
-  return current_event_loop;
+  if (current_ui->event_loop == NULL)
+    current_ui->event_loop = XCNEW (struct event_loop);
+
+  return current_ui->event_loop;
 }
 
 /* Process one high level event.  If nothing is ready at this time,
@@ -767,6 +767,7 @@ gdb_wait_for_event (int block)
   struct event_loop *el = get_event_loop ();
   file_handler *file_ptr;
   int num_found = 0;
+  struct ui *ui = current_ui;
 
   /* Make sure all output is done before getting another event.  */
   gdb_flush (gdb_stdout);
@@ -790,8 +791,17 @@ gdb_wait_for_event (int block)
       else
 	timeout = 0;
 
+      /* We're about to sleep waiting for the next event.  Let other
+	 threads access global structures.  */
+      ggl_unlock ();
+
       num_found = poll (el->gdb_notifier.poll_fds,
 			(unsigned long) el->gdb_notifier.num_fds, timeout);
+
+      ggl_lock ();
+
+      /* If some other thread ran, it switched UI.  Restore ours.  */
+      set_current_ui (ui);
 
       /* Don't print anything if we get out of poll because of a
 	 signal.  */

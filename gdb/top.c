@@ -52,6 +52,7 @@
 #include "frame.h"
 #include "buffer.h"
 #include "gdb_select.h"
+#include <pthread.h>
 
 /* readline include files.  */
 #include "readline/readline.h"
@@ -293,6 +294,12 @@ new_ui (FILE *instream, FILE *outstream, FILE *errstream)
   return ui;
 }
 
+void
+set_current_ui (struct ui *ui)
+{
+  current_ui = ui;
+}
+
 static void
 free_ui (struct ui *ui)
 {
@@ -337,6 +344,33 @@ open_terminal_stream (const char *name)
     perror_with_name  (_("opening terminal failed"));
 
   return fdopen (fd, "w+");
+}
+
+static void *
+ui_thread_entry (void *arg)
+{
+  struct ui *ui = (struct ui *) arg;
+
+  ggl_lock ();
+
+  set_current_ui (ui);
+
+  start_event_loop ();
+
+  ggl_unlock ();
+
+  return NULL;
+}
+
+static int
+create_ui_thread (struct ui *ui)
+{
+  pthread_t child_thread;
+  int res;
+
+  res = pthread_create (&child_thread, NULL, ui_thread_entry, ui);
+
+  return res;
 }
 
 /* Implementation of the "new-ui" command.  */
@@ -395,6 +429,8 @@ new_ui_command (char *args, int from_tty)
   do_cleanups (back_to);
 
   printf_unfiltered ("New UI allocated\n");
+
+  create_ui_thread (ui);
 }
 
 /* Handler for SIGHUP.  */

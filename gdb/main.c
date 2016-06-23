@@ -522,6 +522,8 @@ captured_main (void *data)
   main_ui = new_ui (stdin, stdout, stderr);
   current_ui = main_ui;
 
+  init_ggl_lock ();
+
   gdb_stdtargerr = gdb_stderr;	/* for moment */
   gdb_stdtargin = gdb_stdin;	/* for moment */
 

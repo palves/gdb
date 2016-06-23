@@ -24,6 +24,7 @@
 #include "event-loop.h"
 
 struct tl_interp_info;
+struct event_loop;
 
 /* Prompt state.  */
 
@@ -142,6 +143,8 @@ struct ui
 
   /* The current ui_out.  */
   struct ui_out *m_current_uiout;
+
+  struct event_loop *event_loop;
 };
 
 /* The main UI.  This is the UI that is bound to stdin/stdout/stderr.
@@ -154,6 +157,8 @@ extern struct ui *current_ui;
 
 /* The list of all UIs.  */
 extern struct ui *ui_list;
+
+extern void set_current_ui (struct ui *ui);
 
 /* State for SWITCH_THRU_ALL_UIS.  Declared here because it is meant
    to be created on the stack, but should be treated as opaque.  */
@@ -268,5 +273,9 @@ extern void do_restore_instream_cleanup (void *stream);
 extern char *handle_line_of_input (struct buffer *cmd_line_buffer,
 				   char *rl, int repeat,
 				   char *annotation_suffix);
+
+extern void ggl_lock (void);
+extern void ggl_unlock (void);
+extern void init_ggl_lock (void);
 
 #endif
