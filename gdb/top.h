@@ -145,6 +145,8 @@ struct ui
   /* The current ui_out.  */
   struct ui_out *m_current_uiout;
 
+  struct page_info *page_info;
+
   /* Per-terminal environment variables.  Readline, ncurses and
      termcap all read/write these.  */
   char *env_lines;

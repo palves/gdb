@@ -365,14 +365,12 @@ set_current_ui (struct ui *ui)
 
   current_ui = ui;
 
-#if 0
 #ifdef TUI
   {
     extern void tui_set_screen ();
 
     tui_set_screen ();
   }
-#endif
 #endif
 }
 
@@ -499,12 +497,14 @@ new_ui_command (char *args, int from_tty)
   make_cleanup (restore_ui_cleanup, current_ui);
   set_current_ui (ui);
 
-  /* Tell readline to use the same input/output streams that gdb
-     uses.  */
+  /* Tell readline to use the same input/output streams that gdb uses.
+     Must set this already, do that init_page_info has readline query
+     the correct terminal.  */
   rl_instream = ui->instream;
   rl_outstream = ui->outstream;
 
   init_readline ();
+  init_page_info ();
 
   set_top_level_interpreter (interpreter_name);
 

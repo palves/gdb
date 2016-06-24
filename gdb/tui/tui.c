@@ -56,12 +56,6 @@
    "gdb_curses.h".  */
 #include "readline/readline.h"
 
-/* Tells whether the TUI is active or not.  */
-int tui_active = 0;
-static int tui_finish_init = 1;
-
-enum tui_key_mode tui_current_key_mode = TUI_COMMAND_MODE;
-
 struct tui_char_command
 {
   unsigned char key;
@@ -83,14 +77,35 @@ static const struct tui_char_command tui_commands[] = {
   { 0, 0 },
 };
 
-static Keymap tui_keymap;
-static Keymap tui_readline_standard_keymap;
+struct tui
+{
+  Keymap tui_keymap;
+  Keymap tui_readline_standard_keymap;
+};
+
+static struct tui *
+tui_new (void)
+{
+  return XCNEW (struct tui);
+}
+
+static struct tui *
+get_tui (void)
+{
+  struct tui_terminal_state *tts = tui_ts ();
+
+  if (tts->tui == NULL)
+    tts->tui = tui_new ();
+
+  return tts->tui;
+}
 
 /* TUI readline command.
    Switch the output mode between TUI/standard gdb.  */
 static int
 tui_rl_switch_mode (int notused1, int notused2)
 {
+  tui_set_screen ();
 
   /* Don't let exceptions escape.  We're in the middle of a readline
      callback that isn't prepared for that.  */
@@ -315,19 +330,24 @@ tui_rl_startup_hook (void)
 void
 tui_set_key_mode (enum tui_key_mode mode)
 {
+  struct tui *tui = get_tui ();
+
   tui_current_key_mode = mode;
   rl_set_keymap (mode == TUI_SINGLE_KEY_MODE
-                 ? tui_keymap : tui_readline_standard_keymap);
+                 ? tui->tui_keymap : tui->tui_readline_standard_keymap);
   tui_show_locator_content ();
 }
+
+#include "top.h"
 
 /* Initialize readline and configure the keymap for the switching
    key shortcut.  */
 void
-tui_initialize_readline (void)
+tui_initialize_readline_keymaps (void)
 {
   int i;
   Keymap tui_ctlx_keymap;
+  struct tui *tui = get_tui ();
 
   rl_initialize ();
 
@@ -335,14 +355,15 @@ tui_initialize_readline (void)
   rl_add_defun ("gdb-command", tui_rl_command_key, -1);
   rl_add_defun ("next-keymap", tui_rl_next_keymap, -1);
 
-  tui_keymap = rl_make_bare_keymap ();
+  tui->tui_keymap = rl_make_bare_keymap ();
   tui_ctlx_keymap = rl_make_bare_keymap ();
-  tui_readline_standard_keymap = rl_get_keymap ();
+  tui->tui_readline_standard_keymap = rl_get_keymap ();
 
   for (i = 0; tui_commands[i].cmd; i++)
-    rl_bind_key_in_map (tui_commands[i].key, tui_rl_command_key, tui_keymap);
+    rl_bind_key_in_map (tui_commands[i].key,
+			tui_rl_command_key, tui->tui_keymap);
 
-  rl_generic_bind (ISKMAP, "\\C-x", (char*) tui_ctlx_keymap, tui_keymap);
+  rl_generic_bind (ISKMAP, "\\C-x", (char*) tui_ctlx_keymap, tui->tui_keymap);
 
   /* Bind all other keys to tui_rl_command_mode so that we switch
      temporarily from SingleKey mode and can enter a gdb command.  */
@@ -357,7 +378,7 @@ tui_initialize_readline (void)
       if (tui_commands[j].cmd)
         continue;
 
-      rl_bind_key_in_map (i, tui_rl_command_mode, tui_keymap);
+      rl_bind_key_in_map (i, tui_rl_command_mode, tui->tui_keymap);
     }
 
   rl_bind_key_in_map ('a', tui_rl_switch_mode, emacs_ctlx_keymap);
@@ -372,7 +393,7 @@ tui_initialize_readline (void)
   rl_bind_key_in_map ('2', tui_rl_change_windows, tui_ctlx_keymap);
   rl_bind_key_in_map ('o', tui_rl_other_window, emacs_ctlx_keymap);
   rl_bind_key_in_map ('o', tui_rl_other_window, tui_ctlx_keymap);
-  rl_bind_key_in_map ('q', tui_rl_next_keymap, tui_keymap);
+  rl_bind_key_in_map ('q', tui_rl_next_keymap, tui->tui_keymap);
   rl_bind_key_in_map ('s', tui_rl_next_keymap, emacs_ctlx_keymap);
   rl_bind_key_in_map ('s', tui_rl_next_keymap, tui_ctlx_keymap);
 }
@@ -391,6 +412,28 @@ gdb_getenv_term (void)
   return "<unset>";
 }
 
+struct tui_terminal_state *
+tui_ts (void)
+{
+  if (current_ui->tui == NULL)
+    {
+      current_ui->tui = XCNEW (struct tui_terminal_state);
+      current_ui->tui->tui_finish_init = 1;
+      tui_current_key_mode = TUI_COMMAND_MODE;
+    }
+  return current_ui->tui;
+}
+
+void
+tui_set_screen (void)
+{
+  if (current_ui->tui != NULL
+      && current_ui->tui->screen != NULL)
+    set_term ((SCREEN *) current_ui->tui->screen);
+  else
+    set_term (NULL);
+}
+
 /* Enter in the tui mode (curses).
    When in normal mode, it installs the tui hooks in gdb, redirects
    the gdb output, configures the readline to work in tui mode.
@@ -404,7 +447,7 @@ tui_enable (void)
   /* To avoid to initialize curses when gdb starts, there is a defered
      curses initialization.  This initialization is made only once
      and the first time the curses mode is entered.  */
-  if (tui_finish_init)
+  if (tui_ts ()->tui_finish_init)
     {
       WINDOW *w;
       SCREEN *s;
@@ -422,12 +465,12 @@ tui_enable (void)
       if (!ui_file_isatty (gdb_stdout))
 	error (_("Cannot enable the TUI when output is not a terminal"));
 
-      s = newterm (NULL, stdout, stdin);
+      s = newterm (NULL, current_ui->outstream, current_ui->instream);
 #ifdef __MINGW32__
       /* The MinGW port of ncurses requires $TERM to be unset in order
 	 to activate the Windows console driver.  */
       if (s == NULL)
-	s = newterm ("unknown", stdout, stdin);
+	s = newterm ("unknown", current_ui->outstream, current_ui->instream);
 #endif
       if (s == NULL)
 	{
@@ -450,6 +493,8 @@ tui_enable (void)
 	}
 #endif
 
+      tui_ts ()->screen = s;
+
       cbreak ();
       noecho ();
       /* timeout (1); */
@@ -466,7 +511,7 @@ tui_enable (void)
       tui_set_win_focus_to (TUI_SRC_WIN);
       keypad (TUI_CMD_WIN->generic.handle, TRUE);
       wrefresh (TUI_CMD_WIN->generic.handle);
-      tui_finish_init = 0;
+      tui_ts ()->tui_finish_init = 0;
     }
   else
     {
@@ -515,11 +560,17 @@ tui_enable (void)
 void
 tui_disable (void)
 {
+  struct tui *tui;
+
   if (!tui_active)
     return;
 
+  tui_set_screen ();
+
+  tui = get_tui ();
+
   /* Restore initial readline keymap.  */
-  rl_set_keymap (tui_readline_standard_keymap);
+  rl_set_keymap (tui->tui_readline_standard_keymap);
 
   /* Remove TUI hooks.  */
   tui_remove_hooks ();

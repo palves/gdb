@@ -62,7 +62,7 @@ extern int tui_get_command_dimension (unsigned int *width,
 
 /* Initialize readline and configure the keymap for the switching
    key shortcut.  */
-extern void tui_initialize_readline (void);
+extern void tui_initialize_readline_keymaps (void);
 
 /* Enter in the tui mode (curses).  */
 extern void tui_enable (void);
@@ -83,13 +83,31 @@ enum tui_key_mode
   TUI_ONE_COMMAND_MODE
 };
 
-extern enum tui_key_mode tui_current_key_mode;
+struct tui_terminal_state
+{
+  /* Tells whether the TUI is active or not.  */
+  int tui_active;
+  int tui_finish_init;
+  void *screen;
+
+  enum tui_key_mode tui_current_key_mode;
+
+  struct tui *tui;
+  struct tui_data *tui_data;
+  struct tui_io_data *io_data;
+};
+
+extern struct tui_terminal_state *tui_ts (void);
+
+extern void tui_set_screen (void);
+
+#define tui_current_key_mode tui_ts ()->tui_current_key_mode
 
 /* Change the TUI key mode by installing the appropriate readline
    keymap.  */
 extern void tui_set_key_mode (enum tui_key_mode mode);
 
-extern int tui_active;
+#define tui_active tui_ts ()->tui_active
 
 extern void tui_show_source (const char *fullname, int line);
 

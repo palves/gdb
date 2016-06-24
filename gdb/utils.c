@@ -29,10 +29,6 @@
 #include <sys/resource.h>
 #endif /* HAVE_SYS_RESOURCE_H */
 
-#ifdef TUI
-#include "tui/tui.h"		/* For tui_get_command_dimension.   */
-#endif
-
 #ifdef __GO32__
 #include <pc.h>
 #endif
@@ -90,8 +86,8 @@ static void fputs_maybe_filtered (const char *, struct ui_file *, int);
 
 static void prompt_for_continue (void);
 
-static void set_screen_size (void);
-static void set_width (void);
+static void set_readline_screen_size (void);
+static void reinitialize_wrap_buffer (void);
 
 /* Time spent in prompt_for_continue in the currently executing command
    waiting for user to respond.
@@ -126,14 +122,6 @@ show_sevenbit_strings (struct ui_file *file, int from_tty,
 /* String to be printed before warning messages, if any.  */
 
 char *warning_pre_print = "\nwarning: ";
-
-int pagination_enabled = 1;
-static void
-show_pagination_enabled (struct ui_file *file, int from_tty,
-			 struct cmd_list_element *c, const char *value)
-{
-  fprintf_filtered (file, _("State of pagination is %s.\n"), value);
-}
 
 
 /* Cleanup utilities.
@@ -1636,87 +1624,124 @@ fputstrn_unfiltered (const char *str, int n, int quoter,
 }
 
 
-/* Number of lines per page or UINT_MAX if paging is disabled.  */
-static unsigned int lines_per_page;
-static void
-show_lines_per_page (struct ui_file *file, int from_tty,
-		     struct cmd_list_element *c, const char *value)
+struct page_info
 {
-  fprintf_filtered (file,
-		    _("Number of lines gdb thinks are in a page is %s.\n"),
-		    value);
-}
+  /* Number of lines per page or UINT_MAX if paging is disabled.  */
+  unsigned int lines_per_page;
 
-/* Number of chars per line or UINT_MAX if line folding is disabled.  */
-static unsigned int chars_per_line;
-static void
-show_chars_per_line (struct ui_file *file, int from_tty,
-		     struct cmd_list_element *c, const char *value)
-{
-  fprintf_filtered (file,
-		    _("Number of characters gdb thinks "
-		      "are in a line is %s.\n"),
-		    value);
-}
+  /* Number of chars per line or UINT_MAX if line folding is
+     disabled.  */
+  unsigned int chars_per_line;
 
-/* Current count of lines printed on this page, chars on this line.  */
-static unsigned int lines_printed, chars_printed;
+  /* Current count of lines printed on this page, chars on this line.  */
+  unsigned int lines_printed, chars_printed;
 
-/* Buffer and start column of buffered text, for doing smarter word-
-   wrapping.  When someone calls wrap_here(), we start buffering output
-   that comes through fputs_filtered().  If we see a newline, we just
-   spit it out and forget about the wrap_here().  If we see another
-   wrap_here(), we spit it out and remember the newer one.  If we see
-   the end of the line, we spit out a newline, the indent, and then
-   the buffered output.  */
+  /* Buffer and start column of buffered text, for doing smarter word-
+     wrapping.  When someone calls wrap_here(), we start buffering
+     output that comes through fputs_filtered().  If we see a newline,
+     we just spit it out and forget about the wrap_here().  If we see
+     another wrap_here(), we spit it out and remember the newer one.
+     If we see the end of the line, we spit out a newline, the indent,
+     and then the buffered output.  */
 
-/* Malloc'd buffer with chars_per_line+2 bytes.  Contains characters which
-   are waiting to be output (they have already been counted in chars_printed).
-   When wrap_buffer[0] is null, the buffer is empty.  */
-static char *wrap_buffer;
+  /* Malloc'd buffer with chars_per_line+2 bytes.  Contains characters
+     which are waiting to be output (they have already been counted in
+     chars_printed).  When wrap_buffer[0] is null, the buffer is
+     empty.  */
+  char *wrap_buffer;
 
-/* Pointer in wrap_buffer to the next character to fill.  */
-static char *wrap_pointer;
+  /* Pointer in wrap_buffer to the next character to fill.  */
+  char *wrap_pointer;
 
-/* String to indent by if the wrap occurs.  Must not be NULL if wrap_column
-   is non-zero.  */
-static char *wrap_indent;
+  /* String to indent by if the wrap occurs.  Must not be NULL if
+     wrap_column is non-zero.  */
+  char *wrap_indent;
 
-/* Column number on the screen where wrap_buffer begins, or 0 if wrapping
-   is not in effect.  */
-static int wrap_column;
+  /* Column number on the screen where wrap_buffer begins, or 0 if
+     wrapping is not in effect.  */
+  int wrap_column;
+
+  /* Whether pagination is enabled on this terminal.  */
+  int pagination_enabled;
+};
 
+
+static struct page_info *
+get_page_info (void)
+{
+  return current_ui->page_info;
+}
+
+int
+pagination_enabled (void)
+{
+  return get_page_info ()->pagination_enabled;
+}
+
+void
+set_pagination_enabled (int enable)
+{
+  struct page_info *pi = get_page_info ();
+
+  pi->pagination_enabled = enable;
+}
+
+int pagination_enabled_var = 1;
+
+
+static void
+set_pagination_enabled_command (char *args, int from_tty,
+				struct cmd_list_element *c)
+{
+  set_pagination_enabled (pagination_enabled_var);
+}
+
+static void
+show_pagination_enabled_command (struct ui_file *file, int from_tty,
+				 struct cmd_list_element *c, const char *value)
+{
+  struct page_info *pi = get_page_info ();
+  const char *real_value = pi->pagination_enabled ? "on" : "off";
+
+  fprintf_filtered (file, _("State of pagination is %s.\n"), real_value);
+}
 
 /* Inialize the number of lines per page and chars per line.  */
 
 void
 init_page_info (void)
 {
+  struct ui *ui = current_ui;
+  struct page_info *pi;
+
+  if (ui->page_info == NULL)
+    ui->page_info = XCNEW (struct page_info);
+
+  pi = ui->page_info;
+  pi->pagination_enabled = 1;
+
   if (batch_flag)
     {
-      lines_per_page = UINT_MAX;
-      chars_per_line = UINT_MAX;
+      pi->lines_per_page = UINT_MAX;
+      pi->chars_per_line = UINT_MAX;
     }
   else
-#if defined(TUI)
-  if (!tui_get_command_dimension (&chars_per_line, &lines_per_page))
-#endif
     {
       int rows, cols;
 
 #if defined(__GO32__)
       rows = ScreenRows ();
       cols = ScreenCols ();
-      lines_per_page = rows;
-      chars_per_line = cols;
+      pi->lines_per_page = rows;
+      pi->chars_per_line = cols;
 #else
       /* Make sure Readline has initialized its terminal settings.  */
       rl_reset_terminal (NULL);
 
       /* Get the screen size from Readline.  */
       rl_get_screen_size (&rows, &cols);
-      lines_per_page = rows;
-      chars_per_line = cols;
+      pi->lines_per_page = rows;
+      pi->chars_per_line = cols;
 
       /* Readline should have fetched the termcap entry for us.
          Only try to use tgetnum function if rl_get_screen_size
@@ -1729,27 +1754,57 @@ init_page_info (void)
 	  /* The number of lines per page is not mentioned in the terminal
 	     description or EMACS evironment variable is set.  This probably
 	     means that paging is not useful, so disable paging.  */
-	  lines_per_page = UINT_MAX;
+	  pi->lines_per_page = UINT_MAX;
 	}
 
       /* If the output is not a terminal, don't paginate it.  */
       if (!ui_file_isatty (gdb_stdout))
-	lines_per_page = UINT_MAX;
+	pi->lines_per_page = UINT_MAX;
 #endif
     }
 
-  /* We handle SIGWINCH ourselves.  */
+  /* We handle SIGWINCH ourselves.  XXX */
   rl_catch_sigwinch = 0;
 
-  set_screen_size ();
-  set_width ();
+  set_readline_screen_size ();
+  reinitialize_wrap_buffer ();
+}
+
+
+/* Number of lines per page or UINT_MAX if paging is disabled.  */
+static unsigned int lines_per_page_var;
+static void
+show_lines_per_page (struct ui_file *file, int from_tty,
+		     struct cmd_list_element *c, const char *value)
+{
+  struct page_info *pi = get_page_info ();
+
+  fprintf_filtered (file,
+		    _("Number of lines gdb thinks are in a page is %s.\n"),
+		    (pi->lines_per_page == UINT_MAX)
+		    ? "unlimited" : plongest (pi->lines_per_page));
+}
+
+/* Number of chars per line or UINT_MAX if line folding is disabled.  */
+static unsigned int chars_per_line_var;
+static void
+show_chars_per_line (struct ui_file *file, int from_tty,
+		     struct cmd_list_element *c, const char *value)
+{
+  struct page_info *pi = get_page_info ();
+
+  fprintf_filtered (file,
+		    _("Number of characters gdb thinks "
+		      "are in a line is %s.\n"),
+		    (pi->chars_per_line == UINT_MAX)
+		    ? "unlimited" : plongest (pi->chars_per_line));
 }
 
 /* Return nonzero if filtered printing is initialized.  */
 int
 filtered_printing_initialized (void)
 {
-  return wrap_buffer != NULL;
+  return get_page_info ()->wrap_buffer != NULL;
 }
 
 /* Helper for make_cleanup_restore_page_info.  */
@@ -1757,20 +1812,22 @@ filtered_printing_initialized (void)
 static void
 do_restore_page_info_cleanup (void *arg)
 {
-  set_screen_size ();
-  set_width ();
+  if (current_ui->command_editing)
+    set_readline_screen_size ();
+  reinitialize_wrap_buffer ();
 }
 
 /* Provide cleanup for restoring the terminal size.  */
 
-struct cleanup *
+static struct cleanup *
 make_cleanup_restore_page_info (void)
 {
   struct cleanup *back_to;
+  struct page_info *pi = get_page_info ();
 
   back_to = make_cleanup (do_restore_page_info_cleanup, NULL);
-  make_cleanup_restore_uinteger (&lines_per_page);
-  make_cleanup_restore_uinteger (&chars_per_line);
+  make_cleanup_restore_uinteger (&pi->lines_per_page);
+  make_cleanup_restore_uinteger (&pi->chars_per_line);
 
   return back_to;
 }
@@ -1793,10 +1850,11 @@ set_batch_flag_and_make_cleanup_restore_page_info (void)
 /* Set the screen size based on LINES_PER_PAGE and CHARS_PER_LINE.  */
 
 static void
-set_screen_size (void)
+set_readline_screen_size (void)
 {
-  int rows = lines_per_page;
-  int cols = chars_per_line;
+  struct page_info *pi = get_page_info ();
+  int rows = pi->lines_per_page;
+  int cols = pi->chars_per_line;
 
   if (rows <= 0)
     rows = INT_MAX;
@@ -1812,32 +1870,38 @@ set_screen_size (void)
    CHARS_PER_LINE.  */
 
 static void
-set_width (void)
+reinitialize_wrap_buffer (void)
 {
-  if (chars_per_line == 0)
+  struct page_info *pi = get_page_info ();
+
+  if (pi->chars_per_line == 0)
     init_page_info ();
 
-  if (!wrap_buffer)
+  if (pi->wrap_buffer == NULL)
     {
-      wrap_buffer = (char *) xmalloc (chars_per_line + 2);
-      wrap_buffer[0] = '\0';
+      pi->wrap_buffer = (char *) xmalloc (pi->chars_per_line + 2);
+      pi->wrap_buffer[0] = '\0';
     }
   else
-    wrap_buffer = (char *) xrealloc (wrap_buffer, chars_per_line + 2);
-  wrap_pointer = wrap_buffer;	/* Start it at the beginning.  */
+    pi->wrap_buffer = (char *) xrealloc (pi->wrap_buffer, pi->chars_per_line + 2);
+  pi->wrap_pointer = pi->wrap_buffer;	/* Start it at the beginning.  */
 }
 
 static void
 set_width_command (char *args, int from_tty, struct cmd_list_element *c)
 {
-  set_screen_size ();
-  set_width ();
+  get_page_info ()->chars_per_line = chars_per_line_var;
+  if (current_ui->command_editing)
+    set_readline_screen_size ();
+  reinitialize_wrap_buffer ();
 }
 
 static void
 set_height_command (char *args, int from_tty, struct cmd_list_element *c)
 {
-  set_screen_size ();
+  get_page_info ()->lines_per_page = lines_per_page_var;
+  if (current_ui->command_editing)
+    set_readline_screen_size ();
 }
 
 /* See utils.h.  */
@@ -1845,11 +1909,14 @@ set_height_command (char *args, int from_tty, struct cmd_list_element *c)
 void
 set_screen_width_and_height (int width, int height)
 {
-  lines_per_page = height;
-  chars_per_line = width;
+  struct page_info *pi = get_page_info ();
 
-  set_screen_size ();
-  set_width ();
+  pi->lines_per_page = height;
+  pi->chars_per_line = width;
+
+  if (current_ui->command_editing)
+    set_readline_screen_size ();
+  reinitialize_wrap_buffer ();
 }
 
 /* Wait, so the user can read what's on the screen.  Prompt the user
@@ -1944,8 +2011,10 @@ get_prompt_for_continue_wait_time (void)
 void
 reinitialize_more_filter (void)
 {
-  lines_printed = 0;
-  chars_printed = 0;
+  struct page_info *pi = get_page_info ();
+
+  pi->lines_printed = 0;
+  pi->chars_printed = 0;
 }
 
 /* Indicate that if the next sequence of characters overflows the line,
@@ -1972,36 +2041,38 @@ reinitialize_more_filter (void)
 void
 wrap_here (char *indent)
 {
+  struct page_info *pi = get_page_info ();
+
   /* This should have been allocated, but be paranoid anyway.  */
-  if (!wrap_buffer)
+  if (!pi->wrap_buffer)
     internal_error (__FILE__, __LINE__,
 		    _("failed internal consistency check"));
 
-  if (wrap_buffer[0])
+  if (pi->wrap_buffer[0])
     {
-      *wrap_pointer = '\0';
-      fputs_unfiltered (wrap_buffer, gdb_stdout);
+      *pi->wrap_pointer = '\0';
+      fputs_unfiltered (pi->wrap_buffer, gdb_stdout);
     }
-  wrap_pointer = wrap_buffer;
-  wrap_buffer[0] = '\0';
-  if (chars_per_line == UINT_MAX)	/* No line overflow checking.  */
+  pi->wrap_pointer = pi->wrap_buffer;
+  pi->wrap_buffer[0] = '\0';
+  if (pi->chars_per_line == UINT_MAX)	/* No line overflow checking.  */
     {
-      wrap_column = 0;
+      pi->wrap_column = 0;
     }
-  else if (chars_printed >= chars_per_line)
+  else if (pi->chars_printed >= pi->chars_per_line)
     {
       puts_filtered ("\n");
       if (indent != NULL)
 	puts_filtered (indent);
-      wrap_column = 0;
+      pi->wrap_column = 0;
     }
   else
     {
-      wrap_column = chars_printed;
+      pi->wrap_column = pi->chars_printed;
       if (indent == NULL)
-	wrap_indent = "";
+	pi->wrap_indent = "";
       else
-	wrap_indent = indent;
+	pi->wrap_indent = indent;
     }
 }
 
@@ -2015,28 +2086,29 @@ wrap_here (char *indent)
 void
 puts_filtered_tabular (char *string, int width, int right)
 {
+  struct page_info *pi = get_page_info ();
   int spaces = 0;
   int stringlen;
   char *spacebuf;
 
-  gdb_assert (chars_per_line > 0);
-  if (chars_per_line == UINT_MAX)
+  gdb_assert (pi->chars_per_line > 0);
+  if (pi->chars_per_line == UINT_MAX)
     {
       fputs_filtered (string, gdb_stdout);
       fputs_filtered ("\n", gdb_stdout);
       return;
     }
 
-  if (((chars_printed - 1) / width + 2) * width >= chars_per_line)
+  if (((pi->chars_printed - 1) / width + 2) * width >= pi->chars_per_line)
     fputs_filtered ("\n", gdb_stdout);
 
-  if (width >= chars_per_line)
-    width = chars_per_line - 1;
+  if (width >= pi->chars_per_line)
+    width = pi->chars_per_line - 1;
 
   stringlen = strlen (string);
 
-  if (chars_printed > 0)
-    spaces = width - (chars_printed - 1) % width - 1;
+  if (pi->chars_printed > 0)
+    spaces = width - (pi->chars_printed - 1) % width - 1;
   if (right)
     spaces += width - stringlen;
 
@@ -2058,7 +2130,9 @@ puts_filtered_tabular (char *string, int width, int right)
 void
 begin_line (void)
 {
-  if (chars_printed > 0)
+  struct page_info *pi = get_page_info ();
+
+  if (pi->chars_printed > 0)
     {
       puts_filtered ("\n");
     }
@@ -2083,15 +2157,17 @@ fputs_maybe_filtered (const char *linebuffer, struct ui_file *stream,
 		      int filter)
 {
   const char *lineptr;
+  struct page_info *pi = get_page_info ();
 
   if (linebuffer == 0)
     return;
 
   /* Don't do any filtering if it is disabled.  */
   if (stream != gdb_stdout
-      || !pagination_enabled
+      || !pi->pagination_enabled
       || batch_flag
-      || (lines_per_page == UINT_MAX && chars_per_line == UINT_MAX)
+      || (pi->lines_per_page == UINT_MAX
+	  && pi->chars_per_line == UINT_MAX)
       || top_level_interpreter () == NULL
       || ui_out_is_mi_like_p (interp_ui_out (top_level_interpreter ())))
     {
@@ -2107,7 +2183,7 @@ fputs_maybe_filtered (const char *linebuffer, struct ui_file *stream,
   while (*lineptr)
     {
       /* Possible new page.  */
-      if (filter && (lines_printed >= lines_per_page - 1))
+      if (filter && (pi->lines_printed >= pi->lines_per_page - 1))
 	prompt_for_continue ();
 
       while (*lineptr && *lineptr != '\n')
@@ -2115,69 +2191,69 @@ fputs_maybe_filtered (const char *linebuffer, struct ui_file *stream,
 	  /* Print a single line.  */
 	  if (*lineptr == '\t')
 	    {
-	      if (wrap_column)
-		*wrap_pointer++ = '\t';
+	      if (pi->wrap_column)
+		*pi->wrap_pointer++ = '\t';
 	      else
 		fputc_unfiltered ('\t', stream);
 	      /* Shifting right by 3 produces the number of tab stops
 	         we have already passed, and then adding one and
 	         shifting left 3 advances to the next tab stop.  */
-	      chars_printed = ((chars_printed >> 3) + 1) << 3;
+	      pi->chars_printed = ((pi->chars_printed >> 3) + 1) << 3;
 	      lineptr++;
 	    }
 	  else
 	    {
-	      if (wrap_column)
-		*wrap_pointer++ = *lineptr;
+	      if (pi->wrap_column)
+		*pi->wrap_pointer++ = *lineptr;
 	      else
 		fputc_unfiltered (*lineptr, stream);
-	      chars_printed++;
+	      pi->chars_printed++;
 	      lineptr++;
 	    }
 
-	  if (chars_printed >= chars_per_line)
+	  if (pi->chars_printed >= pi->chars_per_line)
 	    {
-	      unsigned int save_chars = chars_printed;
+	      unsigned int save_chars = pi->chars_printed;
 
-	      chars_printed = 0;
-	      lines_printed++;
+	      pi->chars_printed = 0;
+	      pi->lines_printed++;
 	      /* If we aren't actually wrapping, don't output newline --
 	         if chars_per_line is right, we probably just overflowed
 	         anyway; if it's wrong, let us keep going.  */
-	      if (wrap_column)
+	      if (pi->wrap_column)
 		fputc_unfiltered ('\n', stream);
 
 	      /* Possible new page.  */
-	      if (lines_printed >= lines_per_page - 1)
+	      if (pi->lines_printed >= pi->lines_per_page - 1)
 		prompt_for_continue ();
 
 	      /* Now output indentation and wrapped string.  */
-	      if (wrap_column)
+	      if (pi->wrap_column)
 		{
-		  fputs_unfiltered (wrap_indent, stream);
-		  *wrap_pointer = '\0';	/* Null-terminate saved stuff, */
-		  fputs_unfiltered (wrap_buffer, stream); /* and eject it.  */
+		  fputs_unfiltered (pi->wrap_indent, stream);
+		  *pi->wrap_pointer = '\0';	/* Null-terminate saved stuff, */
+		  fputs_unfiltered (pi->wrap_buffer, stream); /* and eject it.  */
 		  /* FIXME, this strlen is what prevents wrap_indent from
 		     containing tabs.  However, if we recurse to print it
 		     and count its chars, we risk trouble if wrap_indent is
 		     longer than (the user settable) chars_per_line.
 		     Note also that this can set chars_printed > chars_per_line
 		     if we are printing a long string.  */
-		  chars_printed = strlen (wrap_indent)
-		    + (save_chars - wrap_column);
-		  wrap_pointer = wrap_buffer;	/* Reset buffer */
-		  wrap_buffer[0] = '\0';
-		  wrap_column = 0;	/* And disable fancy wrap */
+		  pi->chars_printed = strlen (pi->wrap_indent)
+		    + (save_chars - pi->wrap_column);
+		  pi->wrap_pointer = pi->wrap_buffer;	/* Reset buffer */
+		  pi->wrap_buffer[0] = '\0';
+		  pi->wrap_column = 0;	/* And disable fancy wrap */
 		}
 	    }
 	}
 
       if (*lineptr == '\n')
 	{
-	  chars_printed = 0;
+	  pi->chars_printed = 0;
 	  wrap_here ((char *) 0);	/* Spit out chars, cancel
 					   further wraps.  */
-	  lines_printed++;
+	  pi->lines_printed++;
 	  fputc_unfiltered ('\n', stream);
 	  lineptr++;
 	}
@@ -2734,7 +2810,7 @@ show_debug_timestamp (struct ui_file *file, int from_tty,
 void
 initialize_utils (void)
 {
-  add_setshow_uinteger_cmd ("width", class_support, &chars_per_line, _("\
+  add_setshow_uinteger_cmd ("width", class_support, &chars_per_line_var, _("\
 Set number of characters where GDB should wrap lines of its output."), _("\
 Show number of characters where GDB should wrap lines of its output."), _("\
 This affects where GDB wraps its output to fit the screen width.\n\
@@ -2743,7 +2819,7 @@ Setting this to \"unlimited\" or zero prevents GDB from wrapping its output."),
 			    show_chars_per_line,
 			    &setlist, &showlist);
 
-  add_setshow_uinteger_cmd ("height", class_support, &lines_per_page, _("\
+  add_setshow_uinteger_cmd ("height", class_support, &lines_per_page_var, _("\
 Set number of lines in a page for GDB output pagination."), _("\
 Show number of lines in a page for GDB output pagination."), _("\
 This affects the number of lines after which GDB will pause\n\
@@ -2754,14 +2830,14 @@ Setting this to \"unlimited\" or zero causes GDB never pause during output."),
 			    &setlist, &showlist);
 
   add_setshow_boolean_cmd ("pagination", class_support,
-			   &pagination_enabled, _("\
+			   &pagination_enabled_var, _("\
 Set state of GDB output pagination."), _("\
 Show state of GDB output pagination."), _("\
 When pagination is ON, GDB pauses at end of each screenful of\n\
 its output and asks you whether to continue.\n\
 Turning pagination off is an alternative to \"set height unlimited\"."),
-			   NULL,
-			   show_pagination_enabled,
+			   set_pagination_enabled_command,
+			   show_pagination_enabled_command,
 			   &setlist, &showlist);
 
   add_setshow_boolean_cmd ("sevenbit-strings", class_support,

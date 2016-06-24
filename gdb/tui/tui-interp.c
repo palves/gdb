@@ -211,15 +211,12 @@ tui_on_command_error (void)
 static void *
 tui_init (struct interp *self, int top_level)
 {
-  /* Install exit handler to leave the screen in a good shape.  */
-  atexit (tui_exit);
-
   tui_initialize_static_data ();
 
   tui_initialize_io ();
   tui_initialize_win ();
   if (ui_file_isatty (gdb_stdout))
-    tui_initialize_readline ();
+    tui_initialize_readline_keymaps ();
 
   return NULL;
 }
@@ -229,15 +226,17 @@ tui_resume (void *data)
 {
   struct ui *ui = current_ui;
   struct ui_file *stream;
+  struct tui_terminal_state *ts = tui_ts ();
+  struct tui_io_data *io_data = ts->io_data;
 
   /* gdb_setup_readline will change gdb_stdout.  If the TUI was
      previously writing to gdb_stdout, then set it to the new
      gdb_stdout afterwards.  */
 
-  stream = cli_out_set_stream (tui_old_uiout, gdb_stdout);
+  stream = cli_out_set_stream (tui_io_old_uiout (io_data), gdb_stdout);
   if (stream != gdb_stdout)
     {
-      cli_out_set_stream (tui_old_uiout, stream);
+      cli_out_set_stream (tui_io_old_uiout (io_data), stream);
       stream = NULL;
     }
 
@@ -246,7 +245,7 @@ tui_resume (void *data)
   ui->input_handler = command_line_handler;
 
   if (stream != NULL)
-    cli_out_set_stream (tui_old_uiout, gdb_stdout);
+    cli_out_set_stream (tui_io_old_uiout (io_data), gdb_stdout);
 
   if (tui_start_enabled)
     tui_enable ();
@@ -264,10 +263,12 @@ tui_suspend (void *data)
 static struct ui_out *
 tui_ui_out (struct interp *self)
 {
+  struct tui_terminal_state *ts = tui_ts ();
+
   if (tui_active)
-    return tui_out;
+    return tui_io_out (ts->io_data);
   else
-    return tui_old_uiout;
+    return tui_io_old_uiout (ts->io_data);
 }
 
 static struct gdb_exception
@@ -303,6 +304,9 @@ extern initialize_file_ftype _initialize_tui_interp;
 void
 _initialize_tui_interp (void)
 {
+  /* Install exit handler to leave the screen in a good shape.  */
+  atexit (tui_exit);
+
   interp_factory_register (INTERP_TUI, tui_interp_factory);
 
   if (interpreter_p && strcmp (interpreter_p, INTERP_TUI) == 0)

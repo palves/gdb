@@ -117,7 +117,6 @@ extern void free_current_contents (void *);
 
 extern void init_page_info (void);
 
-extern struct cleanup *make_cleanup_restore_page_info (void);
 extern struct cleanup *
   set_batch_flag_and_make_cleanup_restore_page_info (void);
 
@@ -157,7 +156,8 @@ extern void wrap_here (char *);
 
 extern void reinitialize_more_filter (void);
 
-extern int pagination_enabled;
+extern int pagination_enabled (void);
+extern void set_pagination_enabled (int enable);
 
 extern struct ui_file **current_ui_gdb_stdout_ptr (void);
 extern struct ui_file **current_ui_gdb_stdin_ptr (void);

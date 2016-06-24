@@ -713,7 +713,7 @@ tui_restore_gdbout (void *ui)
 {
   ui_file_delete (gdb_stdout);
   gdb_stdout = (struct ui_file*) ui;
-  pagination_enabled = 1;
+  set_pagination_enabled (1);
 }
 
 /* Get the register from the frame and return a printable
@@ -729,7 +729,7 @@ tui_register_format (struct frame_info *frame, int regnum)
   char *p, *s;
   char *ret;
 
-  pagination_enabled = 0;
+  set_pagination_enabled (0);
   old_stdout = gdb_stdout;
   stream = tui_sfileopen (256);
   gdb_stdout = stream;
