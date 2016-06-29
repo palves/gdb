@@ -53,80 +53,77 @@ struct itset_elt_range;
 /* An element of an I/T set is a class with some virtual methods,
    defined here.  */
 
-struct itset_elt_vtable
+struct itset_elt
 {
-  /* Destroy the contents of this element.  If the element does not
-     require any special cleanup, this can be NULL.  This should not
-     free the element itself; that is done by the caller.  */
+  /* Destroy the contents of this element.  */
 
-  void (*destroy) (struct itset_elt *);
+  virtual ~itset_elt () {}
 
   /* Returns true if this is an itset_elt_range.  */
 
-  int (*is_range_type) (struct itset_elt *);
+  virtual int is_range_type () { return 0; }
 
   /* Return true if the element contains the program space.  The
      element and the program space are passed as arguments.  */
 
-  int (*contains_program_space) (struct itset_elt *elt,
-				 enum itset_width default_width,
-				 struct program_space *pspace);
+  virtual int contains_program_space (enum itset_width default_width,
+				      struct program_space *pspace)
+  {
+    return 0;
+  }
 
   /* Return true if the element contains the inferior.  The element
      and the inferior are passed as arguments.  */
 
-  int (*contains_inferior) (struct itset_elt *elt,
-			    enum itset_width default_width,
-			    struct inferior *inf,
-			    int including_width);
+  virtual int contains_inferior (enum itset_width default_width,
+				 struct inferior *inf,
+				 int including_width)
+  {
+    return 0;
+  }
 
   /* Return true if the element contains the thread.  The element and
      the thread are passed as arguments.  */
 
-  int (*contains_thread) (struct itset_elt *elt,
-			  enum itset_width default_width,
-			  struct itset_elt_range *expanding,
-			  struct thread_info *thr,
-			  int include_width);
+  virtual int contains_thread (enum itset_width default_width,
+			       struct itset_elt_range *expanding,
+			       struct thread_info *thr,
+			       int include_width)
+  {
+    return 0;
+  }
+
+  /* FIXME: some of these should be pure virtual? */
 
   /* Return true if the element is empty.  */
 
-  char *(*get_spec) (struct itset_elt *elt);
+  virtual char *get_spec () { return NULL; };
 
   /* Return true if the element is empty.  */
 
-  enum itset_width (*get_width) (struct itset_elt *elt);
+  virtual enum itset_width get_width () { return ITSET_WIDTH_DEFAULT; }
 
   /* Return the element's TOI.  */
 
-  struct thread_info *(*get_toi) (struct itset_elt *elt);
+  virtual struct thread_info *get_toi () { return NULL; }
 
   /* Return true if the element's TOI is fixed.  */
 
-  int (*has_fixed_toi) (struct itset_elt *elt);
+  virtual int has_fixed_toi () { return 0; }
 
   /* Return the element's execution object type.  */
 
-  char (*get_focus_object_type) (struct itset_elt *elt);
+  virtual char get_focus_object_type () { return '\0'; }
 
   /* Return a clone of ELT.  */
 
-  struct itset_elt *(*clone) (struct itset_elt *elt);
-};
-
-/* The base class of all I/T set elements.  */
-
-struct itset_elt
-{
-  const struct itset_elt_vtable *vtable;
+  virtual struct itset_elt *clone () { return NULL; }
 };
 
 static void
 itset_elt_free (struct itset_elt *elt)
 {
-  if (elt->vtable->destroy != NULL)
-    elt->vtable->destroy (elt);
-  xfree (elt);
+  delete elt;
 }
 
 static void
@@ -256,7 +253,7 @@ set_contains_program_space (VEC (itset_elt_ptr) *elements,
 
   for (ix = 0; VEC_iterate (itset_elt_ptr, elements, ix, elt); ++ix)
     {
-      if (elt->vtable->contains_program_space (elt, default_width, pspace))
+      if (elt->contains_program_space (default_width, pspace))
 	return 1;
     }
 
@@ -277,8 +274,8 @@ set_contains_inferior (VEC (itset_elt_ptr) *elements,
 
   for (ix = 0; VEC_iterate (itset_elt_ptr, elements, ix, elt); ++ix)
     {
-      if (elt->vtable->contains_inferior (elt, default_width,
-					  inf, including_width))
+      if (elt->contains_inferior (default_width,
+				  inf, including_width))
 	return 1;
     }
 
@@ -299,8 +296,7 @@ set_contains_thread (VEC (itset_elt_ptr) *elements,
 
   for (ix = 0; VEC_iterate (itset_elt_ptr, elements, ix, elt); ++ix)
     {
-      if (elt->vtable->contains_thread (elt, default_width,
-					NULL, thr, including_width))
+      if (elt->contains_thread (default_width, NULL, thr, including_width))
 	return 1;
     }
 
@@ -327,67 +323,58 @@ set_free (VEC (itset_elt_ptr) *elements)
 /* An I/T set element representing all inferiors using a certain
    executable.  */
 
-struct itset_elt_exec
+struct itset_elt_exec : public itset_elt
 {
-  struct itset_elt base;
-
   /* The name of the executable.  */
   char *exec_name;
+
+  virtual ~itset_elt_exec();
+
+  virtual int contains_inferior (enum itset_width default_width,
+				 struct inferior *inf,
+				 int including_width);
+
+  virtual int contains_thread (enum itset_width default_width,
+			       struct itset_elt_range *expanding,
+			       struct thread_info *thr,
+			       int include_width);
 };
 
 /* Implementation of `destroy' method.  */
 
-static void
-exec_destroy (struct itset_elt *base)
+itset_elt_exec::~itset_elt_exec ()
 {
-  struct itset_elt_exec *exec = (struct itset_elt_exec *) base;
-
-  xfree (exec->exec_name);
+  xfree (this->exec_name);
 }
 
 /* Implementation of `contains_inferior' method.  */
 
-static int
-exec_contains_inferior (struct itset_elt *base,
-			enum itset_width default_width,
-			struct inferior *inf,
-			int including_width)
+int
+itset_elt_exec::contains_inferior (enum itset_width default_width,
+				   struct inferior *inf,
+				   int including_width)
 {
-  struct itset_elt_exec *exec = (struct itset_elt_exec *) base;
-
   /* FIXME: smarter compare.  */
   return (inf->pspace->ebfd != NULL
-	  && strcmp (exec->exec_name,
+	  && strcmp (this->exec_name,
 		     bfd_get_filename (inf->pspace->ebfd)) == 0);
 }
 
 /* Implementation of `contains_thread' method.  */
 
-static int
-exec_contains_thread (struct itset_elt *base,
-		      enum itset_width default_width,
-		      struct itset_elt_range *expanding,
-		      struct thread_info *thr,
-		      int including_width)
+int
+itset_elt_exec::contains_thread (enum itset_width default_width,
+				 struct itset_elt_range *expanding,
+				 struct thread_info *thr,
+				 int including_width)
 {
-  struct itset_elt_exec *exec = (struct itset_elt_exec *) base;
   struct inferior *inf = get_thread_inferior (thr);
 
   /* FIXME: smarter compare.  */
   return (inf->pspace->ebfd != NULL
-	  && strcmp (exec->exec_name,
+	  && strcmp (this->exec_name,
 		     bfd_get_filename (inf->pspace->ebfd)) == 0);
 }
-
-static const struct itset_elt_vtable exec_vtable =
-{
-  exec_destroy,
-  NULL, /* is_range_type */
-  NULL, /* contains_program_space */
-  exec_contains_inferior,
-  exec_contains_thread,
-  NULL,
-};
 
 /* Create a new `exec' I/T set element.  */
 
@@ -396,8 +383,7 @@ create_exec_itset (char *arg)
 {
   struct itset_elt_exec *elt;
 
-  elt = XNEW (struct itset_elt_exec);
-  elt->base.vtable = &exec_vtable;
+  elt = new itset_elt_exec ();
   elt->exec_name = arg;
 
   return (struct itset_elt *) elt;
@@ -415,9 +401,8 @@ struct spec_range
 
 #define WILDCARD -1
 
-struct itset_elt_range
+struct itset_elt_range : public itset_elt
 {
-  struct itset_elt base;
   char object_type;
   enum itset_width width;
 
@@ -431,6 +416,16 @@ struct itset_elt_range
   /* The first and last in this range.  If FIRST is WILDCARD, then
      LAST is unused.  */
   struct spec_range range;
+
+  virtual ~itset_elt_range ();
+
+  virtual int is_range_type ();
+
+  virtual enum itset_width get_width ();
+
+  virtual char get_focus_object_type ();
+
+  char *range_get_spec (int range_type_char);
 };
 
 /* Compute range's effective width.  If the range's width is not
@@ -447,34 +442,27 @@ effective_width (enum itset_width width, enum itset_width default_width)
   return width;
 }
 
-static void
-range_elt_destroy (struct itset_elt *elt)
+itset_elt_range::~itset_elt_range ()
 {
-  struct itset_elt_range *range_elt = (struct itset_elt_range *) elt;
-
-  itset_free (range_elt->explicit_width);
+  itset_free (this->explicit_width);
 }
 
-static int
-range_elt_is_range_type (struct itset_elt *elt)
+int
+itset_elt_range::is_range_type ()
 {
   return 1;
 }
 
-static enum itset_width
-range_get_width (struct itset_elt *base)
+enum itset_width
+itset_elt_range::get_width ()
 {
-  struct itset_elt_range *range = (struct itset_elt_range *) base;
-
-  return range->width;
+  return this->width;
 }
 
-static char
-range_get_focus_object_type (struct itset_elt *base)
+char
+itset_elt_range::get_focus_object_type ()
 {
-  struct itset_elt_range *range = (struct itset_elt_range *) base;
-
-  return range->object_type;
+  return this->object_type;
 }
 
 static int
@@ -531,17 +519,17 @@ range_concat_spec (char *res, struct spec_range *range)
   return res;
 }
 
-static char *
-range_elt_get_spec (struct itset_elt *base, int range_type_char)
+/* FIXME: doesn't really need to be a method.  */
+char *
+itset_elt_range::range_get_spec (int range_type_char)
 {
-  struct itset_elt_range *range_elt = (struct itset_elt_range *) base;
-  struct spec_range *range = &range_elt->range;
+  struct spec_range *range = &this->range;
   int w;
   char *res = NULL;
 
-  w = range_width_char (range_elt->width);
+  w = range_width_char (this->width);
 
-  if (range_elt->is_current)
+  if (this->is_current)
     return xstrprintf ("%c%c", w, toupper (range_type_char));
 
   res = concat_printf (res, "%c%c", w, range_type_char);
@@ -578,7 +566,7 @@ double_range_get_spec (struct itset_elt *base, int range_type_char,
     {
       char *group_spec;
 
-      group_spec = range_elt->group->vtable->get_spec (range_elt->group);
+      group_spec = range_elt->group->get_spec ();
       res = concat_printf (res, "/%s/", group_spec);
       xfree (group_spec);
     }
@@ -596,12 +584,22 @@ double_range_get_spec (struct itset_elt *base, int range_type_char,
 
 /* An I/T set element representing a range of inferiors.  */
 
-struct itset_elt_inferior_range
+struct itset_elt_inferior_range : public itset_elt_range
 {
-  struct itset_elt_range base;
-};
+  virtual int contains_program_space (enum itset_width default_width,
+				      struct program_space *pspace);
+  virtual int contains_inferior (enum itset_width default_width,
+				 struct inferior *inf,
+				 int including_width);
+  virtual int contains_thread (enum itset_width default_width,
+			       struct itset_elt_range *expanding,
+			       struct thread_info *thr,
+			       int include_width);
+  virtual char *get_spec ();
 
-/* Implementation of `contains_program_space' method.  */
+  virtual struct thread_info *get_toi ();
+  virtual int has_fixed_toi ();
+};
 
 static int
 inferior_range_contains_program_space (struct spec_range *range,
@@ -622,21 +620,19 @@ inferior_range_contains_program_space (struct spec_range *range,
   return 0;
 }
 
-static int
-inferior_range_elt_contains_program_space (struct itset_elt *base,
-					   enum itset_width default_width,
-					   struct program_space *pspace)
+/* Implementation of `contains_program_space' method.  */
+
+int
+itset_elt_inferior_range::contains_program_space (enum itset_width default_width,
+						  struct program_space *pspace)
 {
-  struct itset_elt_range *elt_range = (struct itset_elt_range *) base;
-  enum itset_width width = effective_width (elt_range->width, default_width);
+  enum itset_width width = effective_width (this->width, default_width);
 
   if (width == ITSET_WIDTH_ALL)
     return 1;
 
-  return inferior_range_contains_program_space (&elt_range->range, pspace);
+  return inferior_range_contains_program_space (&this->range, pspace);
 }
-
-/* Implementation of `contains_inferior' method.  */
 
 static int
 inferior_range_contains_inferior (struct spec_range *range,
@@ -649,41 +645,39 @@ inferior_range_contains_inferior (struct spec_range *range,
   return 0;
 }
 
-static int
-inferior_range_elt_contains_inferior (struct itset_elt *base,
-				      enum itset_width default_width,
-				      struct inferior *inf,
-				      int including_width)
+/* Implementation of `contains_inferior' method.  */
+
+int
+itset_elt_inferior_range::contains_inferior (enum itset_width default_width,
+					     struct inferior *inf,
+					     int including_width)
 {
-  struct itset_elt_range *elt_range = (struct itset_elt_range *) base;
-  enum itset_width width = effective_width (elt_range->width, default_width);
+  enum itset_width width = effective_width (this->width, default_width);
 
   if (width == ITSET_WIDTH_ALL)
     return 1;
 
-  return inferior_range_contains_inferior (&elt_range->range, inf);
+  return inferior_range_contains_inferior (&this->range, inf);
 }
 
 /* Implementation of `contains_thread' method.  */
 
-static int
-inferior_range_elt_contains_thread (struct itset_elt *base,
-				    enum itset_width default_width,
-				    struct itset_elt_range *expanding,
-				    struct thread_info *thr,
-				    int including_width)
+int
+itset_elt_inferior_range::contains_thread (enum itset_width default_width,
+					   struct itset_elt_range *expanding,
+					   struct thread_info *thr,
+					   int including_width)
 {
-  struct itset_elt_range *range_elt = (struct itset_elt_range *) base;
-  enum itset_width width = effective_width (range_elt->width, default_width);
+  enum itset_width width = effective_width (this->width, default_width);
   struct inferior *inf;
 
   if (including_width && width == ITSET_WIDTH_ALL)
     return 1;
 
-  if (range_elt->range.first == WILDCARD)
+  if (this->range.first == WILDCARD)
     return 1;
 
-  if (range_elt->is_current)
+  if (this->is_current)
     {
       inf = get_thread_inferior (thr);
 
@@ -691,23 +685,22 @@ inferior_range_elt_contains_thread (struct itset_elt *base,
     }
 
   inf = get_thread_inferior (thr);
-  return inferior_range_contains_inferior (&range_elt->range, inf);
+  return inferior_range_contains_inferior (&this->range, inf);
 }
 
-static char *
-inferior_range_elt_get_spec (struct itset_elt *base)
+char *
+itset_elt_inferior_range::get_spec ()
 {
-  return range_elt_get_spec (base, 'i');
+  return this->range_get_spec ('i');
 }
 
-static struct thread_info *
-inferior_range_elt_get_toi (struct itset_elt *base)
+struct thread_info *
+itset_elt_inferior_range::get_toi ()
 {
-  struct itset_elt_range *range_elt = (struct itset_elt_range *) base;
-  struct spec_range *range = &range_elt->range;
+  struct spec_range *range = &this->range;
   struct inferior *inf;
 
-  if (range_elt->is_current)
+  if (this->is_current)
     return get_current_context_thread ();
 
   ALL_INFERIORS (inf)
@@ -728,27 +721,11 @@ inferior_range_elt_get_toi (struct itset_elt *base)
   return NULL;
 }
 
-static int
-inferior_range_elt_has_fixed_toi (struct itset_elt *base)
+int
+itset_elt_inferior_range::has_fixed_toi ()
 {
-  struct itset_elt_range *range = (struct itset_elt_range *) base;
-
-  return !range->is_current;
+  return !this->is_current;
 }
-
-static const struct itset_elt_vtable inferior_range_vtable =
-{
-  range_elt_destroy,
-  range_elt_is_range_type,
-  inferior_range_elt_contains_program_space,
-  inferior_range_elt_contains_inferior,
-  inferior_range_elt_contains_thread,
-  inferior_range_elt_get_spec,
-  range_get_width,
-  inferior_range_elt_get_toi,
-  inferior_range_elt_has_fixed_toi,
-  range_get_focus_object_type,
-};
 
 /* Create a new `range' I/T set element.  */
 
@@ -757,45 +734,59 @@ create_inferior_range_itset (enum itset_width width,
 			     int is_current,
 			     struct spec_range *inf_range)
 {
-  struct itset_elt_inferior_range *inf_range_elt;
+  struct itset_elt_inferior_range *elt;
   struct itset_elt_range *range_elt;
-  struct itset_elt *elt;
 
-  inf_range_elt = XNEW (struct itset_elt_inferior_range);
+  elt = new itset_elt_inferior_range ();
 
-  range_elt = &inf_range_elt->base;
-  range_elt->range = *inf_range;
-  range_elt->width = width;
-  range_elt->is_current = is_current;
-  range_elt->object_type = 'i';
+  elt->range = *inf_range;
+  elt->width = width;
+  elt->is_current = is_current;
+  elt->object_type = 'i';
 
-  elt = &range_elt->base;
-  elt->vtable = &inferior_range_vtable;
-
-  return range_elt;
+  return elt;
 }
 
 
 
 /* An I/T set element representing a range of threads.  */
 
-struct itset_elt_thread_range
+struct itset_elt_thread_range : public itset_elt_range
 {
-  struct itset_elt_range base;
   struct spec_range inf_range;
+
+  virtual int contains_program_space (enum itset_width default_width,
+				      struct program_space *pspace);
+
+  /* Return true if the element contains the inferior.  The element
+     and the inferior are passed as arguments.  */
+
+  virtual int contains_inferior (enum itset_width default_width,
+				 struct inferior *inf,
+				 int including_width);
+
+  /* Return true if the element contains the thread.  The element and
+     the thread are passed as arguments.  */
+
+  virtual int contains_thread (enum itset_width default_width,
+			       struct itset_elt_range *expanding,
+			       struct thread_info *thr,
+			       int include_width);
+
+  virtual char *get_spec ();
+  virtual struct thread_info *get_toi ();
+  virtual int has_fixed_toi ();
+
+  virtual struct itset_elt *clone ();
 };
 
  /* Implementation of `contains_inferior' method.  */
 
-static int
-thread_range_contains_program_space (struct itset_elt *base,
-				     enum itset_width default_width,
-				     struct program_space *pspace)
+int
+itset_elt_thread_range::contains_program_space (enum itset_width default_width,
+						struct program_space *pspace)
 {
-  struct itset_elt_thread_range *thread_range
-    = (struct itset_elt_thread_range *) base;
-  struct itset_elt_range *range = (struct itset_elt_range *) base;
-  enum itset_width width = effective_width (range->width, default_width);
+  enum itset_width width = effective_width (this->width, default_width);
   struct inferior *inf;
   struct thread_info *thr;
 
@@ -804,7 +795,7 @@ thread_range_contains_program_space (struct itset_elt *base,
 
   if (width == ITSET_WIDTH_EXPLICIT)
     {
-      struct itset *ew = range->explicit_width;
+      struct itset *ew = this->explicit_width;
 
       if (itset_contains_program_space (ew, default_width, pspace))
 	return 1;
@@ -812,37 +803,32 @@ thread_range_contains_program_space (struct itset_elt *base,
 
   if (width == ITSET_WIDTH_GROUP)
     {
-      if (range->group->vtable->contains_program_space (range->group,
-							default_width, pspace))
+      if (this->group->contains_program_space (default_width, pspace))
 	return 1;
     }
 
-  if (range->is_current)
+  if (this->is_current)
     return (get_current_context ()->inf->pspace == pspace);
 
-  return inferior_range_contains_program_space (&thread_range->inf_range,
+  return inferior_range_contains_program_space (&this->inf_range,
 						pspace);
 }
 
 /* Implementation of `contains_inferior' method.  */
 
-static int
-thread_range_contains_inferior (struct itset_elt *base,
-				enum itset_width default_width,
-				struct inferior *inf,
-				int including_width)
+int
+itset_elt_thread_range::contains_inferior (enum itset_width default_width,
+					   struct inferior *inf,
+					   int including_width)
 {
-  struct itset_elt_thread_range *thread_range
-    = (struct itset_elt_thread_range *) base;
-  struct itset_elt_range *range = (struct itset_elt_range *) base;
-  enum itset_width width = effective_width (range->width, default_width);
+  enum itset_width width = effective_width (this->width, default_width);
 
   if (including_width && width == ITSET_WIDTH_ALL)
     return 1;
 
   if (including_width && width == ITSET_WIDTH_EXPLICIT)
     {
-      struct itset *ew = range->explicit_width;
+      struct itset *ew = this->explicit_width;
 
       if (itset_width_contains_inferior (ew, default_width, inf))
 	return 1;
@@ -850,31 +836,27 @@ thread_range_contains_inferior (struct itset_elt *base,
 
   if (including_width && width == ITSET_WIDTH_GROUP)
     {
-      if (range->group->vtable->contains_inferior (range->group, default_width,
-						   inf, including_width))
+      if (this->group->contains_inferior (default_width,
+					  inf, including_width))
 	return 1;
     }
 
-  if (range->is_current)
+  if (this->is_current)
     return (get_current_context ()->inf == inf);
 
-  return inferior_range_contains_inferior (&thread_range->inf_range, inf);
+  return inferior_range_contains_inferior (&this->inf_range, inf);
 }
 
 /* Implementation of `contains_thread' method.  */
 
-static int
-thread_range_contains_thread (struct itset_elt *base,
-			      enum itset_width default_width,
-			      struct itset_elt_range *expanding,
-			      struct thread_info *thr,
-			      int including_width)
+int
+itset_elt_thread_range::contains_thread (enum itset_width default_width,
+					 struct itset_elt_range *expanding,
+					 struct thread_info *thr,
+					 int including_width)
 {
-  struct itset_elt_thread_range *thread_range_elt
-    = (struct itset_elt_thread_range *) base;
-  struct itset_elt_range *range_elt = (struct itset_elt_range *) base;
-  struct spec_range *range = &range_elt->range;
-  enum itset_width width = effective_width (range_elt->width, default_width);
+  struct spec_range *range = &this->range;
+  enum itset_width width = effective_width (this->width, default_width);
   struct inferior *inf;
 
   if (including_width && width == ITSET_WIDTH_ALL)
@@ -882,36 +864,33 @@ thread_range_contains_thread (struct itset_elt *base,
 
   if (including_width && width == ITSET_WIDTH_EXPLICIT)
     {
-      struct itset *ew = range_elt->explicit_width;
+      struct itset *ew = this->explicit_width;
 
       if (itset_contains_thread (ew, thr))
 	return 1;
     }
 
-  if (including_width && range_elt->width == ITSET_WIDTH_GROUP)
+  if (including_width && this->width == ITSET_WIDTH_GROUP)
     {
-      if (range_elt->group->vtable->contains_thread (range_elt->group,
-						     default_width,
-						     NULL, thr, 0))
+      if (this->group->contains_thread (default_width, NULL, thr, 0))
 	return 1;
     }
 
-  if (range_elt->is_current)
+  if (this->is_current)
     {
       struct inferior *inf = get_current_context ()->inf;
 
-      thread_range_elt->inf_range.first = inf->num;
-      thread_range_elt->inf_range.last = inf->num;
+      this->inf_range.first = inf->num;
+      this->inf_range.last = inf->num;
     }
 
   if (including_width && width == ITSET_WIDTH_INFERIOR)
     {
       inf = get_thread_inferior (thr);
-      return inferior_range_contains_inferior (&thread_range_elt->inf_range,
-					       inf);
+      return inferior_range_contains_inferior (&this->inf_range, inf);
     }
 
-  if (range_elt->is_current)
+  if (this->is_current)
     {
       struct thread_info *tp;
 
@@ -924,7 +903,7 @@ thread_range_contains_thread (struct itset_elt *base,
     }
 
   inf = get_thread_inferior (thr);
-  if (inferior_range_contains_inferior (&thread_range_elt->inf_range, inf)
+  if (inferior_range_contains_inferior (&this->inf_range, inf)
       && (range->first == WILDCARD
 	  || (range->first <= thr->per_inf_num
 	      && thr->per_inf_num <= range->last)))
@@ -935,41 +914,31 @@ thread_range_contains_thread (struct itset_elt *base,
   if (/* FIXME: If the expander is calling us again, don't re-expand,
 	 leading to infinite recursion.  Maybe we should have a
 	 separate flag for this?  */
-      expanding != range_elt
-      && range_elt->group != NULL)
+      expanding != this
+      && this->group != NULL)
     {
-      if ((including_width || base->vtable->contains_thread (base,
-							     default_width,
-							     NULL, thr, 1))
-	  && range_elt->group->vtable->contains_thread (range_elt->group,
-							default_width,
-							range_elt,
-							thr, 0))
+      if ((including_width || this->contains_thread (default_width,
+						     NULL, thr, 1))
+	  && this->group->contains_thread (default_width, this, thr, 0))
 	return 1;
     }
 
   return 0;
 }
 
-static char *
-thread_range_get_spec (struct itset_elt *base)
+char *
+itset_elt_thread_range::get_spec ()
 {
-  struct itset_elt_thread_range *thread_range
-    = (struct itset_elt_thread_range *) base;
-
-  return double_range_get_spec (base, 't', &thread_range->inf_range);
+  return double_range_get_spec (this, 't', &this->inf_range);
 }
 
-static struct thread_info *
-thread_range_get_toi (struct itset_elt *base)
+struct thread_info *
+itset_elt_thread_range::get_toi ()
 {
-  struct itset_elt_thread_range *thread_range_elt
-    = (struct itset_elt_thread_range *) base;
-  struct itset_elt_range *range_elt = (struct itset_elt_range *) base;
-  struct spec_range *range = &range_elt->range;
+  struct spec_range *range = &this->range;
   struct thread_info *thr;
 
-  if (range_elt->is_current)
+  if (this->is_current)
     return get_current_context_thread ();
 
   ALL_NON_EXITED_THREADS (thr)
@@ -981,8 +950,7 @@ thread_range_get_toi (struct itset_elt *base)
 	  struct inferior *inf;
 
 	  inf = get_thread_inferior (thr);
-	  if (inferior_range_contains_inferior (&thread_range_elt->inf_range,
-						inf))
+	  if (inferior_range_contains_inferior (&this->inf_range, inf))
 	    return thr;
 	}
     }
@@ -990,12 +958,10 @@ thread_range_get_toi (struct itset_elt *base)
   return NULL;
 }
 
-static int
-thread_range_has_fixed_toi (struct itset_elt *base)
+int
+itset_elt_thread_range::has_fixed_toi ()
 {
-  struct itset_elt_range *range = (struct itset_elt_range *) base;
-
-  return !range->is_current;
+  return !this->is_current;
 }
 
 static struct itset_elt_range *
@@ -1004,45 +970,28 @@ static struct itset_elt_range *
 			     struct spec_range *inf_range,
 			     struct spec_range *thr_range);
 
-static struct itset_elt *
-thread_range_clone (struct itset_elt *base)
+struct itset_elt *
+itset_elt_thread_range::clone ()
 {
-  struct itset_elt_thread_range *thread_range_elt
-    = (struct itset_elt_thread_range *) base;
-  struct itset_elt_range *range = (struct itset_elt_range *) base;
   struct itset_elt_range *clone;
 
-  clone = create_thread_range_itset (range->width,
-				     range->is_current,
-				     &thread_range_elt->inf_range,
-				     &range->range);
+  clone = create_thread_range_itset (this->width,
+				     this->is_current,
+				     &this->inf_range,
+				     &this->range);
 
-  if (range->explicit_width != NULL)
+  if (this->explicit_width != NULL)
     clone->explicit_width
-      = itset_reference (range->explicit_width);
+      = itset_reference (this->explicit_width);
   else
     clone->explicit_width = NULL;
 
   /* FIXME */
   clone->group = NULL;
 
-  return &clone->base;
+  return clone;
 }
 
-static const struct itset_elt_vtable thread_range_vtable =
-{
-  NULL,
-  range_elt_is_range_type,
-  thread_range_contains_program_space,
-  thread_range_contains_inferior,
-  thread_range_contains_thread,
-  thread_range_get_spec,
-  range_get_width,
-  thread_range_get_toi,
-  thread_range_has_fixed_toi,
-  range_get_focus_object_type,
-  thread_range_clone,
-};
 
 /* Create a new `range' I/T set element.  */
 
@@ -1051,48 +1000,50 @@ create_thread_range_itset (enum itset_width width, int is_current,
 			   struct spec_range *inf_range,
 			   struct spec_range *thr_range)
 {
-  struct itset_elt_thread_range *thr_range_elt;
-  struct itset_elt_range *range_elt;
-  struct itset_elt *elt;
+  struct itset_elt_thread_range *elt;
 
-  thr_range_elt = XNEW (struct itset_elt_thread_range);
-  thr_range_elt->inf_range = *inf_range;
+  elt = new itset_elt_thread_range ();
+  elt->inf_range = *inf_range;
 
-  range_elt = &thr_range_elt->base;
-  range_elt->range = *thr_range;
-  range_elt->width = width;
-  range_elt->explicit_width = NULL;
-  range_elt->group = NULL;
-  range_elt->is_current = is_current;
-  range_elt->object_type = 't';
+  elt->range = *thr_range;
+  elt->width = width;
+  elt->explicit_width = NULL;
+  elt->group = NULL;
+  elt->is_current = is_current;
+  elt->object_type = 't';
 
-  elt = &range_elt->base;
-  elt->vtable = &thread_range_vtable;
-
-  return range_elt;
+  return elt;
 }
 
 
 
 /* An I/T set element representing a range of cores.  */
 
-struct itset_elt_core_range
+struct itset_elt_core_range : public itset_elt_range
 {
-  struct itset_elt_range base;
-};
+  virtual int contains_program_space (enum itset_width default_width,
+				      struct program_space *pspace);
 
-static int core_range_contains_thread (struct itset_elt *base,
-				       enum itset_width default_width,
-				       struct itset_elt_range *expanding,
-				       struct thread_info *thr,
-				       int including_width);
+  virtual int contains_inferior (enum itset_width default_width,
+				 struct inferior *inf,
+				 int including_width);
+
+  virtual int contains_thread (enum itset_width default_width,
+			       struct itset_elt_range *expanding,
+			       struct thread_info *thr,
+			       int include_width);
+  virtual char *get_spec ();
+
+  virtual struct thread_info *get_toi ();
+
+  virtual int has_fixed_toi ();
+};
 
  /* Implementation of `contains_inferior' method.  */
 
-static int
-core_range_contains_program_space (struct itset_elt *base,
-				   enum itset_width default_width,
-				   struct program_space *pspace)
+int
+itset_elt_core_range::contains_program_space (enum itset_width default_width,
+					      struct program_space *pspace)
 {
   struct thread_info *thr;
 
@@ -1102,7 +1053,7 @@ core_range_contains_program_space (struct itset_elt *base,
     {
       /* It's cheaper to check the core range first, because looking
 	 up the a thread's inferior is O(n).  */
-      if (core_range_contains_thread (base, default_width, NULL, thr, 1))
+      if (contains_thread (default_width, NULL, thr, 1))
 	{
 	  struct inferior *thr_inf;
 
@@ -1117,15 +1068,13 @@ core_range_contains_program_space (struct itset_elt *base,
 
 /* Implementation of `contains_thread' method.  */
 
-static int
-core_range_contains_thread (struct itset_elt *base,
-			    enum itset_width default_width,
-			    struct itset_elt_range *expanding,
-			    struct thread_info *thr,
-			    int including_width)
+int
+itset_elt_core_range::contains_thread (enum itset_width default_width,
+				       struct itset_elt_range *expanding,
+				       struct thread_info *thr,
+				       int including_width)
 {
-  struct itset_elt_range *range_elt = (struct itset_elt_range *) base;
-  struct spec_range *range = &range_elt->range;
+  struct spec_range *range = &this->range;
   int core;
 
   if (range->first == WILDCARD)
@@ -1140,11 +1089,10 @@ core_range_contains_thread (struct itset_elt *base,
 
 /* Implementation of `contains_inferior' method.  */
 
-static int
-core_range_contains_inferior (struct itset_elt *base,
-			      enum itset_width default_width,
-			      struct inferior *inf,
-			      int including_width)
+int
+itset_elt_core_range::contains_inferior (enum itset_width default_width,
+					 struct inferior *inf,
+					 int including_width)
 {
   struct thread_info *thr;
 
@@ -1154,7 +1102,7 @@ core_range_contains_inferior (struct itset_elt *base,
     {
       /* It's cheaper to check the core range first, because looking
 	 up the a thread's inferior is O(n).  */
-      if (core_range_contains_thread (base, default_width, NULL, thr, 1))
+      if (contains_thread (default_width, NULL, thr, 1))
 	{
 	  struct inferior *thr_inf;
 
@@ -1167,167 +1115,144 @@ core_range_contains_inferior (struct itset_elt *base,
   return 0;
 }
 
-static char *
-core_range_get_spec (struct itset_elt *base)
+char *
+itset_elt_core_range::get_spec ()
 {
-  return range_elt_get_spec (base, 'c');
+  return range_get_spec ('c');
 }
 
-static struct thread_info *
-core_range_get_toi (struct itset_elt *base)
+struct thread_info *
+itset_elt_core_range::get_toi ()
 {
-  struct itset_elt_range *range = (struct itset_elt_range *) base;
   struct thread_info *thr;
 
-  if (range->is_current)
+  if (this->is_current)
     return get_current_context_thread ();
 
   ALL_NON_EXITED_THREADS (thr)
     {
-      if (core_range_contains_thread (base, ITSET_WIDTH_THREAD, NULL, thr, 0))
+      if (contains_thread (ITSET_WIDTH_THREAD, NULL, thr, 0))
 	return thr;
     }
 
   return NULL;
 }
 
-static int
-core_range_has_fixed_toi (struct itset_elt *base)
+int
+itset_elt_core_range::has_fixed_toi ()
 {
-  struct itset_elt_range *range = (struct itset_elt_range *) base;
-
-  return !range->is_current;
+  return !this->is_current;
 }
-
-
-static const struct itset_elt_vtable core_range_vtable =
-{
-  NULL,
-  range_elt_is_range_type,
-  core_range_contains_program_space,
-  core_range_contains_inferior,
-  core_range_contains_thread,
-  core_range_get_spec,
-  range_get_width,
-  core_range_get_toi,
-  core_range_has_fixed_toi,
-  range_get_focus_object_type,
-};
 
 /* Create a new `core_range' I/T set element.  */
 
-static struct itset_elt_range *
+struct itset_elt_range *
 create_core_range_itset (enum itset_width width, int is_current,
 			 struct spec_range *core_range)
 {
-  struct itset_elt_core_range *core_range_elt;
-  struct itset_elt_range *range_elt;
-  struct itset_elt *elt;
+  struct itset_elt_core_range *elt;
 
-  core_range_elt = XNEW (struct itset_elt_core_range);
+  elt = new itset_elt_core_range ();
 
-  range_elt = &core_range_elt->base;
-  range_elt->range = *core_range;
-  range_elt->width = width;
-  range_elt->is_current = is_current;
-  range_elt->object_type = 'c';
+  elt->range = *core_range;
+  elt->width = width;
+  elt->is_current = is_current;
+  elt->object_type = 'c';
 
-  elt = &range_elt->base;
-  elt->vtable = &core_range_vtable;
-
-  return range_elt;
+  return elt;
 }
 
 
 /* An I/T set element representing a range of Ada tasks.  */
 
-struct itset_elt_ada_task_range
+struct itset_elt_ada_task_range : public itset_elt_range
 {
-  struct itset_elt_range base;
   struct spec_range inf_range;
+
+  virtual int contains_program_space (enum itset_width default_width,
+				      struct program_space *pspace);
+
+  virtual int contains_inferior (enum itset_width default_width,
+				 struct inferior *inf,
+				 int including_width);
+
+  virtual int contains_thread (enum itset_width default_width,
+			       struct itset_elt_range *expanding,
+			       struct thread_info *thr,
+			       int include_width);
+  virtual char *get_spec ();
+
+  virtual struct thread_info *get_toi ();
+
+  virtual int has_fixed_toi ();
 };
 
  /* Implementation of `contains_program_space' method.  */
 
-static int
-ada_task_range_contains_program_space (struct itset_elt *base,
-				       enum itset_width default_width,
-				       struct program_space *pspace)
+int
+itset_elt_ada_task_range::contains_program_space (enum itset_width default_width,
+						  struct program_space *pspace)
 {
-  struct itset_elt_range *range_elt = (struct itset_elt_range *) base;
-  struct itset_elt_ada_task_range *ada_task_range_elt
-    = (struct itset_elt_ada_task_range *) base;
-  enum itset_width width = effective_width (range_elt->width, default_width);
+  enum itset_width width = effective_width (this->width, default_width);
 
   if (width == ITSET_WIDTH_ALL)
     return 1;
 
-  if (range_elt->is_current)
+  if (this->is_current)
     return (get_current_context ()->inf->pspace == pspace);
 
-  return inferior_range_contains_program_space (&ada_task_range_elt->inf_range,
-						pspace);
+  return inferior_range_contains_program_space (&this->inf_range, pspace);
 }
 
 /* Implementation of `contains_inferior' method.  */
 
-static int
-ada_task_range_contains_inferior (struct itset_elt *base,
-				  enum itset_width default_width,
-				  struct inferior *inf,
-				  int including_width)
+int
+itset_elt_ada_task_range::contains_inferior (enum itset_width default_width,
+					     struct inferior *inf,
+					     int including_width)
 {
-  struct itset_elt_range *range_elt = (struct itset_elt_range *) base;
-  struct itset_elt_ada_task_range *ada_task_range_elt
-    = (struct itset_elt_ada_task_range *) base;
-  enum itset_width width = effective_width (range_elt->width, default_width);
+  enum itset_width width = effective_width (this->width, default_width);
 
   if (width == ITSET_WIDTH_ALL)
     return 1;
 
-  if (range_elt->is_current)
+  if (this->is_current)
     return (get_current_context ()->inf == inf);
 
-  return inferior_range_contains_inferior (&ada_task_range_elt->inf_range,
-					   inf);
+  return inferior_range_contains_inferior (&this->inf_range, inf);
 }
 
 /* Implementation of `contains_thread' method.  */
 
-static int
-ada_task_range_contains_thread (struct itset_elt *base,
-				enum itset_width default_width,
-				struct itset_elt_range *expanding,
-				struct thread_info *thr,
-				int including_width)
+int
+itset_elt_ada_task_range::contains_thread (enum itset_width default_width,
+					   struct itset_elt_range *expanding,
+					   struct thread_info *thr,
+					   int including_width)
 {
-  struct itset_elt_range *range_elt = (struct itset_elt_range *) base;
-  struct itset_elt_ada_task_range *ada_task_range_elt
-    = (struct itset_elt_ada_task_range *) base;
-  enum itset_width width = effective_width (range_elt->width, default_width);
-  struct spec_range *range = &range_elt->range;
+  enum itset_width width = effective_width (this->width, default_width);
+  struct spec_range *range = &this->range;
   struct inferior *inf;
   int thr_task;
 
   if (including_width && width == ITSET_WIDTH_ALL)
     return 1;
 
-  if (range_elt->is_current)
+  if (this->is_current)
     {
       struct execution_context *ctx = get_current_context ();
 
-      ada_task_range_elt->inf_range.first = ctx->inf->num;
-      ada_task_range_elt->inf_range.last = ctx->inf->num;
+      this->inf_range.first = ctx->inf->num;
+      this->inf_range.last = ctx->inf->num;
     }
 
   if (including_width && width == ITSET_WIDTH_INFERIOR)
     {
       inf = get_thread_inferior (thr);
-      return inferior_range_contains_inferior (&ada_task_range_elt->inf_range,
-					       inf);
+      return inferior_range_contains_inferior (&this->inf_range, inf);
     }
 
-  if (range_elt->is_current)
+  if (this->is_current)
     {
       int task;
 
@@ -1343,7 +1268,7 @@ ada_task_range_contains_thread (struct itset_elt *base,
     }
 
   inf = get_thread_inferior (thr);
-  if (!inferior_range_contains_inferior (&ada_task_range_elt->inf_range, inf))
+  if (!inferior_range_contains_inferior (&this->inf_range, inf))
     return 0;
 
   if (range->first == WILDCARD)
@@ -1357,25 +1282,19 @@ ada_task_range_contains_thread (struct itset_elt *base,
   return 0;
 }
 
-static char *
-ada_task_range_get_spec (struct itset_elt *base)
+char *
+itset_elt_ada_task_range::get_spec ()
 {
-  struct itset_elt_ada_task_range *ada_task_range_elt
-    = (struct itset_elt_ada_task_range *) base;
-
-  return double_range_get_spec (base, 'k', &ada_task_range_elt->inf_range);
+  return double_range_get_spec (this, 'k', &this->inf_range);
 }
 
-static struct thread_info *
-ada_task_range_get_toi (struct itset_elt *base)
+struct thread_info *
+itset_elt_ada_task_range::get_toi ()
 {
-  struct itset_elt_range *range_elt = (struct itset_elt_range *) base;
-  struct itset_elt_ada_task_range *ada_task_range_elt
-    = (struct itset_elt_ada_task_range *) base;
-  struct spec_range *range = &range_elt->range;
+  struct spec_range *range = &this->range;
   struct inferior *inf;
 
-  if (range_elt->is_current)
+  if (this->is_current)
     return get_current_context_thread ();
 
   ALL_INFERIORS (inf)
@@ -1384,8 +1303,7 @@ ada_task_range_get_toi (struct itset_elt *base)
       VEC(ada_task_info_s) *task_list;
       struct thread_info *thr;
 
-      if (!inferior_range_contains_inferior (&ada_task_range_elt->inf_range,
-					     inf))
+      if (!inferior_range_contains_inferior (&this->inf_range, inf))
 	continue;
 
       task_list = get_ada_tasks (inf, 0);
@@ -1405,27 +1323,11 @@ ada_task_range_get_toi (struct itset_elt *base)
   return NULL;
 }
 
-static int
-ada_task_range_has_fixed_toi (struct itset_elt *base)
+int
+itset_elt_ada_task_range::has_fixed_toi ()
 {
-  struct itset_elt_range *range = (struct itset_elt_range *) base;
-
-  return !range->is_current;
+  return !this->is_current;
 }
-
-static const struct itset_elt_vtable ada_task_range_vtable =
-{
-  NULL,
-  range_elt_is_range_type,
-  ada_task_range_contains_program_space,
-  ada_task_range_contains_inferior,
-  ada_task_range_contains_thread,
-  ada_task_range_get_spec,
-  range_get_width,
-  ada_task_range_get_toi,
-  ada_task_range_has_fixed_toi,
-  range_get_focus_object_type,
-};
 
 /* Create a new `range' I/T set element.  */
 
@@ -1434,23 +1336,17 @@ create_ada_task_range_itset (enum itset_width width, int is_current,
 			     struct spec_range *inf_range,
 			     struct spec_range *ada_range)
 {
-  struct itset_elt_ada_task_range *ada_range_elt;
-  struct itset_elt_range *range_elt;
-  struct itset_elt *elt;
+  struct itset_elt_ada_task_range *elt;
 
-  ada_range_elt = XNEW (struct itset_elt_ada_task_range);
-  ada_range_elt->inf_range = *inf_range;
+  elt = new itset_elt_ada_task_range ();
+  elt->inf_range = *inf_range;
 
-  range_elt = &ada_range_elt->base;
-  range_elt->range = *ada_range;
-  range_elt->width = width;
-  range_elt->is_current = is_current;
-  range_elt->object_type = 'k';
+  elt->range = *ada_range;
+  elt->width = width;
+  elt->is_current = is_current;
+  elt->object_type = 'k';
 
-  elt = &range_elt->base;
-  elt->vtable = &ada_task_range_vtable;
-
-  return range_elt;
+  return elt;
 }
 
 static const char *parse_range (const char *spec, struct spec_range *range);
@@ -1509,40 +1405,54 @@ parse_double_range_itset (const char **spec, enum itset_width width,
 
 /* An I/T set element representing an intersection of sets.  */
 
-struct itset_elt_intersect
+struct itset_elt_intersect : public itset_elt
 {
-  struct itset_elt base;
-
   /* The elements that will be intersected.  */
   VEC (itset_elt_ptr) *elements;
+
+  virtual ~itset_elt_intersect ();
+
+  virtual int contains_program_space (enum itset_width default_width,
+				      struct program_space *pspace);
+
+  virtual int contains_inferior (enum itset_width default_width,
+				 struct inferior *inf,
+				 int including_width);
+
+  virtual int contains_thread (enum itset_width default_width,
+			       struct itset_elt_range *expanding,
+			       struct thread_info *thr,
+			       int include_width);
+  virtual char *get_spec ();
+
+  virtual struct thread_info *get_toi ();
+
+  virtual int has_fixed_toi ();
+
+  virtual enum itset_width get_width ();
 };
 
 /* Implementation of `destroy' method.  */
 
-static void
-intersect_destroy (struct itset_elt *base)
+itset_elt_intersect::~itset_elt_intersect ()
 {
-  struct itset_elt_intersect *set = (struct itset_elt_intersect *) base;
-
-  VEC_free (itset_elt_ptr, set->elements);
+  VEC_free (itset_elt_ptr, this->elements);
 }
 
 /* Implementation of `contains_program_space' method.  */
 
-static int
-intersect_contains_program_space (struct itset_elt *base,
-				  enum itset_width default_width,
-				  struct program_space *pspace)
+int
+itset_elt_intersect::contains_program_space (enum itset_width default_width,
+					     struct program_space *pspace)
 {
-  struct itset_elt_intersect *intersect = (struct itset_elt_intersect *) base;
   struct itset_elt *elt;
   int ix;
 
-  gdb_assert (!VEC_empty (itset_elt_ptr, intersect->elements));
+  gdb_assert (!VEC_empty (itset_elt_ptr, this->elements));
 
-  for (ix = 0; VEC_iterate (itset_elt_ptr, intersect->elements, ix, elt); ++ix)
+  for (ix = 0; VEC_iterate (itset_elt_ptr, this->elements, ix, elt); ++ix)
     {
-      if (!elt->vtable->contains_program_space (elt, default_width, pspace))
+      if (!elt->contains_program_space (default_width, pspace))
 	return 0;
     }
 
@@ -1551,22 +1461,19 @@ intersect_contains_program_space (struct itset_elt *base,
 
 /* Implementation of `contains_inferior' method.  */
 
-static int
-intersect_contains_inferior (struct itset_elt *base,
-			     enum itset_width default_width,
-			     struct inferior *inf,
-			     int including_width)
+int
+itset_elt_intersect::contains_inferior (enum itset_width default_width,
+					struct inferior *inf,
+					int including_width)
 {
-  struct itset_elt_intersect *intersect = (struct itset_elt_intersect *) base;
   struct itset_elt *elt;
   int ix;
 
-  gdb_assert (!VEC_empty (itset_elt_ptr, intersect->elements));
+  gdb_assert (!VEC_empty (itset_elt_ptr, this->elements));
 
-  for (ix = 0; VEC_iterate (itset_elt_ptr, intersect->elements, ix, elt); ++ix)
+  for (ix = 0; VEC_iterate (itset_elt_ptr, this->elements, ix, elt); ++ix)
     {
-      if (!elt->vtable->contains_inferior (elt, default_width,
-					   inf, including_width))
+      if (!elt->contains_inferior (default_width, inf, including_width))
 	return 0;
     }
 
@@ -1575,42 +1482,39 @@ intersect_contains_inferior (struct itset_elt *base,
 
 /* Implementation of `contains_thread' method.  */
 
-static int
-intersect_contains_thread (struct itset_elt *base,
-			   enum itset_width default_width,
-			   struct itset_elt_range *expanding,
-			   struct thread_info *thr,
-			   int including_width)
+int
+itset_elt_intersect::contains_thread (enum itset_width default_width,
+				      struct itset_elt_range *expanding,
+				      struct thread_info *thr,
+				      int including_width)
 {
-  struct itset_elt_intersect *intersect = (struct itset_elt_intersect *) base;
   struct itset_elt *elt;
   int ix;
 
-  gdb_assert (!VEC_empty (itset_elt_ptr, intersect->elements));
+  gdb_assert (!VEC_empty (itset_elt_ptr, this->elements));
 
-  for (ix = 0; VEC_iterate (itset_elt_ptr, intersect->elements, ix, elt); ++ix)
+  for (ix = 0; VEC_iterate (itset_elt_ptr, this->elements, ix, elt); ++ix)
     {
-      if (!elt->vtable->contains_thread (elt, default_width,
-					 expanding, thr, including_width))
+      if (!elt->contains_thread (default_width, expanding,
+				 thr, including_width))
 	return 0;
     }
 
   return 1;
 }
 
-static char *
-intersect_get_spec (struct itset_elt *base)
+char *
+itset_elt_intersect::get_spec ()
 {
-  struct itset_elt_intersect *intersect = (struct itset_elt_intersect *) base;
   struct itset_elt *elt;
   int ix;
   char *ret = NULL;
 
-  gdb_assert (!VEC_empty (itset_elt_ptr, intersect->elements));
+  gdb_assert (!VEC_empty (itset_elt_ptr, this->elements));
 
-  for (ix = 0; VEC_iterate (itset_elt_ptr, intersect->elements, ix, elt); ++ix)
+  for (ix = 0; VEC_iterate (itset_elt_ptr, this->elements, ix, elt); ++ix)
     {
-      const char *elt_spec = elt->vtable->get_spec (elt);
+      const char *elt_spec = elt->get_spec ();
 
       ret = reconcat (ret, ret == NULL ? "" : ret,
 		      ix == 0 ? "" : "&", elt_spec, (char *) NULL);
@@ -1623,42 +1527,23 @@ static enum itset_width set_get_width (VEC (itset_elt_ptr) *elements);
 static struct thread_info *set_get_toi (VEC (itset_elt_ptr) *elements);
 static int set_has_fixed_toi (VEC (itset_elt_ptr) *elements);
 
-static enum itset_width
-intersect_get_width (struct itset_elt *base)
+enum itset_width
+itset_elt_intersect::get_width ()
 {
-  struct itset_elt_intersect *intersect = (struct itset_elt_intersect *) base;
-
-  return set_get_width (intersect->elements);
+  return set_get_width (this->elements);
 }
 
-static struct thread_info *
-intersect_get_toi (struct itset_elt *base)
+struct thread_info *
+itset_elt_intersect::get_toi ()
 {
-  struct itset_elt_intersect *intersect = (struct itset_elt_intersect *) base;
-
-  return set_get_toi (intersect->elements);
+  return set_get_toi (this->elements);
 }
 
-static int
-intersect_has_fixed_toi (struct itset_elt *base)
+int
+itset_elt_intersect::has_fixed_toi ()
 {
-  struct itset_elt_intersect *intersect = (struct itset_elt_intersect *) base;
-
-  return set_has_fixed_toi (intersect->elements);
+  return set_has_fixed_toi (this->elements);
 }
-
-static const struct itset_elt_vtable intersect_vtable =
-{
-  intersect_destroy,
-  NULL, /* is_range_type */
-  intersect_contains_program_space,
-  intersect_contains_inferior,
-  intersect_contains_thread,
-  intersect_get_spec,
-  intersect_get_width,
-  intersect_get_toi,
-  intersect_has_fixed_toi,
-};
 
 /* Create a new `intersect' I/T set element.  */
 
@@ -1667,8 +1552,7 @@ create_intersect_itset (void)
 {
   struct itset_elt_intersect *elt;
 
-  elt = XNEW (struct itset_elt_intersect);
-  elt->base.vtable = &intersect_vtable;
+  elt = new itset_elt_intersect ();
   elt->elements = NULL;
 
   return elt;
@@ -1678,178 +1562,186 @@ create_intersect_itset (void)
 
 /* An I/T set element representing all inferiors.  */
 
-struct itset_elt_all
+struct itset_elt_all : public itset_elt
 {
-  struct itset_elt base;
+  virtual int contains_program_space (enum itset_width default_width,
+				      struct program_space *pspace);
+
+  virtual int contains_inferior (enum itset_width default_width,
+				 struct inferior *inf,
+				 int including_width);
+
+  virtual int contains_thread (enum itset_width default_width,
+			       struct itset_elt_range *expanding,
+			       struct thread_info *thr,
+			       int include_width);
+  virtual char *get_spec ();
+
+  virtual int has_fixed_toi ();
+
+  virtual enum itset_width get_width ();
 };
 
 /* Implementation of `contains_inferior' method.  */
 
-static int
-all_contains_program_space (struct itset_elt *base,
-			    enum itset_width default_width,
-			    struct program_space *pspace)
+int
+itset_elt_all::contains_program_space (enum itset_width default_width,
+				       struct program_space *pspace)
 {
   return 1;
 }
 
 /* Implementation of `contains_inferior' method.  */
 
-static int
-all_contains_inferior (struct itset_elt *base,
-		       enum itset_width default_width,
-		       struct inferior *inf,
-		       int including_width)
+int
+itset_elt_all::contains_inferior (enum itset_width default_width,
+				  struct inferior *inf,
+				  int including_width)
 {
   return 1;
 }
 
 /* Implementation of `contains_thread' method.  */
 
-static int
-all_contains_thread (struct itset_elt *base,
-		     enum itset_width default_width,
-		     struct itset_elt_range *expanding,
-		     struct thread_info *thr,
-		     int including_width)
+int
+itset_elt_all::contains_thread (enum itset_width default_width,
+				struct itset_elt_range *expanding,
+				struct thread_info *thr,
+				int including_width)
 {
   return 1;
 }
 
-static char *
-all_get_spec (struct itset_elt *base)
+char *
+itset_elt_all::get_spec ()
 {
   return xstrdup ("all");
 }
 
-static enum itset_width
-all_get_width (struct itset_elt *base)
+enum itset_width
+itset_elt_all::get_width ()
 {
   return ITSET_WIDTH_ALL;
 }
 
-static int
-has_fixed_toi_false (struct itset_elt *base)
+int
+itset_elt_all::has_fixed_toi ()
 {
   return 0;
 }
-
-static const struct itset_elt_vtable all_vtable =
-{
-  NULL,
-  NULL, /* is_range_type */
-  all_contains_program_space,
-  all_contains_inferior,
-  all_contains_thread,
-  all_get_spec,
-  all_get_width,
-  NULL,
-  has_fixed_toi_false
-};
 
 static struct itset_elt *
 create_all_itset (void)
 {
   struct itset_elt_all *elt;
 
-  elt = XNEW (struct itset_elt_all);
-  elt->base.vtable = &all_vtable;
+  elt = new itset_elt_all ();
 
-  return (struct itset_elt *) elt;
+  return elt;
 }
 
 
 
 /* An I/T set element representing no inferiors.  */
 
-struct itset_elt_empty
+struct itset_elt_empty : public itset_elt
 {
-  struct itset_elt base;
+  virtual int contains_program_space (enum itset_width default_width,
+				      struct program_space *pspace);
+
+  virtual int contains_inferior (enum itset_width default_width,
+				 struct inferior *inf,
+				 int including_width);
+
+  virtual int contains_thread (enum itset_width default_width,
+			       struct itset_elt_range *expanding,
+			       struct thread_info *thr,
+			       int include_width);
 };
 
 /* Implementation of `contains_program_space' method.  */
 
-static int
-empty_contains_program_space (struct itset_elt *base,
-			      enum itset_width default_width,
-			      struct program_space *pspace)
+int
+itset_elt_empty::contains_program_space (enum itset_width default_width,
+					 struct program_space *pspace)
 {
   return 0;
 }
 
 /* Implementation of `contains_inferior' method.  */
 
-static int
-empty_contains_inferior (struct itset_elt *base,
-			 enum itset_width default_width,
-			 struct inferior *inf,
-			 int including_width)
+int
+itset_elt_empty::contains_inferior (enum itset_width default_width,
+				    struct inferior *inf,
+				    int including_width)
 {
   return 0;
 }
 
 /* Implementation of `contains_thread' method.  */
 
-static int
-empty_contains_thread (struct itset_elt *base,
-		       enum itset_width default_width,
-		       struct itset_elt_range *expanding,
-		       struct thread_info *thr,
-		       int including_width)
+int
+itset_elt_empty::contains_thread (enum itset_width default_width,
+				  struct itset_elt_range *expanding,
+				  struct thread_info *thr,
+				  int including_width)
 {
   return 0;
 }
-
-static const struct itset_elt_vtable empty_vtable =
-{
-  NULL,
-  NULL, /* is_range_type */
-  empty_contains_program_space,
-  empty_contains_inferior,
-  empty_contains_thread,
-};
 
 static struct itset_elt *
 create_empty_itset (void)
 {
   struct itset_elt_empty *elt;
 
-  elt = XNEW (struct itset_elt_empty);
-  elt->base.vtable = &empty_vtable;
+  elt = new itset_elt_empty ();
 
-  return (struct itset_elt *) elt;
+  return elt;
 }
 
 
 
 /* An I/T set element representing an itset.  */
 
-struct itset_elt_itset
+struct itset_elt_itset : public itset_elt
 {
-  struct itset_elt base;
-
   /* The I/T set this element wraps.  */
   struct itset *set;
+
+  virtual ~itset_elt_itset ();
+
+  virtual int contains_program_space (enum itset_width default_width,
+				      struct program_space *pspace);
+
+  virtual int contains_inferior (enum itset_width default_width,
+				 struct inferior *inf,
+				 int including_width);
+
+  virtual int contains_thread (enum itset_width default_width,
+			       struct itset_elt_range *expanding,
+			       struct thread_info *thr,
+			       int include_width);
+  virtual char *get_spec ();
+
+  virtual struct thread_info *get_toi ();
+
+  virtual int has_fixed_toi ();
+
+  virtual enum itset_width get_width ();
 };
 
-static void
-itset_elt_itset_destroy (struct itset_elt *base)
+itset_elt_itset::~itset_elt_itset ()
 {
-  struct itset_elt_itset *iiset = (struct itset_elt_itset *) base;
-
-  itset_free (iiset->set);
+  itset_free (this->set);
 }
 
 /* Implementation of `contains_program_space' method.  */
 
-static int
-itset_elt_itset_contains_program_space (struct itset_elt *base,
-					enum itset_width default_width,
-					struct program_space *pspace)
+int
+itset_elt_itset::contains_program_space (enum itset_width default_width,
+					 struct program_space *pspace)
 {
-  struct itset_elt_itset *iiset = (struct itset_elt_itset *) base;
-
-  return itset_contains_program_space (iiset->set, default_width, pspace);
+  return itset_contains_program_space (this->set, default_width, pspace);
 }
 
 static int
@@ -1860,91 +1752,63 @@ itset_contains_inferior_1 (struct itset *set,
 
 /* Implementation of `contains_inferior' method.  */
 
-static int
-itset_elt_itset_contains_inferior (struct itset_elt *base,
-				   enum itset_width default_width,
-				   struct inferior *inf,
-				   int including_width)
+int
+itset_elt_itset::contains_inferior (enum itset_width default_width,
+				    struct inferior *inf,
+				    int including_width)
 {
-  struct itset_elt_itset *iiset = (struct itset_elt_itset *) base;
-
-  return itset_contains_inferior_1 (iiset->set, default_width,
+  return itset_contains_inferior_1 (this->set, default_width,
 				    inf, including_width);
 }
 
 /* Implementation of `contains_thread' method.  */
 
-static int
-itset_elt_itset_contains_thread (struct itset_elt *base,
-				 enum itset_width default_width,
-				 struct itset_elt_range *expanding,
-				 struct thread_info *thr,
-				 int including_width)
+int
+itset_elt_itset::contains_thread (enum itset_width default_width,
+				  struct itset_elt_range *expanding,
+				  struct thread_info *thr,
+				  int including_width)
 {
-  struct itset_elt_itset *iiset = (struct itset_elt_itset *) base;
-
   if (including_width)
-    return itset_width_contains_thread (iiset->set, default_width,
+    return itset_width_contains_thread (this->set, default_width,
 					thr);
   else
-    return itset_contains_thread (iiset->set, thr);
+    return itset_contains_thread (this->set, thr);
 }
 
-static char *
-itset_elt_itset_get_spec (struct itset_elt *base)
+char *
+itset_elt_itset::get_spec ()
 {
-  struct itset_elt_itset *iiset = (struct itset_elt_itset *) base;
+  if (this->set->name != NULL)
+    return xstrdup (this->set->name);
 
-  if (iiset->set->name != NULL)
-    return xstrdup (iiset->set->name);
-
-  return itset_get_spec (iiset->set);
+  return itset_get_spec (this->set);
 }
 
-static enum itset_width
-itset_elt_itset_get_width (struct itset_elt *base)
+enum itset_width
+itset_elt_itset::get_width ()
 {
-  struct itset_elt_itset *iiset = (struct itset_elt_itset *) base;
-
-  return itset_get_width (iiset->set);
+  return itset_get_width (this->set);
 }
 
-static struct thread_info *
-itset_elt_itset_get_toi (struct itset_elt *base)
+struct thread_info *
+itset_elt_itset::get_toi ()
 {
-  struct itset_elt_itset *iiset = (struct itset_elt_itset *) base;
-
-  return itset_get_toi (iiset->set);
+  return itset_get_toi (this->set);
 }
 
-static int
-itset_elt_itset_has_fixed_toi (struct itset_elt *base)
+int
+itset_elt_itset::has_fixed_toi ()
 {
-  struct itset_elt_itset *iiset = (struct itset_elt_itset *) base;
-
-  return itset_has_fixed_toi (iiset->set);
+  return itset_has_fixed_toi (this->set);
 }
-
-static const struct itset_elt_vtable itset_elt_itset_vtable =
-{
-  itset_elt_itset_destroy,
-  NULL, /* is_range_type */
-  itset_elt_itset_contains_program_space,
-  itset_elt_itset_contains_inferior,
-  itset_elt_itset_contains_thread,
-  itset_elt_itset_get_spec,
-  itset_elt_itset_get_width,
-  itset_elt_itset_get_toi,
-  itset_elt_itset_has_fixed_toi,
-};
 
 static struct itset_elt_itset *
 create_itset_elt_itset (struct itset *set)
 {
   struct itset_elt_itset *elt;
 
-  elt = XNEW (struct itset_elt_itset);
-  elt->base.vtable = &itset_elt_itset_vtable;
+  elt = new itset_elt_itset ();
   elt->set = itset_reference (set);
 
   return elt;
@@ -1963,56 +1827,60 @@ itset_add_set (struct itset *to, struct itset *addme)
 
 /* An I/T set element representing a negated set.  */
 
-struct itset_elt_negated
+struct itset_elt_negated : public itset_elt
 {
-  struct itset_elt base;
-
   /* The negated element.  */
   struct itset_elt *negated;
+
+  virtual ~itset_elt_negated ();
+
+  virtual int contains_program_space (enum itset_width default_width,
+				      struct program_space *pspace);
+
+  virtual int contains_inferior (enum itset_width default_width,
+				 struct inferior *inf,
+				 int including_width);
+
+  virtual int contains_thread (enum itset_width default_width,
+			       struct itset_elt_range *expanding,
+			       struct thread_info *thr,
+			       int include_width);
+  virtual char *get_spec ();
+
+  virtual struct thread_info *get_toi ();
+
+  virtual int has_fixed_toi ();
+
+  virtual enum itset_width get_width ();
 };
 
-static void
-itset_elt_negated_destroy (struct itset_elt *base)
+itset_elt_negated::~itset_elt_negated ()
 {
-  struct itset_elt_negated *elt = (struct itset_elt_negated *) base;
-
-  itset_elt_free (elt->negated);
+  itset_elt_free (this->negated);
 }
 
 /* Implementation of `contains_inferior' method.  */
 
-static int
-itset_elt_negated_contains_program_space (struct itset_elt *base,
-					  enum itset_width default_width,
-					  struct program_space *pspace)
+int
+itset_elt_negated::contains_program_space (enum itset_width default_width,
+					   struct program_space *pspace)
 {
-  struct itset_elt_negated *elt = (struct itset_elt_negated *) base;
-
-  if (!elt->negated->vtable->contains_program_space (elt->negated,
-						     default_width,
-						     pspace))
+  if (!this->negated->contains_program_space (default_width, pspace))
     return 0;
 
   /* See comment in contains_inferior below.  */
-  return elt->negated->vtable->contains_program_space (elt->negated,
-						       default_width,
-						       pspace);
+  return this->negated->contains_program_space (default_width, pspace);
 }
 
 /* Implementation of `contains_inferior' method.  */
 
-static int
-itset_elt_negated_contains_inferior (struct itset_elt *base,
-				     enum itset_width default_width,
-				     struct inferior *inf,
-				     int including_width)
+int
+itset_elt_negated::contains_inferior (enum itset_width default_width,
+				      struct inferior *inf,
+				      int including_width)
 {
-  struct itset_elt_negated *elt = (struct itset_elt_negated *) base;
-
   if (including_width
-      && !elt->negated->vtable->contains_inferior (elt->negated,
-						   default_width,
-						   inf, 1))
+      && !this->negated->contains_inferior (default_width, inf, 1))
     return 0;
 
   /* Hmm.  This doesn't actually negate on purpose.  Otherwise, what
@@ -2022,87 +1890,61 @@ itset_elt_negated_contains_inferior (struct itset_elt *base,
 
      mean?  But this looks odd.  FIXME.  Maybe we should think of a
      better design.  */
-  return elt->negated->vtable->contains_inferior (elt->negated,
-						   default_width,
-						   inf, 0);
+  return this->negated->contains_inferior (default_width, inf, 0);
 }
 
 /* Implementation of `contains_thread' method.  */
 
-static int
-itset_elt_negated_contains_thread (struct itset_elt *base,
-				   enum itset_width default_width,
-				   struct itset_elt_range *expanding,
-				   struct thread_info *thr,
-				   int including_width)
+int
+itset_elt_negated::contains_thread (enum itset_width default_width,
+				    struct itset_elt_range *expanding,
+				    struct thread_info *thr,
+				    int including_width)
 {
-  struct itset_elt_negated *elt = (struct itset_elt_negated *) base;
-
-  if (including_width && !elt->negated->vtable->contains_thread (elt->negated,
-								 default_width,
-								 NULL, thr, 1))
+  if (including_width && !this->negated->contains_thread (default_width,
+							  NULL, thr, 1))
     return 0;
 
-  return !elt->negated->vtable->contains_thread (elt->negated, default_width,
-						   NULL, thr, 0);
+  return !this->negated->contains_thread (default_width, NULL, thr, 0);
 }
 
-static char *
-itset_elt_negated_get_spec (struct itset_elt *base)
+char *
+itset_elt_negated::get_spec ()
 {
-  struct itset_elt_negated *elt = (struct itset_elt_negated *) base;
-
-  return xstrprintf ("~%s", elt->negated->vtable->get_spec (elt->negated));
+  return xstrprintf ("~%s", this->negated->get_spec ());
 }
 
-static enum itset_width
-itset_elt_negated_get_width (struct itset_elt *base)
+enum itset_width
+itset_elt_negated::get_width ()
 {
-  struct itset_elt_negated *elt = (struct itset_elt_negated *) base;
-
-  return elt->negated->vtable->get_width (elt->negated);
+  return this->negated->get_width ();
 }
 
-static struct thread_info *
-itset_elt_negated_get_toi (struct itset_elt *base)
+struct thread_info *
+itset_elt_negated::get_toi ()
 {
   struct thread_info *thr;
 
   ALL_THREADS (thr)
     {
-      if (itset_elt_negated_contains_thread (base, ITSET_WIDTH_THREAD,
-					     NULL, thr, 0))
+      if (contains_thread (ITSET_WIDTH_THREAD, NULL, thr, 0))
 	return thr;
     }
   return NULL;
 }
 
-static int
-itset_elt_negated_has_fixed_toi (struct itset_elt *base)
+int
+itset_elt_negated::has_fixed_toi ()
 {
   return 0;
 }
-
-static const struct itset_elt_vtable itset_elt_negated_vtable =
-{
-  itset_elt_negated_destroy,
-  NULL, /* is_range_type */
-  itset_elt_negated_contains_program_space,
-  itset_elt_negated_contains_inferior,
-  itset_elt_negated_contains_thread,
-  itset_elt_negated_get_spec,
-  itset_elt_negated_get_width,
-  itset_elt_negated_get_toi,
-  itset_elt_negated_has_fixed_toi,
-};
 
 static struct itset_elt_negated *
 create_itset_elt_negated (void)
 {
   struct itset_elt_negated *elt;
 
-  elt = XNEW (struct itset_elt_negated);
-  elt->base.vtable = &itset_elt_negated_vtable;
+  elt = new itset_elt_negated ();
   elt->negated = NULL;
 
   return elt;
@@ -2112,35 +1954,43 @@ create_itset_elt_negated (void)
 
 /* An I/T set element representing all inferiors of a given state.  */
 
-struct itset_elt_state
+struct itset_elt_state : public itset_elt
 {
-  struct itset_elt base;
-
   enum thread_state state;
+
+  virtual int contains_program_space (enum itset_width default_width,
+				      struct program_space *pspace);
+
+  virtual int contains_inferior (enum itset_width default_width,
+				 struct inferior *inf,
+				 int including_width);
+
+  virtual int contains_thread (enum itset_width default_width,
+			       struct itset_elt_range *expanding,
+			       struct thread_info *thr,
+			       int include_width);
+  virtual char *get_spec ();
+
+  virtual enum itset_width get_width ();
 };
 
 /* Implementation of `contains_thread' method.  */
 
-static int
-state_contains_thread (struct itset_elt *base,
-		       enum itset_width default_width,
-		       struct itset_elt_range *expanding,
-		       struct thread_info *thr,
-		       int including_width)
+int
+itset_elt_state::contains_thread (enum itset_width default_width,
+				  struct itset_elt_range *expanding,
+				  struct thread_info *thr,
+				  int including_width)
 {
-  struct itset_elt_state *state = (struct itset_elt_state *) base;
-
-  return thr->state == state->state;
+  return thr->state == this->state;
 }
 
  /* Implementation of `contains_program_space' method.  */
 
-static int
-state_contains_program_space (struct itset_elt *base,
-			      enum itset_width default_width,
-			      struct program_space *pspace)
+int
+itset_elt_state::contains_program_space (enum itset_width default_width,
+					 struct program_space *pspace)
 {
-  struct itset_elt_state *state = (struct itset_elt_state *) base;
   struct thread_info *thr;
   /* FIXME: does this method need to take this as parameter?  */
   int including_width = 1;
@@ -2151,8 +2001,7 @@ state_contains_program_space (struct itset_elt *base,
     {
       /* It's cheaper to check the state first, because looking up the
 	 a thread's inferior is O(n).  */
-      if (state_contains_thread (base, default_width,
-				 NULL, thr, including_width))
+      if (contains_thread (default_width, NULL, thr, including_width))
 	{
 	  struct inferior *thr_inf;
 
@@ -2167,13 +2016,11 @@ state_contains_program_space (struct itset_elt *base,
 
 /* Implementation of `contains_inferior' method.  */
 
-static int
-state_contains_inferior (struct itset_elt *base,
-			 enum itset_width default_width,
-			 struct inferior *inf,
-			 int including_width)
+int
+itset_elt_state::contains_inferior (enum itset_width default_width,
+				    struct inferior *inf,
+				    int including_width)
 {
-  struct itset_elt_state *state = (struct itset_elt_state *) base;
   struct thread_info *thr;
 
   /* True if we find a thread of this inferior that is in the state
@@ -2182,7 +2029,7 @@ state_contains_inferior (struct itset_elt *base,
     {
       /* It's cheaper to check the state first, because looking up the
 	 a thread's inferior is O(n).  */
-      if (state_contains_thread (base, default_width, NULL, thr, 1))
+      if (contains_thread (default_width, NULL, thr, 1))
 	{
 	  struct inferior *thr_inf;
 
@@ -2195,12 +2042,10 @@ state_contains_inferior (struct itset_elt *base,
   return 0;
 }
 
-static char *
-state_get_spec (struct itset_elt *base)
+char *
+itset_elt_state::get_spec ()
 {
-  struct itset_elt_state *state = (struct itset_elt_state *) base;
-
-  switch (state->state)
+  switch (this->state)
     {
     case THREAD_RUNNING:
       return xstrdup ("running");
@@ -2211,66 +2056,67 @@ state_get_spec (struct itset_elt *base)
   gdb_assert_not_reached ("unhandled state");
 }
 
-static enum itset_width
-state_get_width (struct itset_elt *base)
+enum itset_width
+itset_elt_state::get_width ()
 {
   return ITSET_WIDTH_DEFAULT;
 }
-
-static const struct itset_elt_vtable state_vtable =
-{
-  NULL,
-  NULL, /* is_range_type */
-  state_contains_program_space,
-  state_contains_inferior,
-  state_contains_thread,
-  state_get_spec,
-  state_get_width
-};
 
 static struct itset_elt *
 create_state_itset (enum thread_state thread_state)
 {
   struct itset_elt_state *elt;
 
-  elt = XNEW (struct itset_elt_state);
-  elt->base.vtable = &state_vtable;
+  elt = new itset_elt_state ();
   elt->state = thread_state;
 
-  return (struct itset_elt *) elt;
+  return elt;
 }
 
 
 
+struct curinf_itset_elt : public itset_elt
+{
+  virtual int contains_program_space (enum itset_width default_width,
+				      struct program_space *pspace);
+
+  virtual int contains_inferior (enum itset_width default_width,
+				 struct inferior *inf,
+				 int including_width);
+
+  virtual int contains_thread (enum itset_width default_width,
+			       struct itset_elt_range *expanding,
+			       struct thread_info *thr,
+			       int include_width);
+  virtual char *get_spec ();
+};
+
 /* Implementation of `contains_program_space' method.  */
 
-static int
-curinf_contains_program_space (struct itset_elt *base,
-			       enum itset_width default_width,
-			       struct program_space *pspace)
+int
+curinf_itset_elt::contains_program_space (enum itset_width default_width,
+					  struct program_space *pspace)
 {
   return current_inferior ()->pspace == pspace;
 }
 
 /* Implementation of `contains_inferior' method.  */
 
-static int
-curinf_contains_inferior (struct itset_elt *base,
-			  enum itset_width default_width,
-			  struct inferior *inf,
-			  int including_width)
+int
+curinf_itset_elt::contains_inferior (enum itset_width default_width,
+				     struct inferior *inf,
+				     int including_width)
 {
   return current_inferior () == inf;
 }
 
 /* Implementation of `contains_thread' method.  */
 
-static int
-curinf_contains_thread (struct itset_elt *base,
-			enum itset_width default_width,
-			struct itset_elt_range *expanding,
-			struct thread_info *thr,
-			int including_width)
+int
+curinf_itset_elt::contains_thread (enum itset_width default_width,
+				   struct itset_elt_range *expanding,
+				   struct thread_info *thr,
+				   int including_width)
 {
   struct inferior *inf;
 
@@ -2278,21 +2124,11 @@ curinf_contains_thread (struct itset_elt *base,
   return current_inferior () == inf;
 }
 
-static char *
-curinf_get_spec (struct itset_elt *base)
+char *
+curinf_itset_elt::get_spec ()
 {
   return xstrdup ("current");
 }
-
-static const struct itset_elt_vtable curinf_vtable =
-{
-  NULL,
-  NULL, /* is_range_type */
-  curinf_contains_program_space,
-  curinf_contains_inferior,
-  curinf_contains_thread,
-  curinf_get_spec
-};
 
 /* Create a new I/T set element representing just the current
    inferior.  */
@@ -2300,57 +2136,59 @@ static const struct itset_elt_vtable curinf_vtable =
 static struct itset_elt *
 create_curinf_itset (void)
 {
-  struct itset_elt *elt;
+  struct curinf_itset_elt *elt;
 
-  elt = XNEW (struct itset_elt);
-  elt->vtable = &curinf_vtable;
+  elt = new curinf_itset_elt ();
 
   return elt;
 }
 
 
 
+struct curthr_itset_elt : public itset_elt
+{
+  virtual int contains_program_space (enum itset_width default_width,
+				      struct program_space *pspace);
+
+  virtual int contains_inferior (enum itset_width default_width,
+				 struct inferior *inf,
+				 int including_width);
+
+  virtual int contains_thread (enum itset_width default_width,
+			       struct itset_elt_range *expanding,
+			       struct thread_info *thr,
+			       int include_width);
+};
+
 /* Implementation of `contains_program_space' method.  */
 
-static int
-curthr_contains_program_space (struct itset_elt *base,
-			       enum itset_width default_width,
-			       struct program_space *pspace)
+int
+curthr_itset_elt::contains_program_space (enum itset_width default_width,
+					  struct program_space *pspace)
 {
   return current_inferior ()->pspace == pspace;
 }
 
 /* Implementation of `contains_inferior' method.  */
 
-static int
-curthr_contains_inferior (struct itset_elt *base,
-			  enum itset_width default_width,
-			  struct inferior *inf,
-			  int including_width)
+int
+curthr_itset_elt::contains_inferior (enum itset_width default_width,
+				     struct inferior *inf,
+				     int including_width)
 {
   return current_inferior () == inf;
 }
 
 /* Implementation of `contains_thread' method.  */
 
-static int
-curthr_contains_thread (struct itset_elt *base,
-			enum itset_width default_width,
-			struct itset_elt_range *expanding,
-			struct thread_info *thr,
-			int including_width)
+int
+curthr_itset_elt::contains_thread (enum itset_width default_width,
+				   struct itset_elt_range *expanding,
+				   struct thread_info *thr,
+				   int including_width)
 {
   return ptid_equal (inferior_ptid, thr->ptid);
 }
-
-static const struct itset_elt_vtable curthr_vtable =
-{
-  NULL,
-  NULL, /* is_range_type */
-  curthr_contains_program_space,
-  curthr_contains_inferior,
-  curthr_contains_thread,
-};
 
 /* Create a new I/T set element representing just the current
    inferior.  */
@@ -2358,45 +2196,57 @@ static const struct itset_elt_vtable curthr_vtable =
 static struct itset_elt *
 create_curthr_itset (void)
 {
-  struct itset_elt *elt;
+  struct curthr_itset_elt *elt;
 
-  elt = XNEW (struct itset_elt);
-  elt->vtable = &curthr_vtable;
+  elt = new curthr_itset_elt ();
 
   return elt;
 }
 
-
 
+
+struct lockstep_itset_elt : public itset_elt
+{
+  virtual int contains_program_space (enum itset_width default_width,
+				      struct program_space *pspace);
+
+  virtual int contains_inferior (enum itset_width default_width,
+				 struct inferior *inf,
+				 int including_width);
+
+  virtual int contains_thread (enum itset_width default_width,
+			       struct itset_elt_range *expanding,
+			       struct thread_info *thr,
+			       int include_width);
+  virtual char *get_spec ();
+};
+
 
 /* Implementation of `contains_program_space' method.  */
 
-static int
-lockstep_contains_program_space (struct itset_elt *base,
-				 enum itset_width default_width,
-				 struct program_space *pspace)
+int
+lockstep_itset_elt::contains_program_space (enum itset_width default_width,
+					    struct program_space *pspace)
 {
   return current_inferior ()->pspace == pspace;
 }
 
 /* Implementation of `contains_inferior' method.  */
 
-static int
-lockstep_contains_inferior (struct itset_elt *base,
-			    enum itset_width default_width,
-			    struct inferior *inf,
-			    int including_width)
+int
+lockstep_itset_elt::contains_inferior (enum itset_width default_width,
+				       struct inferior *inf,
+				       int including_width)
 {
   return current_inferior () == inf;
 }
 
 /* Implementation of `contains_thread' method.  */
 
-static int
-lockstep_contains_thread (struct itset_elt *base,
-			  enum itset_width default_width,
-			  struct itset_elt_range *expanding,
-			  struct thread_info *thr, int including_width)
+int
+lockstep_itset_elt::contains_thread (enum itset_width default_width,
+				     struct itset_elt_range *expanding,
+				     struct thread_info *thr, int including_width)
 {
   struct thread_info *iter;
   CORE_ADDR pc;
@@ -2417,9 +2267,7 @@ lockstep_contains_thread (struct itset_elt *base,
 
   ALL_THREADS (iter)
     {
-      if (expanding->base.vtable->contains_thread (&expanding->base,
-						   default_width,
-						   expanding, iter, 0))
+      if (expanding->contains_thread (default_width, expanding, iter, 0))
 	{
 	  CORE_ADDR iter_pc;
 
@@ -2441,26 +2289,11 @@ lockstep_contains_thread (struct itset_elt *base,
   return 0;
 }
 
-static char *
-lockstep_get_spec (struct itset_elt *base)
+char *
+lockstep_itset_elt::get_spec ()
 {
   return xstrdup ("L");
 }
-
-static const struct itset_elt_vtable lockstep_vtable =
-{
-  NULL,
-  NULL, /* is_range_type */
-  lockstep_contains_program_space,
-  lockstep_contains_inferior,
-  lockstep_contains_thread,
-  lockstep_get_spec,
-  NULL, /* get_width */
-  NULL, /* get_toi */
-  NULL, /* has_fixed_toi */
-  NULL, /* get_focus_object_type */
-  NULL, /* clone */
-};
 
 /* Create a new I/T set element representing just the current
    inferior.  */
@@ -2468,10 +2301,9 @@ static const struct itset_elt_vtable lockstep_vtable =
 static struct itset_elt *
 create_lockstep_itset (void)
 {
-  struct itset_elt *elt;
+  struct lockstep_itset_elt *elt;
 
-  elt = XNEW (struct itset_elt);
-  elt->vtable = &lockstep_vtable;
+  elt = new lockstep_itset_elt ();
 
   return elt;
 }
@@ -2480,26 +2312,35 @@ create_lockstep_itset (void)
 
 /* An I/T set element representing a static list of inferiors.  */
 
-struct itset_elt_static
+struct itset_elt_static : public itset_elt
 {
-  struct itset_elt base;
-
   /* The inferiors.  */
   VEC (int) *inferiors;
 
   /* The threads.  */
   VEC (int) *threads;
+
+  virtual ~itset_elt_static ();
+
+  virtual int contains_program_space (enum itset_width default_width,
+				      struct program_space *pspace);
+
+  virtual int contains_inferior (enum itset_width default_width,
+				 struct inferior *inf,
+				 int including_width);
+
+  virtual int contains_thread (enum itset_width default_width,
+			       struct itset_elt_range *expanding,
+			       struct thread_info *thr,
+			       int include_width);
 };
 
 /* Implementation of `destroy' method.  */
 
-static void
-static_destroy (struct itset_elt *base)
+itset_elt_static::~itset_elt_static ()
 {
-  struct itset_elt_static *st = (struct itset_elt_static *) base;
-
-  VEC_free (int, st->inferiors);
-  VEC_free (int, st->threads);
+  VEC_free (int, this->inferiors);
+  VEC_free (int, this->threads);
 }
 
 /* Helper function to compare two ints.  Returns true if the first
@@ -2514,15 +2355,13 @@ static_lessthan (const int a, const int b)
 
 /* Implementation of `contains_inferior' method.  */
 
-static int
-static_contains_program_space (struct itset_elt *base,
-			       enum itset_width default_width,
-			       struct program_space *pspace)
+int
+itset_elt_static::contains_program_space (enum itset_width default_width,
+					  struct program_space *pspace)
 {
-  struct itset_elt_static *st = (struct itset_elt_static *) base;
   int idx, inf_num;
 
-  for (idx = 0; VEC_iterate (int, st->inferiors, idx, inf_num); ++idx)
+  for (idx = 0; VEC_iterate (int, this->inferiors, idx, inf_num); ++idx)
     {
       struct inferior *inf = find_inferior_id (inf_num);
 
@@ -2535,49 +2374,36 @@ static_contains_program_space (struct itset_elt *base,
 
 /* Implementation of `contains_inferior' method.  */
 
-static int
-static_contains_inferior (struct itset_elt *base,
-			  enum itset_width default_width,
-			  struct inferior *inf,
-			  int including_width)
+int
+itset_elt_static::contains_inferior (enum itset_width default_width,
+				     struct inferior *inf,
+				     int including_width)
 {
-  struct itset_elt_static *st = (struct itset_elt_static *) base;
   int idx;
 
-  idx = VEC_lower_bound (int, st->inferiors, inf->num, static_lessthan);
-  if (idx < VEC_length (int, st->inferiors)
-      && VEC_index (int, st->inferiors, idx) == inf->num)
+  idx = VEC_lower_bound (int, this->inferiors, inf->num, static_lessthan);
+  if (idx < VEC_length (int, this->inferiors)
+      && VEC_index (int, this->inferiors, idx) == inf->num)
     return 1;
   return 0;
 }
 
 /* Implementation of `contains_thread' method.  */
 
-static int
-static_contains_thread (struct itset_elt *base,
-			enum itset_width default_width,
-			struct itset_elt_range *expanding,
-			struct thread_info *thr,
-			int including_width)
+int
+itset_elt_static::contains_thread (enum itset_width default_width,
+				   struct itset_elt_range *expanding,
+				   struct thread_info *thr,
+				   int including_width)
 {
-  struct itset_elt_static *st = (struct itset_elt_static *) base;
   int idx;
 
-  idx = VEC_lower_bound (int, st->threads, thr->per_inf_num, static_lessthan);
-  if (idx < VEC_length (int, st->threads)
-      && VEC_index (int, st->threads, idx) == thr->global_num)
+  idx = VEC_lower_bound (int, this->threads, thr->per_inf_num, static_lessthan);
+  if (idx < VEC_length (int, this->threads)
+      && VEC_index (int, this->threads, idx) == thr->global_num)
     return 1;
   return 0;
 }
-
-static const struct itset_elt_vtable static_vtable =
-{
-  static_destroy,
-  NULL, /* is_range_type */
-  static_contains_program_space,
-  static_contains_inferior,
-  static_contains_thread,
-};
 
 
 
@@ -2635,8 +2461,7 @@ create_static_itset (VEC (itset_elt_ptr) *elements)
   struct itset_elt_static *elt;
   struct iter_data datum;
 
-  elt = XNEW (struct itset_elt_static);
-  elt->base.vtable = &static_vtable;
+  elt = new itset_elt_static ();
   elt->inferiors = NULL;
   elt->threads = NULL;
 
@@ -2655,7 +2480,7 @@ create_static_itset (VEC (itset_elt_ptr) *elements)
 	   VEC_length (int, elt->threads),
 	   sizeof (int), compare_positive_ints);
 
-  return (struct itset_elt *) elt;
+  return elt;
 }
 
 
@@ -3038,8 +2863,7 @@ itset_get_range_elt_if_simple (struct itset *itset)
       struct itset_elt *elt;
 
       elt = VEC_index (itset_elt_ptr, current_itset->elements, 0);
-      if (elt->vtable->is_range_type != NULL
-	  && elt->vtable->is_range_type (elt))
+      if (elt->is_range_type ())
 	return (struct itset_elt_range *) elt;
     }
 
@@ -3087,8 +2911,7 @@ parse_elem_1 (struct itset_parser *self)
 
 	      elt = VEC_index (itset_elt_ptr, current_itset->elements, 0);
 
-	      if (elt->vtable->is_range_type != NULL
-		  && elt->vtable->is_range_type (elt))
+	      if (elt->is_range_type ())
 		{
 		  struct itset_elt_range *range_elt
 		    = (struct itset_elt_range *) elt;
@@ -3126,10 +2949,9 @@ parse_elem_1 (struct itset_parser *self)
 
 	  elt = VEC_index (itset_elt_ptr, current_itset->elements, 0);
 
-	  if (elt->vtable->is_range_type != NULL
-	      && elt->vtable->is_range_type (elt))
+	  if (elt->is_range_type ())
 	    {
-	      struct itset_elt *clone_elt = elt->vtable->clone (elt);
+	      struct itset_elt *clone_elt = elt->clone ();
 	      struct itset_elt_range *range_elt = (struct itset_elt_range *) clone_elt;
 
 	      range_elt->width = width;
@@ -3156,7 +2978,7 @@ parse_elem_1 (struct itset_parser *self)
       else
 #endif
 	elt_range->group = group;
-      return &elt_range->base;
+      return elt_range;
     }
 
   return parse_named_or_throw (&self->spec);
@@ -3363,7 +3185,7 @@ set_get_spec (VEC (itset_elt_ptr) *elements)
 
   for (ix = 0; VEC_iterate (itset_elt_ptr, elements, ix, elt); ++ix)
     {
-      const char *elt_spec = elt->vtable->get_spec (elt);
+      const char *elt_spec = elt->get_spec ();
 
       ret = reconcat (ret, ret, ix == 0 ? "" : ",", elt_spec, (char *) NULL);
     }
@@ -3395,7 +3217,7 @@ set_get_width (VEC (itset_elt_ptr) *elements)
 
   for (ix = 0; VEC_iterate (itset_elt_ptr, elements, ix, elt); ++ix)
     {
-      enum itset_width elt_width = elt->vtable->get_width (elt);
+      enum itset_width elt_width = elt->get_width ();
 
       if (elt_width > width)
 	width = elt_width;
@@ -3419,7 +3241,7 @@ set_get_toi (VEC (itset_elt_ptr) *elements)
 
   for (ix = 0; VEC_iterate (itset_elt_ptr, elements, ix, elt); ++ix)
     {
-      struct thread_info *tp = elt->vtable->get_toi (elt);
+      struct thread_info *tp = elt->get_toi ();
 
       if (tp != NULL)
 	return tp;
@@ -3442,7 +3264,7 @@ set_has_fixed_toi (VEC (itset_elt_ptr) *elements)
 
   for (ix = 0; VEC_iterate (itset_elt_ptr, elements, ix, elt); ++ix)
     {
-      if (elt->vtable->has_fixed_toi (elt))
+      if (elt->has_fixed_toi ())
 	return 1;
     }
 
@@ -3465,8 +3287,7 @@ set_get_focus_object_type (VEC (itset_elt_ptr) *elements)
     {
       char object_type_char = '\0';
 
-      if (elt->vtable->get_focus_object_type != NULL)
-	object_type_char = elt->vtable->get_focus_object_type (elt);
+      object_type_char = elt->get_focus_object_type ();
       if (object_type_char != '\0')
 	return object_type_char;
     }
@@ -4138,7 +3959,7 @@ itfocus_from_thread_switch (void)
 	= itset_reference (cur_elt_range->explicit_width);
     }
 
-  new_itset = itset_from_elt (&new_elt_range->base);
+  new_itset = itset_from_elt (new_elt_range);
   itset_free (current_itset);
   current_itset = new_itset;
 }
