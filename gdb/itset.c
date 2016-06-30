@@ -30,6 +30,7 @@
 #include "gdbcmd.h"
 #include "ada-lang.h"
 #include "completer.h"
+#include <vector>
 
 /* FIXME */
 char itset_get_focus_object_type (struct itset *set);
@@ -140,8 +141,7 @@ make_cleanup_itset_elt_free (struct itset_elt *elt)
   return make_cleanup (itset_elt_free_cleanup, elt);
 }
 
-typedef struct itset_elt *itset_elt_ptr;
-DEF_VEC_P (itset_elt_ptr);
+typedef std::vector<itset_elt *> itset_elt_vector;
 
 struct itset
 {
@@ -155,7 +155,7 @@ struct itset
   int refc;
 
   /* The elements making up the set.  */
-  VEC (itset_elt_ptr) *elements;
+  itset_elt_vector elements;
 };
 
 const char *
@@ -167,7 +167,7 @@ itset_name (const struct itset *itset)
 int
 itset_is_empty_set (struct itset *set)
 {
-  return VEC_empty (itset_elt_ptr, set->elements);
+  return set->elements.empty ();
 }
 
 
@@ -244,15 +244,16 @@ get_named_itset (char *name)
    contained by the set ELEMENTS.  */
 
 static int
-set_contains_program_space (VEC (itset_elt_ptr) *elements,
+set_contains_program_space (const itset_elt_vector &elements,
 			    enum itset_width default_width,
 			    struct program_space *pspace)
 {
-  int ix;
-  struct itset_elt *elt;
-
-  for (ix = 0; VEC_iterate (itset_elt_ptr, elements, ix, elt); ++ix)
+  for (itset_elt_vector::const_iterator it = elements.begin ();
+       it != elements.end ();
+       ++it)
     {
+      struct itset_elt *elt = *it;
+
       if (elt->contains_program_space (default_width, pspace))
 	return 1;
     }
@@ -264,16 +265,17 @@ set_contains_program_space (VEC (itset_elt_ptr) *elements,
    contained by the set ELEMENTS.  */
 
 static int
-set_contains_inferior (VEC (itset_elt_ptr) *elements,
+set_contains_inferior (const itset_elt_vector &elements,
 		       enum itset_width default_width,
 		       struct inferior *inf,
 		       int including_width)
 {
-  int ix;
-  struct itset_elt *elt;
-
-  for (ix = 0; VEC_iterate (itset_elt_ptr, elements, ix, elt); ++ix)
+  for (itset_elt_vector::const_iterator it = elements.begin ();
+       it != elements.end ();
+       ++it)
     {
+      struct itset_elt *elt = *it;
+
       if (elt->contains_inferior (default_width,
 				  inf, including_width))
 	return 1;
@@ -286,16 +288,17 @@ set_contains_inferior (VEC (itset_elt_ptr) *elements,
    by the set ELEMENTS.  */
 
 static int
-set_contains_thread (VEC (itset_elt_ptr) *elements,
+set_contains_thread (const itset_elt_vector &elements,
 		     enum itset_width default_width,
 		     struct thread_info *thr,
 		     int including_width)
 {
-  int ix;
-  struct itset_elt *elt;
-
-  for (ix = 0; VEC_iterate (itset_elt_ptr, elements, ix, elt); ++ix)
+  for (itset_elt_vector::const_iterator it = elements.begin ();
+       it != elements.end ();
+       ++it)
     {
+      struct itset_elt *elt = *it;
+
       if (elt->contains_thread (default_width, NULL, thr, including_width))
 	return 1;
     }
@@ -303,19 +306,20 @@ set_contains_thread (VEC (itset_elt_ptr) *elements,
   return 0;
 }
 
-/* A helper function to destroy all the elements in the set ELEMENTS.
-   This also destroys ELEMENTS itself.  */
+/* A helper function to destroy all the elements in the set
+   ELEMENTS.  */
 
 static void
-set_free (VEC (itset_elt_ptr) *elements)
+set_free (const itset_elt_vector &elements)
 {
-  int ix;
-  struct itset_elt *elt;
+  for (itset_elt_vector::const_iterator it = elements.begin ();
+       it != elements.end ();
+       ++it)
+    {
+      struct itset_elt *elt = *it;
 
-  for (ix = 0; VEC_iterate (itset_elt_ptr, elements, ix, elt); ++ix)
-    itset_elt_free (elt);
-
-  VEC_free (itset_elt_ptr, elements);
+      itset_elt_free (elt);
+    }
 }
 
 
@@ -1408,7 +1412,7 @@ parse_double_range_itset (const char **spec, enum itset_width width,
 struct itset_elt_intersect : public itset_elt
 {
   /* The elements that will be intersected.  */
-  VEC (itset_elt_ptr) *elements;
+  itset_elt_vector elements;
 
   virtual ~itset_elt_intersect ();
 
@@ -1436,7 +1440,6 @@ struct itset_elt_intersect : public itset_elt
 
 itset_elt_intersect::~itset_elt_intersect ()
 {
-  VEC_free (itset_elt_ptr, this->elements);
 }
 
 /* Implementation of `contains_program_space' method.  */
@@ -1445,13 +1448,14 @@ int
 itset_elt_intersect::contains_program_space (enum itset_width default_width,
 					     struct program_space *pspace)
 {
-  struct itset_elt *elt;
-  int ix;
+  gdb_assert (!this->elements.empty ());
 
-  gdb_assert (!VEC_empty (itset_elt_ptr, this->elements));
-
-  for (ix = 0; VEC_iterate (itset_elt_ptr, this->elements, ix, elt); ++ix)
+  for (itset_elt_vector::const_iterator it = this->elements.begin ();
+       it != this->elements.end ();
+       ++it)
     {
+      struct itset_elt *elt = *it;
+
       if (!elt->contains_program_space (default_width, pspace))
 	return 0;
     }
@@ -1466,13 +1470,14 @@ itset_elt_intersect::contains_inferior (enum itset_width default_width,
 					struct inferior *inf,
 					int including_width)
 {
-  struct itset_elt *elt;
-  int ix;
+  gdb_assert (!this->elements.empty ());
 
-  gdb_assert (!VEC_empty (itset_elt_ptr, this->elements));
-
-  for (ix = 0; VEC_iterate (itset_elt_ptr, this->elements, ix, elt); ++ix)
+  for (itset_elt_vector::const_iterator it = this->elements.begin ();
+       it != this->elements.end ();
+       ++it)
     {
+      struct itset_elt *elt = *it;
+
       if (!elt->contains_inferior (default_width, inf, including_width))
 	return 0;
     }
@@ -1488,13 +1493,14 @@ itset_elt_intersect::contains_thread (enum itset_width default_width,
 				      struct thread_info *thr,
 				      int including_width)
 {
-  struct itset_elt *elt;
-  int ix;
+  gdb_assert (!this->elements.empty ());
 
-  gdb_assert (!VEC_empty (itset_elt_ptr, this->elements));
-
-  for (ix = 0; VEC_iterate (itset_elt_ptr, this->elements, ix, elt); ++ix)
+  for (itset_elt_vector::const_iterator it = this->elements.begin ();
+       it != this->elements.end ();
+       ++it)
     {
+      struct itset_elt *elt = *it;
+
       if (!elt->contains_thread (default_width, expanding,
 				 thr, including_width))
 	return 0;
@@ -1506,26 +1512,28 @@ itset_elt_intersect::contains_thread (enum itset_width default_width,
 char *
 itset_elt_intersect::get_spec ()
 {
-  struct itset_elt *elt;
-  int ix;
   char *ret = NULL;
 
-  gdb_assert (!VEC_empty (itset_elt_ptr, this->elements));
+  gdb_assert (!this->elements.empty ());
 
-  for (ix = 0; VEC_iterate (itset_elt_ptr, this->elements, ix, elt); ++ix)
+  for (itset_elt_vector::const_iterator it = this->elements.begin ();
+       it != this->elements.end ();
+       ++it)
     {
+      struct itset_elt *elt = *it;
       const char *elt_spec = elt->get_spec ();
 
       ret = reconcat (ret, ret == NULL ? "" : ret,
-		      ix == 0 ? "" : "&", elt_spec, (char *) NULL);
+		      it == this->elements.begin () ? "" : "&",
+		      elt_spec, (char *) NULL);
     }
 
   return ret;
 }
 
-static enum itset_width set_get_width (VEC (itset_elt_ptr) *elements);
-static struct thread_info *set_get_toi (VEC (itset_elt_ptr) *elements);
-static int set_has_fixed_toi (VEC (itset_elt_ptr) *elements);
+static enum itset_width set_get_width (const itset_elt_vector &elements);
+static struct thread_info *set_get_toi (const itset_elt_vector &elements);
+static int set_has_fixed_toi (const itset_elt_vector &elements);
 
 enum itset_width
 itset_elt_intersect::get_width ()
@@ -1553,7 +1561,6 @@ create_intersect_itset (void)
   struct itset_elt_intersect *elt;
 
   elt = new itset_elt_intersect ();
-  elt->elements = NULL;
 
   return elt;
 }
@@ -1820,7 +1827,7 @@ itset_add_set (struct itset *to, struct itset *addme)
   struct itset_elt *elt;
 
   elt = (struct itset_elt *) create_itset_elt_itset (addme);
-  VEC_safe_push (itset_elt_ptr, to->elements, elt);
+  to->elements.push_back (elt);
 }
 
 
@@ -2417,7 +2424,7 @@ struct iter_data
 
   /* The elements of the original (dynamic) I/T set.  */
 
-  VEC (itset_elt_ptr) *elements;
+  itset_elt_vector elements;
 
   /* The default width.  */
   enum itset_width default_width;
@@ -2456,7 +2463,7 @@ check_one_thread (struct thread_info *thr, void *datum)
 /* Create a new static I/T set from the list of elements.  */
 
 static struct itset_elt *
-create_static_itset (VEC (itset_elt_ptr) *elements)
+create_static_itset (itset_elt_vector &elements)
 {
   struct itset_elt_static *elt;
   struct iter_data datum;
@@ -2466,7 +2473,7 @@ create_static_itset (VEC (itset_elt_ptr) *elements)
   elt->threads = NULL;
 
   datum.st = elt;
-  datum.elements = elements;
+  std::swap (datum.elements, elements);
 
   iterate_over_inferiors (check_one_inferior, &datum);
   if (VEC_length (int, elt->inferiors) > 1)
@@ -2858,11 +2865,11 @@ static struct itset *
 static struct itset_elt_range *
 itset_get_range_elt_if_simple (struct itset *itset)
 {
-  if (VEC_length (itset_elt_ptr, itset->elements) == 1)
+  if (itset->elements.size () == 1)
     {
       struct itset_elt *elt;
 
-      elt = VEC_index (itset_elt_ptr, current_itset->elements, 0);
+      elt = current_itset->elements[0];
       if (elt->is_range_type ())
 	return (struct itset_elt_range *) elt;
     }
@@ -2905,11 +2912,9 @@ parse_elem_1 (struct itset_parser *self)
 	width = self->default_width;
       else if (width == ITSET_WIDTH_EXPLICIT)
 	{
-	  if (VEC_length (itset_elt_ptr, current_itset->elements) == 1)
+	  if (current_itset->elements.size () == 1)
 	    {
-	      struct itset_elt *elt;
-
-	      elt = VEC_index (itset_elt_ptr, current_itset->elements, 0);
+	      struct itset_elt *elt = current_itset->elements [0];
 
 	      if (elt->is_range_type ())
 		{
@@ -2943,11 +2948,11 @@ parse_elem_1 (struct itset_parser *self)
       || *self->spec == '('
       || *self->spec == ')')
     {
-      if (VEC_length (itset_elt_ptr, current_itset->elements) == 1)
+      if (current_itset->elements.size () == 1)
 	{
 	  struct itset_elt *elt;
 
-	  elt = VEC_index (itset_elt_ptr, current_itset->elements, 0);
+	  elt = current_itset->elements[0];
 
 	  if (elt->is_range_type ())
 	    {
@@ -3094,8 +3099,8 @@ parse_inters (struct itset_parser *self)
   if (*self->spec == '&')
     {
       intersect = create_intersect_itset ();
-      VEC_safe_push (itset_elt_ptr, intersect->elements, elt1);
-      elt1 = (struct itset_elt *) intersect;
+      intersect->elements.push_back (elt1);
+      elt1 = intersect;
 
       discard_cleanups (old_chain);
       old_chain = make_cleanup_itset_elt_free (elt1);
@@ -3111,7 +3116,7 @@ parse_inters (struct itset_parser *self)
 	  do_cleanups (old_chain);
 	  return NULL;
 	}
-      VEC_safe_push (itset_elt_ptr, intersect->elements, elt2);
+      intersect->elements.push_back (elt2);
     }
 
   discard_cleanups (old_chain);
@@ -3141,8 +3146,8 @@ parse_itset_one (struct itset_parser *self)
 
       un = create_itset_elt_itset (set);
 
-      VEC_safe_push (itset_elt_ptr, set->elements, inters1);
-      inters1 = (struct itset_elt *) un;
+      set->elements.push_back (inters1);
+      inters1 = un;
 
       discard_cleanups (old_chain);
       old_chain = make_cleanup_itset_elt_free (inters1);
@@ -3164,7 +3169,7 @@ parse_itset_one (struct itset_parser *self)
 	  do_cleanups (old_chain);
 	  return NULL;
 	}
-      VEC_safe_push (itset_elt_ptr, un->set->elements, inters2);
+      un->set->elements.push_back (inters2);
 
       maybe_skip_spaces (self);
     }
@@ -3177,17 +3182,20 @@ parse_itset_one (struct itset_parser *self)
    contained by the set ELEMENTS.  */
 
 static char *
-set_get_spec (VEC (itset_elt_ptr) *elements)
+set_get_spec (const itset_elt_vector &elements)
 {
-  int ix;
-  struct itset_elt *elt;
   char *ret = xstrdup ("");
 
-  for (ix = 0; VEC_iterate (itset_elt_ptr, elements, ix, elt); ++ix)
+  for (itset_elt_vector::const_iterator it = elements.begin ();
+       it != elements.end ();
+       ++it)
     {
+      struct itset_elt *elt = *it;
       const char *elt_spec = elt->get_spec ();
 
-      ret = reconcat (ret, ret, ix == 0 ? "" : ",", elt_spec, (char *) NULL);
+      ret = reconcat (ret, ret,
+		      it == elements.begin () ? "" : ",",
+		      elt_spec, (char *) NULL);
     }
 
   return ret;
@@ -3209,14 +3217,15 @@ itset_spec (const struct itset *set)
 }
 
 static enum itset_width
-set_get_width (VEC (itset_elt_ptr) *elements)
+set_get_width (const itset_elt_vector &elements)
 {
-  int ix;
-  struct itset_elt *elt;
   enum itset_width width = ITSET_WIDTH_DEFAULT;
 
-  for (ix = 0; VEC_iterate (itset_elt_ptr, elements, ix, elt); ++ix)
+  for (itset_elt_vector::const_iterator it = elements.begin ();
+       it != elements.end ();
+       ++it)
     {
+      struct itset_elt *elt = *it;
       enum itset_width elt_width = elt->get_width ();
 
       if (elt_width > width)
@@ -3234,13 +3243,13 @@ itset_get_width (struct itset *set)
 
 
 static struct thread_info *
-set_get_toi (VEC (itset_elt_ptr) *elements)
+set_get_toi (const itset_elt_vector &elements)
 {
-  int ix;
-  struct itset_elt *elt;
-
-  for (ix = 0; VEC_iterate (itset_elt_ptr, elements, ix, elt); ++ix)
+  for (itset_elt_vector::const_iterator it = elements.begin ();
+       it != elements.end ();
+       ++it)
     {
+      struct itset_elt *elt = *it;
       struct thread_info *tp = elt->get_toi ();
 
       if (tp != NULL)
@@ -3257,13 +3266,13 @@ itset_get_toi (struct itset *set)
 }
 
 static int
-set_has_fixed_toi (VEC (itset_elt_ptr) *elements)
+set_has_fixed_toi (const itset_elt_vector &elements)
 {
-  int ix;
-  struct itset_elt *elt;
-
-  for (ix = 0; VEC_iterate (itset_elt_ptr, elements, ix, elt); ++ix)
+  for (itset_elt_vector::const_iterator it = elements.begin ();
+       it != elements.end ();
+       ++it)
     {
+      struct itset_elt *elt = *it;
       if (elt->has_fixed_toi ())
 	return 1;
     }
@@ -3278,13 +3287,13 @@ itset_has_fixed_toi (struct itset *set)
 }
 
 static char
-set_get_focus_object_type (VEC (itset_elt_ptr) *elements)
+set_get_focus_object_type (const itset_elt_vector &elements)
 {
-  int ix;
-  struct itset_elt *elt;
-
-  for (ix = 0; VEC_iterate (itset_elt_ptr, elements, ix, elt); ++ix)
+  for (itset_elt_vector::const_iterator it = elements.begin ();
+       it != elements.end ();
+       ++it)
     {
+      struct itset_elt *elt = *it;
       char object_type_char = '\0';
 
       object_type_char = elt->get_focus_object_type ();
@@ -3337,7 +3346,7 @@ itset_create_const_1 (const char **specp, enum itset_width default_width)
       parser.default_width = default_width;
       parser.spec = spec;
       elt = parse_itset_one (&parser);
-      VEC_safe_push (itset_elt_ptr, result->elements, elt);
+      result->elements.push_back (elt);
 
       spec = parser.spec;
 #if 0
@@ -3353,9 +3362,9 @@ itset_create_const_1 (const char **specp, enum itset_width default_width)
     {
       struct itset_elt *st = create_static_itset (result->elements);
 
-      set_free (result->elements);
-      result->elements = NULL;
-      VEC_safe_push (itset_elt_ptr, result->elements, st);
+      /* Should have been swapped in.  */
+      gdb_assert (result->elements.empty ());
+      result->elements.push_back (st);
     }
 
   discard_cleanups (cleanups);
@@ -3922,7 +3931,7 @@ itset_from_elt (struct itset_elt *elt)
   itset = XCNEW (struct itset);
   itset->refc = 1;
 
-  VEC_safe_push (itset_elt_ptr, itset->elements, elt);
+  itset->elements.push_back (elt);
   return itset;
 }
 
