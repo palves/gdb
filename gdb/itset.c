@@ -31,6 +31,7 @@
 #include "ada-lang.h"
 #include "completer.h"
 #include <vector>
+#include <set>
 
 /* FIXME */
 char itset_get_focus_object_type (struct itset *set);
@@ -2322,12 +2323,10 @@ create_lockstep_itset (void)
 struct itset_elt_static : public itset_elt
 {
   /* The inferiors.  */
-  VEC (int) *inferiors;
+  std::set<int> inferiors;
 
   /* The threads.  */
-  VEC (int) *threads;
-
-  virtual ~itset_elt_static ();
+  std::set<int> threads;
 
   virtual int contains_program_space (enum itset_width default_width,
 				      struct program_space *pspace);
@@ -2342,35 +2341,17 @@ struct itset_elt_static : public itset_elt
 			       int include_width);
 };
 
-/* Implementation of `destroy' method.  */
-
-itset_elt_static::~itset_elt_static ()
-{
-  VEC_free (int, this->inferiors);
-  VEC_free (int, this->threads);
-}
-
-/* Helper function to compare two ints.  Returns true if the first
-   argument is strictly less than the second, useful for
-   VEC_lower_bound.  */
-
-static int
-static_lessthan (const int a, const int b)
-{
-  return a < b;
-}
-
 /* Implementation of `contains_inferior' method.  */
 
 int
 itset_elt_static::contains_program_space (enum itset_width default_width,
 					  struct program_space *pspace)
 {
-  int idx, inf_num;
-
-  for (idx = 0; VEC_iterate (int, this->inferiors, idx, inf_num); ++idx)
+  for (std::set<int>::const_iterator it = this->inferiors.begin ();
+       it != this->inferiors.end ();
+       ++it)
     {
-      struct inferior *inf = find_inferior_id (inf_num);
+      struct inferior *inf = find_inferior_id (*it);
 
       if (inf->pspace == pspace)
 	return 1;
@@ -2386,13 +2367,7 @@ itset_elt_static::contains_inferior (enum itset_width default_width,
 				     struct inferior *inf,
 				     int including_width)
 {
-  int idx;
-
-  idx = VEC_lower_bound (int, this->inferiors, inf->num, static_lessthan);
-  if (idx < VEC_length (int, this->inferiors)
-      && VEC_index (int, this->inferiors, idx) == inf->num)
-    return 1;
-  return 0;
+  return this->inferiors.find (inf->num) != this->inferiors.end ();
 }
 
 /* Implementation of `contains_thread' method.  */
@@ -2403,89 +2378,32 @@ itset_elt_static::contains_thread (enum itset_width default_width,
 				   struct thread_info *thr,
 				   int including_width)
 {
-  int idx;
-
-  idx = VEC_lower_bound (int, this->threads, thr->per_inf_num, static_lessthan);
-  if (idx < VEC_length (int, this->threads)
-      && VEC_index (int, this->threads, idx) == thr->global_num)
-    return 1;
-  return 0;
+  return this->threads.find (thr->global_num) != this->threads.end ();
 }
 
 
 
-/* Helper struct used to pass data through iterate_over_inferiors.  */
-
-struct iter_data
-{
-  /* The I/T set we are constructing.  */
-
-  struct itset_elt_static *st;
-
-  /* The elements of the original (dynamic) I/T set.  */
-
-  itset_elt_vector elements;
-
-  /* The default width.  */
-  enum itset_width default_width;
-};
-
-/* A callback for iterate_over_inferiors that adds an inferior to the
-   result set, if it is in the source set.  */
-
-static int
-check_one_inferior (struct inferior *inf, void *datum)
-{
-  struct iter_data *id = (struct iter_data *) datum;
-
-  if (set_contains_inferior (id->elements, id->default_width, inf, 1))
-    VEC_safe_push (int, id->st->inferiors, inf->num);
-
-  /* Keep going.  */
-  return 0;
-}
-
-/* A callback for iterate_over_threads that adds a thread to the
-   result set, if it is in the source set.  */
-
-static int
-check_one_thread (struct thread_info *thr, void *datum)
-{
-  struct iter_data *id = (struct iter_data *) datum;
-
-  if (set_contains_thread (id->elements, id->default_width, thr, 1))
-    VEC_safe_push (int, id->st->threads, thr->global_num);
-
-  /* Keep going.  */
-  return 0;
-}
-
 /* Create a new static I/T set from the list of elements.  */
 
 static struct itset_elt *
-create_static_itset (itset_elt_vector &elements)
+create_static_itset (enum itset_width default_width,
+		     const itset_elt_vector &elements)
 {
-  struct itset_elt_static *elt;
-  struct iter_data datum;
+  struct inferior *inf;
+  struct thread_info *thr;
+  struct itset_elt_static *elt = new itset_elt_static ();
 
-  elt = new itset_elt_static ();
-  elt->inferiors = NULL;
-  elt->threads = NULL;
+  ALL_INFERIORS (inf)
+    {
+      if (set_contains_inferior (elements, default_width, inf, 1))
+	elt->inferiors.insert (inf->num);
+    }
 
-  datum.st = elt;
-  std::swap (datum.elements, elements);
-
-  iterate_over_inferiors (check_one_inferior, &datum);
-  if (VEC_length (int, elt->inferiors) > 1)
-    qsort (VEC_address (int, elt->inferiors),
-	   VEC_length (int, elt->inferiors),
-	   sizeof (int), compare_positive_ints);
-
-  iterate_over_threads (check_one_thread, &datum);
-  if (VEC_length (int, elt->threads) > 1)
-    qsort (VEC_address (int, elt->threads),
-	   VEC_length (int, elt->threads),
-	   sizeof (int), compare_positive_ints);
+  ALL_NON_EXITED_THREADS (thr)
+    {
+      if (set_contains_thread (elements, default_width, thr, 1))
+	elt->threads.insert (thr->global_num);
+    }
 
   return elt;
 }
@@ -3360,10 +3278,11 @@ itset_create_const_1 (const char **specp, enum itset_width default_width)
 
   if (is_static)
     {
-      struct itset_elt *st = create_static_itset (result->elements);
+      struct itset_elt *st = create_static_itset (ITSET_WIDTH_ALL,
+						  result->elements);
 
-      /* Should have been swapped in.  */
-      gdb_assert (result->elements.empty ());
+      set_free (result->elements);
+      result->elements.clear ();
       result->elements.push_back (st);
     }
 
