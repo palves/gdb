@@ -34,17 +34,17 @@
 #include <set>
 
 /* FIXME */
-char itset_get_focus_object_type (struct itset *set);
+char itset_get_focus_object_type (itset *set);
 
 /* Rather than creating/destroying these dynamic itsets when
    necessary, keep global copies around (itsets are refcounted).  */
-static struct itset *all_itset;
-static struct itset *empty_itset;
-static struct itset *running_itset;
-static struct itset *stopped_itset;
-static struct itset *curinf_itset;
-static struct itset *curthr_itset;
-static struct itset *lockstep_itset;
+static itset *all_itset;
+static itset *empty_itset;
+static itset *running_itset;
+static itset *stopped_itset;
+static itset *curinf_itset;
+static itset *curthr_itset;
+static itset *lockstep_itset;
 
 /* Forward declaration of the base class.  */
 struct itset_elt;
@@ -144,29 +144,59 @@ make_cleanup_itset_elt_free (struct itset_elt *elt)
 
 typedef std::vector<itset_elt *> itset_elt_vector;
 
-struct itset
+static void set_free (const itset_elt_vector &elements);
+
+class itset
 {
+public:
+  itset ();
+  ~itset ();
+
+  void incref ()
+  {
+    ++this->m_refc;
+  }
+
+  void decref ()
+  {
+    if (--this->m_refc == 0)
+      delete this;
+  }
+
   /* The itset's name.  May be NULL.  */
   char *name;
 
   /* The original specification of the set.  */
   char *spec;
 
-  /* The reference count.  */
-  int refc;
-
   /* The elements making up the set.  */
   itset_elt_vector elements;
+
+private:
+  /* The reference count.  */
+  int m_refc;
 };
 
+itset::itset()
+  : name (NULL), spec (NULL), m_refc (1)
+{
+}
+
+itset::~itset()
+{
+  set_free (elements);
+  xfree (name);
+  xfree (spec);
+}
+
 const char *
-itset_name (const struct itset *itset)
+itset_name (const itset *itset)
 {
   return itset->name;
 }
 
 int
-itset_is_empty_set (struct itset *set)
+itset_is_empty_set (itset *set)
 {
   return set->elements.empty ();
 }
@@ -177,22 +207,35 @@ itset_is_empty_set (struct itset *set)
    debugger built-in (all, stopped, running, etc.), or user
    defined.  */
 
-struct named_itset
+class named_itset
 {
-  /* Pointer to next in linked list.  */
-  struct named_itset *next;
+public:
+
+  explicit named_itset (itset *wrapped_set)
+    : next (NULL),
+      number (0),
+      set (wrapped_set)
+  {}
+
+  ~named_itset ()
+  {
+    itset_free (set);
+  }
+
+  /* Pointer to next in linked list.  XXX */
+  named_itset *next;
 
   /* Unique identifier.  Positive if user defined, negative if
      internal and built-in.  */
   int number;
 
   /* The I/T set.  */
-  struct itset *set;
+  itset *set;
 };
 
 /* The head of the list of named I/T sets.  */
 
-static struct named_itset *named_itsets;
+static named_itset *named_itsets;
 
 /* Number of last named itset made.  */
 
@@ -412,7 +455,7 @@ struct itset_elt_range : public itset_elt
   enum itset_width width;
 
   /* If WIDTH is explicit, this is the width set, otherwise NULL.  */
-  struct itset *explicit_width;
+  itset *explicit_width;
 
   /* The selected group, otherwise NULL.  */
   struct itset_elt *group;
@@ -544,7 +587,7 @@ itset_elt_range::range_get_spec (int range_type_char)
   return res;
 }
 
-static char *itset_get_spec (const struct itset *set);
+static char *itset_get_spec (const itset *set);
 
 static char *
 double_range_get_spec (struct itset_elt *base, int range_type_char,
@@ -800,7 +843,7 @@ itset_elt_thread_range::contains_program_space (enum itset_width default_width,
 
   if (width == ITSET_WIDTH_EXPLICIT)
     {
-      struct itset *ew = this->explicit_width;
+      itset *ew = this->explicit_width;
 
       if (itset_contains_program_space (ew, default_width, pspace))
 	return 1;
@@ -833,7 +876,7 @@ itset_elt_thread_range::contains_inferior (enum itset_width default_width,
 
   if (including_width && width == ITSET_WIDTH_EXPLICIT)
     {
-      struct itset *ew = this->explicit_width;
+      itset *ew = this->explicit_width;
 
       if (itset_width_contains_inferior (ew, default_width, inf))
 	return 1;
@@ -869,7 +912,7 @@ itset_elt_thread_range::contains_thread (enum itset_width default_width,
 
   if (including_width && width == ITSET_WIDTH_EXPLICIT)
     {
-      struct itset *ew = this->explicit_width;
+      itset *ew = this->explicit_width;
 
       if (itset_contains_thread (ew, thr))
 	return 1;
@@ -1714,7 +1757,7 @@ create_empty_itset (void)
 struct itset_elt_itset : public itset_elt
 {
   /* The I/T set this element wraps.  */
-  struct itset *set;
+  itset *set;
 
   virtual ~itset_elt_itset ();
 
@@ -1753,7 +1796,7 @@ itset_elt_itset::contains_program_space (enum itset_width default_width,
 }
 
 static int
-itset_contains_inferior_1 (struct itset *set,
+itset_contains_inferior_1 (itset *set,
 			   enum itset_width default_width,
 			   struct inferior *inf,
 			   int including_width);
@@ -1812,7 +1855,7 @@ itset_elt_itset::has_fixed_toi ()
 }
 
 static struct itset_elt_itset *
-create_itset_elt_itset (struct itset *set)
+create_itset_elt_itset (itset *set)
 {
   struct itset_elt_itset *elt;
 
@@ -1823,7 +1866,7 @@ create_itset_elt_itset (struct itset *set)
 }
 
 void
-itset_add_set (struct itset *to, struct itset *addme)
+itset_add_set (itset *to, itset *addme)
 {
   struct itset_elt *elt;
 
@@ -2642,13 +2685,13 @@ parse_named_or_throw (const char **textp)
 static void
 itset_free_cleanup (void *arg)
 {
-  struct itset *itset = (struct itset *) arg;
+  itset *set = (itset *) arg;
 
-  itset_free (itset);
+  itset_free (set);
 }
 
 struct cleanup *
-make_cleanup_itset_free (struct itset *itset)
+make_cleanup_itset_free (itset *itset)
 {
   return make_cleanup (itset_free_cleanup, itset);
 }
@@ -2777,11 +2820,11 @@ parse_range_elem (struct itset_parser *self, enum itset_width width)
   return NULL;
 }
 
-static struct itset *
+static itset *
   itset_create_const_1 (const char **specp, enum itset_width default_width);
 
 static struct itset_elt_range *
-itset_get_range_elt_if_simple (struct itset *itset)
+itset_get_range_elt_if_simple (itset *itset)
 {
   if (itset->elements.size () == 1)
     {
@@ -2802,7 +2845,7 @@ parse_elem_1 (struct itset_parser *self)
   enum itset_width width;
   const char *save_spec = self->spec;
   struct itset_elt *group = NULL;
-  struct itset *explicit_width = NULL;
+  itset *explicit_width = NULL;
 
   maybe_skip_spaces (self);
 
@@ -3057,10 +3100,7 @@ parse_itset_one (struct itset_parser *self)
 
   if (*self->spec == ',' || (self->parens_level > 0 && *self->spec != ')'))
     {
-      struct itset *set;
-
-      set = XCNEW (struct itset);
-      set->refc = 1;
+      itset *set = new itset ();
 
       un = create_itset_elt_itset (set);
 
@@ -3120,7 +3160,7 @@ set_get_spec (const itset_elt_vector &elements)
 }
 
 static char *
-itset_get_spec (const struct itset *set)
+itset_get_spec (const itset *set)
 {
   return set_get_spec (set->elements);
 }
@@ -3129,7 +3169,7 @@ itset_get_spec (const struct itset *set)
    all callers are leaking the result.  */
 
 const char *
-itset_spec (const struct itset *set)
+itset_spec (const itset *set)
 {
   return itset_get_spec (set);
 }
@@ -3154,7 +3194,7 @@ set_get_width (const itset_elt_vector &elements)
 }
 
 enum itset_width
-itset_get_width (struct itset *set)
+itset_get_width (itset *set)
 {
   return set_get_width (set->elements);
 }
@@ -3178,7 +3218,7 @@ set_get_toi (const itset_elt_vector &elements)
 }
 
 struct thread_info *
-itset_get_toi (struct itset *set)
+itset_get_toi (itset *set)
 {
   return set_get_toi (set->elements);
 }
@@ -3199,7 +3239,7 @@ set_has_fixed_toi (const itset_elt_vector &elements)
 }
 
 int
-itset_has_fixed_toi (struct itset *set)
+itset_has_fixed_toi (itset *set)
 {
   return set_has_fixed_toi (set->elements);
 }
@@ -3225,7 +3265,7 @@ set_get_focus_object_type (const itset_elt_vector &elements)
 }
 
 char
-itset_get_focus_object_type (struct itset *set)
+itset_get_focus_object_type (itset *set)
 {
   return set_get_focus_object_type (set->elements);
 }
@@ -3233,18 +3273,17 @@ itset_get_focus_object_type (struct itset *set)
 /* Parse an I/T set specification and return a new I/T set.  Throws an
    exception on error.  */
 
-static struct itset *
+static itset *
 itset_create_const_1 (const char **specp, enum itset_width default_width)
 {
   int is_static = 0;
-  struct itset *result;
+  itset *result;
   struct itset_elt *elt;
   struct cleanup *cleanups;
   const char *spec = *specp;
   const char *spec_start;
 
-  result = XCNEW (struct itset);
-  result->refc = 1;
+  result = new itset ();
 
   cleanups = make_cleanup_itset_free (result);
 
@@ -3291,10 +3330,10 @@ itset_create_const_1 (const char **specp, enum itset_width default_width)
   return result;
 }
 
-struct itset *
+itset *
 itset_create_const (const char **specp, enum itset_width default_width)
 {
-  struct itset *set;
+  itset *set;
 
   set = itset_create_const_1 (specp, default_width);
   if (!valid_spec_end (*specp))
@@ -3305,35 +3344,35 @@ itset_create_const (const char **specp, enum itset_width default_width)
   return set;
 }
 
-static struct itset *
+static itset *
 itset_create_spec_default_width (const char *spec,
 				 enum itset_width default_width)
 {
    return itset_create_const (&spec, default_width);
 }
 
-struct itset *
+itset *
 itset_create_spec (const char *spec)
 {
   return itset_create_spec_default_width (spec, ITSET_WIDTH_DEFAULT);
 }
 
-struct itset *
+itset *
 itset_create (char **specp)
 {
   const char *spec_const = *specp;
-  struct itset *itset;
+  itset *itset;
 
   itset = itset_create_const (&spec_const, ITSET_WIDTH_DEFAULT);
   *specp = (char *) spec_const;
   return itset;
 }
 
-struct itset *
-itset_clone_replace_default_width (const struct itset *itset_template,
+itset *
+itset_clone_replace_default_width (const itset *itset_template,
 				   enum itset_width default_width)
 {
-  struct itset *result;
+  itset *result;
   char *spec;
 
   spec = itset_get_spec (itset_template);
@@ -3346,7 +3385,7 @@ itset_clone_replace_default_width (const struct itset *itset_template,
   return result;
 }
 
-struct itset *
+itset *
 itset_create_empty (void)
 {
   return itset_create_spec ("");
@@ -3355,7 +3394,7 @@ itset_create_empty (void)
 /* Create a new I/T set which represents the current inferior and all
    its threads.  */
 
-static struct itset *
+static itset *
 itset_create_curinf (void)
 {
   return itset_create_spec ("iI");
@@ -3363,7 +3402,7 @@ itset_create_curinf (void)
 
 /* Create a new I/T set which represents the current thread.  */
 
-static struct itset *
+static itset *
 itset_create_curthr (void)
 {
   return itset_create_spec ("tT");
@@ -3371,45 +3410,45 @@ itset_create_curthr (void)
 
 /* Create a new I/T set which represents the current thread.  */
 
-static struct itset *
+static itset *
 itset_create_lockstep (void)
 {
   return itset_create_spec ("t/L/t1.1");
 }
 
-static struct itset *itset_from_elt (struct itset_elt *elt);
+static itset *itset_from_elt (struct itset_elt *elt);
 
-static struct itset *
+static itset *
 itset_create_all (void)
 {
   return itset_from_elt (create_all_itset ());
 }
 
-static struct itset *
+static itset *
 itset_create_running (void)
 {
   return itset_from_elt (create_state_itset (THREAD_RUNNING));
 }
 
-static struct itset *
+static itset *
 itset_create_stopped (void)
 {
   return itset_from_elt (create_state_itset (THREAD_STOPPED));
 }
 
-static struct itset *
+static itset *
 itset_create_default (void)
 {
   return itset_create_spec ("dt1.1");
 }
 
 int
-itset_contains_any_thread (struct itset *itset)
+itset_contains_any_thread (itset *set)
 {
   struct thread_info *thr;
 
   ALL_THREADS (thr)
-    if (itset_contains_thread (itset, thr))
+    if (itset_contains_thread (set, thr))
       return 1;
 
   return 0;
@@ -3419,7 +3458,7 @@ itset_contains_any_thread (struct itset *itset)
 /* Return 1 if SET contains INF, 0 otherwise.  */
 
 int
-itset_contains_program_space (struct itset *set,
+itset_contains_program_space (itset *set,
 			      enum itset_width default_width,
 			      struct program_space *pspace)
 {
@@ -3429,7 +3468,7 @@ itset_contains_program_space (struct itset *set,
 /* Return 1 if SET contains INF, 0 otherwise.  */
 
 static int
-itset_contains_inferior_1 (struct itset *set,
+itset_contains_inferior_1 (itset *set,
 			   enum itset_width default_width,
 			   struct inferior *inf,
 			   int including_width)
@@ -3443,7 +3482,7 @@ itset_contains_inferior_1 (struct itset *set,
 /* Return 1 if SET contains INF, 0 otherwise.  */
 
 int
-itset_width_contains_inferior (struct itset *set,
+itset_width_contains_inferior (itset *set,
 			       enum itset_width default_width,
 			       struct inferior *inf)
 {
@@ -3453,14 +3492,14 @@ itset_width_contains_inferior (struct itset *set,
 /* Return 1 if SET contains INF, 0 otherwise.  */
 
 int
-itset_contains_inferior (struct itset *set,
+itset_contains_inferior (itset *set,
 			 struct inferior *inf)
 {
   return itset_contains_inferior_1 (set, ITSET_WIDTH_INFERIOR, inf, 0);
 }
 
 int
-itset_contains_thread_maybe_width (struct itset *set,
+itset_contains_thread_maybe_width (itset *set,
 				   enum itset_width default_width,
 				   struct thread_info *thr,
 				   int including_width)
@@ -3474,7 +3513,7 @@ itset_contains_thread_maybe_width (struct itset *set,
 /* Return 1 if SET contains THR, 0 otherwise.  */
 
 int
-itset_width_contains_thread (struct itset *set,
+itset_width_contains_thread (itset *set,
 		       enum itset_width default_width,
 		       struct thread_info *thr)
 {
@@ -3484,7 +3523,7 @@ itset_width_contains_thread (struct itset *set,
 /* Return 1 if SET contains THR, 0 otherwise.  */
 
 int
-itset_contains_thread (struct itset *set,
+itset_contains_thread (itset *set,
 		       struct thread_info *thr)
 {
   return itset_contains_thread_maybe_width (set, ITSET_WIDTH_THREAD, thr, 0);
@@ -3493,7 +3532,7 @@ itset_contains_thread (struct itset *set,
 /* Return 1 if SET contains TASK, 0 otherwise.  */
 
 int
-itset_contains_ada_task (struct itset *set,
+itset_contains_ada_task (itset *set,
 			 enum itset_width default_width,
 			 const struct ada_task_info *task,
 			 int including_width)
@@ -3510,29 +3549,23 @@ itset_contains_ada_task (struct itset *set,
 
 /* Acquire a new reference to an I/T set.  */
 
-struct itset *
-itset_reference (struct itset *itset)
+itset *
+itset_reference (itset *set)
 {
-  ++itset->refc;
-  return itset;
+  set->incref ();
+  return set;
 }
 
 /* Destroy SET.  */
 
 void
-itset_free (struct itset *set)
+itset_free (itset *set)
 {
   /* Like xfree, allow NULL.  */
   if (set == NULL)
     return;
 
-  if (--set->refc == 0)
-    {
-      set_free (set->elements);
-      xfree (set->name);
-      xfree (set->spec);
-      xfree (set);
-    }
+  set->decref ();
 }
 
 /* Helper struct for iterate_over_itset.  */
@@ -3540,7 +3573,7 @@ itset_free (struct itset *set)
 struct iterate_data
 {
   /* The I/T set we are using.  */
-  struct itset *itset;
+  itset *set;
 
   /* The original callback  */
   int (*callback) (struct inferior *, void *);
@@ -3559,7 +3592,7 @@ iter_callback (struct inferior *inf, void *d)
 {
   struct iterate_data *data = (struct iterate_data *) d;
 
-  if (itset_contains_inferior_1 (data->itset, data->default_width, inf, 1))
+  if (itset_contains_inferior_1 (data->set, data->default_width, inf, 1))
     return data->callback (inf, data->client_data);
 
   /* Keep going.  */
@@ -3570,14 +3603,14 @@ iter_callback (struct inferior *inf, void *d)
    in ITSET.  */
 
 struct inferior *
-iterate_over_itset_inferiors (struct itset *itset,
+iterate_over_itset_inferiors (itset *set,
 			      enum itset_width default_width,
 			      itset_inf_callback_func *callback,
 			      void *datum)
 {
   struct iterate_data data;
 
-  data.itset = itset;
+  data.set = set;
   data.callback = callback;
   data.client_data = datum;
   data.default_width = default_width;
@@ -3590,7 +3623,7 @@ iterate_over_itset_inferiors (struct itset *itset,
 struct iterate_thr_data
 {
   /* The I/T set we are using.  */
-  struct itset *itset;
+  itset *set;
 
   /* The original callback  */
   int (*callback) (struct thread_info *, void *);
@@ -3609,7 +3642,7 @@ iter_thr_callback (struct thread_info *thr, void *d)
 {
   struct iterate_thr_data *data = (struct iterate_thr_data *) d;
 
-  if (itset_contains_thread_maybe_width (data->itset, data->default_width,
+  if (itset_contains_thread_maybe_width (data->set, data->default_width,
 					 thr, 1))
     return data->callback (thr, data->client_data);
 
@@ -3621,14 +3654,14 @@ iter_thr_callback (struct thread_info *thr, void *d)
    in ITSET.  */
 
 static struct thread_info *
-iterate_over_itset_threads (struct itset *itset,
+iterate_over_itset_threads (itset *set,
 			    enum itset_width default_width,
 			    int (*callback) (struct thread_info *, void *),
 			    void *datum)
 {
   struct iterate_thr_data data;
 
-  data.itset = itset;
+  data.set = set;
   data.callback = callback;
   data.client_data = datum;
   data.default_width = default_width;
@@ -3636,7 +3669,7 @@ iterate_over_itset_threads (struct itset *itset,
   return iterate_over_threads (iter_thr_callback, &data);
 }
 
-struct itset *current_itset = NULL;
+itset *current_itset = NULL;
 
 /* A cleanups callback, helper for save_current_itset
    below.  */
@@ -3644,7 +3677,7 @@ struct itset *current_itset = NULL;
 static void
 restore_itset (void *arg)
 {
-  struct itset *saved_itset = (struct itset *) arg;
+  itset *saved_itset = (itset *) arg;
 
   current_itset = saved_itset;
   itset_free (current_itset);
@@ -3710,7 +3743,7 @@ count_threads_of (struct thread_info *thr, void *data)
 }
 
 static void
-switch_to_itset (struct itset *itset)
+switch_to_itset (itset *itset)
 {
   struct inferior *inf;
   struct thread_info *tp;
@@ -3842,16 +3875,13 @@ itfocus_should_follow_stop_event (void)
   return (cur_elt_range != NULL);
 }
 
-static struct itset *
+static itset *
 itset_from_elt (struct itset_elt *elt)
 {
-  struct itset *itset;
+  itset *set = new itset ();
 
-  itset = XCNEW (struct itset);
-  itset->refc = 1;
-
-  itset->elements.push_back (elt);
-  return itset;
+  set->elements.push_back (elt);
+  return set;
 }
 
 void
@@ -3861,7 +3891,7 @@ itfocus_from_thread_switch (void)
   struct itset_elt_range *cur_elt_range
     = itset_get_range_elt_if_simple (current_itset);
   enum itset_width width = itset_get_width (current_itset);
-  struct itset *new_itset;
+  itset *new_itset;
   struct spec_range inf_range;
   struct spec_range thr_range;
 
@@ -3908,7 +3938,7 @@ itfocus_command (char *spec, int from_tty)
 
   if (spec != NULL)
     {
-      struct itset *itset;
+      itset *itset;
 
       itset = itset_create (&spec);
       old_chain = make_cleanup_itset_free (itset);
@@ -3962,22 +3992,21 @@ itfocus_command (char *spec, int from_tty)
 }
 
 static struct named_itset *
-make_itset_named_itset (struct itset *set, char *name, int internal)
+make_itset_named_itset (class itset *itset, char *name, int internal)
 {
-  struct named_itset *named_itset;
+  named_itset *result;
 
-  itset_reference (set);
-  set->name = name;
+  itset_reference (itset);
+  itset->name = name;
 
-  named_itset = XCNEW (struct named_itset);
-  named_itset->set = set;
+  result = new named_itset (itset);
 
   if (internal)
-    named_itset->number = --internal_named_itset_count;
+    result->number = --internal_named_itset_count;
   else
-    named_itset->number = ++named_itset_count;
+    result->number = ++named_itset_count;
 
-  return named_itset;
+  return result;
 }
 
 #if 0
@@ -3988,7 +4017,7 @@ itset_elt_is_static (struct itset_elt *elt)
 }
 
 static int
-itset_is_static (struct itset *itset)
+itset_is_static (itset *itset)
 {
   struct itset_elt *elt;
   int ix;
@@ -4013,8 +4042,8 @@ defset_command (char *arg, int from_tty)
   char *endp;
   char *name;
   char *spec;
-  struct itset *itset;
-  struct named_itset *named_itset;
+  class itset *itset;
+  class named_itset *named_itset;
   struct cleanup *old_chain;
 
   if (arg == NULL || *arg == '\0')
@@ -4049,13 +4078,6 @@ defset_command (char *arg, int from_tty)
 }
 
 static void
-free_named_itset (struct named_itset *it)
-{
-  itset_free (it->set);
-  xfree (it);
-}
-
-static void
 undefset_command (char *arg, int from_tty)
 {
   char *name;
@@ -4076,7 +4098,7 @@ undefset_command (char *arg, int from_tty)
 	  if (it->number > 0)
 	    {
 	      *it_link = it->next;
-	      free_named_itset (it);
+	      delete it;
 	    }
 	  else
 	    it_link = &it->next;
@@ -4096,7 +4118,7 @@ undefset_command (char *arg, int from_tty)
 	    error (_("cannot delete builtin I/T set"));
 
 	  *it_link = it->next;
-	  free_named_itset (it);
+	  delete it;
 	  found = 1;
 	  break;
 	}
@@ -4213,8 +4235,8 @@ whichsets_callback (struct thread_info *thr, void *data)
 static void
 whichsets_command (char *arg, int from_tty)
 {
-  struct named_itset *named_itset;
-  struct itset *itset;
+  class named_itset *named_itset;
+  class itset *itset;
   struct cleanup *old_chain;
 
   if (arg == NULL)
@@ -4235,7 +4257,7 @@ whichsets_command (char *arg, int from_tty)
 }
 
 static void
-viewset (struct itset *itset)
+viewset (class itset *itset)
 {
   struct inferior *inf;
   struct thread_info *thr;
@@ -4307,12 +4329,12 @@ viewset (struct itset *itset)
 static void
 viewset_command (char *arg, int from_tty)
 {
-  struct named_itset *named_itset;
+  class named_itset *named_itset;
 
   if (arg == NULL)
     {
       struct named_itset *e;
-      struct itset *itset;
+      itset *set;
 
       /* No arg means all debugger- and user-defined sets.  */
       ALL_NAMED_ITSETS (named_itset)
@@ -4320,7 +4342,7 @@ viewset_command (char *arg, int from_tty)
     }
   else
     {
-      struct itset *itset;
+      class itset *itset;
       struct cleanup *old_chain;
 
       arg = skip_spaces (arg);
@@ -4332,12 +4354,12 @@ viewset_command (char *arg, int from_tty)
 }
 
 static void
-make_internal_itset (struct itset *itset, const char *name)
+make_internal_itset (itset *set, const char *name)
 {
-  struct named_itset *named_itset;
+  struct named_itset *named_set;
 
-  named_itset = make_itset_named_itset (itset, xstrdup (name), 1);
-  add_to_named_itset_chain (named_itset);
+  named_set = make_itset_named_itset (set, xstrdup (name), 1);
+  add_to_named_itset_chain (named_set);
 }
 
 static void
@@ -4550,10 +4572,10 @@ itfocus_completer (struct cmd_list_element *ignore,
 {
   TRY
     {
-      struct itset *itset;
+      itset *set;
 
-      itset = itset_create_const (&text, ITSET_WIDTH_DEFAULT);
-      itset_free (itset);
+      set = itset_create_const (&text, ITSET_WIDTH_DEFAULT);
+      itset_free (set);
     }
   CATCH (e, RETURN_MASK_ERROR)
     {
