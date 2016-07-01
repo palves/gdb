@@ -3053,6 +3053,36 @@ parse_inters (struct itset_parser *self)
   return intersect.release ();
 }
 
+class itset_ptr
+{
+public:
+  explicit itset_ptr (itset *set)
+    : m_itset (set)
+  {}
+
+  ~itset_ptr ()
+  {
+    if (m_itset != NULL)
+      m_itset->decref ();
+  }
+
+  itset &operator* () const { return *m_itset; }
+
+  itset *operator-> () const { return m_itset; }
+
+  itset *get () const { return m_itset; }
+
+  itset *release ()
+  {
+    itset *res = m_itset;
+    m_itset = NULL;
+    return res;
+  }
+
+private:
+  itset *m_itset;
+};
+
 static struct itset_elt *
 parse_itset_one (struct itset_parser *self)
 {
@@ -3067,8 +3097,8 @@ parse_itset_one (struct itset_parser *self)
   else
     return elt1.release ();
 
-  itset *set = new itset ();
-  std::auto_ptr <itset_elt_itset> un (create_itset_elt_itset (set));
+  itset_ptr set (new itset ());
+  std::auto_ptr <itset_elt_itset> un (create_itset_elt_itset (set.get ()));
   set->elements.push_back (elt1.release ());
 
   while (*self->spec == ',' || (self->parens_level > 0 && *self->spec != ')'))
@@ -3233,15 +3263,12 @@ static itset *
 itset_create_const_1 (const char **specp, enum itset_width default_width)
 {
   int is_static = 0;
-  itset *result;
   struct itset_elt *elt;
   struct cleanup *cleanups;
   const char *spec = *specp;
   const char *spec_start;
 
-  result = new itset ();
-
-  cleanups = make_cleanup_itset_free (result);
+  itset_ptr result (new itset ());
 
   spec = skip_spaces_const (spec);
   spec_start = spec;
@@ -3281,9 +3308,7 @@ itset_create_const_1 (const char **specp, enum itset_width default_width)
       result->elements.push_back (st);
     }
 
-  discard_cleanups (cleanups);
-
-  return result;
+  return result.release ();
 }
 
 itset *
