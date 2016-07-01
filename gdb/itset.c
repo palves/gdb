@@ -32,6 +32,7 @@
 #include "completer.h"
 #include <vector>
 #include <set>
+#include <memory>
 
 /* FIXME */
 char itset_get_focus_object_type (itset *set);
@@ -121,26 +122,6 @@ struct itset_elt
 
   virtual struct itset_elt *clone () { return NULL; }
 };
-
-static void
-itset_elt_free (struct itset_elt *elt)
-{
-  delete elt;
-}
-
-static void
-itset_elt_free_cleanup (void *arg)
-{
-  struct itset_elt *elt = (struct itset_elt *) arg;
-
-  itset_elt_free (elt);
-}
-
-static struct cleanup *
-make_cleanup_itset_elt_free (struct itset_elt *elt)
-{
-  return make_cleanup (itset_elt_free_cleanup, elt);
-}
 
 typedef std::vector<itset_elt *> itset_elt_vector;
 
@@ -362,7 +343,7 @@ set_free (const itset_elt_vector &elements)
     {
       struct itset_elt *elt = *it;
 
-      itset_elt_free (elt);
+      delete elt;
     }
 }
 
@@ -1478,6 +1459,11 @@ struct itset_elt_intersect : public itset_elt
   virtual int has_fixed_toi ();
 
   virtual enum itset_width get_width ();
+
+  void add (itset_elt *elt)
+  {
+    elements.push_back (elt);
+  }
 };
 
 /* Implementation of `destroy' method.  */
@@ -1907,7 +1893,7 @@ struct itset_elt_negated : public itset_elt
 
 itset_elt_negated::~itset_elt_negated ()
 {
-  itset_elt_free (this->negated);
+  delete this->negated;
 }
 
 /* Implementation of `contains_inferior' method.  */
@@ -3016,20 +3002,16 @@ parse_current_focus (struct itset_parser *self)
 static struct itset_elt *
 parse_parens_set (struct itset_parser *self)
 {
-  struct cleanup *old_chain;
-  struct itset_elt *elt;
-
   if (*self->spec != '(')
     return NULL;
   self->spec++;
 
   self->parens_level++;
 
-  elt = parse_itset_one (self);
-  if (elt == NULL)
+  std::auto_ptr <itset_elt> elt (parse_itset_one (self));
+  if (elt.get () == NULL)
     error (_("Invalid I/T syntax at `%s'"), self->spec);
 
-  old_chain = make_cleanup_itset_elt_free (elt);
   if (*self->spec != ')')
     error (_("Invalid I/T syntax at `%s'"), self->spec);
 
@@ -3037,79 +3019,57 @@ parse_parens_set (struct itset_parser *self)
   self->parens_level--;
   gdb_assert (self->parens_level >= 0);
 
-  discard_cleanups (old_chain);
-
-  return (struct itset_elt *) elt;
+  return elt.release ();
 }
 
 static struct itset_elt *
 parse_inters (struct itset_parser *self)
 {
-  struct itset_elt *elt1, *elt2 = NULL;
-  struct itset_elt_intersect *intersect = NULL;
-  struct cleanup *old_chain;
-
-  elt1 = parse_elem (self);
-  if (elt1 == NULL)
+  std::auto_ptr <itset_elt> elt1 (parse_elem (self));
+  if (elt1.get () == NULL)
     return NULL;
-
-  old_chain = make_cleanup_itset_elt_free (elt1);
 
   maybe_skip_spaces (self);
 
-  if (*self->spec == '&')
+  if (*self->spec != '&')
     {
-      intersect = create_intersect_itset ();
-      intersect->elements.push_back (elt1);
-      elt1 = intersect;
-
-      discard_cleanups (old_chain);
-      old_chain = make_cleanup_itset_elt_free (elt1);
+      /* Not an intersect.  */
+      return elt1.release ();
     }
+
+  std::auto_ptr <itset_elt_intersect> intersect (create_intersect_itset ());
+  intersect->add (elt1.release ());
 
   while (*self->spec == '&')
     {
       self->spec++;
 
-      elt2 = parse_elem (self);
+      struct itset_elt *elt2 = parse_elem (self);
       if (elt2 == NULL)
-	{
-	  do_cleanups (old_chain);
-	  return NULL;
-	}
-      intersect->elements.push_back (elt2);
+	return NULL;
+      intersect->add (elt2);
     }
 
-  discard_cleanups (old_chain);
-  return elt1;
+  return intersect.release ();
 }
 
 static struct itset_elt *
 parse_itset_one (struct itset_parser *self)
 {
-  struct itset_elt *inters1, *inters2 = NULL;
-  struct itset_elt_itset *un = NULL;
-  struct cleanup *old_chain;
-
-  inters1 = parse_inters (self);
-  if (inters1 == NULL)
+  std::auto_ptr <itset_elt> elt1 (parse_elem (self));
+  if (elt1.get () == NULL)
     return NULL;
-  old_chain = make_cleanup_itset_elt_free (inters1);
 
   maybe_skip_spaces (self);
 
   if (*self->spec == ',' || (self->parens_level > 0 && *self->spec != ')'))
-    {
-      itset *set = new itset ();
+    ;
+  else
+    return elt1.release ();
 
-      un = create_itset_elt_itset (set);
-
-      set->elements.push_back (inters1);
-      inters1 = un;
-
-      discard_cleanups (old_chain);
-      old_chain = make_cleanup_itset_elt_free (inters1);
-    }
+  itset *set = new itset ();
+  std::auto_ptr <itset_elt_itset> un (create_itset_elt_itset (set));
+  set->elements.push_back (elt1.release ());
 
   while (*self->spec == ',' || (self->parens_level > 0 && *self->spec != ')'))
     {
@@ -3121,19 +3081,15 @@ parse_itset_one (struct itset_parser *self)
       if (*self->spec == '\0')
 	error (_("Invalid I/T syntax: premature end"));
 
-      inters2 = parse_inters (self);
+      struct itset_elt *inters2 = parse_inters (self);
       if (inters2 == NULL)
-	{
-	  do_cleanups (old_chain);
-	  return NULL;
-	}
-      un->set->elements.push_back (inters2);
+	return NULL;
+      set->elements.push_back (inters2);
 
       maybe_skip_spaces (self);
     }
 
-  discard_cleanups (old_chain);
-  return inters1;
+  return un.release ();
 }
 
 /* A helper function that returns true if the inferior INF is
