@@ -3912,18 +3912,14 @@ fetch_inferior_event_quit_handler (void)
     target_interrupt (inferior_ptid);
 }
 
-static int flushing_async_output;
-
 static void
 flush_pending_async_output_wrap (void *)
 {
-  struct cleanup *old_chain;
-
   /* If we paginated while flushing the async output, we can end up
      processing another event and recurse here again.  In that case,
      don't flush output yet.  Instead let the outer event handling
      flush everything.  */
-  if (flushing_async_output)
+  if (handling_target_event > 1)
     return;
 
   /* The target event could have triggered a query.  */
@@ -3933,12 +3929,7 @@ flush_pending_async_output_wrap (void *)
   if (!current_ui->async)
     return;
 
-  old_chain = make_cleanup_restore_integer (&flushing_async_output);
-  flushing_async_output = 1;
-
   flush_pending_async_output ();
-
-  do_cleanups (old_chain);
 }
 
 int handling_target_event;
