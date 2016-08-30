@@ -72,6 +72,9 @@ enum exec_direction_kind
 /* The current execution direction.  */
 extern enum exec_direction_kind execution_direction;
 
+/* Whether we're currently handling a target event.  */
+extern int handling_target_event;
+
 extern void start_remote (int from_tty);
 
 /* Clear out all variables saying what to do when inferior is

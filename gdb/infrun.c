@@ -3912,6 +3912,39 @@ fetch_inferior_event_quit_handler (void)
     target_interrupt (inferior_ptid);
 }
 
+static int flushing_async_output;
+
+static void
+flush_pending_async_output_wrap (void *)
+{
+  struct cleanup *old_chain;
+
+  /* If we paginated while flushing the async output, we can end up
+     processing another event and recurse here again.  In that case,
+     don't flush output yet.  Instead let the outer event handling
+     flush everything.  */
+  if (flushing_async_output)
+    return;
+
+  /* The target event could have triggered a query.  */
+  if (gdb_in_secondary_prompt_p (current_ui))
+    return;
+
+  if (!current_ui->async)
+    return;
+
+  old_chain = make_cleanup_restore_integer (&flushing_async_output);
+  flushing_async_output = 1;
+
+  flush_pending_async_output ();
+
+  do_cleanups (old_chain);
+}
+
+int handling_target_event;
+
+extern int filtering_enabled (struct ui_file *stream);
+
 /* Asynchronous version of wait_for_inferior.  It is called by the
    event loop whenever a change of state is detected on the file
    descriptor corresponding to the target.  It can be called more than
@@ -3934,6 +3967,9 @@ fetch_inferior_event (void *client_data)
 
   memset (ecs, 0, sizeof (*ecs));
 
+  make_cleanup_restore_integer (&handling_target_event);
+  handling_target_event++;
+
   make_cleanup_override_quit_handler (fetch_inferior_event_quit_handler);
 
   /* Events are always processed with the main UI as current UI.  This
@@ -3941,6 +3977,19 @@ fetch_inferior_event (void *client_data)
      the main console.  */
   make_cleanup_restore_current_ui ();
   current_ui = main_ui;
+
+  /* We don't want to paginate halfway through handling a target
+     event, and recurse, potentially handling another event before the
+     first one was finished processing.  Instead, accumulate output in
+     the async output buffer, and flush it when the event is done
+     being processed.  */
+
+  if (filtering_enabled (gdb_stdout))
+    {
+      make_cleanup (flush_pending_async_output_wrap, NULL);
+
+      prepare_for_async_output ();
+    }
 
   /* End up with readline processing input, if necessary.  */
   make_cleanup (reinstall_readline_callback_handler_cleanup, NULL);

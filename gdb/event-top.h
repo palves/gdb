@@ -33,6 +33,9 @@ extern void gdb_disable_readline (void);
 extern void async_init_signals (void);
 extern void change_line_handler (int);
 
+extern void flush_pending_async_output (void);
+struct cleanup *prepare_for_async_output (void);
+
 extern void command_line_handler (char *rl);
 extern void command_handler (char *command);
 
@@ -50,6 +53,8 @@ extern void async_request_quit (void *arg);
 extern void stdin_event_handler (int error, void *client_data);
 extern void async_disable_stdin (void);
 extern void async_enable_stdin (void);
+
+extern void on_event_handler_exception (gdb_exception ex);
 
 /* Exported variables from event-top.c.
    FIXME: these should really go into top.h.  */

@@ -32,6 +32,7 @@
 #include "cli/cli-script.h"
 #include "python/python.h"
 #include "guile/guile.h"
+#include "top.h"
 
 /* Iterate over all external extension languages, regardless of whether the
    support has been compiled in or not.
@@ -673,21 +674,12 @@ breakpoint_ext_lang_cond_says_stop (struct breakpoint *b)
    an extension language that doesn't have cooperative SIGINT handling.  */
 static int quit_flag;
 
-/* The current extension language we've called out to, or
-   extension_language_gdb if there isn't one.
-   This must be set everytime we call out to an extension language, and reset
-   to the previous value when it returns.  Note that the previous value may
-   be a different (or the same) extension language.  */
-static const struct extension_language_defn *active_ext_lang
-  = &extension_language_gdb;
-
-/* Return the currently active extension language.  */
-
-const struct extension_language_defn *
-get_active_ext_lang (void)
-{
-  return active_ext_lang;
-}
+/* The current extension language we've called out to, or NULL if
+   there isn't one.  This must be set everytime we call out to an
+   extension language, and reset to the previous value when it
+   returns.  Note that the previous value may be a different (or the
+   same) extension language.  */
+static const struct extension_language_defn *active_ext_lang = NULL;
 
 /* Install a SIGINT handler.  */
 
@@ -743,6 +735,18 @@ install_gdb_sigint_handler (struct signal_handler *previous)
 struct active_ext_lang_state *
 set_active_ext_lang (const struct extension_language_defn *now_active)
 {
+  /* Ctrl-C handling only concerns with the main UI.  */
+  if (current_ui != main_ui)
+    return NULL;
+
+  /* We only want Ctrl-C to interrupt a script when we're running the
+     script on the command line directly.  If we're inside a query and
+     end up processing a target event that calls into a script (e.g.,
+     a Python unwinder), we want ctrl-c to cancel the query, not to
+     interrupt the unwinding.  */
+  if (handling_target_event)
+    return NULL;
+
   struct active_ext_lang_state *previous
     = XCNEW (struct active_ext_lang_state);
 
@@ -774,6 +778,13 @@ set_active_ext_lang (const struct extension_language_defn *now_active)
 void
 restore_active_ext_lang (struct active_ext_lang_state *previous)
 {
+  if (current_ui != main_ui
+      || handling_target_event)
+    {
+      gdb_assert (previous == NULL);
+      return;
+    }
+
   active_ext_lang = previous->ext_lang;
 
   if (target_terminal_is_ours ())
@@ -803,7 +814,7 @@ restore_active_ext_lang (struct active_ext_lang_state *previous)
 void
 set_quit_flag (void)
 {
-  if (active_ext_lang->ops != NULL
+  if (active_ext_lang != NULL
       && active_ext_lang->ops->set_quit_flag != NULL)
     active_ext_lang->ops->set_quit_flag (active_ext_lang);
   else

@@ -193,6 +193,10 @@ extern void fputs_filtered (const char *, struct ui_file *);
 
 extern void fputs_unfiltered (const char *, struct ui_file *);
 
+extern void fputs_filtered_maybe_paginate (const char *,
+					   struct ui_file *,
+					   int paginate);
+
 extern int fputc_filtered (int c, struct ui_file *);
 
 extern int fputc_unfiltered (int c, struct ui_file *);

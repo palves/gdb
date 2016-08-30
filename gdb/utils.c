@@ -82,10 +82,9 @@ void (*deprecated_error_begin_hook) (void);
 
 /* Prototypes for local functions */
 
-static void vfprintf_maybe_filtered (struct ui_file *, const char *,
-				     va_list, int) ATTRIBUTE_PRINTF (2, 0);
-
-static void fputs_maybe_filtered (const char *, struct ui_file *, int);
+static void vfprintf_filtered_maybe_paginate (struct ui_file *, const char *,
+					      va_list, int)
+  ATTRIBUTE_PRINTF (2, 0);
 
 static void prompt_for_continue (void);
 
@@ -697,6 +696,10 @@ internal_vproblem (struct internal_problem *problem,
   if (filtered_printing_initialized ())
     begin_line ();
 
+  /* Prevent processing target events within query.  We're pretty
+     messed up already...  */
+  target_async (0);
+
   /* Emit the message unless query will emit it below.  */
   if (problem->should_quit != internal_problem_ask
       || !confirm
@@ -1255,7 +1258,9 @@ defaulted_query (const char *ctlstr, const char defchar, va_list args)
      way, important error messages don't get lost when talking to GDB
      over a pipe.  */
   if (current_ui->instream != current_ui->stdin_stream
-      || !input_interactive_p (current_ui))
+      || !input_interactive_p (current_ui)
+      /* We can't handle nested queries.  */
+      || current_ui != main_ui)
     {
       old_chain = make_cleanup_restore_target_terminal ();
 
@@ -2045,23 +2050,40 @@ begin_line (void)
     }
 }
 
+int
+filtering_enabled (struct ui_file *stream)
+{
+  /* Don't do any filtering if it is disabled.  */
+  if (stream != gdb_stdout
+      || current_ui != main_ui
+      || stream == current_ui->async_output
+      || !pagination_enabled
+      || batch_flag
+      || (lines_per_page == UINT_MAX && chars_per_line == UINT_MAX)
+      || top_level_interpreter () == NULL
+      || ui_out_is_mi_like_p (interp_ui_out (top_level_interpreter ())))
+    return 0;
+  return 1;
+}
 
-/* Like fputs but if FILTER is true, pause after every screenful.
+/* Like fputs but:
 
-   Regardless of FILTER can wrap at points other than the final
-   character of a line.
+   - If PAGINATE is true, pause after every screenful.
 
-   Unlike fputs, fputs_maybe_filtered does not return a value.
-   It is OK for LINEBUFFER to be NULL, in which case just don't print
-   anything.
+   - Regardless of PAGINATE can wrap at points other than the final
+     character of a line.
 
-   Note that a longjmp to top level may occur in this routine (only if
-   FILTER is true) (since prompt_for_continue may do so) so this
-   routine should not be called when cleanups are not in place.  */
+   Unlike fputs, fputs_filtered_maybe_paginate does not return a
+   value.  It is OK for LINEBUFFER to be NULL, in which case just
+   don't print anything.
 
-static void
-fputs_maybe_filtered (const char *linebuffer, struct ui_file *stream,
-		      int filter)
+   Note that if PAGINATE is true, a QUIT exception may be thrown in
+   this routine, since prompt_for_continue may do so.  */
+
+void
+fputs_filtered_maybe_paginate (const char *linebuffer,
+			       struct ui_file *stream,
+			       int paginate)
 {
   const char *lineptr;
 
@@ -2069,12 +2091,7 @@ fputs_maybe_filtered (const char *linebuffer, struct ui_file *stream,
     return;
 
   /* Don't do any filtering if it is disabled.  */
-  if (stream != gdb_stdout
-      || !pagination_enabled
-      || batch_flag
-      || (lines_per_page == UINT_MAX && chars_per_line == UINT_MAX)
-      || top_level_interpreter () == NULL
-      || ui_out_is_mi_like_p (interp_ui_out (top_level_interpreter ())))
+  if (!filtering_enabled (stream))
     {
       fputs_unfiltered (linebuffer, stream);
       return;
@@ -2088,7 +2105,7 @@ fputs_maybe_filtered (const char *linebuffer, struct ui_file *stream,
   while (*lineptr)
     {
       /* Possible new page.  */
-      if (filter && (lines_printed >= lines_per_page - 1))
+      if (paginate && (lines_printed >= lines_per_page - 1))
 	prompt_for_continue ();
 
       while (*lineptr && *lineptr != '\n')
@@ -2129,7 +2146,7 @@ fputs_maybe_filtered (const char *linebuffer, struct ui_file *stream,
 		fputc_unfiltered ('\n', stream);
 
 	      /* Possible new page.  */
-	      if (lines_printed >= lines_per_page - 1)
+	      if (paginate && (lines_printed >= lines_per_page - 1))
 		prompt_for_continue ();
 
 	      /* Now output indentation and wrapped string.  */
@@ -2168,7 +2185,7 @@ fputs_maybe_filtered (const char *linebuffer, struct ui_file *stream,
 void
 fputs_filtered (const char *linebuffer, struct ui_file *stream)
 {
-  fputs_maybe_filtered (linebuffer, stream, 1);
+  fputs_filtered_maybe_paginate (linebuffer, stream, 1);
 }
 
 int
@@ -2309,15 +2326,15 @@ puts_debug (char *prefix, char *string, char *suffix)
    called when cleanups are not in place.  */
 
 static void
-vfprintf_maybe_filtered (struct ui_file *stream, const char *format,
-			 va_list args, int filter)
+vfprintf_filtered_maybe_paginate (struct ui_file *stream, const char *format,
+				  va_list args, int paginate)
 {
   char *linebuffer;
   struct cleanup *old_cleanups;
 
   linebuffer = xstrvprintf (format, args);
   old_cleanups = make_cleanup (xfree, linebuffer);
-  fputs_maybe_filtered (linebuffer, stream, filter);
+  fputs_filtered_maybe_paginate (linebuffer, stream, paginate);
   do_cleanups (old_cleanups);
 }
 
@@ -2325,7 +2342,7 @@ vfprintf_maybe_filtered (struct ui_file *stream, const char *format,
 void
 vfprintf_filtered (struct ui_file *stream, const char *format, va_list args)
 {
-  vfprintf_maybe_filtered (stream, format, args, 1);
+  vfprintf_filtered_maybe_paginate (stream, format, args, 1);
 }
 
 void
@@ -2362,7 +2379,7 @@ vfprintf_unfiltered (struct ui_file *stream, const char *format, va_list args)
 void
 vprintf_filtered (const char *format, va_list args)
 {
-  vfprintf_maybe_filtered (gdb_stdout, format, args, 1);
+  vfprintf_filtered_maybe_paginate (gdb_stdout, format, args, 1);
 }
 
 void

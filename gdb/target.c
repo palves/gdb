@@ -494,6 +494,9 @@ target_terminal_inferior (void)
   if (ui != main_ui)
     return;
 
+  if (gdb_in_secondary_prompt_p (ui))
+    return;
+
   if (terminal_state == terminal_is_inferior)
     return;
 

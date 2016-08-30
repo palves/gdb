@@ -372,27 +372,7 @@ start_event_loop (void)
 	}
       CATCH (ex, RETURN_MASK_ALL)
 	{
-	  exception_print (gdb_stderr, ex);
-
-	  /* If any exception escaped to here, we better enable
-	     stdin.  Otherwise, any command that calls async_disable_stdin,
-	     and then throws, will leave stdin inoperable.  */
-	  async_enable_stdin ();
-	  /* If we long-jumped out of do_one_event, we probably didn't
-	     get around to resetting the prompt, which leaves readline
-	     in a messed-up state.  Reset it here.  */
-	  current_ui->prompt_state = PROMPT_NEEDED;
-	  observer_notify_command_error ();
-	  /* This call looks bizarre, but it is required.  If the user
-	     entered a command that caused an error,
-	     after_char_processing_hook won't be called from
-	     rl_callback_read_char_wrapper.  Using a cleanup there
-	     won't work, since we want this function to be called
-	     after a new prompt is printed.  */
-	  if (after_char_processing_hook)
-	    (*after_char_processing_hook) ();
-	  /* Maybe better to set a flag to be checked somewhere as to
-	     whether display the prompt or not.  */
+	  on_event_handler_exception (ex);
 	}
       END_CATCH
 

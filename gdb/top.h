@@ -123,6 +123,11 @@ struct ui
   /* See enum prompt_state's description.  */
   enum prompt_state prompt_state;
 
+  /* Asynchronous event output goes here.  It is flushed to the screen
+     when out of any ongoing input query.  This is a mem_fileopen'ed
+     file (that is, a memory buffer).  */
+  struct ui_file *async_output;
+
   /* The fields below that start with "m_" are "private".  They're
      meant to be accessed through wrapper macros that make them look
      like globals.  */
@@ -277,5 +282,7 @@ extern void do_restore_instream_cleanup (void *stream);
 extern char *handle_line_of_input (struct buffer *cmd_line_buffer,
 				   char *rl, int repeat,
 				   char *annotation_suffix);
+
+extern struct ui_file *ui_async_output_file (struct ui *ui);
 
 #endif

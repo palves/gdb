@@ -975,9 +975,6 @@ struct gdb_readline_wrapper_cleanup
   {
     void (*handler_orig) (char *);
     int already_prompted_orig;
-
-    /* Whether the target was async.  */
-    int target_is_async_orig;
   };
 
 static void
@@ -1008,9 +1005,6 @@ gdb_readline_wrapper_cleanup (void *arg)
   after_char_processing_hook = saved_after_char_processing_hook;
   saved_after_char_processing_hook = NULL;
 
-  if (cleanup->target_is_async_orig)
-    target_async (1);
-
   xfree (cleanup);
 }
 
@@ -1031,16 +1025,11 @@ gdb_readline_wrapper (const char *prompt)
   else
     cleanup->already_prompted_orig = 0;
 
-  cleanup->target_is_async_orig = target_is_async_p ();
-
   ui->secondary_prompt_depth++;
   back_to = make_cleanup (gdb_readline_wrapper_cleanup, cleanup);
 
   /* Processing events may change the current UI.  */
   make_cleanup_restore_current_ui ();
-
-  if (cleanup->target_is_async_orig)
-    target_async (0);
 
   /* Display our prompt and prevent double prompt display.  */
   display_gdb_prompt (prompt);

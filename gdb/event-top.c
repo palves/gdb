@@ -342,6 +342,14 @@ display_gdb_prompt (const char *new_prompt)
   char *actual_gdb_prompt = NULL;
   struct cleanup *old_chain;
 
+  /* If we're printing a primary prompt, flush any asynchronous output
+     that might have been output while a secondary prompt was
+     active.  */
+  if (new_prompt == NULL
+      && current_ui == main_ui
+      && current_ui->prompt_state != PROMPT_BLOCKED)
+    flush_pending_async_output ();
+
   annotate_display_prompt ();
 
   /* Reset the nesting depth used when trace-commands is set.  */
@@ -409,6 +417,117 @@ display_gdb_prompt (const char *new_prompt)
 
   do_cleanups (old_chain);
 }
+
+struct ui_file *
+ui_async_output_file (struct ui *ui)
+{
+  if (ui->async_output == NULL)
+    ui->async_output = mem_fileopen ();
+  return ui->async_output;
+}
+
+static void
+discard_pending_async_output (void)
+{
+  struct ui *ui = current_ui;
+
+  if (ui->async_output != NULL)
+    {
+      ui_file_delete (ui->async_output);
+      ui->async_output = NULL;
+    }
+}
+
+void
+flush_pending_async_output (void)
+{
+  struct ui *ui = current_ui;
+  char *async_output_buffer;
+  struct cleanup *old_chain;
+
+  if (ui->async_output == NULL)
+    return;
+
+  /* Flushing to self would be a bad idea.  */
+  gdb_assert (ui->async_output != gdb_stdout);
+
+  async_output_buffer = ui_file_xstrdup (ui->async_output, NULL);
+  old_chain = make_cleanup (xfree, async_output_buffer);
+
+  ui_file_delete (ui->async_output);
+  ui->async_output = NULL;
+
+  TRY
+    {
+      int paginate = current_ui->prompt_state != PROMPTED;
+
+      fputs_filtered_maybe_paginate (async_output_buffer,
+				     gdb_stdout, paginate);
+    }
+  CATCH (ex, RETURN_MASK_ALL)
+    {
+      /* If the pagination query is canceled, flush all currently
+	 pending output.  Note that while the pagination query was
+	 active we might have accumulated more output.  */
+      if (ex.reason == RETURN_QUIT)
+	discard_pending_async_output ();
+      throw_exception (ex);
+    }
+  END_CATCH
+
+  do_cleanups (old_chain);
+}
+
+static void
+unprepare_for_async_output (void *arg)
+{
+  current_interp_set_logging (0, NULL, NULL);
+}
+
+/* Run execute_command for P and FROM_TTY.  Capture its output into the
+   returned string, do not display it to the screen.  BATCH_FLAG will be
+   temporarily set to true.  */
+
+struct cleanup *
+prepare_for_async_output (void)
+{
+  struct ui_file *output;
+  struct cleanup *cleanup;
+  struct cleanup *old_chain = make_cleanup (null_cleanup, NULL);
+
+  output = ui_async_output_file (current_ui);
+
+  make_cleanup_restore_ui_file (&gdb_stdout);
+  make_cleanup_restore_ui_file (&gdb_stderr);
+#if 0
+  make_cleanup_restore_ui_file (&gdb_stdlog);
+  make_cleanup_restore_ui_file (&gdb_stdtarg);
+  make_cleanup_restore_ui_file (&gdb_stdtargerr);
+#endif
+
+  /* Give the current interpreter a chance to do anything special that
+     it might need for logging, such as updating other channels.  */
+  if (current_interp_set_logging (1, output, NULL) == 0)
+    {
+      gdb_stdout = output;
+      gdb_stderr = output;
+#if 0
+      gdb_stdlog = output;
+      gdb_stdtarg = output;
+      gdb_stdtargerr = output;
+#endif
+    }
+
+  make_cleanup (unprepare_for_async_output, NULL);
+
+  if (ui_out_redirect (current_uiout, output) < 0)
+    error (_("Output protocol does not support redirection"));
+  else
+    make_cleanup_ui_out_redirect_pop (current_uiout);
+
+  return old_chain;
+}
+
 
 /* Return the top level prompt, as specified by "set prompt", possibly
    overriden by the python gdb.prompt_hook hook, and then composed
@@ -540,21 +659,35 @@ stdin_event_handler (int error, gdb_client_data client_data)
 	 loop.  */
       current_ui = ui;
 
-      /* This makes sure a ^C immediately followed by further input is
-	 always processed in that order.  E.g,. with input like
-	 "^Cprint 1\n", the SIGINT handler runs, marks the async
-	 signal handler, and then select/poll may return with stdin
-	 ready, instead of -1/EINTR.  The
-	 gdb.base/double-prompt-target-event-error.exp test exercises
-	 this.  */
-      QUIT;
-
-      do
+      TRY
 	{
-	  call_stdin_event_handler_again_p = 0;
-	  ui->call_readline (client_data);
+	  /* This makes sure a ^C immediately followed by further input is
+	     always processed in that order.  E.g,. with input like
+	     "^Cprint 1\n", the SIGINT handler runs, marks the async
+	     signal handler, and then select/poll may return with stdin
+	     ready, instead of -1/EINTR.  The
+	     gdb.base/double-prompt-target-event-error.exp test exercises
+	     this.  */
+	  QUIT;
+
+	  do
+	    {
+	      call_stdin_event_handler_again_p = 0;
+	      ui->call_readline (client_data);
+	    }
+	  while (call_stdin_event_handler_again_p != 0);
 	}
-      while (call_stdin_event_handler_again_p != 0);
+      CATCH (ex, RETURN_MASK_ALL)
+	{
+	  /* If we're throwing an exception for the UI that is in a
+	     nested event loop, let the exception propagate to the
+	     outer level.  */
+	  if (gdb_in_secondary_prompt_p (ui))
+	    throw_exception (ex);
+
+	  on_event_handler_exception (ex);
+	}
+      END_CATCH
     }
 }
 
@@ -583,12 +716,16 @@ async_enable_stdin (void)
 {
   struct ui *ui = current_ui;
 
-  if (ui->prompt_state == PROMPT_BLOCKED)
-    {
-      target_terminal_ours ();
-      ui_register_input_event_handler (ui);
-      ui->prompt_state = PROMPT_NEEDED;
-    }
+  if (ui->prompt_state != PROMPT_BLOCKED)
+    return;
+
+  ui->prompt_state = PROMPT_NEEDED;
+
+  if (gdb_in_secondary_prompt_p (ui))
+    return;
+
+  target_terminal_ours ();
+  ui_register_input_event_handler (ui);
 }
 
 /* Disable reads from stdin (the console) marking the command as
@@ -600,8 +737,35 @@ async_disable_stdin (void)
   struct ui *ui = current_ui;
 
   ui->prompt_state = PROMPT_BLOCKED;
+
+  if (gdb_in_secondary_prompt_p (ui))
+    return;
+
   delete_file_handler (ui->input_fd);
 }
+
+void
+on_event_handler_exception (gdb_exception ex)
+{
+  exception_print (gdb_stderr, ex);
+
+  /* If any exception escaped to here, we better enable stdin.
+     Otherwise, any command that calls async_disable_stdin, and then
+     throws, will leave stdin inoperable.  */
+  current_ui->prompt_state = PROMPT_BLOCKED;
+  async_enable_stdin ();
+  /* Likewise, we probably didn't get around to resetting the prompt,
+     which leaves readline in a messed-up state.  Reset it here.  */
+  observer_notify_command_error ();
+  /* This call looks bizarre, but it is required.  If the user entered
+     a command that caused an error, after_char_processing_hook won't
+     be called from rl_callback_read_char_wrapper.  Using a cleanup
+     there won't work, since we want this function to be called after
+     a new prompt is printed.  */
+  if (after_char_processing_hook)
+    (*after_char_processing_hook) ();
+}
+
 
 
 /* Handle a gdb command line.  This function is called when

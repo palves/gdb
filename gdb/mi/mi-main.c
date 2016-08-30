@@ -2143,8 +2143,8 @@ mi_execute_command (const char *cmd, int from_tty)
 	     of the prompt.  Otherwise, any command that calls
 	     async_disable_stdin, and then throws, will leave input
 	     disabled.  */
+	  current_ui->prompt_state = PROMPT_BLOCKED;
 	  async_enable_stdin ();
-	  current_ui->prompt_state = PROMPT_NEEDED;
 
 	  /* The command execution failed and error() was called
 	     somewhere.  */
