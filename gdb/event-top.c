@@ -348,12 +348,12 @@ expand_gdb_prompt (char *prompt)
 
 	  if (!ptid_equal (inferior_ptid, null_ptid))
 	    {
-	      xsnprintf (buf, sizeof (buf), "i%s",
+	      xsnprintf (buf, sizeof (buf), "%s",
 			 print_thread_id (inferior_thread ()));
 	    }
 	  else
 	    {
-	      xsnprintf (buf, sizeof (buf), "i%d", current_inferior ()->num);
+	      xsnprintf (buf, sizeof (buf), "%d.0", current_inferior ()->num);
 	    }
 	  obstack_grow_str (&obstack, buf);
 
