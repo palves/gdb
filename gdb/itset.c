@@ -571,7 +571,8 @@ itset_elt_range::range_get_spec (int range_type_char)
 static char *itset_get_spec (const itset *set);
 
 static char *
-double_range_get_spec (struct itset_elt *base, int range_type_char,
+double_range_get_spec (struct itset_elt *base,
+		       int range_type_char, bool print_range_type_char,
 		       struct spec_range *inf_range)
 {
   struct itset_elt_range *range_elt = (struct itset_elt_range *) base;
@@ -603,7 +604,8 @@ double_range_get_spec (struct itset_elt *base, int range_type_char,
   if (range_elt->is_current)
     return concat_printf (res, "%c", toupper (range_type_char));
 
-  res = concat_printf (res, "%c", range_type_char);
+  if (print_range_type_char)
+    res = concat_printf (res, "%c", range_type_char);
   res = range_concat_spec (res, inf_range);
   res = concat_printf (res, ".");
   res = range_concat_spec (res, range);
@@ -958,7 +960,7 @@ itset_elt_thread_range::contains_thread (enum itset_width default_width,
 char *
 itset_elt_thread_range::get_spec ()
 {
-  return double_range_get_spec (this, 't', &this->inf_range);
+  return double_range_get_spec (this, 't', false, &this->inf_range);
 }
 
 struct thread_info *
@@ -1314,7 +1316,7 @@ itset_elt_ada_task_range::contains_thread (enum itset_width default_width,
 char *
 itset_elt_ada_task_range::get_spec ()
 {
-  return double_range_get_spec (this, 'k', &this->inf_range);
+  return double_range_get_spec (this, 'k', true, &this->inf_range);
 }
 
 struct thread_info *
@@ -2536,23 +2538,17 @@ parse_range_itset (const char **spec, enum itset_width width,
   return create_func (width, 0, &range);
 }
 
-static int
+static bool
 parse_width (const char **spec, enum itset_width *width)
 {
   const char *width_str = *spec;
-
-  if (!isalpha (width_str[0])
-      || width_str[1] == ':'
-      || width_str[1] == '*'
-      || isdigit (width_str[1]))
-    return 0;
 
   if (width_str[0] == 'e' && width_str[1] == '(')
     {
       /* Leave the '(' in place, to be consumed by the caller.  */
       (*spec)++;
       *width = ITSET_WIDTH_EXPLICIT;
-      return 1;
+      return true;
     }
 
   switch (width_str[0])
@@ -2576,11 +2572,11 @@ parse_width (const char **spec, enum itset_width *width)
       *width = ITSET_WIDTH_DEFAULT;
       break;
     default:
-      return 0;
+      return false;
     }
 
   (*spec)++;
-  return 1;
+  return true;
 }
 
 
@@ -2797,7 +2793,11 @@ parse_range_elem (struct itset_parser *self, enum itset_width width)
   if (elt != NULL)
     return elt;
 
+#if 0
   object_type = itset_get_focus_object_type (current_itset);
+#else
+  object_type = 't';
+#endif
 
   elt = parse_range_elem_1 (self, width, object_type);
   if (elt != NULL)
