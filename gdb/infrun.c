@@ -4755,7 +4755,8 @@ stop_all_threads (struct itset *stop_set)
 		}
 
 	      if (ws.kind == TARGET_WAITKIND_STOPPED
-		  && ws.value.sig == GDB_SIGNAL_0)
+		  && ws.value.sig == GDB_SIGNAL_0
+		  && should_stop_thread (stop_set, t))
 		{
 		  /* We caught the event that we intended to catch, so
 		     there's no event pending.  */
