@@ -12087,7 +12087,7 @@ until_break_command (char *arg, int from_tty, int anywhere)
 
   cb_data.from_tty = from_tty;
   apply_execution_command (0, exec_option, leader,
-			   until_break_aec_callback, NULL);
+			   until_break_aec_callback, &cb_data);
 }
 
 void prepare_proceed (CORE_ADDR addr, enum gdb_signal siggnal);
@@ -12101,7 +12101,6 @@ until_break_aec_callback (struct thread_info *thread, void *data)
   struct until_break_aec_callback_data *d
     = (struct until_break_aec_callback_data *) data;
   struct frame_info *frame;
-  struct gdbarch *frame_gdbarch;
   struct frame_id stack_frame_id;
   struct frame_id caller_frame_id;
   struct until_break_cmd_data *cmd_data
@@ -12127,7 +12126,6 @@ until_break_aec_callback (struct thread_info *thread, void *data)
      that.  */
 
   frame = get_selected_frame (NULL);
-  frame_gdbarch = get_frame_arch (frame);
   stack_frame_id = get_stack_frame_id (frame);
   caller_frame_id = frame_unwind_caller_id (frame);
 

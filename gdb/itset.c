@@ -2638,7 +2638,6 @@ parse_named_or_throw (const char **textp)
     {
       struct named_itset *named_itset;
       char *tem;
-      struct itset_elt_itset *itset_elt;
 
       for (text = name; isalnum (*text) || *text == '_'; ++text)
 	;
@@ -2654,7 +2653,7 @@ parse_named_or_throw (const char **textp)
       named_itset = get_named_itset (tem);
       if (named_itset == NULL)
 	error (_("Unknown named I/T set: `%s'"), tem);
-      itset_elt = create_itset_elt_itset (named_itset->set);
+      struct itset_elt *itset_elt = create_itset_elt_itset (named_itset->set);
       elt = (struct itset_elt *) create_itset_elt_itset (named_itset->set);
     }
 
@@ -4351,7 +4350,6 @@ for_each_selected_thread_cmd_1 (cmd_cfunc_ftype cmd,
   struct inferior *inf;
   struct thread_info *tp;
   int count = 0;
-  ptid_t selected_ptid = inferior_ptid;
 
   /* Don't use make_cleanup_restore_current_thread as CMD may want to
      change the user selected frame, e.g., up/down/frame, etc.  */
@@ -4464,7 +4462,6 @@ for_each_selected_ada_task_cmd (cmd_cfunc_ftype cmd,
   struct cleanup *old_chain;
   int count = 0;
   struct inferior *inf;
-  ptid_t saved_inferior_ptid = inferior_ptid;
 
   /* Don't use make_cleanup_restore_current_thread as CMD may want to
      change the user selected frame, e.g., up/down/frame, etc.  */
