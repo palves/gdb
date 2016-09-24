@@ -1,0 +1,17 @@
+# epiphany testcase for fmadd $frd6,$frn6,$frm6 -*- Asm -*-
+# mach: all
+
+	.include "testutils.inc"
+
+	start
+
+	.global fmaddf32
+fmaddf32:
+	mova	r12,0f2.0
+	fmadd 	r12,r12,r12
+	mova	r13,0f6.0
+	fsub	r13,r13,r12
+	bbne	1f
+	check	r13
+1:	fail
+	

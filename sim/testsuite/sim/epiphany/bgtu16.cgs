@@ -1,0 +1,19 @@
+# epiphany testcase for bgtu $simm8 -*- Asm -*-
+# mach: all
+
+	.include "testutils.inc"
+
+	start
+
+	.global bgtu16
+bgtu16:
+	mova 	r0,0x80000001
+	mova	r1,0x80000000
+	sub	r2,r0,r1
+	bgtu	1f
+	fail
+1:      sub	r2,r1,r0
+	bgtu	2f
+        pass
+2:	fail
+

@@ -1,0 +1,22 @@
+# epiphany testcase for push/pop.  Also tests post increment/decrement addressing
+# mach: all
+
+	.include "testutils.inc"
+
+	start
+
+	.global pushpop
+pushpop:	
+	mova	sp,stack+1024
+	mov	r0,0
+	mov	r1,1
+	mov	r2,2
+	mov	r3,3
+	push	{r0,r1}
+	pop	{r2,r3}
+	add 	r4,r2,r3
+	sub	r4,r4,r1
+	check	r4
+	.data
+	.p2alignw	2,0
+stack:	.org .+1024

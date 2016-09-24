@@ -1,0 +1,17 @@
+# epiphany testcase for fadd $frd,$frn,$frm -*- Asm -*-
+# mach: all
+
+	.include "testutils.inc"
+
+	start
+
+	.global faddf16
+faddf16:
+	mova	r0,0f1.0
+	fadd	r1,r0,r0
+	mova	r2,0f2.0
+	eor	r2,r1,r2
+	bne	1f
+	pass
+1:	fail
+

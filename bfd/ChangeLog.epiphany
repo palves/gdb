@@ -1,0 +1,56 @@
+2015-02-25  Hesham ALMatary <heshamelmatary@gmail.com>
+
+	* config.bfd: Add Epiphany RTEMS target.
+
+2014-06-13  Pierre Langlois  <pierre.langlois@embecosm.com>
+
+	* reloc.c (BFD_RELOC_EPIPHANY_OVERHIGH): Rename to ...
+	(BFD_RELOC_EPIPHANY_CACHEHIGH): ... this.
+	(BFD_RELOC_EPIPHANY_OVERLOW): Rename to ...
+	(BFD_RELOC_EPIPHANY_CACHELOW): ... this.
+	(BFD_RELOC_EPIPHANY_OVER32): Rename to ...
+	(BFD_RELOC_EPIPHANY_CACHE32): ... this.
+	* libbfd.h: Regenerate.
+	* bfd-in2.h: Regenerate.
+	* elf32-epiphany.c: Rename overlaymanager to cachemanager.
+	(epiphany_elf_howto_table): Rename R_EPIPHANY_OVERHIGH to
+	R_EPIPHANY_CACHEHIGH.  Rename R_EPIPHANY_OVERLOW to R_EPIPHANY_CACHELOW.
+	Rename R_EPIPHANY_OVER32 to R_EPIPHANY_CACHE32.
+	(epiphany_reloc_type_lookup): Likewise.
+	(epiphany_final_link_relocate): Likewise.
+	(epiphany_elf_finish_dynamic_sections): Rename .overlayman section to .cacheman.
+
+2014-05-30  Pierre Langlois  <pierre.langlois@embecosm.com>
+
+	* reloc.c (BFD_RELOC_EPIPHANY_OVER32): Define a new PLT
+	relocation.
+	* libbfd.h: Regenerate.
+	* bfd-in2.h: Regenerate.
+	* elf32-epiphany.c (epiphany_elf_howto_table): Add a 32 bit PLT
+	relocation: R_EPIPHANY_OVER32.
+	(epiphany_reloc_type_lookup): Likewise.
+	(epiphany_final_link_relocate): Handle PLT relocation of type
+	R_EPIPHANY_OVER32.
+	(epiphany_elf_check_relocs): Add R_EPIPHANY_OVER32 to the
+	relocation types that need a PLT entry.
+
+2013-06-14  Simon Cook  <simon.cook@embecosm.com>
+
+	* reloc.c: Defined PLT relocations.
+	* libbfd.h: Regenerated.
+	* libbfd-in2.h: Regenerated.
+	* elf32-epiphany.c (epiphany_elf_howto_table): Add PLT relocs.
+	(epiphany_reloc_type_lookup): Likewise.
+	(epiphany_final_link_relocate): Add handling of PLT relocs.
+	(epiphany_elf_relocate_section): Pass output_bfd and h to
+	epiphany_final_link_relocate to handle PLT.
+	(epiphany_get_plt_address): Define for building PLT table.
+	(epiphany_elf_create_plt_section): Define for creating PLT
+	section.
+	(epiphany_elf_check_relocs): Define to handle PLT relocs.
+	(epiphany_elf_size_dynamic_sections): Define to handle PLT.
+	(epiphany_elf_finish_dynamic_sections): Likewise.
+	(elf_backend_check_relocs): Define.
+	(elf_backend_plt_alignment): Likewise.
+	(elf_backend_size_dynamic_sections): Likewise.
+	(elf_backend_finish_dynamic_sections): Likewise.

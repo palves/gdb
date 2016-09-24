@@ -26,6 +26,15 @@
 #include "elf/epiphany.h"
 #include "libiberty.h"
 
+#define PLT_ENTRY_SIZE 16
+
+/* Current PLT Design:
+   [....] Push LR to stack
+   [....] Jump with Link to cachemanager
+   [....] Startaddr
+   [....] Size (or should this be endaddr?) */
+   
+
 /* Struct used to pass miscellaneous paramaters which
    helps to avoid overly long parameter lists.  */
 struct misc
@@ -95,8 +104,15 @@ static reloc_howto_type epiphany_elf_howto_table [] =
   /* imm12 - sign-magnitude */
   AHOW (R_EPIPHANY_IMM11,   0, 2,11, FALSE, 0, complain_overflow_bitfield, "R_EPIPHANY_IMM12",   0x00ff0380, 0x00ff0380),
   /* imm8 */
-  AHOW (R_EPIPHANY_IMM8,    0, 1, 8, FALSE, 8, complain_overflow_signed,   "R_EPIPHANY_IMM8",    0x0000ff00, 0x0000ff00)
+  AHOW (R_EPIPHANY_IMM8,    0, 1, 8, FALSE, 8, complain_overflow_signed,   "R_EPIPHANY_IMM8",    0x0000ff00, 0x0000ff00),
 
+  /* %CACHEHIGH(EA) */
+  AHOW (R_EPIPHANY_CACHEHIGH, 0, 2,16, FALSE, 0, complain_overflow_dont,     "R_EPIPHANY_CACHEHIGH", 0x0ff01fe0, 0x0ff01fe0),
+  /* %CACHELOW(EA) */
+  AHOW (R_EPIPHANY_CACHELOW,  0, 2,16, FALSE, 0, complain_overflow_dont,     "R_EPIPHANY_CACHELOW",  0x0ff01fe0, 0x0ff01fe0),
+
+  /* A 32 bit PLT relocation for the software cache. */
+  AHOW (R_EPIPHANY_CACHE32,      0, 2,32, FALSE, 0, complain_overflow_dont,     "R_EPIPHANY_CACHE32",     0xffffffff, 0xffffffff)
 
 };
 #undef AHOW
@@ -148,6 +164,14 @@ epiphany_reloc_type_lookup (bfd * abfd ATTRIBUTE_UNUSED,
 
     case BFD_RELOC_EPIPHANY_IMM8:
       return & epiphany_elf_howto_table[ (int) R_EPIPHANY_IMM8];
+
+    case BFD_RELOC_EPIPHANY_CACHEHIGH:
+      return & epiphany_elf_howto_table[ (int) R_EPIPHANY_CACHEHIGH];
+    case BFD_RELOC_EPIPHANY_CACHELOW:
+      return & epiphany_elf_howto_table[ (int) R_EPIPHANY_CACHELOW];
+
+    case BFD_RELOC_EPIPHANY_CACHE32:
+      return & epiphany_elf_howto_table[ (int) R_EPIPHANY_CACHE32];
 
     default:
       /* Pacify gcc -Wall.  */
@@ -378,25 +402,70 @@ epiphany_info_to_howto_rela (bfd * abfd ATTRIBUTE_UNUSED,
   cache_ptr->howto = & epiphany_elf_howto_table [r_type];
 }
 
+/* Get the location of the PLT entry we should be referring to */
+static bfd_vma
+epiphany_get_plt_address (bfd_vma relocation,
+			  bfd *   output_bfd,
+			  struct elf_link_hash_entry *h)
+{
+  unsigned int i;
+  bfd_vma  contents;
+  asection *s;
+
+  s = bfd_get_section_by_name (output_bfd, ".plt");
+  BFD_ASSERT (s != 0);
+
+  /* Look for either entry corresponding to function or fill in next entry
+     Note here that i is a memory offset, so increases by entry size */
+  for (i = 0; i < s->size; i += PLT_ENTRY_SIZE)
+    {
+      /* memory address of actual function is third 32-bit word in entry */
+      contents = bfd_get_32 (output_bfd, s->contents + i + 8);
+      if (contents == 0)
+	{
+	  bfd_put_32 (output_bfd, relocation,
+		      s->contents + i + 8);
+	  /* h holds the function size to store in PLT */
+	  BFD_ASSERT (h != NULL);
+	  bfd_put_32 (output_bfd, h->size,
+		      s->contents + i + 12);
+	  return s->vma + i;
+       }
+      else if (contents == relocation)
+	{
+	  return s->vma + i;
+	}
+    }
+
+  return relocation;
+}
+
 /* Perform a single relocation.
    By default we use the standard BFD routines.  */
 
 static bfd_reloc_status_type
-epiphany_final_link_relocate (reloc_howto_type *  howto,
-			      bfd *               input_bfd,
-			      asection *          input_section,
-			      bfd_byte *          contents,
-			      Elf_Internal_Rela * rel,
-			      bfd_vma             relocation)
+epiphany_final_link_relocate (bfd *                        output_bfd,
+			      reloc_howto_type *           howto,
+			      bfd *                        input_bfd,
+			      asection *                   input_section,
+			      bfd_byte *                   contents,
+			      Elf_Internal_Rela *          rel,
+			      bfd_vma                      relocation,
+			      struct elf_link_hash_entry * h)
 {
   switch (howto->type)
     {
       /* Handle 16 bit immediates.  */
+    case R_EPIPHANY_CACHEHIGH:
+      /* In this case check PLT entry and modify relocation */
+      relocation = epiphany_get_plt_address(relocation, output_bfd, h);
     case R_EPIPHANY_HIGH:
       relocation += rel->r_addend;
       relocation >>= 16;
       goto common;
 
+    case R_EPIPHANY_CACHELOW:
+      relocation = epiphany_get_plt_address(relocation, output_bfd, h);
     case R_EPIPHANY_LOW:
       relocation += rel->r_addend;
     common:
@@ -425,6 +494,11 @@ epiphany_final_link_relocate (reloc_howto_type *  howto,
 	|| ((relocation & 0x7f8 )  << 13);
       return _bfd_relocate_contents (howto, input_bfd, relocation,
 				     contents + rel->r_offset);
+    case R_EPIPHANY_CACHE32:
+      /* Here we are handling a 32 bit function pointer in the .data section.
+	 Check PLT entry and modify relocation.  */
+      relocation = epiphany_get_plt_address (relocation, output_bfd, h);
+      break;
 
       /* Pass others through.  */
     default:
@@ -468,7 +542,7 @@ epiphany_final_link_relocate (reloc_howto_type *  howto,
    accordingly.  */
 
 static bfd_boolean
-epiphany_elf_relocate_section (bfd *output_bfd ATTRIBUTE_UNUSED,
+epiphany_elf_relocate_section (bfd *output_bfd,
 			       struct bfd_link_info *info,
 			       bfd *input_bfd,
 			       asection *input_section,
@@ -537,8 +611,9 @@ epiphany_elf_relocate_section (bfd *output_bfd ATTRIBUTE_UNUSED,
 	continue;
 
       /* Finally, the sole EPIPHANY-specific part.  */
-      r = epiphany_final_link_relocate (howto, input_bfd, input_section,
-				     contents, rel, relocation);
+      r = epiphany_final_link_relocate (output_bfd, howto, input_bfd,
+					input_section, contents, rel,
+					relocation, h);
 
       if (r != bfd_reloc_ok)
 	{
@@ -586,6 +661,159 @@ epiphany_elf_relocate_section (bfd *output_bfd ATTRIBUTE_UNUSED,
   return TRUE;
 }
 
+
+
+/* Based on _bfd_elf_create_dynamic_sections */
+static bfd_boolean
+epiphany_elf_create_plt_section (bfd *dynobj, struct bfd_link_info *info)
+{
+   flagword flags;
+   struct elf_link_hash_entry *h;
+   asection *s;
+   const struct elf_backend_data *bed = get_elf_backend_data (dynobj);
+   struct elf_link_hash_table *htab = elf_hash_table (info);
+   bfd *output_bfd = info->output_bfd;
+   
+   /* If .plt already exists, we don't need to recreate it */
+   if (htab->splt != NULL)
+     return TRUE;
+   
+   flags  = bed->dynamic_sec_flags;
+   flags |= SEC_ALLOC | SEC_CODE | SEC_LOAD;
+   s = bfd_make_section_anyway_with_flags (dynobj, ".plt", flags);
+   if (s == NULL
+       || ! bfd_set_section_alignment (dynobj, s, bed->plt_alignment))
+     return FALSE;
+   htab->splt = s;
+
+   htab->dynobj = output_bfd;
+   
+   /* Define PLT symbol */
+   h = _bfd_elf_define_linkage_sym (dynobj, info, s,
+				    "_PROCEDURE_LINKAGE_TABLE");
+   htab->hplt = h;
+   if (h == NULL)
+     return FALSE;
+  
+   return TRUE;
+ }
+
+/* Check through relocations in a section, and assign space in the PLT
+   where required. */
+ static bfd_boolean
+ epiphany_elf_check_relocs (bfd *abfd,
+			    struct bfd_link_info *info ATTRIBUTE_UNUSED,
+			    asection *sec ATTRIBUTE_UNUSED,
+			    const Elf_Internal_Rela *relocs)
+ {
+   Elf_Internal_Shdr *symtab_hdr;
+   struct elf_link_hash_entry **sym_hashes;
+   const Elf_Internal_Rela *rel;
+
+   const Elf_Internal_Rela *rel_end;
+
+   symtab_hdr = &elf_tdata (abfd)->symtab_hdr;
+   sym_hashes = elf_sym_hashes (abfd);
+
+   rel_end = relocs + sec->reloc_count;
+   for (rel = relocs; rel < rel_end; rel++)
+     {
+       struct elf_link_hash_entry *h;
+       unsigned long r_symndx;
+
+       r_symndx = ELF32_R_SYM (rel->r_info);
+       if (r_symndx < symtab_hdr->sh_info)
+	 h = NULL;
+       else
+	 {
+	   h = sym_hashes[r_symndx - symtab_hdr->sh_info];
+	   while (h->root.type == bfd_link_hash_indirect
+		  || h->root.type == bfd_link_hash_warning)
+	     h = (struct elf_link_hash_entry *) h->root.u.i.link;
+	 }
+
+       switch (ELF32_R_TYPE (rel->r_info))
+	 {
+	   /* These relocs require a plt entry */
+	   case R_EPIPHANY_CACHE32:
+	   case R_EPIPHANY_CACHEHIGH:
+	     if (h != NULL)
+	       {
+		 /* Should this call be elsewhere? */
+		 epiphany_elf_create_plt_section (abfd, info);
+		 h->needs_plt = 1;
+		 h->plt.refcount +=1;
+		 /* Enables analysis of dynamic sections */
+		 info->dynamic = 1;
+		 /* If we have not seen this symbol before space needs
+		    allocating in the PLT */
+		 if (h->plt.refcount == 0)
+		   elf_hash_table (info)->splt->size += PLT_ENTRY_SIZE;
+	       }
+	     break;
+	   /* Do we need anything else here? */
+	   default:
+	     break;
+	 }
+     }
+
+   return TRUE;
+ }
+
+/* Allocate memory for PLT contents, replacing the PLT section
+   we previously created with that in the final object. */
+static bfd_boolean
+epiphany_elf_size_dynamic_sections (bfd *output_bfd,
+				    struct bfd_link_info *info)
+{
+  asection *tmpplt = elf_hash_table(info)->splt;
+  asection *plt = bfd_get_section_by_name (output_bfd, ".plt");
+  plt->contents = bfd_zalloc (output_bfd, tmpplt->size);
+  plt->size = tmpplt->size;
+  elf_hash_table(info)->splt = plt;
+
+  return TRUE;
+}
+
+/* Generate the branches to our cache manager */
+static bfd_boolean
+epiphany_elf_finish_dynamic_sections (bfd * output_bfd,
+				      struct bfd_link_info * info ATTRIBUTE_UNUSED)
+{
+  asection *plt;
+  asection *cacheman;
+  bfd_vma   i;
+
+  plt = bfd_get_section_by_name (output_bfd, ".plt");
+  if (plt == NULL)
+    return TRUE;
+
+  /* We assume our chache manager is in .cacheman */
+  cacheman = bfd_get_section_by_name (output_bfd, ".cacheman");
+  BFD_ASSERT (cacheman != NULL);
+  if (cacheman == NULL)
+    return FALSE;
+
+  for (i = 0; i < plt->size; i += PLT_ENTRY_SIZE)
+    {
+      /* str lr,[sp],-0x2*/
+      bfd_put_32 (output_bfd, 0x2700d55c, plt->contents + i);
+      
+      bfd_vma branch = 0x000000f8; /* 32-bit relative branch with link */
+      bfd_vma diff = cacheman->vma - plt->vma - i - 4;
+      /* Check that the branch target is within 24-bit range
+         Note signed immediates are shifted one to the left  */
+      BFD_ASSERT ((signed long) diff <  33554431 &&
+		  (signed long) diff > -33554432);
+      diff = diff & 0x01fffffe;
+      branch |= (diff << 7);
+      bfd_put_32 (output_bfd, branch, plt->contents + i + 4);
+    }
+
+  return TRUE;
+}
+
+
 /* We only have a little-endian target.  */
 #define TARGET_LITTLE_SYM	 epiphany_elf32_vec
 #define TARGET_LITTLE_NAME  "elf32-epiphany"
@@ -601,10 +829,15 @@ epiphany_elf_relocate_section (bfd *output_bfd ATTRIBUTE_UNUSED,
 #define elf_backend_can_gc_sections     	1
 #define elf_backend_rela_normal			1
 #define elf_backend_relocate_section		epiphany_elf_relocate_section
+#define elf_backend_check_relocs                epiphany_elf_check_relocs
+#define elf_backend_plt_alignment               4
 
 #define elf_symbol_leading_char			'_'
 #define bfd_elf32_bfd_reloc_type_lookup		epiphany_reloc_type_lookup
 #define bfd_elf32_bfd_reloc_name_lookup		epiphany_reloc_name_lookup
 #define bfd_elf32_bfd_relax_section		epiphany_elf_relax_section
+
+#define elf_backend_size_dynamic_sections       epiphany_elf_size_dynamic_sections
+#define elf_backend_finish_dynamic_sections     epiphany_elf_finish_dynamic_sections
 
 #include "elf32-target.h"

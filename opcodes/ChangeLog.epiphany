@@ -1,0 +1,33 @@
+2015-09-24  Ola Jeppsson  <ola@adapteva.com>
+
+	* opcodes/epiphany-desc.c: Regenerated
+	* opcodes/epiphany-desc.h: Regenerated
+	* opcodes/epiphany-opc.c: Regenerated
+	* opcodes/epiphany-opc.h: Regenerated
+
+2015-09-04  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany-desc.c: Regenerated.
+	* epiphany-desc.h: Regenerated.
+
+2014-06-13  Pierre Langlois  <pierre.langlois@embecosm.com>
+
+	* epiphany-asm.c: Regenerated.
+
+2013-12-18  Simon Cook  <simon.cook@embecosm.com>
+
+	* epiphany-desc.c: Regenerated.
+	* epiphany-desc.h: Regenerated.
+
+2013-09-03  Simon Cook  <simon.cook@embecosm.com>
+
+	* epiphany-desc.c: Regenerated.
+	* epiphany-desc.h: Regenerated.
+
+2013-08-09  Simon Cook  <simon.cook@embecosm.com>
+
+	* epiphany-asm.c: Accept @PLT instead of overhigh/overlow.
+
+2013-06-14  Simon Cook  <simon.cook@embecosm.com>
+
+	* epiphany-asm.c: Regenerated.

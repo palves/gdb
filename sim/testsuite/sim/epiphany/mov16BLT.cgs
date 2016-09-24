@@ -1,0 +1,15 @@
+# epiphany testcase for movblt $rd,$rn -*- Asm -*-
+# mach: all
+
+	.include "testutils.inc"
+
+	start
+
+	.global mov16BLT
+mov16BLT:
+	mova	r1,0f1
+	mova	r0,0f0
+	fsub	r3,r0,r1
+	movblt 	r31,r0
+	check	r0
+	

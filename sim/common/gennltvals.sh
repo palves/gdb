@@ -52,6 +52,10 @@ dir=libgloss/cr16/sys target=cr16
 $shell ${srccom}/gentvals.sh $target sys ${newlibroot}/$dir \
 	"syscall.h" 'SYS_[_[:alnum:]]*' "${cpp}"
 
+dir=libgloss target=epiphany
+$shell ${srccom}/gentvals.sh $target sys ${srcroot}/$dir \
+	"syscall.h" 'SYS_[_A-Za-z0-9]*' "${cpp}"
+
 dir=libgloss target=fr30
 $shell ${srccom}/gentvals.sh $target sys ${newlibroot}/$dir \
 	"syscall.h" 'SYS_[_[:alnum:]]*' "${cpp}"

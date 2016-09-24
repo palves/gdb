@@ -1,0 +1,15 @@
+# epiphany testcase for movlte $rd,$rn -*- Asm -*-
+# mach: all
+
+	.include "testutils.inc"
+
+	start
+
+	.global mov16LTE
+mov16LTE:
+	mova	r1,-1
+	mova	r2,1
+	sub	r0,r1,r2
+	mov	r31,0
+	movlte	r31,r2
+	compare	r31,1

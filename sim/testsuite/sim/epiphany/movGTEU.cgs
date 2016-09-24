@@ -1,0 +1,18 @@
+# epiphany testcase for movgteu $rd6,$rn6 -*- Asm -*-
+# mach: all
+
+	.include "testutils.inc"
+
+	start
+
+	.global movGTEU
+movGTEU:
+	mova	r0,-1
+	mova	r1,-2
+	sub	r2,r1,r0
+	movgteu r0,r2
+	add	r0,r0,1
+	check	r0
+	
+	
+

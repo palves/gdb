@@ -1,0 +1,18 @@
+# epiphany testcase for movgtu $rd,$rn -*- Asm -*-
+# mach: all
+
+	.include "testutils.inc"
+
+	start
+
+	.global mov16GTU
+mov16GTU:
+	mova	r1,-1
+	mova	r2,2
+	add	r0,r2,r1        ; 2+-1 sets cbit, but not zbit
+	mov	r31,0           ; moves don't affect CCs
+	movgtu	r31,r2
+	compare	r31,2
+	
+	
+

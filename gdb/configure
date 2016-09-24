@@ -15794,6 +15794,52 @@ if test "${ignore_sim}" = "false"; then
 
 $as_echo "#define WITH_SIM 1" >>confdefs.h
 
+    if test x"${gdb_sim_libs}" != x ; then
+      for lib in ${gdb_sim_libs}; do
+	as_ac_Lib=`$as_echo "ac_cv_lib_${lib}''_main" | $as_tr_sh`
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for main in -l${lib}" >&5
+$as_echo_n "checking for main in -l${lib}... " >&6; }
+if { as_var=$as_ac_Lib; eval "test \"\${$as_var+set}\" = set"; }; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-l${lib}  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+
+int
+main ()
+{
+return main ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  eval "$as_ac_Lib=yes"
+else
+  eval "$as_ac_Lib=no"
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+eval ac_res=\$$as_ac_Lib
+	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
+$as_echo "$ac_res" >&6; }
+eval as_val=\$$as_ac_Lib
+   if test "x$as_val" = x""yes; then :
+  cat >>confdefs.h <<_ACEOF
+#define `$as_echo "HAVE_LIB${lib}" | $as_tr_cpp` 1
+_ACEOF
+
+  LIBS="-l${lib} $LIBS"
+
+fi
+
+      done
+   fi
 
     # Some tdep code should only be compiled in when the ppc sim is
     # built.  PR sim/13418.

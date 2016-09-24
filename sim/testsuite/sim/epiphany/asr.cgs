@@ -1,0 +1,14 @@
+# epiphany testcase for asr $rd6,$rn6,$rm6 -*- Asm -*-
+# mach: all
+
+	.include "testutils.inc"
+
+	start
+
+	.global asr
+asr:
+	mova r10,0x80000000
+	mov	r11,31
+	asr r10,r10,r11
+	add	r10,r10,1
+	check	r10

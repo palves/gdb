@@ -1,0 +1,13 @@
+# epiphany testcase for sub $rd6,$rn6,$rm6 -*- Asm -*-
+# mach: all
+
+	.include "testutils.inc"
+
+	start
+
+	.global sub
+sub:
+	mov	r10,10
+	mov	r11,10
+	sub r10,r10,r11
+	check	r10

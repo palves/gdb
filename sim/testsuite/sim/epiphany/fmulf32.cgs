@@ -1,0 +1,13 @@
+# epiphany testcase for fmul $frd6,$frn6,$frm6 -*- Asm -*-
+# mach: all
+
+	.include "testutils.inc"
+
+	start
+
+	.global fmulf32
+fmulf32:
+	mova	r10,0f1.0
+	fmul	r11,r10,r10
+	fsub	r11,r11,r10
+	check	r11

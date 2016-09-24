@@ -1,0 +1,418 @@
+2016-03-17  Pedro Alves  <pedro@palves.net>
+
+	* epiphany-tdep.c (epiphany_gdbarch_init): Set
+	gdbarch_decr_pc_after_break.
+
+2015-09-24  Ola Jeppsson  <ola@adapteva.com>
+
+	* gdb/configure: Regenerated.
+
+2015-09-24  Ola Jeppsson  <ola@adapteva.com>
+
+	* gdb/epiphany-tdep.c (EPIPHANY_GPR_FP): Change fp to r15.
+	(EPIPHANY_MOV_FP_SP_INST): Adjust for fp move.
+	(epiphany_debug_infrun): Likewise.
+	(epiphany_analyse_prologue): Likewise.
+	(epiphany_register_name): Likewise.
+
+2015-09-24  Ola Jeppsson  <ola@adapteva.com>
+
+	* gdb/configure.tgt (epiphany-*): Specify gdb_sim_libs.
+
+2015-09-24  Ola Jeppsson  <ola@adapteva.com>
+
+	* gdb/configure.tgt: Add gdb_sim_libs variable.
+	* gdb/configure.ac: Support gdb_sim_libs variable.
+
+2015-08-31  Ola Jeppsson  <ola@adapteva.com>
+
+	* gdb/epiphany-tdep.c (epiphany_push_dummy_call): Fix type
+	warnings.
+	(epiphany_software_single_step): Return 0 if failed to insert
+	breakpoint.
+
+2015-04-22  Hesham ALMatary  <heshamelmatary@gmail.com>
+
+	* configure.tgt: Add epiphany-*-rtems* target
+
+2014-12-11  Simon Cook  <simon.cook@embecosm.com>
+
+	* infcall.c (value_arg_coerce): Fix compile error found when rebasing
+	with upstream GDB.
+	(run_inferior_call): Likewise.
+	(call_function_by_hand): Likewise.
+
+2014-06-21  Jeremy Bennett  <jeremy.bennett@embecosm.com>
+
+	* epiphany-tdep.c (epiphany_is_instr32): Created.
+	(epiphany_is_branch): Created.
+	(epiphany_is_jump): Created.
+	(epiphany_is_uncond_branch): Created.
+	(epiphany_branch_offset): Created.
+	(epiphany_jump_register): Created.
+	(epiphany_ss_instr_type): Created.
+	(epiphany_software_single_step): Created.
+	(epiphany_gdbarch_init): Add software single step to arch.
+
+2014-02-20  Jeremy Bennett  <jeremy.bennett@embecosm.com>
+
+	* epiphany-tdep.c: Use new (larger) set of SCRs to match target.
+	(epiphany_register_name): Updated for new SCRs and check for valid
+	register number.
+
+2013-06-03  Simon Cook  <simon.cook@embecosm.com>
+
+	* epiphany-tdep.c (_initialize_epiphany_tdep): Add prototype.
+	(epiphany_return_value): Update interface.
+
+2012-03-20  Jeremy Bennett  <jeremy.bennett@embecosm.com>
+
+	* epiphany-tdep.c (epiphany_analyse_prologue): Change declaration
+	of regs to have EPIPHANY_NUM_REGS elements.
+
+2012-02-08  Jeremy Bennett  <jeremy.bennett@embecosm.com>
+
+	* epiphany-tdep.c: Include remote.h, command.h and cli/cli-cmds.h
+	to support set/show coreid command.
+	<MAX_CORES>: Definition created.
+	(epiphany_set_coreid): Created.
+	(_initialize_epiphany_tdep): Register commands to set and show the
+	coreid.
+	* remote.c <remote_client_data>: New static data.
+	(register_remote_client_data): Created.
+	(remote_query_supported): Conditionally pass client data.
+	* remote.h (register_remote_client_data): Added.
+
+2012-01-19  Jeremy Bennett  <jeremy.bennett@embecosm.com>
+
+	* epiphany-tdep.c: Remove extern gdbarch_debug (unused).
+	(epiphany_debug_arch): Remove (unused).
+	(epiphany_analyse_prologue): Only populate register data if we
+	have a frame.
+	(epiphany_in_function_epilogue_p): Initialize ep_start to
+	func_start if function is found.
+	(epiphany_push_dummy_call): Allow for 16-byte scalars, which are
+	still only double word aligned if on the stack.
+
+2011-11-25  Jeremy Bennett  <jeremy.bennett@embecosm.com>
+
+	* epiphany-tdep.c (epiphany_analyse_prologue): Corrected
+	calculation of immediate fields.
+
+2011-11-23  Jeremy Bennett  <jeremy.bennett@embecosm.com>
+
+	* epiphany-tdep.c (epiphany_in_function_epilogue_p): Corrected so
+	epilogue only starts *after* the SP is invalidated, not on the
+	instruction when it will be invalidated. Added support for
+	displacement postmodify of SP. Include FP in epilogue determination.
+
+2011-11-22  Jeremy Bennett  <jeremy.bennett@embecosm.com>
+
+	* epiphany-tdep.c (epiphany_in_function_epilogue_p): Include first
+	instruction of epilogue in test. Add debug output.
+
+2011-11-21  Jeremy Bennett  <jeremy.bennett@embecosm.com>
+
+	* epiphany-tdep.c (epiphany_analyse_prologue): Corrected nop
+	instruction to be 0x1a2.
+	(epiphany_in_function_epilogue_p): Rewritten to do full analysis.
+
+2011-11-10  Jeremy Bennett  <jeremy.bennett@embecosm.com>
+
+	* infcall.c (call_function_by_hand): Temporary hack to recognize
+	that SP has pre-allocated space.
+	* epiphany-tdep.c (epiphany_return_value): Debug messages shows
+	address of any structure return.
+
+2011-11-03  Jeremy Bennett  <jeremy.bennett@embecosm.com>
+
+	* epiphany-tdep.c (epiphany_return_value): Test for return by
+	struct convention invert result of epiphany_aggregate_by_value_p.
+
+2011-11-01  Jeremy Bennett  <jeremy.bennett@embecosm.com>
+
+	* epiphany-tdep.c (epiphany_push_dummy_call): Added more debug
+	infrun output for scalars and stack args. Ensure double word stack
+	args are double word aligned.
+
+2011-10-02  Jeremy Bennett  <jeremy.bennett@embecosm.com>
+
+	* dwarf2-frame.c (dwarf2_frame_default_init_reg): Set default for
+	SP unwinding to be CFA - 8. Still a quick hack.
+	* epiphany-tdep.c <EPIPHANY_STACK_ALIGN>: Defined to 8 (was 16).
+
+2011-10-02  Jeremy Bennett  <jeremy.bennett@embecosm.com>
+
+	* epiphany-tdep.c (epiphany_fetch_inst32, epiphany_is_inst16)
+	(epiphany_is_flow_change, epiphany_analyse_str_disp)
+	(epiphany_analyse_str_disp_postmod, epiphany_analyse_inst):
+	Deleted.
+	(epiphany_debug_infrun): New function.
+	(epiphany_anayse_prologue): Only set the frame_id if this_frame is
+	non-NULL. End prologue analysis if 16-bit flow of control other
+	than nop is found. No return result.
+	(eiphany_scan_prologue): Use SAL data. No need for this_frame argument.
+	(epiphany_create_prologue_cache): Deleted and rolled into
+	epiphany_frame_cache.
+	(epiphany_dummy_id, epiphany_push_dummy_call): Replace all
+	infrun_debug messages with calls to epiphany_debug_infrun ().
+	(epiphany_skip_prologue): Use epiphany_create_prologue_cache to
+	find the prologue end.
+	(epiphany_frame_cache): Incorporate the code from
+	epiphany_create_prologue_cache.
+
+2011-10-01  Jeremy Bennett  <jeremy.bennett@embecosm.com>
+
+	* dwarf2-frame.c (dwarf2_frame_default_init_reg): Set default for
+	SP unwinding to be CFA - 16. Quick patch for Epiphany.
+	* epiphany-tdep.c: include prologue-value.h. Added extern refs to
+	frame_debug and debug_infrun.
+	<EPIPHANY_STACK_ALIGN>: Set to 8 (stack is double-word aligned).
+	<EPIPHANY_STACK_OFFSET>: Added definition.
+	<SUBMASK, BIT, BITS, SEXTEND16>: New macros
+	(epiphany_frame_debug): New function.
+	(epiphany_analyse_prologue): Renamed from
+	epiphany_analyze_prologue and completely rewritten using scheme in
+	prologue-value.[ch].
+	(epiphany_analyze_prologue): Renamed as epiphany_analyse_prologue.
+	(epiphany_create_prologue_cache, epiphany_scan_prologue): New
+	functions.
+	(epiphany_aggregate_by_value, epiphany_parm_size): New functions.
+	(epiphany_dummy_id): Add frame debug output.
+	(epiphany_push_dummy_call): Correctly calculate	register alignment
+	for register pairs. Align frame for stack args. Add frame debug output.
+	(epiphany_skip_prologue): Simplified to use
+	skip_prologue_using_sal if possible, otherwise constant addition
+	to supplied PC.
+	(epiphany_unwind_pc, epiphany_unwind_sp): Base on THIS frame.
+	(epiphany_frame_cache): No longer return the cache. Base on
+	epiphany_create_prologue_cache.
+	(epiphany_frame_base_address, epiphany_frame_prev_register)
+	(epiphany_frame_this_id): Use new epiphany_frame_cache interface.
+
+2011-09-21  Jeremy Bennett  <jeremy.bennett@embecosm.com>
+
+	* epiphany-tdep.c <PARM_BOUNDARY_BITS, PARM_BOUNDARY_BYTES>
+	<MAX_AGGREGATE_BY_VALUE_BITS, MAX_AGGREGATE_BY_VALUE_BYTES>: New
+	constants defined.
+	(epiphany_analyze_prologue): Trigger internal error if symbol data
+	not available.
+	(epiphany_aggregate_by_value_p, epiphany_parm_size): New
+	functions.
+	(epiphany_push_dummy_call): Stack alignment corrected.
+	epiphany_aggregate_by_value_p used to identify pass by value.
+	(epiphany_print_registers_info): Better spacing for floating point
+	values.
+	(epiphany_return_value): Order of arguments to
+	store_unsigned_integer corrected.  epiphany_aggregate_by_value_p
+	used to identify pass by value.
+	(epiphany_register_reggroup_p): Exclude SP and LR from float
+	group.
+
+2011-08-25  Jeremy Bennett  <jeremy.bennett@embecosm.com>
+
+	* epiphany-tdep.c <EPIPHANY_BKPT_INST_STRUCT>: Merge with SIM
+	version (which was the correct one).
+	(epiphany_print_registers_info): Also print GPRs in floating point
+	format.
+	(epiphany_print_float_info): Print GPRs using
+	epiphany_print_registers_info.
+	(epiphany_return_value): Function content added for Epiphany.
+	(epiphany_skip_main_prologue): Deleted.
+	(epiphany_breakpoint_from_pc): Remove simulator dependent code.
+	(gdbarch_init): Call to set_gdbarch_skip_main_prologue removed.
+	* remote-sim.c (dump_mem): Change to use unsigned char * for
+	better printing.
+
+2011-08-24  Jeremy Bennett  <jeremy.bennett@embecosm.com>
+
+	* epiphany-tdep.c (epiphany_analyze_prologue): Remove this_sp_ptr
+	argument.
+	(epiphany_push_dummy_call): Function content added.
+	(epiphany_skip_prologue, epiphany_frame_cache): Change calls to
+	epiphany_analyze_prologue to match new definition.
+
+2011-08-22  Jeremy Bennett  <jeremy.bennett@embecosm.com>
+
+	* epiphany-tdep.c (epiphany_analyze_prologue): New function,
+	bringing together common functionality used in
+	epiphany_frame_cache and epiphany_skip_prologue.
+	(epiphany_skip_prologue): Simplified to use epiphany_analyze_prologue.
+	(epiphany_frame_cache): New function based on old
+	epiphany_frame_unwind_cache, but using THIS frame.
+	(epiphany_frame_unwind cache): Replaced by epiphany_frame_cache.
+
+2011-08-20  Jeremy Bennett  <jeremy.bennett@embecosm.com>
+
+	* epiphany-tdep.c (epiphany_frame_prev_register): Argument list
+	and return result changed for GDB 7.x, result caculcation updated
+	to match.
+	(epiphany_frame_sniffer): Updated to use THIS frame and marked for
+	rewriting. Interface completely changed.
+	<epiphany_frame_unwind>: New data structure.
+	(epiphany_frame_base_address): Updated to use THIS frame.
+	<epiphany_frame_base>: Moved out of epiphany_frame_sniffer.
+	(epiphany_frame_base_sniffer): New function.
+	(gdbarch_init): Simplified registration of frame unwinders and
+	sniffers.
+
+2011-08-19  Jeremy Bennett  <jeremy.bennett@embecosm.com>
+
+	* epiphany-tdep.c: Order gdbarch functions to match sequence in
+	gdbarch_init.
+	(epiphany_virtual_frame_pointer, epiphany_dummy_id)
+	(epiphany_push_dummy_call, epiphany_print_float_info)
+	(epiphany_cannot_store_register, epiphany_get_longjmp_target)
+	(epiphany_skip_main_prologue, epiphany_skip_trampoline_code)
+	(epiphany_in_function_epilogue_p): New functions.
+	(epiphany_single_step_through_delay): Removed.
+	(epiphany_pseudo_register_read): Function now returns a result.
+	(epiphany_return_value): functype and valtype args replace type
+	argument.
+	(epiphany_gdbarch_init): Reorder architecture sequence to match
+	gdbarch structure. Add new architecture functions. Set
+	gdbarch_signed to zero, i.e. char behaves as unsigned. Delete call
+	to set_gdbarch_deprecated_fp_regnum. Set
+	gdbarch_believe_pcc_promotion to 1 (i.e. the compiler reports a
+	char or short promoted to int as int, not the original type).
+
+2011-08-16  Joern Rennecke <joern.rennecke@embecosm.com>
+
+	* copying.c: Regenerate.
+
+2011-08-16  Jeremy Bennett  <jeremy.bennett@embecosm.com>
+
+	* epiphany-tdep.c (epiphany_frame_unwind_cache): Replace use of
+	frame_unwind_func so will compile.
+
+2011-08-16  Joern Rennecke <joern.rennecke@embecosm.com>
+	From mainline:
+	2011-04-11  Gary Benson  <gbenson@redhat.com>
+	  Fix failure with --enable-maintainer-mode.
+	  * Makefile.in (aclocal_m4_deps): Updated gnulib dependencies.
+
+2011-08-12  Joern Rennecke <joern.rennecke@embecosm.com>
+	From mainline:
+	2011-06-27  Tristan Gingold  <gingold@adacore.com>
+	  * dwarf2read.c (struct dwarf2_section_info): Replace was_mmapped
+	  field by map_addr and map_len.
+	  (dwarf2_read_section): Adjust for the new bfd_mmap api.
+	  (munmap_section_buffer): Likewise.
+
+2011-08-12  Jeremy Bennett  <jeremy.bennett@embecosm.com>
+
+	* epiphany-tdep.c (epiphany_fetch_inst32): Change to use gdbarch
+	as first argument, target_read_memory to get instruction under
+	all circumstances and add byte order to call to
+	extract_unsigned_integer.
+	(epiphany_return_value): Add byte order to call to
+	store_unsigned_integer.
+	(epiphany_register_type): Use builtin_type to set up void type and
+	to return uint32 type.
+	(eiphany_skip_prologue): Add gdbarch to call to
+	skip_prologue_using_sal, use gdbarch as first arg to
+	epiphany_fetch_inst32.
+	(epiphany_frame_unwind_cache): Use gdbarch as first arg to
+	epiphany_fetch_inst32. Don't call trad_frame_get_register, to
+	allow the code to compile.
+	(epiphany_frame_prev_register): Don't call
+	trad_frame_get_register, to allow the code to compile.
+	(epiphany_frame_sniffer): Remove .prev_pc field.
+	(epiphany_gdbarch_init): Comment out calls to
+	frame_unwind_apend_sniffer to allow code to compile.
+
+2011-08-11  Joern Rennecke <joern.rennecke@embecosm.com>
+	From mainline:
+	2011-07-04  Thomas Schwinge  <thomas@schwinge.name>
+	  * osabi.c (generic_elf_osabi_sniffer) <ELFOSABI_GNU>: Handle in the
+	  same way as ELFOSABI_NONE.
+	  <ELFOSABI_LINUX, ELFOSABI_HURD>: Remove cases.
+	2011-04-25  Jan Kratochvil  <jan.kratochvil@redhat.com>
+	  * defs.h (ENUM_BITFIELD): Remove.
+
+2011-07-28  Jeremy Bennett  <jeremy.bennett@embecosm.com>
+
+	* valops.c.orig: Deleted.
+
+2011-07-18  Jeremy Bennett  <jeremy.bennett@embecosm.com>
+
+	Added for the record, since no ChangeLog has been maintained since
+	May 2010.
+
+	* Changelog.epiphany: Created.
+	* atdsp-tdep.c: Replaced by epiphany-tdep.c
+	* epiphany-tdep.c: Created from atdsp-tdep.c, all references to
+	"atdsp" replaced by "epiphany"
+	<EPIPHANY_NUM_SCRS>: Increased to 32.
+	<EPIPHANY_BKPT_INST_STRUCT_SIM>: version with opposite endianness
+	for use with the simulator.
+	(epiphany_analyse_inst): Look for and skip terminating 'b' does
+	not increment index.
+	(epiphany_breakpoint_from_pc): Use breakpoint with reverse
+	endianness if simulating.
+	(epiphany_register_name); Add 24 new SCRs.
+	* configure.tgt: Replace atdsp by epiphany.
+	* mipsread.c: Include elf/internals.h.
+	* NEWS: Changed to reference Epiphany rather than ATDSP.
+	* po/gdb.pot: Updated ATDSP entry and changed to Epiphany with
+	correct line number.
+
+2010-05-08  Jeremy Bennett  <jeremy.bennett@embecosm.com>
+
+	* NEWS, README: Updated for new ATDSP version.
+	* atdsp-tdep.c (atdsp_skip_prologue): Corrected stepping past
+	16/32-bit instructions (was back to front).
+
+2010-05-08  Jeremy Bennett  <eremy.bennett@embecosm.com>
+
+	* atdsp-tdep.c: Include gdb_assert.h. Forward declarations of
+	functions all deleted. Redundant #defines deleted.
+	(atdsp_analyse_inst): New function for generic instruction analysis.
+	(atdsp_is_inst16): Predicate for instruction length.
+	(atdsp_is_flow_change): Predicate for instructions which (may)
+	change the flow of control.
+	(atdsp_skip_prologue): Updated and simplified for new prologue
+	structure.
+	(atdsp_frame_unwind_cache): Updated and simplified for new
+	prologue structure.
+	(atdsp_is_callee_saved_reg): Obsolete, deleted.
+	(atdsp_patch32): Obsolete, deleted.
+	(atdsp_patch32_rd): Obsolete, deleted.
+	(atdsp_patch32_rn): Obsolete, deleted.
+	(atdsp_patch32_imm11): Obsolete, deleted.
+	(atdsp_patch32_sign): Obsolete, deleted.
+	(atdsp_patch32_cc): Obsolete, deleted.
+	(atdsp_mask32): Obsolete, deleted.
+	(atdsp_mask32_imm11): Obsolete, deleted.
+	(atdsp_mask32_rd): Obsolete, deleted.
+	(atdsp_extract32): Obsolete, deleted.
+	(atdsp_extract32_imm11): Obsolete, deleted.
+	(atdsp_extract32_simm11): Obsolete, deleted.
+	(atdsp_extract32_rd): Obsolete, deleted.
+	(atdsp_str32_disp): Obsolete, deleted.
+	(atdsp_mov32): Obsolete, deleted.
+	(atdsp_sub_imm32): Obsolete, deleted.
+	(atdsp_frame_lr_saved): Obsolete, deleted.
+	(atdsp_frame_fp_saved): Obsolete, deleted.
+	(atdsp_frame_new_fp): Obsolete, deleted.
+	(atdsp_frame_size): Obsolete, deleted.
+	(atdsp_frame_callee_save): Obsolete, deleted.
+
+2009-10-03  Joern Rennecke <joern.rennecke@embecosm.com>
+
+	Backported from mainline:
+	2008-11-04  Daniel Jacobowitz  <dan@codesourcery.com>
+	* eval.c (evaluate_subexp_standard): Assert that there is at
+	least one array dimension.
+
+2009-05-23  Jeremy Bennett  <jeremy.bennett@embecosm.com>
+
+	* atdsp-tdep.c (atdsp_skip_prologue): Use examination of binary if
+	SAL info is not available.
+
+2009-04-01  Jeremy Bennett  <jeremy.bennett@embecosm.com>
+
+	* atdsp-tdep.c: New file for ATDSP
+	* configure.tgt: Added atdsp-*-elf* target
+	* NEWS: Added ATDSP
+

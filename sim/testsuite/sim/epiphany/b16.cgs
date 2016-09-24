@@ -1,0 +1,15 @@
+# epiphany testcase for b $simm8 -*- Asm -*-
+# mach: all
+
+	.include "testutils.inc"
+
+	
+	start
+	b	1f
+	fail
+	.global b16
+b16:
+	fail
+2:	pass
+1:	b 	2b		;try a backwards branch too
+	fail			; if we're offset wrong

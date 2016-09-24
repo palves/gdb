@@ -62,11 +62,7 @@ extern void sim_addr_range_delete (ADDR_RANGE * /*ar*/,
 
 /* TODO: This should get moved into sim-inline.h.  */
 #ifdef HAVE_INLINE
-#ifdef SIM_ARANGE_C
-#define SIM_ARANGE_INLINE INLINE
-#else
-#define SIM_ARANGE_INLINE EXTERN_INLINE
-#endif
+#define SIM_ARANGE_INLINE static INLINE
 #else
 #define SIM_ARANGE_INLINE EXTERN
 #endif

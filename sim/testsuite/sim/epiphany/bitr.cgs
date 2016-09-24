@@ -1,0 +1,17 @@
+# epiphany testcase for bir $rd6,$rn6 -*- Asm -*-
+# mach: all
+
+	.include "testutils.inc"
+
+	start
+
+	.global bitr
+bitr:   
+	mov	r9,1
+        mov     r8,0x8000
+        bitr    r9,r8           ; 0x8000 reverses as 0x00010000
+        sub     r9,r9,r8
+        sub     r9,r9,r8
+	bne     1f
+        pass
+1:      fail

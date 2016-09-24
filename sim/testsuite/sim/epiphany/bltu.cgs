@@ -1,0 +1,24 @@
+# epiphany testcase for bltu $simm24 -*- Asm -*-
+# mach: all
+
+	.include "testutils.inc"
+
+	start
+
+	.global bltu
+	
+;;; ~CBIT
+	
+bltu:
+        mova 	r0,10
+	mova	r1,20
+	sub	r2,r1,r0
+	bltu	1f
+	add	r2,r0,r1
+	bltu	2f
+	fail
+	.rept	128
+	nop
+	.endr
+1:	fail
+2:	pass

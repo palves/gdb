@@ -1,0 +1,12 @@
+# epiphany testcase for lsr $rd6,$rn6,$rm6 -*- Asm -*-
+# mach: all
+
+	.include "testutils.inc"
+
+	start
+
+	.global lsr
+lsr:
+	mov	r20,0xffe5	; loads 16 bits
+	lsr r20,r20,r20		; uses low 5 bits as shift
+	compare r20,(65535>>5)	; expect 0x07ff

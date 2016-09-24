@@ -1,0 +1,14 @@
+# epiphany testcase for movlteu $rd6,$rn6 -*- Asm -*-
+# mach: all
+
+	.include "testutils.inc"
+
+	start
+
+	.global movLTEU
+movLTEU:
+	mov	r10,99
+	mov	r11,0
+	movts	status,r11	; ~AC | AZ
+	movlteu r10,r11
+	check	r10

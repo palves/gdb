@@ -554,7 +554,7 @@ sim_events_schedule_after_signal (SIM_DESC sd,
   events->nr_held ++;
   if (events->nr_held > MAX_NR_SIGNAL_SIM_EVENTS)
     {
-      sim_engine_abort (NULL, NULL, NULL_CIA,
+      sim_engine_abort (sd, NULL, NULL_CIA,
 			"sim_events_schedule_after_signal - buffer overflow");
     }
 

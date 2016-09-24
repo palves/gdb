@@ -760,7 +760,19 @@ dwarf2_frame_default_init_reg (struct gdbarch *gdbarch, int regnum,
   if (regnum == gdbarch_pc_regnum (gdbarch))
     reg->how = DWARF2_FRAME_REG_RA;
   else if (regnum == gdbarch_sp_regnum (gdbarch))
-    reg->how = DWARF2_FRAME_REG_CFA;
+    {
+      /* 1 Oct 11: Jeremy Bennett. Quick patch for Epiphany, for whom the
+	 default unwind is no the CFA, but the CFA-8. */
+      if (1)
+	{
+	  reg->how        = DWARF2_FRAME_REG_SAVED_VAL_OFFSET;
+	  reg->loc.offset = -8;
+	}
+      else
+	{
+	  reg->how = DWARF2_FRAME_REG_CFA;
+	}
+    }
 }
 
 /* Return a default for the architecture-specific operations.  */

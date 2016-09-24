@@ -1,0 +1,14 @@
+# epiphany testcase for mov ip,ip bug
+# mach: all
+
+	.include "testutils.inc"
+
+	start
+
+	.global movbug
+movbug:
+	mov	ip,0		;32 bit move
+	mov	r0,ip		;32 bit
+	mov	ip,ip
+	check	ip
+	

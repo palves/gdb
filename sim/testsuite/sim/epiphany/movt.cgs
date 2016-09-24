@@ -1,0 +1,19 @@
+# epiphany testcase for movt $rd6,$imm16 -*- Asm -*-
+# mach: all
+
+	.include "testutils.inc"
+
+	start
+
+	.global mov16
+mov16:
+	movt r0,0xffff
+	mov  r1,0xffff
+	and  r2,r0,r1
+	bne  1f			; 0xffff0000 & 0x0000ffff -> zero
+	lsr  r0,r0,16
+	sub  r0,r0,r1
+	bne  1f			; both 0xffff000 should end up as zero.
+
+	pass
+1:	fail

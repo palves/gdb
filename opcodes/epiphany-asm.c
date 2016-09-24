@@ -209,21 +209,48 @@ parse_imm16 (CGEN_CPU_DESC cd,
   if (strncasecmp (*strp, "%high(", 6) == 0)
     {
       *strp += 6;
-      errmsg = cgen_parse_address (cd, strp, opindex, BFD_RELOC_EPIPHANY_HIGH,
-				   result_type, valuep);
-      if (**strp != ')')
-	return MISSING_CLOSE_PARENTHESIS;
-      ++*strp;
+      if (strchr (*strp, '@') == NULL ||
+	  strchr (*strp, ')') < strchr (*strp, '@'))
+	{
+	  errmsg = cgen_parse_address (cd, strp, opindex, BFD_RELOC_EPIPHANY_HIGH,
+				       result_type, valuep);
+	  if (**strp != ')')
+	    return MISSING_CLOSE_PARENTHESIS;
+	  ++*strp;
+	}
+      else
+	{
+	  errmsg = cgen_parse_address (cd, strp, opindex,
+				       BFD_RELOC_EPIPHANY_CACHEHIGH,
+				       result_type, valuep);
+	  if (strncasecmp (*strp, "@PLT)", 5) != 0)
+	    return MISSING_CLOSE_PARENTHESIS;
+	  *strp += 5;
+	}
       *valuep >>= 16;
     }
   else if (strncasecmp (*strp, "%low(", 5) == 0)
     {
       *strp += 5;
-      errmsg = cgen_parse_address (cd, strp, opindex, BFD_RELOC_EPIPHANY_LOW,
-				   result_type, valuep);
-      if (**strp != ')')
-	return MISSING_CLOSE_PARENTHESIS;
-      ++*strp;
+      if (strchr (*strp, '@') == NULL ||
+	  strchr (*strp, ')') < strchr (*strp, '@'))
+	{
+	  errmsg = cgen_parse_address (cd, strp, opindex,
+				       BFD_RELOC_EPIPHANY_LOW,
+				       result_type, valuep);
+	  if (**strp != ')')
+	    return MISSING_CLOSE_PARENTHESIS;
+	  ++*strp;
+	}
+      else
+	{
+	  errmsg = cgen_parse_address (cd, strp, opindex,
+				       BFD_RELOC_EPIPHANY_CACHELOW,
+				       result_type, valuep);
+	  if (strncasecmp (*strp, "@PLT)", 5) != 0)
+	    return MISSING_CLOSE_PARENTHESIS;
+	  *strp += 5;
+	}
     }
   else if (!cgen_parse_keyword (cd, strp, &epiphany_cgen_opval_gr_names,
 				&dummyval)

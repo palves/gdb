@@ -1,0 +1,18 @@
+# epiphany testcase for strb $rd,[$rn,$rm] -*- Asm -*-
+# mach: all
+
+	.include "testutils.inc"
+
+	start
+
+	.global strbx16
+strbx16:
+	mov	r1,255
+	mov	r0,%low(v)
+	movt	r0,%high(v)
+	mov	r2,2
+	strb 	r1,[r0,r2]
+	ldrb	r3,[r0,r2]
+	compare r3,255
+	.data
+v:	.byte 5,10,20

@@ -1,0 +1,20 @@
+# epiphany testcase for str $rd,[$rn,$rm] -*- Asm -*-
+# mach: all
+
+	.include "testutils.inc"
+
+	start
+
+	.global strx16
+strx16:
+	mova	r0,v
+	lsr	r0,r0,1
+	lsl	r1,r0,1
+	str 	r0,[r0,r0]
+	ldr	r2,[r1,0]
+	sub	r2,r2,r0
+	check	r2
+	.data
+	.align 2
+v:	.long 1,2,3
+	

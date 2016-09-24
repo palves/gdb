@@ -1,0 +1,24 @@
+# epiphany testcase for strb $rd6,[$rn6],$rm6 -*- Asm -*-
+# mach: all
+
+	.include "testutils.inc"
+
+	start
+
+	.global strbp
+strbp:
+	mov 	r0,%low(v)
+	movt 	r0,%high(v)
+	mov	r2,r0		;save starting address
+	mov	r1,1
+	strb 	r1,[r0],r1	;store a 1 into memory
+	sub	r2,r0,r2	;should have advanced r0 by 1
+	sub	r2,r2,1
+	bne	1f
+	sub	r2,r2,1
+	ldrb	r1,[r0,r2]	;read the byte we stored
+	compare	r1,1
+1:	fail			
+	.data
+v:	.byte 0,0,0
+	

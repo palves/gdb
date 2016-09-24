@@ -22017,6 +22017,7 @@ acceptable commands.
 
 
 @menu
+* Epiphany::                    Adapteva Epiphany
 * ARC::                         Synopsys ARC
 * ARM::                         ARM
 * M68K::                        Motorola M68K
@@ -22027,6 +22028,55 @@ acceptable commands.
 * CRIS::                        CRIS
 * Super-H::                     Renesas Super-H
 @end menu
+
+@node Epiphany
+@subsection Epiphany
+@cindex Adapteva Epiphany
+@cindex Epiphany
+@value{GDBN} supports the Adapteva Epiphany as a target modeled in
+cycle accurate SystemC.  There is also a separate @value{GDBN} simulator
+for this target.
+
+The general purpose registers (shown by @kbd{info register}) for this
+processor are @samp{r0} through @samp{r63}. However the frame pointer
+(@samp{r9}), inter-procedure call register (@samp{r10}), stack pointer
+(@samp{r11}) and link register (@samp{r12}) are referred to by their
+functional names (respectively @samp{fp}, @samp{ip}, @samp{sp},
+@samp{lr}), @emph{not} their register numbers.
+
+The special core registers can be displayed by the @kbd{info register
+all} command.  These registers are @samp{config}, @samp{status},
+@samp{pc}, @samp{debug}, @samp{iab}, @samp{lc}, @samp{ls}, @samp{le},
+@samp{iret}, @samp{imask}, @samp{ilat}, @samp{ilatst},@samp{ilatcl} ,
+@samp{ipend}, @samp{ctimer0}, @samp{ctimer1}, @samp{dma0config},
+@samp{dma0stride}, @samp{dma0count}, @samp{dma0srcaddr},
+@samp{dma0dstaddr}, @samp{dma0autodma0}, @samp{dma0autodma1},
+@samp{dma0status}, @samp{dma1config}, @samp{dma1stride},
+@samp{dma1count}, @samp{dma1srcaddr}, @samp{dma1dstaddr},
+@samp{dma1autodma0}, @samp{dma1autodma1} and @samp{dma1status}.
+
+The standard @value{GDBN} registers @samp{$sp}, @samp{$fp}, @samp{$ps}
+and @samp{$pc} refer respectively to the stack pointer, frame pointer
+@samp{status} and program counter registers.
+
+GDB provides the following Epiphany specific commands:
+
+@table @code
+@item set coreid @var{corenum}
+@kindex set coreid
+
+The Epiphany is a multi-core architecture, but the GDB client will
+only debug one core at a time.  This command specifies the ID of the
+core to use.  The value is in the range 0-4095, and must be specified
+@emph{before} connecting to a remote target. If no value is set, the
+default value 0 is used.
+
+@item show coreid
+@kindex show coreid
+
+Show the ID of the core to be used when remote debugging.
+
+@end table
 
 @node ARC
 @subsection Synopsys ARC

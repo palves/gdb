@@ -1,0 +1,14 @@
+# epiphany testcase for bblte $simm8 -*- Asm -*-
+# mach: all
+
+	.include "testutils.inc"
+
+	start
+	mov	r0,bzbit		;BZ flag
+	movts	status,r0
+	.global bblte16
+bblte16:
+	bblte 	1f
+	fail
+1:	pass
+	fail

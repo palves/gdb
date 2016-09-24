@@ -1,0 +1,14 @@
+# epiphany testcase for asr $rd,$rn,$shift -*- Asm -*-
+# mach: all
+
+	.include "testutils.inc"
+
+	start
+
+	.global asri16
+asri16:
+	mova	r0,0x80000000
+	asr	r0,r0,1
+	lsr	r0,r0,30
+	compare	r0,3
+

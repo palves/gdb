@@ -1,0 +1,19 @@
+# epiphany testcase for ldrb $rd6,[$rn6],$rm6 -*- Asm -*-
+# mach: all
+
+	.include "testutils.inc"
+
+	start
+
+	.global ldrbp
+ldrbp:
+	mova	r10,v
+	mova	r11,1
+	ldrb r0,[r10],r11
+	add	r0,r0,0
+	bne	1f
+	ldrb	r0,[r10],r11
+	compare	r0,1
+1:	fail
+	
+v:	.byte	0,1,2

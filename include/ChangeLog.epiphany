@@ -1,0 +1,12 @@
+2014-06-13  Pierre Langlois  <pierre.langlois@embecosm.com>
+
+	* elf/epiphany.h (R_EPIPHANY_OVERHIGH): Rename to ...
+	(R_EPIPHANY_CACHEHIGH): ... this.
+	(R_EPIPHANY_OVERLOW): Rename to ...
+	(R_EPIPHANY_CACHELOW): ... this.
+	(R_EPIPHANY_OVER32): Rename to ...
+	(R_EPIPHANY_CACHE32): ... this.
+
+2014-05-30  Pierre Langlois  <pierre.langlois@embecosm.com>
+
+	* elf/epiphany.h (R_EPIPHANY_OVER32): Define.

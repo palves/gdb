@@ -1,0 +1,18 @@
+# epiphany testcase for denormalized FP values -*- Asm -*-
+# mach: all
+
+	.include "testutils.inc"
+
+	start
+
+	.global fnorm
+fnorm:
+	mova	r0,0f1.0
+        mova    r1,0x807fffff
+	fadd	r0,r1,r1
+	bbne	1f
+        add     r0,r0,0x0
+        bgte    1f
+        pass
+1:	fail
+

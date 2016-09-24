@@ -1,0 +1,18 @@
+# epiphany testcase for movbne $rd6,$rn6 -*- Asm -*-
+# mach: all
+
+	.include "testutils.inc"
+
+	start
+
+	.global movBNE
+movBNE:
+	mova	r0,0f1.0
+	mova	r1,0f2.0
+	fsub	r2,r0,r1
+	movbne r1,r2
+	fadd	r0,r0,r1
+	bbeq	1f
+	fail
+1:	pass
+	

@@ -1,0 +1,13 @@
+# epiphany testcase for orr $rd6,$rn6,$rm6 -*- Asm -*-
+# mach: all
+
+	.include "testutils.inc"
+
+	start
+
+	.global orr
+orr:
+	mov r12,0x5555
+	mov r13,0xaaaa
+	orr r12,r12,r13
+	compare r12,0xffff

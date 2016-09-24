@@ -1,0 +1,21 @@
+# epiphany testcase for fmsub $frd,$frn,$frm -*- Asm -*-
+# mach: all
+
+	.include "testutils.inc"
+
+	start
+
+	.global fmsubf16
+fmsubf16:
+	mova	r0,0f-2.0
+	mov	r3,3
+	sub	r3,r3,1		; clear Z condition code
+	fmsub	r0,r0,r0  	; -2*-2 + -2 == 2
+	mova	r1,0f6.0
+	fadd	r0,r0,r1	;should set BZ flag
+	beq	1f		;Z should be clear even if BZ set
+	bbne	1f		; BZ should be set
+	check	r0
+1:	fail
+	
+

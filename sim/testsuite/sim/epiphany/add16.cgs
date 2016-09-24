@@ -1,0 +1,13 @@
+# epiphany testcase for add $rd,$rn,$rm -*- Asm -*-
+# mach: all
+
+	.include "testutils.inc"
+
+	start
+
+	.global add16
+add16:
+	mov r0,1
+	add r0,r0,r0
+	sub r0,r0,2
+	check r0

@@ -339,6 +339,66 @@ epiphany_handle_align (fragS *fragp)
   fragp->fr_fix += fix;
 }
 
+
+/* Parse a .byte, .word, etc. expression.
+
+   Additionnally, we check for .word symbol@PLT and set the relocation type.  */
+
+bfd_reloc_code_real_type
+epiphany_parse_cons_expression (expressionS *exp,
+				int nbytes)
+{
+  expression_and_evaluate (exp);
+  if ((strncasecmp (input_line_pointer, "@PLT", 4) == 0)
+      && (exp->X_op == O_symbol)
+      && (nbytes == 4))
+    {
+      exp->X_md = BFD_RELOC_EPIPHANY_CACHE32;
+      input_line_pointer += 4;
+    }
+  return BFD_RELOC_NONE;
+}
+
+/* Create a fixup for a cons expression. If epiphany_parse_cons_expression
+   found a .word symbol@PLT then we create the reloc accordingly.  */
+
+void
+epiphany_cons_fix_new (fragS *frag,
+		  int where,
+		  int nbytes,
+		  expressionS *exp,
+		  bfd_reloc_code_real_type r)
+{
+  if (exp->X_md == BFD_RELOC_EPIPHANY_CACHE32)
+    r = BFD_RELOC_EPIPHANY_CACHE32;
+  else
+    {
+      switch (nbytes)
+	{
+	case 1:
+	  r = BFD_RELOC_8;
+	  break;
+	case 2:
+	  r = BFD_RELOC_16;
+	  break;
+	case 3:
+	  r = BFD_RELOC_24;
+	  break;
+	case 4:
+	  r = BFD_RELOC_32;
+	  break;
+	case 8:
+	  r = BFD_RELOC_64;
+	  break;
+	default:
+	  as_bad (_("unsupported BFD relocation size %u"), nbytes);
+	  r = BFD_RELOC_32;
+	  break;
+	}
+    }
+  fix_new_exp (frag, where, (int) nbytes, exp, 0, r);
+}
+
 /* Read a comma separated incrementing list of register names
    and form a bit mask of upto 15 registers 0..14.  */
 
@@ -989,9 +1049,9 @@ md_cgen_lookup_reloc (const CGEN_INSN *insn ATTRIBUTE_UNUSED,
 
     case EPIPHANY_OPERAND_IMM16:
       if (0 == strcmp ("movt", CGEN_INSN_MNEMONIC (insn)))
-	return BFD_RELOC_EPIPHANY_HIGH;
+	return fixP->fx_cgen.opinfo; /* reloc specified in instruction parsing */
       else if (0 == strcmp ("mov", CGEN_INSN_MNEMONIC (insn)))
-	return BFD_RELOC_EPIPHANY_LOW;
+	return fixP->fx_cgen.opinfo;
       else
 	as_bad ("unknown imm16 operand");
       /* fall-thru */
@@ -1051,7 +1111,9 @@ epiphany_fix_adjustable (fixS *fixP)
       && (reloc_type == BFD_RELOC_EPIPHANY_SIMM24
 	  || reloc_type == BFD_RELOC_EPIPHANY_SIMM8
 	  || reloc_type == BFD_RELOC_EPIPHANY_HIGH
-	  || reloc_type == BFD_RELOC_EPIPHANY_LOW))
+	  || reloc_type == BFD_RELOC_EPIPHANY_LOW
+	  || reloc_type == BFD_RELOC_EPIPHANY_CACHEHIGH
+	  || reloc_type == BFD_RELOC_EPIPHANY_CACHELOW))
     return FALSE;
 
   /* Since we don't use partial_inplace, we must not reduce symbols in
@@ -1077,6 +1139,8 @@ epiphany_cgen_parse_fix_exp (int opinfo, expressionS *exp ATTRIBUTE_UNUSED)
     {
     case BFD_RELOC_EPIPHANY_LOW:
     case BFD_RELOC_EPIPHANY_HIGH:
+    case BFD_RELOC_EPIPHANY_CACHELOW:
+    case BFD_RELOC_EPIPHANY_CACHEHIGH:
       break;
     default:
       return opinfo;

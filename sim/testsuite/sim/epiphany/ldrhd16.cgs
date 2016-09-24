@@ -1,0 +1,15 @@
+# epiphany testcase for ldrh $rd,[$rn,$disp3] -*- Asm -*-
+# mach: all
+
+	.include "testutils.inc"
+
+	start
+
+	.global ldrhd16
+ldrhd16:
+	mova	r1,v
+	mov	r0,255
+	ldrh	r0,[r1,1]
+	check	r0
+v:	.hword -1,0,-1
+	

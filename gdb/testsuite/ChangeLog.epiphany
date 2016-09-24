@@ -1,0 +1,3 @@
+2011-11-15  Jeremy Bennett  <jeremy.bennett@embecosm.com>
+
+	* gdb.base/float.exp: Add test for Epiphany architecture.

@@ -1,0 +1,38 @@
+# epiphany testcase for setting rounding mode
+# mach: all
+
+	.include "testutils.inc"
+;;
+;; From "Number-theoretic Test Generation for Directed Rounding",
+;; Michael Parks <Michael.Parks@sun.com>
+;;
+;; interesting cases
+;;
+;;  x           y             2**(n-1)xy
+;;-----------------------------------------
+;;
+;; 16777213     8388609         2**23 x 16777214.9999996...
+;; 4b7ffffd     4b000001        56fffffe.fffffa...
+
+	start
+	.global round
+round:
+        mova    r0,0x4b7ffffd
+        mova    r10,0x4b000001
+        fmul    r1,r0,r10       ; expect 0x56ffffff with rounding
+        mova    r11,0x56ffffff
+        sub     r12,r11,r1
+        beq     1f
+        fail
+1:      
+        movfs   r2,config       ; Get the config reg
+        mov     r3,1            ; Set the trunc bit
+        orr     r2,r2,r3        ;  and set in config reg
+        movts   config,r2
+
+        fmul    r4,r0,r10        ; expect 0x56fffffe with trunc
+        mova    r11,0x56fffffe
+        sub     r12,r11,r4
+        beq     2f
+        fail
+2:      pass

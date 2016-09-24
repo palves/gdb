@@ -1,0 +1,14 @@
+# epiphany testcase for IDLE instruction
+# mach: all
+# xfail: epiphany-*-elf
+
+	.include "testutils.inc"
+
+	start
+
+	.global main
+main:
+	mova    r0,-1           ; Should NOT be generated as 'result'
+        idle                    ; exits with zero
+        pass                    ; NOT REACHED
+

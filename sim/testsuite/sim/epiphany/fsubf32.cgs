@@ -1,0 +1,14 @@
+# epiphany testcase for fsub $frd6,$frn6,$frm6 -*- Asm -*-
+# mach: all
+
+	.include "testutils.inc"
+
+	start
+
+	.global fsubf32
+fsubf32:
+	mova	r8,0f2.0
+	fsub	r9,r8,r8
+	bbne	1f
+	pass
+1:	fail
