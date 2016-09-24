@@ -75,6 +75,11 @@ struct itset *itset_create_current (void);
 
 struct itset *itset_create_or_default (char **spec);
 
+/* Return true if PSPACE is contained in the I/T set.  */
+
+int itset_contains_program_space (struct itset *itset,
+				  struct program_space *pspace);
+
 /* Return true if the inferior is contained in the I/T set.  */
 
 int itset_contains_inferior (struct itset *itset, struct inferior *inf);
