@@ -1,0 +1,18 @@
+# epiphany testcase for ldrw $rd,[$rn],$rm -*- Asm -*-
+# mach: all
+
+	.include "testutils.inc"
+
+	start
+
+	.global ldrwp16
+ldrwp16:
+	mova	r0,d
+	mov	r1,4
+	
+	ldrh 	r2,[r0],r1
+	ldrh	r3,[r0],r1
+	compare	r3,3
+
+	.data
+d:	.short	1,2,3

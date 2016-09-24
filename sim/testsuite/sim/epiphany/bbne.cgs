@@ -1,0 +1,20 @@
+# epiphany testcase for bbne $simm24 -*- Asm -*-
+# mach: all
+
+	.include "testutils.inc"
+
+	start
+
+	.global bbne
+bbne:
+	mova	r0,0f1.0
+	fsub	r1,r0,r0
+	bbne	1f
+	fadd	r1,r0,r0
+	bbne	2f
+	.rept	128
+	nop
+	.endr
+1:	fail
+2:	pass
+	

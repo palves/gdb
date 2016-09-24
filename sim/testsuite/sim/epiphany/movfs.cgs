@@ -1,0 +1,17 @@
+# epiphany testcase for movfs $rd6,$sn6 -*- Asm -*-
+# mach: all
+
+	.include "testutils.inc"
+
+	start
+
+	.global movfs
+movfs:
+	movfs r31,pc		;
+	bl	1f
+1:	sub	r0,lr,r31	;
+#	sub	r0,r0,1b-movfs	;
+	mov	r1,1b-movfs
+	sub	r0,r0,r1
+	check	r0
+

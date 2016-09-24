@@ -1,0 +1,27 @@
+2014-06-13  Pierre Langlois  <pierre.langlois@embecosm.com>
+
+	* config/tc-epiphany.h: Rename R_EPIPHANY_OVER32 to
+	BFD_RELOC_EPIPHANY_CACHE32.
+	* config/tc-epiphany.c (epiphany_parse_cons_expression): Rename
+	BFD_RELOC_EPIPHANY_OVER32 to BFD_RELOC_EPIPHANY_CACHE32.
+	(epiphany_cons_fix_new): Likewise.
+	(epiphany_fix_adjustable): Rename BFD_RELOC_EPIPHANY_OVERHIGH to
+	BFD_RELOC_EPIPHANY_CACHEHIGH and BFD_RELOC_EPIPHANY_OVERLOW to
+	BFD_RELOC_EPIPHANY_CACHELOW.
+	(epiphany_cgen_parse_fix_exp): Likewise.
+
+2014-05-30  Pierre Langlois  <pierre.langlois@embecosm.com>
+
+	* config/tc-epiphany.h (TC_PARSE_CONS_EXPRESSION): Define.
+	(TC_CONS_FIX_NEW): Likewise.
+	* config/tc-epiphany.c (epiphany_parse_cons_expression): New
+	function.
+	(epiphany_cons_fix_new): New function.
+
+2013-06-14  Simon Cook  <simon.cook@embecosm.com>
+
+	* config/tc-epiphany.c (md_cgen_lookup_lookup): Replace
+	hard-coded relocs with those specifed by instruction
+	parsing for EPIPHANY_OPERAND_IMM16.
+	(epiphany_fix_adjustable): Extend reloc case for PLT relocs.
+	(epiphany_cgen_parse_fix_exp): Add PLT relocs.

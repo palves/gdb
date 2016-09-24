@@ -77,6 +77,20 @@ extern int epiphany_cgen_parse_fix_exp (int, expressionS *);
 #define HANDLE_ALIGN(f)  epiphany_handle_align (f)
 extern void epiphany_handle_align (fragS *);
 
+/* We need to parse the @PLT reloc specifier in .word.  */
+
+#define TC_PARSE_CONS_EXPRESSION(EXPR,N) epiphany_parse_cons_expression (EXPR, N)
+extern bfd_reloc_code_real_type epiphany_parse_cons_expression (expressionS *,
+                                                                int);
+
+/* This is called by emit_expr when creating a reloc for a cons. We use this to
+   set the relocation type manually to BFD_RELOC_EPIPHANY_CACHE32 for PLT
+   relocs.  */
+
+#define TC_CONS_FIX_NEW epiphany_cons_fix_new
+extern void epiphany_cons_fix_new (fragS *, int, int, expressionS *,
+                                   bfd_reloc_code_real_type);
+
 #define TARGET_FORMAT "elf32-epiphany"
 
 #define md_relax_frag epiphany_relax_frag

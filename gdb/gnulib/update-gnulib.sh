@@ -106,12 +106,12 @@ if [ "$ver" != "$AUTOCONF_VERSION" ]; then
 fi
 
 # Verify that we have the correct version of automake.
-ver=`automake --version 2>&1 | head -1 | sed 's/.*) //'`
-if [ "$ver" != "$AUTOMAKE_VERSION" ]; then
-   echo "Error: Wrong automake version ($ver), we need $AUTOMAKE_VERSION."
-   echo "Aborting."
-   exit 1
-fi
+#ver=`automake --version 2>&1 | head -1 | sed 's/.*) //'`
+#if [ "$ver" != "$AUTOMAKE_VERSION" ]; then
+#   echo "Error: Wrong automake version ($ver), we need $AUTOMAKE_VERSION."
+#   echo "Aborting."
+#   exit 1
+#fi
 
 # Verify that we have the correct version of aclocal.
 #

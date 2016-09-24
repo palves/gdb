@@ -1,0 +1,20 @@
+# epiphany testcase for bl $simm24 -*- Asm -*-
+# mach: all
+
+	.include "testutils.inc"
+
+	start
+
+	.global bl
+bl:
+	mov	r0,1
+	bl 	sub
+	check	r0
+	
+	.rept 128
+	b	1f
+	.endr
+sub:	sub	r0,r0,1
+	bne	1f
+	rts
+1:	fail

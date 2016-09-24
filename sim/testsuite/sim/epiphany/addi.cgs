@@ -1,0 +1,17 @@
+# epiphany testcase for add $rd6,$rn6,$simm11 -*- Asm -*-
+# mach: all
+
+	.include "testutils.inc"
+
+	start
+
+	.global addi
+addi:
+	mov	r15,0
+	add r15,r15,1
+	sub r15,r15,1
+	bne	1f
+	add	r15,r15,-1
+	add	r15,r15,1
+	check	r15
+1:	fail

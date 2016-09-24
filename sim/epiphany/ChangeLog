@@ -1,0 +1,221 @@
+2016-03-13  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany-fp.c (extract_mant): Declare as static inline.
+	(extract_exp): Likewise.
+	(extract_sign): Likewise.
+	(isDenormalOrZero): Likewise.
+	(isDenormal): Likewise.
+	(makeZero): Likewise.
+	(makeNegative): Likewise.
+	(makePositive): Likewise.
+	(isZero): Likewise.
+	(isNegative): Likewise.
+	(isInf): Likewise.
+	(isNAN): Likewise.
+	(makeNAN): Likewise.
+	* oob-events.c (epiphany_handle_oob_events): Don't declare as
+	inline.
+	* oob-events.h (epiphany_handle_oob_events): Update function
+	prototype.
+
+2016-02-15  Ola Jeppsson  <ola@adapteva.com>
+
+	* esim/esim.c (es_validate_cluster_cfg): Use ULL postfix for
+	comparing 64 bit values.
+
+2015-12-07  Ola Jeppsson  <ola@adapteva.com>
+
+	* Makefile.in: Add missing esim dependencies.
+	* esim/esim-int.h (ES_ADDR_IS_EXT_RAM): Fix check when
+	external RAM includes top memory byte.
+	(es_validate_cluster_cfg): Fix external ram overflow check.
+
+2015-12-07  Ola Jeppsson  <ola@adapteva.com>
+
+	* Makefile.in (AS_FOR_TARGET): Add missing definition.
+
+2015-09-25  Ola Jeppsson  <ola@adapteva.com>
+
+	* configure: Regenerated.
+
+2015-09-25  Ola Jeppsson  <ola@adapteva.com>
+
+	* Makefile.in: Delay building epiphany-sim-dummy
+	until install stage. This way an in-tree assembler can be
+	detected.
+	* configure.ac: Remove redundant check for target
+	assembler.
+
+2015-09-23  Ola Jeppsson  <ola@adapteva.com>
+
+	* config.in: Regenerate.
+	* configure: Likewise.
+	* cpu.c: Likewise.
+	* decode.c: Likewise.
+	* decode.h: Likewise.
+	* sem-switch.c: Likewise.
+	* sem.c: Likewise.
+
+2015-09-23  Ola Jeppsson  <ola@adapteva.com>
+
+	* configure.ac: Enable hardware by default.
+	Enable emesh-sim by default.
+
+2015-09-23  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany.c (epiphany_testset): Replace
+	CIA_{GET,SET} with CPU_PC_{GET,SET}.
+	* dv-epiphany_mem.c (void epiphany_mem_signal):
+	Likewise.
+
+2015-09-23  Ola Jeppsson  <ola@adapteva.com>
+
+	* mem-barrier.h: Use __sync_synchronize() as
+	fallback.
+
+2015-09-23  Ola Jeppsson  <ola@adapteva.com>
+
+	* sim-if.c (sim_open): Remove check for
+	HAVE_DV_SOCKSER and remove call to dv_sockser_install.
+	* tconfig.h: Remove check for HAVE_DV_SOCKSER.
+
+2015-09-22  Ola Jeppsson  <ola@adapteva.com>
+
+	* Merge Epiphany multicore simulator branch
+	[ No log entries between: 2014-03-18 -- 2014-10-28 ]
+
+2015-09-04  Ola Jeppsson  <ola@adapteva.com>
+
+	* aclocal.m4: New file.
+	* configure: Regenerate.
+	* decode.c: Regenerate.
+	* epiphany-desc.c: Remove.
+	* epiphany-desc.h: Remove.
+	* epiphany-opc.h: Remove.
+	* sem-switch.c: Regenerate.
+	* sem.c: Regenerate.
+
+2015-09-04  Ola Jeppsson  <ola@adapteva.com>
+
+	* Makefile.in: Adjust for upstream changes.
+	* sim-main.h: Likewise.
+	* mloop.in (execute): Change TRACE_INSN_INIT to
+	CGEN_TRACE_INSN_INIT, TRACE_INSN to CGEN_TRACE_INSN, and
+	TRACE_INSN_FINI to CGEN_TRACE_INSN_FINI.
+	* tconfig.in: Rename ...
+	* tconfig.h: ... to this.
+
+2012-01-23  Joern Rennecke  <joern.rennecke@embecosm.com>
+
+	* configure: Regenerate.
+
+2011-11-16  Joern Rennecke  <joern.rennecke@embecosm.com>
+
+	* epiphany-fp.c, Makefile.in, sim-if.c, traps.c, mloop.in:
+	Remove trailing whitespace / replace octuple spaces with tabs.
+
+	* Makefile.in, epiphany-sim.h, mloop.in, epiphany.c, sim-main.h:
+	Update Copyright, reformat, delete obsolete code.
+	* epiphany-fp.c, devices.c, sim-if.c, epiphany-fp.h, traps.c: Likewise.
+
+	* epiphany-fp.c (FINISH, DENORM, f1, foo): Delete.
+	(convert2int): Rename to ...
+	(float_as_int) ... this.  Changed all callers.  Use a union.
+	(int_as_float): New function.
+	(fcal): Use int_as_float instead of volatile variables.
+	Check return value of fesetround.
+	(result, resusi, f, fn, dn): Delete.
+	(epiphany_fix): Use int_as_float instead of volatile variables.
+	(epiphany_icommon): Add flag handling.
+
+2011-11-15  Jeremy Bennett  <jeremy.bennett@embecosm.com>
+
+	* epiphany.c (epiphany_trap): Add TARGET_SYS_link and
+	TARGET_SYS_unlink.
+
+2011-11-10  Joern Rennecke  <joern.rennecke@embecosm.com>
+
+	* epiphany.c (fetch_str): Delete.
+	(syscall_read_mem, syscall_write_mem): New function.
+	(epiphany_trap): Remove unused variables res_buf and fmt.
+	Use cb_syscall.
+
+2011-11-09  Joern Rennecke  <joern.rennecke@embecosm.com>
+
+	* epiphany.c (printf_wrapper): Delete.
+	(epiphany_trap): Move syscall handling into TRAP_OTHER.
+	Use PARM3 to hold syscall number on entry and errno on exit.
+	Add support for lseek.  Remove printf functionality.
+
+2011-11-08  Joern Rennecke  <joern.rennecke@embecosm.com>
+
+	* epiphany.c: Include <sys/time.h>, <sys/types.h>,
+	<sys/stat.h>, <errno.h>, <unistd.h> and "targ-vals.h".
+	(epiphany_trap) [TRAP_OTHER]: restore PARAM0 as subcode / syscall
+	parameter.  Handle TARGET_SYS_gettimeofday, TARGET_SYS_stat and
+	TARGET_SYS_fstat.
+
+	* epiphany.c: Fix Copyright years and contributing party.
+	* Makefile.in: Likewise.
+
+2011-08-16  Jeremy Bennett  <jeremy.bennett@embecosm.com>
+
+	* epiphany-desc.h, epiphany-opc.h: Deleted.
+
+2011-08-16  Jeremy Bennett  <jeremy.bennett@embecosm.com>
+
+	* epiphany-desc.h, model.c, epiphany-opc.h, arch.c, arch.h,
+	* decode.c, sem-switch.c, sem.c, cpuall.h, cpu.c, decode.h,
+	* epiphany-desc.c, cpu.h: Regenerated using CGEN.
+	* configure, config.in: Regenerated using autoconf.
+
+2011-08-16  Joern Rennecke  <joern.rennecke@embecosm.com>
+
+	* epiphany-fp.c (WANT_CPU, WANT_CPU_EPIPHANYBF): Define.
+
+	* devices.c (device_error): Constify message parameter.
+
+	* epiphany.c (epiphany_trap): Replace zfree with free.
+
+2010-03-20  Alan Lehotsky  <apl@alum.mit.edu>
+
+	* model.c, decode.c, sem-switch.c, sem.c, cpu.c epiphany-desc.c
+	  decode.h cpu.h epiphany-desc.h: Regenerate.
+
+2010-03-20  Alan Lehotsky  <apl@alum.mit.edu>
+
+	* epiphany-fp.c, epiphany.epiphany-fp.h: New file for fp simulator.
+	* Makefile.in: Add dependencies
+	* epiphany-opc.h, epiphany-desc.c, epiphany-desc.h,
+	  sem-switch.c, sem.c, cpu.c, cpu.h: Regenerate.
+	* sim-main.h: integrate fp simulator.
+
+2010-03-08  Alan Lehotsky  <apl@alum.mit.edu>
+
+	* model.c, sem-switch.c, decode.c, sem.c,
+	  decode.h, cpu.h: Regenerate.
+	* Makefile.in (EPIPHANYBF_INCLUDE_DEPS): Add dependent headers.
+
+2010-02-21  Alan Lehotsky <apl@alum.mit.edu>
+
+	* epiphany.c (epiphany_trap): finish implementing i/o for
+		  simulator.
+
+2009-10-03  Joern Rennecke  <joern.rennecke@embecosm.com>
+
+	* model.c, decode.c, sem-switch.c, sem.c, decode.h, cpu.h: Regenerate.
+
+2009-09-29  Joern Rennecke  <joern.rennecke@embecosm.com>
+
+	* model.c, sem-switch.c, decode.c, sem.c, cpu.c, decode.h: Regenerate.
+	* cpu.h: Likewise.
+
+2009-09-19  Joern Rennecke  <joern.rennecke@embecosm.com>
+
+	* cpu.h: Regenerate.
+
+2009-09-17  Joern Rennecke  <joern.rennecke@embecosm.com>
+
+	* sem-switch.c, decode.c, sem.c, decode.h: Regenerate.
+
+	* sem-switch.c, sem.c: Regenerate.

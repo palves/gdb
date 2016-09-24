@@ -4,6 +4,7 @@
 # This file sets the following shell variables:
 #  gdb_target_obs	target-specific object files to use
 #  gdb_sim		simulator library for target
+#  gdb_sim_libs		extra libraries needed by simulator
 #  gdb_osabi		default OS ABI to use with target
 #  build_gdbserver	set to "yes" if gdbserver supports target
 #  gdb_have_gcore	set to "true"/"false" if this target can run gcore
@@ -142,6 +143,13 @@ bfin-*-*)
 cris*)
 	# Target: CRIS
 	gdb_target_obs="cris-tdep.o cris-linux-tdep.o linux-tdep.o solib-svr4.o"
+	;;
+
+epiphany-*-elf* | epiphany-*-rtems*)
+	# Target: Adapteva EPIPHANY embedded system
+	gdb_target_obs="epiphany-tdep.o"
+	#gdb_sim=../sim/epiphany/libsim.a
+	#gdb_sim_libs="rt pthread"
 	;;
 
 frv-*-*)

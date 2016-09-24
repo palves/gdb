@@ -1,0 +1,21 @@
+# epiphany testcase for strd $rd,[$rn,$disp3] -*- Asm -*-
+# mach: all
+
+	.include "testutils.inc"
+
+	start
+
+	.global strdd16
+strdd16:
+	mova	r2,v
+	mov	r0,10
+	mov	r1,r0
+	strd r0,[r2,0]
+	ldr  r4,[r2,2]
+	ldrd r2,[r2,0]
+	add	r2,r2,r3
+	add	r2,r2,r4
+	compare	r2,23
+	.data
+	.align	3
+v:	.long 1,2,3,4

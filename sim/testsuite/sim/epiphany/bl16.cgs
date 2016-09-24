@@ -1,0 +1,16 @@
+# epiphany testcase for bl $simm8 -*- Asm -*-
+# mach: all
+
+	.include "testutils.inc"
+
+	start
+
+	.global bl16
+bl16:
+	mov	r0,1
+	bl 	sub
+	check	r0
+sub:	sub	r0,r0,1
+	bne	1f
+	rts
+1:	fail

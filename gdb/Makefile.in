@@ -1405,7 +1405,7 @@ gdb$(EXEEXT): gdb.o $(LIBGDB_OBS) $(ADD_DEPS) $(CDEPS) $(TDEPLIBS)
 	rm -f gdb$(EXEEXT)
 	$(CC_LD) $(INTERNAL_LDFLAGS) $(WIN32LDAPP) \
 		-o gdb$(EXEEXT) gdb.o $(LIBGDB_OBS) \
-		$(TDEPLIBS) $(TUI_LIBRARY) $(CLIBS) $(LOADLIBES)
+		$(TDEPLIBS) $(TUI_LIBRARY) $(CLIBS) $(LOADLIBES) $(LDFLAGS)
 
 # Convenience rule to handle recursion.
 $(LIBGNU) $(GNULIB_H): all-lib

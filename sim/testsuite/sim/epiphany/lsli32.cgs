@@ -1,0 +1,17 @@
+# epiphany testcase for lsl $rd6,$rn6,$shift -*- Asm -*-
+# mach: all
+
+	.include "testutils.inc"
+
+	start
+
+	.global lsli32
+lsli32:
+	mov r20,65535
+	lsl r20,r20,31
+	blt	1f
+	fail
+1:	lsl r20,r20,1
+	beq	2f
+	fail
+2:	check r20

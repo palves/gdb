@@ -1,0 +1,12 @@
+# epiphany testcase for sub $rd,$rn,$simm3 -*- Asm -*-
+# mach: all
+
+	.include "testutils.inc"
+
+	start
+
+	.global subi16
+subi16:
+	mova	r0,3
+	sub 	r0,r0,3
+	check	r0

@@ -1,0 +1,14 @@
+# epiphany testcase for movts $rd,$rn -*- Asm -*-
+# mach: all
+
+	.include "testutils.inc"
+
+	start
+
+	.global movts16
+movts16:
+	mov	r0,0xffff
+	movts imask,r0
+	movfs r1,imask		;
+	compare r1,65535	; all the mask bits still set
+	pass

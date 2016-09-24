@@ -1,0 +1,15 @@
+# epiphany testcase for rti -*- Asm -*-
+# mach: all
+
+	.include "testutils.inc"
+
+	start
+
+	.global rti
+rti:    mova    r0,isgood       ; should also setup IPEND and KERNEL
+	movts   iret,r0         ; status bits
+	rti
+        fail
+isgood:
+        ;; should test IPEND and KERNEL after RTI
+        pass

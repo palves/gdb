@@ -1,0 +1,14 @@
+# epiphany testcase for movltu $rd6,$rn6 -*- Asm -*-
+# mach: all
+
+	.include "testutils.inc"
+
+	start
+
+	.global movLTU
+movLTU:
+	mova	r0,-1
+	mova	r1,1
+	sub	r2,r1,r0
+	movltu r0,r1
+	compare	r0,1

@@ -6357,6 +6357,15 @@ assembler and not (currently) written to any object files.  */
 /* Adapteva EPIPHANY - 8 bit immediate for 16 bit mov instruction.  */
   BFD_RELOC_EPIPHANY_IMM8,
 
+/* Adapteva EPIPHANY - 16 most-significant bits of PLT reference  */
+  BFD_RELOC_EPIPHANY_CACHEHIGH,
+
+/* Adapteva EPIPHANY - 16 least-significant bits of PLT reference  */
+  BFD_RELOC_EPIPHANY_CACHELOW,
+
+/* Adapteva EPIPHANY - 32 bits of PLT reference  */
+  BFD_RELOC_EPIPHANY_CACHE32,
+
 /* Visium Relocations.  */
   BFD_RELOC_VISIUM_HI16,
   BFD_RELOC_VISIUM_LO16,

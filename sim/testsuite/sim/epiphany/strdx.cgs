@@ -1,0 +1,16 @@
+# epiphany testcase for strd $rd6,[$rn6,$rm6] -*- Asm -*-
+# mach: all
+
+	.include "testutils.inc"
+
+	start
+
+	.global strdx
+strdx:
+	mova	r10,v+2
+	mov	r11,6
+	strd	r0,[r10,r11]	;check that ultimate alignment ok
+	pass
+	.data
+	.align 	3
+v:	.long	1,2,3,4

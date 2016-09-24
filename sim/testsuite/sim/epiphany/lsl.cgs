@@ -1,0 +1,13 @@
+# epiphany testcase for lsl $rd6,$rn6,$rm6 -*- Asm -*-
+# mach: all
+
+	.include "testutils.inc"
+
+	start
+
+	.global lsl
+lsl:
+	mov	r9,1
+	lsl r9,r9,r9
+	compare r9,2
+

@@ -1,0 +1,23 @@
+# epiphany testcase for trap $disp3 -*- Asm -*-
+# mach: all
+# output:hello, world\n
+# output:pass\n
+	
+	.include "testutils.inc"
+
+	start
+
+	.global trap16
+trap16:
+	mov	r0,1
+	mova	r1,hello
+	mov	r2,13
+	trap	0			; write
+        sub     r0,r0,13                ; how much did we write?
+	bne     1f
+	
+	pass
+1:	fail
+	
+	.data
+hello:	.ascii	"hello, world\n"

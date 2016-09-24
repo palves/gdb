@@ -1,0 +1,483 @@
+#!/usr/bin/python
+# -*- coding:utf-8 -*-
+#
+# Epiphany simulator frontend.
+# Copyright (C) 2014 Adapteva.
+# Contributed by Ola Jeppsson
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+
+# TODO: MPI support
+# TODO: Support HDF/XML files
+
+from __future__ import print_function
+
+import signal
+import sys
+import os
+import time
+import traceback
+from argparse import ArgumentParser, RawDescriptionHelpFormatter
+
+
+EXEC_DIR = os.path.dirname(os.path.realpath(__file__))
+DUMMY_PROGRAM = os.path.join(EXEC_DIR, '..', 'epiphany-elf', 'libexec', 'epiphany-elf-sim-dummy')
+
+SIGNALS_TO_NAMES_DICT = dict((getattr(signal, n), n) \
+    for n in dir(signal) if n.startswith('SIG') and '_' not in n)
+
+def signal_name(signum):
+    """ Return signal name """
+    return SIGNALS_TO_NAMES_DICT.get(signum, '%d' % signum)
+
+def print_stderr(*objs):
+    """ Print to stderr """
+    print(*objs, file=sys.stderr)
+
+def auto_int(x):
+    """ Support hex notation for arguments """
+    return int(x,0)
+
+
+def parse_or_die():
+    """ Parse command line arguments """
+    parser = ArgumentParser(formatter_class=RawDescriptionHelpFormatter)
+    parser.description = \
+"""
+Epiphany simulator frontend.
+Helps spawning simulator processes.
+
+Default configuration is Parallella-16 Epiphany-III.
+Rows: 4 Columns: 4
+External RAM size: 32 MB External RAM base: 0x8e000000
+First core: 0x808 (32, 8)
+
+Press Ctrl-C at any time to abort the simulation.
+"""
+
+    parser.add_argument(
+            '--verbose', action='store_true', help='Verbose output')
+
+    parser.add_argument(
+            '-r', '--rows', type=auto_int, default=4, help='Number of rows')
+    parser.add_argument(
+            '-c', '--cols', type=auto_int, default=4, help='Number of columns')
+
+
+    parser.add_argument(
+            '-f', '--first-core', type=auto_int,
+            help='Coreid of upper leftmost (northwest) core')
+    parser.add_argument(
+            '-i', '--first-row', type=auto_int,
+            help='Row of upper leftmost (northwest) core')
+    parser.add_argument(
+            '-j', '--first-col', type=auto_int,
+            help='Column of upper leftmost (northwest) core')
+
+
+    parser.add_argument(
+            '--environment', type=str, default='user',
+            help='Environment. Either `user\' or `operating\'')
+
+    parser.add_argument(
+            '--ext-ram-size', type=auto_int, default=32,
+            help='External RAM size in MB')
+    parser.add_argument(
+            '--ext-ram-base', type=auto_int, default=0x8e000000,
+            help='External RAM base address')
+
+    parser.add_argument(
+            '--redirect-dir', type=str,
+            help="""Redirect stdin, stdout, and stderr to per process files in
+            REDIRECT_DIR. REDIRECT_DIR will be created if it does not exist.
+            Files in the directory will be overwritten.
+            stdin will be redirected to REDIRECT_DIR/core-0xXYZ.stdin if that
+            file exists.""")
+
+    # TODO: Will not work with MPI
+    parser.add_argument('--wait-attach', type=auto_int, nargs='*',
+            action='append', default=[], metavar='COREID',
+            help="""Will not spawn simulator processes for given COREID(s).
+                This is useful when you want to attach cores through gdb""")
+
+    parser.add_argument(
+            'program', nargs='*', metavar='PROGRAM',
+            help="""
+            Executable program(s).
+            Not required when environment is set to operational.
+            Program(s) will be distributed to cores from left (west) to
+            right (east) and then wrap to next row.
+            If the number of programs is less than the number of cores, the
+            last program will be used for the remaining cores""")
+
+    parser.add_argument('--profile', action='store_true',
+            help='Enable profiling')
+
+    parser.add_argument('--extra-args', type=str, metavar='ARGS', default='',
+            help="""Pass ARGS to epiphany-elf-run. Enclose in quotes, e.g
+            --extra-args="--foo --bar" """)
+
+    args = parser.parse_args()
+
+    # Flatten list
+    args.wait_attach = sum(args.wait_attach, [])
+
+
+    # Check arguments
+    if args.rows < 1 or 64 < args.rows:
+        parser.error('Rows must be within range [1..64]')
+
+    if args.cols < 1 or 64 < args.cols:
+        parser.error('Columns must be within range [1..64]')
+
+    if args.ext_ram_size < 0 or 4095 < args.ext_ram_size:
+        parser.error('External RAM size must be within range [0..4095]')
+
+    if args.environment != 'user' and args.environment != 'operating':
+        parser.error('Environment must be either `user\' or `operating\'')
+
+    if not args.program and args.environment != 'operating':
+        parser.error('No program(s) specified')
+
+    for p in args.program:
+        if not os.path.isfile(p):
+            parser.error("Program `%s' not found" % p)
+
+    if not args.program and args.environment == 'operating':
+        if not os.path.isfile(DUMMY_PROGRAM):
+            parser.error("No program specified and dummy operating environment "
+                "binary `%s' not found" % DUMMY_PROGRAM)
+
+    # Adjust/check first_core argument
+    if args.first_core == None:
+        if args.first_row == None and args.first_col == None:
+            args.first_core = 0x808
+        elif args.first_row != None and args.first_col != None:
+            if args.first_row < 0 or 63 < args.first_row:
+                parser.error('First row must be within range [0..63]')
+            if args.first_col < 0 or 63 < args.first_col:
+                parser.error('First column must be within range [0..63]')
+            args.first_core = 64*args.first_row + args.first_col
+        else:
+            parser.error('If you set --first-row, you must also supply '
+                '--first-col. And vice versa')
+    elif args.first_col != None or args.first_row != None:
+        parser.error('Ambiguity. --first-core and one/both of '
+            '--first-row/--first-col set')
+    check_wait_attach_or_die(parser, args)
+
+    return args
+
+
+def check_wait_attach_or_die(parser, args):
+    """ Check that coreids given to wait-attach are within bounds """
+    if not args.wait_attach:
+        return
+
+    fst_r, fst_c = args.first_core / 64, args.first_core % 64
+    last_r, last_c = fst_r + args.rows - 1 , fst_c + args.cols - 1
+
+    invalid = []
+    for coreid in args.wait_attach:
+        r, c = coreid / 64, coreid % 64
+        if r < fst_r or last_r < r or c < fst_c or last_c < c:
+            invalid.append(coreid)
+    if invalid:
+        s = reduce(lambda acc, v : acc + (', 0x%03x' % v) ,
+                invalid[1::], ('0x%03x' % invalid[0]))
+        parser.error('The following cores given to --wait-attach are out of bounds: ' + s)
+
+
+
+def mkdir_p(dirname):
+    """ no errors if existing, make parent directories as needed """
+    try:
+        os.makedirs(dirname)
+    except OSError as e:
+        if e.errno == os.errno.EEXIST and os.path.isdir(dirname):
+            pass
+        else:
+            raise
+
+
+def redirect_stdin(path, keep_copies=False):
+    """ Redirect stdin to path. """
+    stdin_fd  = sys.stdin.fileno()
+
+    old_stdin_fd = new_stdin_fd = -1
+
+    try:
+        new_stdin_fd = os.open(path, os.O_RDONLY)
+
+        # copy fd so we can revert in case of error
+        if keep_copies:
+            old_stdin_fd = os.dup(stdin_fd)
+
+        # Redirect
+        os.dup2(new_stdin_fd, stdin_fd)
+
+        if not keep_copies:
+            os.close(new_stdin_fd)
+            return
+        else:
+            return old_stdin_fd, new_stdin_fd
+    except OSError as e:
+        if new_stdin_fd > -1: os.close(new_stdin_fd)
+        if old_stdin_fd > -1: os.close(old_stdin_fd)
+        raise
+
+def redirect_stdio(prefix):
+    """ Redirect stdin, stdout, and stderr to prefix.std{in,out,err}.
+        If prefix.stdin doesn't exist, redirect to /dev/null.
+    """
+
+    stdout_fd = sys.stdout.fileno()
+    stderr_fd = sys.stderr.fileno()
+
+    old_stdin_fd = old_stdout_fd = old_stderr_fd = -1
+    new_stdin_fd = new_stdout_fd = new_stderr_fd = -1
+
+    # copy fds so we can revert in case of error
+    old_stdout_fd = os.dup(stdout_fd)
+    old_stderr_fd = os.dup(stderr_fd)
+
+    # stdout/stderr
+    flags = os.O_CREAT | os.O_TRUNC | os.O_WRONLY
+    mode = 0o644
+
+    new_stdout_fd = os.open(prefix + '.stdout', flags, mode)
+    new_stderr_fd = os.open(prefix + '.stderr', flags, mode)
+
+    # stdin
+    if os.path.exists(prefix + '.stdin'):
+        old_stdin_fd, new_stdin_fd = redirect_stdin(prefix + '.stdin', keep_copies=True)
+    else:
+        old_stdin_fd, new_stdin_fd = redirect_stdin('/dev/null', keep_copies=True)
+
+    # Redirect stdout/stderr
+    # If redirecting stdout fails, restore stdin
+    try:
+        os.dup2(new_stdout_fd, stdout_fd)
+    except OSError:
+        os.dup2(old_stdin_fd, stdin_fd)
+        raise
+    # If redirecting stderr fails, restore stdout and stdin
+    try:
+        os.dup2(new_stderr_fd, stderr_fd)
+    except OSError:
+        os.dup2(old_stdin_fd, stdin_fd)
+        os.dup2(old_stdout_fd, stdout_fd)
+        raise
+
+    # Close duplicate fds
+    os.close(old_stdin_fd) ; os.close(new_stdin_fd)
+    os.close(old_stdout_fd); os.close(new_stdout_fd)
+    os.close(old_stderr_fd); os.close(new_stderr_fd)
+
+
+def spawn(args, i, j):
+    """ Fork and spawn one simulator process """
+
+    coreid = args.first_core + i*64+j
+
+    if coreid is 0:
+        """ Don't spawn coreid 0 """
+        return (), ()
+    if coreid in args.wait_attach:
+        if args.verbose:
+            print_stderr('[INFO] Skipping 0x%03x. You have to start it manually' % coreid)
+        return (), ()
+
+    if not args.program and args.environment == 'operating':
+        program = DUMMY_PROGRAM
+    elif i*args.cols+j < len(args.program):
+        program = args.program[i*args.cols+j]
+    else:
+        program = args.program[-1]
+
+
+    sim_args=[]
+    if args.verbose:
+        sim_args.append('--verbose')
+
+    sim_args += map(lambda x: str(x), [
+        '--e-coreid'      , coreid,
+        '--e-first-core'  , args.first_core,
+        '--e-rows'        , args.rows,
+        '--e-cols'        , args.cols,
+        '--e-ext-ram-size', args.ext_ram_size,
+        '--e-ext-ram-base', args.ext_ram_base,
+        '--environment'   , args.environment
+        ])
+
+    if args.profile:
+        sim_args.append('-pon')
+
+    sim_args.extend(args.extra_args.split())
+
+    sim_args.append(program)
+
+    pid = os.fork()
+
+    if pid == 0:
+        """ Child """
+        # Raising exceptions with multiple processes seems messy so just
+        # print error, send SIGTERM to parent, and exit in case of any error
+        # in child.
+        try:
+            try:
+                if args.redirect_dir:
+                    redirect_stdio(os.path.join(args.redirect_dir, 'core-' + ('0x%03x' % coreid)))
+                else:
+                    redirect_stdin('/dev/null')
+            except OSError as e:
+                print_stderr('[ERR ] core-0x%03x: Could not redirect stdio: %s' % (coreid, str(e)))
+                os.kill(os.getppid(), signal.SIGTERM)
+                os._exit(1)
+
+            os.execlp('epiphany-elf-run', 'epiphany-elf-run', *sim_args)
+
+        except Exception as e:
+            print_stderr('[ERR ] core-0x%03x: ' % coreid)
+            traceback.print_exc(file=sys.stderr)
+            os.kill(os.getppid(), signal.SIGTERM)
+            os._exit(1)
+
+    else:
+        """ Parent """
+        return pid, coreid
+
+
+def spawn_sim_processes(args):
+    """ Spawn simulator processes """
+
+    pid_core_map = {}
+
+    for i in range(args.rows):
+        for j in range(args.cols):
+            pid, coreid = spawn(args, i, j)
+            if pid != () and coreid != ():
+                pid_core_map[pid] = coreid
+
+    return pid_core_map
+
+def which(command):
+    """ Return path to command or None """
+
+    for p in os.environ['PATH'].split(os.pathsep):
+        full_path = os.path.join(p, command)
+        if os.path.exists(full_path):
+            return full_path
+    return None
+
+
+
+def main():
+
+    if not which('epiphany-elf-run'):
+        print_stderr('[ERR ] epiphany-elf-run must be in path')
+        exit(1)
+
+    args = parse_or_die()
+
+    if args.verbose:
+        print_stderr('[INFO] Press Ctrl-C at any time to abort.')
+
+    if args.redirect_dir:
+        try:
+            mkdir_p(args.redirect_dir)
+            if args.verbose:
+                print_stderr('[INFO] Created output directory')
+        except OSError as e:
+            if e.errno == os.errno.EEXIST:
+                print_stderr('[ERR ] Specified redirect directory `%s\' already '
+                'exists but is not a directory' % args.redirect_dir)
+                exit(8)
+            if e.errno == os.errno.EACCES:
+                print_stderr('[ERR ] Permission denied to access specified '
+                'redirect directory `%s\'' % args.redirect_dir)
+                exit(9)
+            else:
+                raise
+
+    if args.verbose:
+        print_stderr('[INFO] Spawning core simulator processes')
+    pid_core_map = spawn_sim_processes(args)
+    if args.verbose:
+        print_stderr('[INFO] All core simulators started')
+
+    while True:
+        """ Wait for children """
+        try:
+            pid, status = os.wait()
+
+            # Lowest byte signal, second byte return code
+            sim_rc     = status / 256
+            sim_signal = status % 256
+
+            coreid = pid_core_map[pid]
+            if sim_signal:
+                print_stderr('[INFO] core simulator 0x%0.3x (%2d,%2d) terminated by signal %s' %
+                          (coreid, coreid/64, coreid%64, signal_name(sim_signal)))
+            else:
+                print_stderr('[INFO] core simulator 0x%0.3x (%2d,%2d) exited with status %d' %
+                          (coreid, coreid/64, coreid%64, sim_rc))
+        except OSError as e:
+            if e.errno == os.errno.ECHILD:
+                """ All children done """
+                break
+            else:
+                raise
+
+    return 0
+
+def sigterm_handler(sig, frame):
+    """ Kill all children on SIGTERM """
+
+    # Catch SIGTERM/SIGINT (will exit immediately anyway)
+    signal.signal(signal.SIGTERM, (lambda sig, frame : 0))
+    signal.signal(signal.SIGINT, (lambda sig, frame : 0))
+    time.sleep(1)
+    print_stderr('[INFO] Got SIGTERM. Terminating all children...')
+    time.sleep(1)
+    os.kill(0, signal.SIGTERM)
+    exit(6)
+
+
+if __name__ == "__main__":
+    signal.signal(signal.SIGTERM, sigterm_handler)
+    try:
+        main()
+    except KeyboardInterrupt:
+        """ Ctrl-C """
+        # Catch SIGTERM/SIGINT (will exit immediately anyways)
+        signal.signal(signal.SIGTERM, (lambda sig, frame : 0))
+        signal.signal(signal.SIGINT, (lambda sig, frame : 0))
+        time.sleep(1)
+        print_stderr('\n[INFO] Keyboard interrupt. Terminating all children...')
+        time.sleep(1)
+        os.kill(0, signal.SIGTERM)
+        exit(4)
+    except Exception:
+        # Catch SIGTERM/SIGINT (will exit immediately anyways)
+        signal.signal(signal.SIGTERM, (lambda sig, frame : 0))
+        signal.signal(signal.SIGINT, (lambda sig, frame : 0))
+        time.sleep(1)
+        traceback.print_exc(file=sys.stderr)
+        print_stderr('[ERR ] Terminating all children...')
+        time.sleep(1)
+        os.kill(0, signal.SIGTERM)
+        exit(5)
+

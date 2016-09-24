@@ -1,0 +1,30 @@
+# epiphany testcase for bitr16 $rd6,$rn6 -*- Asm -*-
+# mach: all
+
+	.include "testutils.inc"
+
+	start
+
+	.global bitr16
+lsl:
+	mov	r3,1
+        bitr    r2,r3
+        mova    r0,0x80000000
+        sub     r0,r2,r0
+        bne     1f
+        bitr    r2,r2
+        sub     r2,r2,1
+        bne     1f
+        mova    r0,0xcccccccc
+        bitr    r1,r0
+        mova    r2,0x33333333
+        sub     r2,r2,r1
+        bne     1f
+        bitr    r2,r2
+        bne     1f
+        sub     r2,r2,1
+        bitr    r2,r2
+        add     r2,r2,1
+        bne     1f
+        pass
+1:      fail

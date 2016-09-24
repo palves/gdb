@@ -1,0 +1,14 @@
+2012-01-27  Joern Rennecke  <joern.rennecke@embecosm.com>
+
+	* configure: Regenerate.
+
+2010-03-20  Alan Lehotsky <apl@alum.mit.edu>
+
+	* sim/epiphany/round.cgs: test CONFIG reg fp round/trunc bit.
+
+2009-10-19  Jeremy Bennett <jeremy.bennett@embecosm.com>
+
+	Noted for the record, not by the author, date estimated.
+
+	* epiphany-elf: Renamed from atdsp-elf.
+	* sim/epiphany: Renamed from sim/atdsp.

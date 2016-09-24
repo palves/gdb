@@ -1,0 +1,17 @@
+# epiphany testcase for jalr $rn6 -*- Asm -*-
+# mach: all
+
+	.include "testutils.inc"
+
+	start
+
+	.global jalr
+jalr:	mova	r20,sub
+	mov	r0,0
+	jalr 	r20
+	compare	r0,1
+
+sub:	mov r0,1
+	rts
+	fail
+	

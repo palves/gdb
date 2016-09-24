@@ -1,0 +1,354 @@
+# Simulator main loop for epiphany. -*- C -*-
+# based on iq2000 mloop.in
+
+# Copyright (C) 1998, 1999, 2007, 2008, 2011 Free Software Foundation, Inc.
+# Contributed by Embecosm on behalf of Adapteva.
+#
+# This file is part of the GNU Simulators.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Syntax:
+# /bin/sh mainloop.in command
+#
+# Command is one of:
+#
+# init
+# support
+# extract-{simple,scache,pbb}
+# {full,fast}-exec-{simple,scache,pbb}
+#
+# A target need only provide a "full" version of one of simple,scache,pbb.
+# If the target wants it can also provide a fast version of same.
+# It can't provide more than this, however for illustration's sake the IQ2000
+# port provides examples of all.
+
+# ??? After a few more ports are done, revisit.
+# Will eventually need to machine generate a lot of this.
+
+case "x$1" in
+
+xsupport)
+
+cat <<EOF
+
+static INLINE const IDESC *
+extract (SIM_CPU *current_cpu, PCADDR pc, CGEN_INSN_INT insn, ARGBUF *abuf,
+	 int fast_p)
+{
+  const IDESC *id = @cpu@_decode (current_cpu, pc, insn, insn, abuf);
+  @cpu@_fill_argbuf (current_cpu, abuf, id, pc, fast_p);
+  if (! fast_p)
+    {
+      int trace_p = PC_IN_TRACE_RANGE_P (current_cpu, pc);
+      int profile_p = PC_IN_PROFILE_RANGE_P (current_cpu, pc);
+      @cpu@_fill_argbuf_tp (current_cpu, abuf, trace_p, profile_p);
+    }
+  return id;
+}
+
+static INLINE SEM_PC
+execute (SIM_CPU *current_cpu, SCACHE *sc, int fast_p)
+{
+  SEM_PC vpc;
+
+  if (fast_p)
+    {
+#if ! WITH_SEM_SWITCH_FAST
+#if WITH_SCACHE
+      vpc = (*sc->argbuf.semantic.sem_fast) (current_cpu, sc);
+#else
+      vpc = (*sc->argbuf.semantic.sem_fast) (current_cpu, &sc->argbuf);
+#endif
+#else
+      abort ();
+#endif /* WITH_SEM_SWITCH_FAST */
+    }
+  else
+    {
+#if ! WITH_SEM_SWITCH_FULL
+      ARGBUF *abuf = &sc->argbuf;
+      const IDESC *idesc = abuf->idesc;
+#if WITH_SCACHE_PBB
+      int virtual_p = CGEN_ATTR_VALUE (NULL, idesc->attrs, CGEN_INSN_VIRTUAL);
+#else
+      int virtual_p = 0;
+#endif
+
+      if (! virtual_p)
+	{
+	  /* FIXME: call x-before */
+	  if (ARGBUF_PROFILE_P (abuf))
+	    PROFILE_COUNT_INSN (current_cpu, abuf->addr, idesc->num);
+	  /* FIXME: Later make cover macros: PROFILE_INSN_{INIT,FINI}.  */
+	  if (PROFILE_MODEL_P (current_cpu)
+	      && ARGBUF_PROFILE_P (abuf))
+	    @cpu@_model_insn_before (current_cpu, 1 /*first_p*/);
+	  CGEN_TRACE_INSN_INIT (current_cpu, abuf, 1);
+	  CGEN_TRACE_INSN (current_cpu, idesc->idata,
+		      (const struct argbuf *) abuf, abuf->addr);
+	}
+#if WITH_SCACHE
+      vpc = (*sc->argbuf.semantic.sem_full) (current_cpu, sc);
+#else
+      vpc = (*sc->argbuf.semantic.sem_full) (current_cpu, abuf);
+#endif
+      if (! virtual_p)
+	{
+	  /* FIXME: call x-after */
+	  if (PROFILE_MODEL_P (current_cpu)
+	      && ARGBUF_PROFILE_P (abuf))
+	    {
+	      int cycles;
+
+	      cycles = (*idesc->timing->model_fn) (current_cpu, sc);
+	      @cpu@_model_insn_after (current_cpu, 1 /*last_p*/, cycles);
+	    }
+	  CGEN_TRACE_INSN_FINI (current_cpu, abuf, 1);
+	}
+#else
+      abort ();
+#endif /* WITH_SEM_SWITCH_FULL */
+    }
+
+  return vpc;
+}
+
+EOF
+;;
+
+xinit)
+;;
+
+xextract-simple | xextract-scache)
+
+# Inputs:  current_cpu, vpc, sc, FAST_P
+# Outputs: sc filled in
+
+cat <<EOF
+{
+  CGEN_INSN_INT insn = GETIMEMUHI (current_cpu, vpc);
+  switch (insn&0xf) {
+  case OP4_BRANCH16:
+  case OP4_LDSTR16X:
+  case OP4_FLOW16:
+  case OP4_IMM16:
+  case OP4_LDSTR16D:
+  case OP4_LDSTR16P:
+  case OP4_LSHIFT16:
+  case OP4_DSP16:
+  case OP4_ALU16:
+  case OP4_ASHIFT16:
+    break;
+
+  default:
+    insn |= ( GETIMEMUHI (current_cpu, 2 + vpc) << 16);
+  }
+
+  extract (current_cpu, vpc, insn, SEM_ARGBUF (sc), FAST_P);
+}
+EOF
+
+;;
+
+xextract-pbb)
+
+# Inputs:  current_cpu, pc, sc, max_insns, FAST_P
+# Outputs: sc, pc
+# sc must be left pointing past the last created entry.
+# pc must be left pointing past the last created entry.
+# If the pbb is terminated by a cti insn, SET_CTI_VPC(sc) must be called
+# to record the vpc of the cti insn.
+# SET_INSN_COUNT(n) must be called to record number of real insns.
+
+cat <<EOF
+{
+  const IDESC *idesc;
+  int icount = 0;
+
+  while (max_insns > 0)
+    {
+      CGEN_INSN_INT insn = GETIMEMUHI (current_cpu, pc);  /* Try 16bit insn.  */
+
+      switch (insn&0xf) {
+      case OP4_BRANCH16:
+      case OP4_LDSTR16X:
+      case OP4_FLOW16:
+      case OP4_IMM16:
+      case OP4_LDSTR16D:
+      case OP4_LDSTR16P:
+      case OP4_LSHIFT16:
+      case OP4_DSP16:
+      case OP4_ALU16:
+      case OP4_ASHIFT16:
+	break;
+
+      default:
+	insn |= GETIMEMUHI (current_cpu, pc+2) << 16;
+      }
+
+      idesc = extract (current_cpu, pc, insn, &sc->argbuf, FAST_P);
+
+      ++sc;
+      --max_insns;
+      ++icount;
+      pc += idesc->length;
+
+      if (IDESC_CTI_P (idesc))
+	{
+	  SET_CTI_VPC (sc - 1);
+	  break;
+	}
+    }
+
+  SET_INSN_COUNT (icount);
+}
+EOF
+
+;;
+
+xfull-exec-* | xfast-exec-*)
+
+# Inputs: current_cpu, sc, FAST_P
+# Outputs: vpc
+# vpc contains the address of the next insn to execute
+
+cat <<EOF
+{
+#if WITH_EMESH_SIM
+  static int initialized = 0;
+  static size_t core_mem_region_size = 0;
+  static size_t core_glob_addr_start = 0;
+
+  SEM_PC old_vpc = vpc;
+
+  if (!initialized)
+    {
+
+      sim_io_eprintf(current_state, "ESIM: Waiting for other cores...");
+      /** @todo Would be nice to support Ctrl-C here */
+      es_wait_run(STATE_ESIM(current_state));
+      sim_io_eprintf(current_state, " done.\n");
+
+      core_mem_region_size =
+        es_get_core_mem_region_size(STATE_ESIM(current_state));
+      core_glob_addr_start =
+        es_get_coreid(STATE_ESIM(current_state)) * core_mem_region_size;
+
+      vpc = epiphany_handle_oob_events(current_cpu, vpc);
+
+      if (vpc != old_vpc)
+	sc = epiphanybf_scache_lookup (current_cpu, vpc, scache, hash_mask, FAST_P);
+
+      initialized = 1;
+    }
+#endif /* WITH_EMESH_SIM */
+
+#if (! FAST_P && WITH_SEM_SWITCH_FULL) || (FAST_P && WITH_SEM_SWITCH_FAST)
+#define DEFINE_SWITCH
+#include "sem-switch.c"
+#elif WITH_SCACHE_PBB
+  vpc = execute (current_cpu, vpc, FAST_P);
+#else
+  if (epiphany_cpu_is_active(current_cpu))
+    vpc = execute (current_cpu, sc, FAST_P);
+  else
+    {
+      CPU_SCR_WRITESLOT_LOCK();
+      if (CPU_SCR_WRITESLOT_EMPTY())
+	CPU_WAKEUP_WAIT();
+      /* No point in releasing lock in between */
+      goto wakeup_from_idle;
+    }
+
+  /* Handle out of band events.
+   * (All except external_write which we do after execute (too many arguments
+   * to pass to epiphany_handle_oob_events otherwise). This is ok because
+   * every time before we are called from sim_resume via engine_run_1
+   *  (see ../common/cgen-run.c) the scache is flushed.
+   */
+  vpc = epiphany_handle_oob_events(current_cpu, vpc);
+
+  if (!CPU_SCR_WRITESLOT_EMPTY())
+    {
+      CPU_SCR_WRITESLOT_LOCK();
+wakeup_from_idle:
+      epiphanybf_h_all_registers_set(current_cpu,
+				     current_cpu->scr_remote_write_reg,
+				     current_cpu->scr_remote_write_val);
+      current_cpu->scr_remote_write_reg = -1;
+      current_cpu->scr_remote_write_val = 0xbaadbeef;
+      CPU_SCR_WRITESLOT_SIGNAL();
+      CPU_SCR_WRITESLOT_RELEASE();
+    }
+
+  vpc = epiphany_handle_oob_events(current_cpu, vpc);
+
+
+  /*
+   * Invalidate vpc in scache if not core-local memory.
+   * Ideally, we would like to never consult scache for non core-local
+   * memory, but due to how genmloop.sh works, I cannot see a straight-forward
+   * way to accomplish this.
+   * We don't want to cache remote mem since if we did, every write
+   * would have to be followed by an invalidate request to all cores in the
+   * system.
+   */
+
+
+  /* If another core (or the host CPU) wrote to local memory we need to make
+   * sure that cached instructions are flushed.
+   * @todo Now we flush the entire cache - this is *slow*.
+   * Instead, we could maintain a write-list and then just flush instructions
+   * inside memory written to from the scache.
+   * When flushing we need to take into account local/global addresses, and
+   * partly overwritten instructions.
+   */
+  if (current_cpu->external_write)
+    {
+      scache_flush_cpu(current_cpu);
+      MEM_BARRIER();
+      current_cpu->external_write = 0;
+    }
+
+  /* Allow addresses inside both core-local and the cores global address
+   * space. Otherwise invalidate the executed address from the scache.
+   */
+#if WITH_EMESH_SIM
+
+#define INVALIDATE_IF_NOT_LOCAL(xpc)\
+do\
+  {\
+    if (xpc >= core_mem_region_size &&\
+	  !(core_glob_addr_start <= xpc &&\
+	    xpc < core_glob_addr_start + core_mem_region_size))\
+      epiphanybf_scache_invalidate(current_cpu, xpc);\
+  }\
+while (0)
+
+  INVALIDATE_IF_NOT_LOCAL(old_vpc);
+#endif
+
+#endif
+}
+EOF
+
+;;
+
+*)
+  echo "Invalid argument to mainloop.in: $1" >&2
+  exit 1
+  ;;
+
+esac

@@ -1,0 +1,16 @@
+# epiphany testcase for ldr $rd,[$rn,$rm] -*- Asm -*-
+# mach: all
+
+	.include "testutils.inc"
+
+	start
+
+	.global ldrx16
+ldrx16:
+	mov	r0,v
+	mov	r1,8
+	ldr r0,[r0,r1]
+	compare r0,2
+	.data
+	.p2align 2		;force alignment
+v:	.int	0,1,2,3

@@ -1,0 +1,13 @@
+# epiphany testcase for lsr $rd6,$rn6,$shift -*- Asm -*-
+# mach: all
+
+	.include "testutils.inc"
+
+	start
+
+	.global lsri32
+lsri32:
+	mov	r40,(1<<9)
+	lsr r40,r40,9
+	compare	r40,1
+	pass

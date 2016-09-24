@@ -1,0 +1,19 @@
+# epiphany testcase for beq $simm24 -*- Asm -*-
+# mach: all
+
+	.include "testutils.inc"
+
+	start
+
+	.global beq
+beq:
+	mova	r0,1
+	add	r1,r0,r0
+	beq	1f
+	sub	r0,r0,r0
+	beq	2f
+	.rept 128
+	nop
+	.endr
+1:	fail
+2:	pass

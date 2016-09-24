@@ -1,0 +1,13 @@
+# epiphany testcase for mov $rd,$imm8 -*- Asm -*-
+# mach: all
+
+	.include "testutils.inc"
+
+	start
+
+	.global mov8
+mov8:
+2:	mov r0,254
+1:	mov r1,1b-2b
+	compare	r1,2
+

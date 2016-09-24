@@ -1,0 +1,4 @@
+2016-03-13  Ola Jeppsson  <ola@adapteva.com>
+
+	* sim-arange.h (SIM_ARANGE_INLINE): Change to static inline
+	when HAVE_INLINE is defined.

@@ -1,0 +1,61 @@
+2012-01-27  Joern Rennecke  <joern.rennecke@embecosm.com>
+
+	* configure.tgt (epiphany-*-*) Set sim_testsuite=yes.
+	* configure: Regenerate.
+
+2012-01-23  Joern Rennecke  <joern.rennecke@embecosm.com>
+
+	* configure: Regenerate.
+
+2012-01-14  Joern Rennecke  <joern.rennecke@embecosm.com>
+
+	Reflect mainline change from 2011/10/18:
+	* epiphany/configure.ac: Update to autoconf 2.64; adapt to
+	name change of common/aclocal.m4 to common/acinclude.m4.
+	* configure, epiphany/configure: Regenerate.
+
+	Reflect mainline change from 2011/07/05
+	(start a unified sim_do_command):
+	* epiphany/sim-if.c (sim_do_command): Remove m32r-esque implementation.
+
+2011-11-08  Joern Rennecke  <joern.rennecke@embecosm.com>
+
+	* common/gennltvals.sh: Add epiphany stanza.
+	* common/nltvals.def: Regenerate.
+
+2011-08-16  Joern Rennecke <joern.rennecke@embecosm.com>
+
+	* configure.tgt: Add epiphany support.
+	* configure: Regenerate.
+
+2010-03-20  Alan Lehotsky <apl@alum.mit.edu>
+
+	* testsuite/sim/epiphany/idle.cgs: New.
+
+2010-02-27  Alan Lehotsky <apl@alum.mit.edu>
+
+	* testsuite/sim/epiphany/denorm.cgs: New.
+
+2010-02-21  Alan Lehotsky <apl@alum.mit.edu>
+
+	* testsuite/sim/epiphany/trap16.cgs: Correct check for return value
+		  from write syscall.
+
+2010-02-07  Alan Lehotsky <apl@alum.mit.edu>
+
+	* testsuite/sim/epiphany/bitr.cgs: Test new bitr instruction.
+	* testsuite/sim/epiphany/bitr16.cgs: Likewise.
+
+2010-02-06  Alan Lehotsky <apl@alum.mit.edu>
+
+	* testsuite/sim/epiphany/*.cgs: correct instruction tests that had
+	been broken by changes to epiphany simulator condition codes.
+
+	* testsuite/sim/epiphany/testutils.inc: define symbolic STATUS
+	register bits.
+
+2009-10-19  Jeremy Bennett <jeremy.bennett@embecosm.com>
+
+	Noted for the record, not by the author, date estimated.
+
+	* epiphany: Renamed from atdsp.

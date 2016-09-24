@@ -1,0 +1,63 @@
+# epiphany testcase for trap $disp3 -*- Asm -*-
+# mach: all
+# output:pass\n
+	
+	.include "testutils.inc"
+	start
+
+	.global syscalls
+syscalls:
+	mova    r0,file        ; path
+        mov     r1,0777        ; mode
+        mov     r2,0x200|0x2   ; TARGET_O_CREAT|TARGET_O_RDWR
+	trap	2              ; open
+        add     r8,r0,0        ; file handle - save for later use
+        blt     1f             ; no file
+
+        mova    r1,hello
+        mov     r2,13
+        trap    0               ;WRITE a message "hello world"
+        add     r0,r0,0
+        blt     1f              ; write failed
+        sub     r0,r0,13
+        bne     2f              ; didn't write all the data
+        mov     r0,r8
+        trap    6               ;close
+        add     r0,r0,0
+        blt     1f              ; close failed
+
+        mova    r0,file         ; reopen the file
+        mov     r1,0777         ; 
+        mov     r2,0            ; O_RDONLY
+        trap    2               ; open
+        add     r0,r0,0
+        blt     1f              ;reopen failed
+        mov     r8,r0
+        mova    r1,buffer
+        mov     r2,13
+        trap    1               ;read
+        add     r0,r0,0
+        blt     1f
+        sub     r2,r0,13       ; better have read all the data
+        bne     1f             ; nope
+        
+        ;;  check that we read the correct data
+        mova r4,buffer
+        mova r5,hello
+3:
+        ldrb    r1,[r4],1
+        ldrb    r2,[r5],1
+        sub     r3,r1,r2
+        beq     4f
+        fail                    ;read not matching write
+4:      sub     r0,r0,1
+        bne     3b
+        
+	pass
+1:	
+2:      trap    3               ;exit
+
+	.data
+file:   .ascii  "/tmp/trap-test.txt\0"
+hello:	.ascii	"hello, world\n"
+buffer: .byte   16

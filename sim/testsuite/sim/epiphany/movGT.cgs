@@ -1,0 +1,14 @@
+# epiphany testcase for movgt $rd6,$rn6 -*- Asm -*-
+# mach: all
+
+	.include "testutils.inc"
+
+	start
+
+	.global movGT
+movGT:
+	mov	r0,1
+	mov	r1,2
+	sub	r3,r1,r0
+	movgt r0,r1
+	compare	r0,2

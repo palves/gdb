@@ -1,0 +1,10 @@
+# test that's expected to fail -*- Asm -*-
+# mach: all
+# xerror:
+
+	.include "testutils.inc"
+
+	start
+
+	.global xfail
+xfail:	fail

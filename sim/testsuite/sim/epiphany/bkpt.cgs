@@ -1,0 +1,11 @@
+# epiphany testcase for bkpt -*- Asm -*-
+# mach: all
+
+	.include "testutils.inc"
+
+	start
+
+	.global bkpt
+bkpt:
+	bkpt
+	pass

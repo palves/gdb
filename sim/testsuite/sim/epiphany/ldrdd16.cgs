@@ -1,0 +1,18 @@
+# epiphany testcase for ldrd $rd,[$rn,$disp3] -*- Asm -*-
+# mach: all
+
+	.include "testutils.inc"
+
+	start
+
+	.global ldrdd16
+ldrdd16:
+	mova	r0,v
+	
+	ldrd r0,[r0,0]
+	add	r0,r0,r1
+	compare	r0,40
+	.data
+	.align 3
+v:	.long 25,15,30,45,50
+	

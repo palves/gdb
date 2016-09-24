@@ -1,0 +1,17 @@
+# epiphany testcase for bltu $simm8 -*- Asm -*-
+# mach: all
+
+	.include "testutils.inc"
+
+	start
+
+	.global bltu16
+bltu16:
+	mova	r0,10
+	mova	r1,20
+	sub	r2,r1,r0
+	bltu	1f
+        add	r2,r0,r1
+	bltu	2f
+1:      fail
+2:	pass

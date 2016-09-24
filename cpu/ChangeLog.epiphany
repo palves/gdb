@@ -1,0 +1,35 @@
+2015-09-24  Ola Jeppsson  <ola@adapteva.com>
+
+	* cpu/epiphany.cpu: Fix inconsistent alias for fp.
+
+2015-09-22  Ola Jeppsson  <ola@adapteva.com>
+
+	* Merge Epiphany multicore simulator branch
+	[ No log entries between: 2014-03-18 -- 2014-10-28 ]
+
+2015-08-29  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany.cpu: Move fp alias back to r15.
+
+2014-06-13  Pierre Langlois  <pierre.langlois@embecosm.com>
+
+	* epiphany.opc (parse_imm16): Rename BFD_RELOC_EPIPHANY_OVERLOW to
+	BFD_RELOC_EPIPHANY_CACHELOW.  Rename BFD_RELOC_EPIPHANY_OVERHIGH to
+	BFD_RELOC_EPIPHANY_CACHEHIGH.
+
+2013-12-18  Simon Cook  <simon.cook@embecosm.com>
+
+	* epiphany.cpu: Reset fp alias to r11.
+
+2013-09-03  Simon Cook  <simon.cook@embecosm.com>
+
+	* epiphany.cpu: Update fp alias.
+
+2013-08-09  Simon Cook  <simon.cook@embecosm.com>
+
+	* epiphany-opc (parse_imm16): Accept @PLT instead of overhigh/overlow.
+
+2013-06-14  Simon Cook  <simon.cook@embecosm.com>
+
+	* epiphany.opc (parse_imm16): Add support for %overlow and
+	%overhigh.

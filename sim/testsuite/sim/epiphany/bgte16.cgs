@@ -1,0 +1,18 @@
+# epiphany testcase for bgte $simm8 -*- Asm -*-
+# mach: all
+
+	.include "testutils.inc"
+
+	start
+
+	.global bgte16
+bgte16:
+	mov r0,0
+	sub	r0,r0,1
+	bgte	1f
+	add	r0,r0,2
+	bgte	2f
+	fail
+1:	fail
+2:	pass
+

@@ -1,0 +1,13 @@
+# epiphany testcase for and $rd,$rn,$rm -*- Asm -*-
+# mach: all
+
+	.include "testutils.inc"
+
+	start
+
+	.global and16
+and16:
+	mov r0,65535
+	mov r1,0x7ffe
+	and r0,r0,r1
+	compare r0,0x7ffe
