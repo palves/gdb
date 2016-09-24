@@ -24,6 +24,7 @@ struct target_waitstatus;
 struct frame_info;
 struct address_space;
 struct return_value_info;
+struct itset;
 
 /* True if we are debugging run control.  */
 extern unsigned int debug_infrun;
@@ -111,7 +112,7 @@ extern void set_last_target_status (ptid_t ptid,
 				    struct target_waitstatus status);
 
 /* Stop all threads.  Only returns after everything is halted.  */
-extern void stop_all_threads (void);
+extern void stop_all_threads (struct itset *stop_set);
 
 extern void prepare_for_detach (void);
 

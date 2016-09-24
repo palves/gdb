@@ -690,12 +690,17 @@ bppy_init (PyObject *self, PyObject *args, PyObject *kwargs)
 	case bp_breakpoint:
 	  {
 	    struct event_location *location;
+	    struct itset *trigger_set, *suspend_set;
 
 	    location
 	      = string_to_event_location_basic (&copy, current_language);
 	    make_cleanup_delete_event_location (location);
+	    default_breakpoint_itsets (&trigger_set, &suspend_set);
+
 	    create_breakpoint (python_gdbarch,
-			       location, NULL, -1, NULL,
+			       location, NULL,
+			       trigger_set, suspend_set,
+			       -1, NULL,
 			       0,
 			       temporary_bp, bp_breakpoint,
 			       0,

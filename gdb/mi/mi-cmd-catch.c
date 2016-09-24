@@ -84,7 +84,7 @@ mi_cmd_catch_assert (char *cmd, char *argv[], int argc)
      and will assume control of its lifetime.  */
   if (condition != NULL)
     condition = xstrdup (condition);
-  create_ada_exception_catchpoint (gdbarch, ada_catch_assert,
+  create_ada_exception_catchpoint (NULL, NULL, gdbarch, ada_catch_assert,
 				   NULL, condition, temp, enabled, 0);
 }
 
@@ -163,7 +163,7 @@ mi_cmd_catch_exception (char *cmd, char *argv[], int argc)
     exception_name = xstrdup (exception_name);
   if (condition != NULL)
     condition = xstrdup (condition);
-  create_ada_exception_catchpoint (gdbarch, ex_kind,
+  create_ada_exception_catchpoint (NULL, NULL, gdbarch, ex_kind,
 				   exception_name, condition,
 				   temp, enabled, 0);
 }
