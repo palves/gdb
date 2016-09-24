@@ -2731,6 +2731,20 @@ epiphany_frame_base_sniffer (struct frame_info *this_frame)
 }	/* epiphany_frame_base_sniffer () */
 
 
+static void
+epiphany_dwarf2_frame_init_reg (struct gdbarch *gdbarch, int regnum,
+				struct dwarf2_frame_state_reg *reg,
+				struct frame_info *this_frame)
+{
+  if (regnum == gdbarch_pc_regnum (gdbarch))
+    reg->how = DWARF2_FRAME_REG_RA;
+  else if (regnum == gdbarch_sp_regnum (gdbarch))
+    {
+      reg->how = DWARF2_FRAME_REG_SAVED_VAL_OFFSET;
+      reg->loc.offset = -8;
+    }
+}
+
 /*----------------------------------------------------------------------------*/
 /*! Architecture initialization for Epiphany
 
@@ -2914,6 +2928,8 @@ epiphany_gdbarch_init (struct gdbarch_info  info,
      have any implication in cygwin specific worlds. */
   /* No need for solib_symbols_extension, since we have no shared objects. */
   /* No need for has_dos_based_file_system, since we don't. */
+
+  dwarf2_frame_set_init_reg (gdbarch, epiphany_dwarf2_frame_init_reg);
 
   /* Functions to unwind frames and sniff for frame bases. We try DWARF2
      first, then our hand-written tool. We'd like a STABS one, but no one has
