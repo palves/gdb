@@ -18,12 +18,12 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
 #include "defs.h"
+#include "breakpoint.h"
 #include "arch-utils.h"
 #include <ctype.h>
 #include "hashtab.h"
 #include "symtab.h"
 #include "frame.h"
-#include "breakpoint.h"
 #include "tracepoint.h"
 #include "gdbtypes.h"
 #include "expression.h"
@@ -67,6 +67,8 @@
 #include "ax-gdb.h"
 #include "dummy-frame.h"
 #include "interps.h"
+#include "infcmd.h"
+
 #include "format.h"
 #include "location.h"
 #include "thread-fsm.h"
@@ -11948,52 +11950,151 @@ until_break_fsm_async_reply_reason (struct thread_fsm *self)
   return EXEC_ASYNC_LOCATION_REACHED;
 }
 
+struct until_break_cmd_data
+{
+  struct symtab_and_line sal;
+  struct frame_id breakpoint_frame_id;
+  struct frame_id selected_frame_id;
+};
+
+struct until_break_aec_callback_data
+{
+  int from_tty;
+};
+
+static void until_break_aec_callback (struct thread_info *thread, void *data);
+
+static void
+itset_free_p (void *arg)
+{
+  struct itset **itset_p = (struct itset **) arg;
+
+  if (*itset_p)
+    itset_free (*itset_p);
+}
+
 void
 until_break_command (char *arg, int from_tty, int anywhere)
 {
-  struct symtabs_and_lines sals;
-  struct symtab_and_line sal;
+  struct itset *apply_itset = NULL;
+  int apply_itset_explicit = 0;
+  struct itset *run_free_itset = NULL;
+  struct thread_info *thr;
+  struct cleanup *old_chain;
+  int thr_count = 0;
+  struct until_break_aec_callback_data cb_data;
+  struct event_location *location;
+
+  old_chain = make_cleanup (itset_free_p, &apply_itset);
+  make_cleanup (itset_free_p, &run_free_itset);
+
+  arg = parse_execution_args (arg, 0,
+			      &apply_itset, &apply_itset_explicit,
+			      &run_free_itset);
+
+  location = string_to_event_location (&arg, current_language);
+  make_cleanup_delete_event_location (location);
+
+  ALL_THREADS (thr)
+    if (itset_contains_thread (apply_itset, thr))
+      {
+	struct symtabs_and_lines sals;
+	struct symtab_and_line sal;
+	struct frame_info *frame;
+	struct frame_id breakpoint_frame_id;
+	struct until_break_cmd_data *cmd_data;
+
+	++thr_count;
+
+	ensure_runnable (thr);
+
+	if (!ptid_equal (inferior_ptid, thr->ptid))
+	  switch_to_thread (thr->ptid);
+
+	frame = get_selected_frame (NULL);
+
+	/* Set a breakpoint where the user wants it and at return from
+	   this function.  */
+
+	if (last_displayed_sal_is_valid ())
+	  sals = decode_line_1 (location, DECODE_LINE_FUNFIRSTLINE, NULL,
+				get_last_displayed_symtab (),
+				get_last_displayed_line ());
+	else
+	  sals = decode_line_1 (location, DECODE_LINE_FUNFIRSTLINE,
+				NULL, (struct symtab *) NULL, 0);
+
+	if (sals.nelts != 1)
+	  error (_("Couldn't get information on specified line."));
+
+	sal = sals.sals[0];
+	xfree (sals.sals);	/* malloc'd, so freed.  */
+
+	if (*arg)
+	  error (_("Junk at end of arguments."));
+
+	resolve_sal_pc (&sal);
+
+	if (anywhere)
+	  /* If the user told us to continue until a specified
+	     location, we don't specify a frame at which we need to
+	     stop.  */
+	  breakpoint_frame_id = null_frame_id;
+	else
+	  /* Otherwise, specify the selected frame, because we want to
+	     stop only at the very same frame.  */
+	  breakpoint_frame_id = get_stack_frame_id (frame);
+
+	cmd_data = XNEW (struct until_break_cmd_data);
+	cmd_data->sal = sal;
+	cmd_data->breakpoint_frame_id = breakpoint_frame_id;
+	cmd_data->selected_frame_id = get_frame_id (frame);
+	thr->cmd_data = cmd_data;
+      }
+
+  if (thr_count == 0)
+    {
+      if (apply_itset_explicit)
+	error (_("Set of threads to until is empty."));
+      else
+	error (_("The program is not being run."));
+    }
+
+  cb_data.from_tty = from_tty;
+  apply_execution_command (apply_itset, run_free_itset,
+			   until_break_aec_callback, NULL);
+
+  do_cleanups (old_chain);
+}
+
+static void
+until_break_aec_callback (struct thread_info *thread, void *data)
+{
+  struct breakpoint *location_breakpoint;
+  struct breakpoint *caller_breakpoint = NULL;
+  int thread_num;
+  struct until_break_aec_callback_data *d
+    = (struct until_break_aec_callback_data *) data;
   struct frame_info *frame;
   struct gdbarch *frame_gdbarch;
   struct frame_id stack_frame_id;
   struct frame_id caller_frame_id;
-  struct breakpoint *location_breakpoint;
-  struct breakpoint *caller_breakpoint = NULL;
-  struct cleanup *old_chain, *cleanup;
-  int thread;
-  struct thread_info *tp;
-  struct event_location *location;
+  struct until_break_cmd_data *cmd_data
+    = (struct until_break_cmd_data *) thread->cmd_data;
+  int ix;
   struct until_break_fsm *sm;
+  struct cleanup *old_chain;
 
-  clear_proceed_status (0);
+  frame = frame_find_by_id (cmd_data->selected_frame_id);
+  select_frame (frame);
 
-  /* Set a breakpoint where the user wants it and at return from
-     this function.  */
+  location_breakpoint = set_momentary_breakpoint (get_frame_arch (frame),
+						  cmd_data->sal,
+						  cmd_data->breakpoint_frame_id,
+						  bp_until);
+  old_chain = make_cleanup_delete_breakpoint (location_breakpoint);
 
-  location = string_to_event_location (&arg, current_language);
-  cleanup = make_cleanup_delete_event_location (location);
-
-  if (last_displayed_sal_is_valid ())
-    sals = decode_line_1 (location, DECODE_LINE_FUNFIRSTLINE, NULL,
-			  get_last_displayed_symtab (),
-			  get_last_displayed_line ());
-  else
-    sals = decode_line_1 (location, DECODE_LINE_FUNFIRSTLINE,
-			  NULL, (struct symtab *) NULL, 0);
-
-  if (sals.nelts != 1)
-    error (_("Couldn't get information on specified line."));
-
-  sal = sals.sals[0];
-  xfree (sals.sals);	/* malloc'd, so freed.  */
-
-  if (*arg)
-    error (_("Junk at end of arguments."));
-
-  resolve_sal_pc (&sal);
-
-  tp = inferior_thread ();
-  thread = tp->global_num;
+  thread_num = thread->global_num;
 
   old_chain = make_cleanup (null_cleanup, NULL);
 
@@ -12024,34 +12125,18 @@ until_break_command (char *arg, int from_tty, int anywhere)
 						    bp_until);
       make_cleanup_delete_breakpoint (caller_breakpoint);
 
-      set_longjmp_breakpoint (tp, caller_frame_id);
-      make_cleanup (delete_longjmp_breakpoint_cleanup, &thread);
+      set_longjmp_breakpoint (thread, caller_frame_id);
+      make_cleanup (delete_longjmp_breakpoint_cleanup, &thread_num);
     }
 
-  /* set_momentary_breakpoint could invalidate FRAME.  */
-  frame = NULL;
-
-  if (anywhere)
-    /* If the user told us to continue until a specified location,
-       we don't specify a frame at which we need to stop.  */
-    location_breakpoint = set_momentary_breakpoint (frame_gdbarch, sal,
-						    null_frame_id, bp_until);
-  else
-    /* Otherwise, specify the selected frame, because we want to stop
-       only at the very same frame.  */
-    location_breakpoint = set_momentary_breakpoint (frame_gdbarch, sal,
-						    stack_frame_id, bp_until);
-  make_cleanup_delete_breakpoint (location_breakpoint);
-
-  sm = new_until_break_fsm (command_interp (), tp->global_num,
-			    location_breakpoint, caller_breakpoint);
-  tp->thread_fsm = &sm->thread_fsm;
-
-  discard_cleanups (old_chain);
-
+  clear_proceed_status (0);
   proceed (-1, GDB_SIGNAL_DEFAULT);
 
-  do_cleanups (cleanup);
+  sm = new_until_break_fsm (command_interp (), thread->global_num,
+			    location_breakpoint, caller_breakpoint);
+  thread->thread_fsm = &sm->thread_fsm;
+
+  discard_cleanups (old_chain);
 }
 
 /* This function attempts to parse an optional "if <cond>" clause

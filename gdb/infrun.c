@@ -82,8 +82,6 @@ static int hook_stop_stub (void *);
 
 static int restore_selected_frame (void *);
 
-static int follow_fork (void);
-
 static int follow_fork_inferior (int follow_child, int detach_fork);
 
 static void follow_inferior_reset_breakpoints (void);
@@ -666,8 +664,8 @@ holding the child stopped.  Try \"set detach-on-fork\" or \
    if the inferior should be resumed; false, if the target for some
    reason decided it's best not to resume.  */
 
-static int
-follow_fork (void)
+int
+follow_fork (int prepare_only)
 {
   int follow_child = (follow_fork_mode_string == follow_fork_mode_child);
   int should_resume = 1;
@@ -684,7 +682,7 @@ follow_fork (void)
   struct frame_id step_frame_id = { 0 };
   struct thread_fsm *thread_fsm = NULL;
 
-  if (!non_stop)
+  if (!target_is_non_stop_p ())
     {
       ptid_t wait_ptid;
       struct target_waitstatus wait_status;
@@ -711,6 +709,9 @@ follow_fork (void)
 	  should_resume = 0;
 	}
     }
+
+  if (prepare_only)
+    return 0;
 
   tp = inferior_thread ();
 
@@ -2210,10 +2211,10 @@ resume_cleanups (void *ignore)
   normal_stop ();
 }
 
-static const char schedlock_off[] = "off";
-static const char schedlock_on[] = "on";
-static const char schedlock_step[] = "step";
-static const char schedlock_replay[] = "replay";
+const char schedlock_off[] = "off";
+const char schedlock_on[] = "on";
+const char schedlock_step[] = "step";
+const char schedlock_replay[] = "replay";
 static const char *const scheduler_enums[] = {
   schedlock_off,
   schedlock_on,
@@ -2221,7 +2222,7 @@ static const char *const scheduler_enums[] = {
   schedlock_replay,
   NULL
 };
-static const char *scheduler_mode = schedlock_replay;
+const char *scheduler_mode = schedlock_replay;
 static void
 show_scheduler_mode (struct ui_file *file, int from_tty,
 		     struct cmd_list_element *c, const char *value)
@@ -2276,7 +2277,7 @@ user_visible_resume_ptid (int step)
 
   if (non_stop)
     {
-      /* With non-stop mode on, threads are always handled
+      /* In non-stop mode, threads are always handled
 	 individually.  */
       resume_ptid = inferior_ptid;
     }
@@ -2331,7 +2332,7 @@ internal_resume_ptid (int user_step)
 /* Wrapper for target_resume, that handles infrun-specific
    bookkeeping.  */
 
-static void
+void
 do_target_resume (ptid_t resume_ptid, int step, enum gdb_signal sig)
 {
   struct thread_info *tp = inferior_thread ();
@@ -2342,6 +2343,7 @@ do_target_resume (ptid_t resume_ptid, int step, enum gdb_signal sig)
   /* Avoid confusing the next resume, if the next stop/resume
      happens to apply to another thread.  */
   tp->suspend.stop_signal = GDB_SIGNAL_0;
+  tp->reported_event = 0;
 
   /* Advise target which signals may be handled silently.
 
@@ -2791,7 +2793,7 @@ new_stop_id (void)
 /* Clear out all variables saying what to do when inferior is continued.
    First do this, then set the ones you want, then call `proceed'.  */
 
-static void
+void
 clear_proceed_status_thread (struct thread_info *tp)
 {
   if (debug_infrun)
@@ -2873,7 +2875,7 @@ clear_proceed_status (int step)
 				     execution_direction))
     target_record_stop_replaying ();
 
-  if (!non_stop)
+  if (!target_is_non_stop_p ())
     {
       struct thread_info *tp;
 
@@ -2898,7 +2900,7 @@ clear_proceed_status (int step)
     {
       struct inferior *inferior;
 
-      if (non_stop)
+      if (target_is_non_stop_p ())
 	{
 	  /* If in non-stop mode, only delete the per-thread status of
 	     the current thread.  */
@@ -2992,7 +2994,7 @@ prepare_proceed (CORE_ADDR addr, enum gdb_signal siggnal)
   /* If we're stopped at a fork/vfork, follow the branch set by the
      "set follow-fork-mode" command; otherwise, we'll just proceed
      resuming the current thread.  */
-  if (!follow_fork ())
+  if (!follow_fork (1))
     {
       /* The target for some reason decided not to resume.  */
       normal_stop ();
@@ -5259,6 +5261,7 @@ Cannot fill $_exitsignal with the correct signal number.\n"));
 	}
 
       gdb_flush (gdb_stdout);
+      ecs->event_thread = NULL;
       target_mourn_inferior (inferior_ptid);
       stop_print_frame = 0;
       stop_waiting (ecs);
@@ -5383,7 +5386,7 @@ Cannot fill $_exitsignal with the correct signal number.\n"));
 
 	  ecs->event_thread->suspend.stop_signal = GDB_SIGNAL_0;
 
-	  should_resume = follow_fork ();
+	  should_resume = follow_fork (1);
 
 	  parent = ecs->ptid;
 	  child = ecs->ws.value.related_pid;
@@ -7835,6 +7838,15 @@ stop_waiting (struct execution_control_state *ecs)
 
   /* Let callers know we don't want to wait for the inferior anymore.  */
   ecs->wait_some_more = 0;
+
+  if (ecs->event_thread != NULL)
+    {
+      /* Mark this thread as having reported its event to the
+	 frontend/user.  Later, when proceeding, if the thread is
+	 stopped at a breakpoint, we'll step over it in order to make
+	 progress.  */
+      ecs->event_thread->reported_event = 1;
+    }
 
   /* If all-stop, but the target is always in non-stop mode, stop all
      threads now that we're presenting the stop to the user.  */

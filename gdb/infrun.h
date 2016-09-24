@@ -25,6 +25,7 @@ struct frame_info;
 struct address_space;
 struct return_value_info;
 struct itset;
+struct thread_info;
 
 /* True if we are debugging run control.  */
 extern unsigned int debug_infrun;
@@ -81,11 +82,18 @@ extern void start_remote (int from_tty);
    step/stepi command.  */
 extern void clear_proceed_status (int step);
 
+extern void clear_proceed_status_thread (struct thread_info *tp);
+
 extern void proceed (CORE_ADDR, enum gdb_signal);
 
 /* The `resume' routine should only be called in special circumstances.
    Normally, use `proceed', which handles a lot of bookkeeping.  */
 extern void resume (enum gdb_signal);
+
+extern const char schedlock_off[];
+extern const char schedlock_on[];
+extern const char schedlock_step[];
+extern const char *scheduler_mode;
 
 /* Return a ptid representing the set of threads that we will proceed,
    in the perspective of the user/frontend.  We may actually resume
@@ -243,5 +251,18 @@ extern void all_uis_check_sync_execution_done (void);
    yet, re-disable its prompt (a synchronous execution command was
    started or re-started).  */
 extern void all_uis_on_sync_execution_starting (void);
+
+extern void do_target_resume (ptid_t ptid, int step, enum gdb_signal signo);
+
+typedef void (*aec_callback_func) (struct thread_info *thr, void *data);
+
+struct itset;
+
+extern int follow_fork (int prepare_only);
+
+extern void
+  apply_execution_command (struct itset *apply_itset,
+			   struct itset *run_free_itset,
+			   aec_callback_func callback, void *callback_data);
 
 #endif /* INFRUN_H */
