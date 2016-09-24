@@ -2884,6 +2884,12 @@ clear_proceed_status (int step)
 	  if (!itset_contains_thread (current_itset, tp))
 	    continue;
 
+	  if (tp->resumed)
+	    continue;
+
+	  if (thread_is_in_step_over_chain (tp))
+	    continue;
+
 	  clear_proceed_status_thread (tp);
 	}
     }
