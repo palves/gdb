@@ -73,6 +73,8 @@
 #include "record-btrace.h"
 #include <algorithm>
 
+#include "readline/readline.h"
+
 /* Temp hacks for tracepoint encoding migration.  */
 static char *target_buf;
 static long target_buf_size;
@@ -672,7 +674,18 @@ get_remote_exec_file (void)
     = (char *) program_space_data (current_program_space,
 				   remote_pspace_data);
   if (remote_exec_file == NULL)
-    return "";
+    {
+      if (exec_bfd != NULL)
+	{
+	  static char *prev_filename;
+
+	  xfree (prev_filename);
+	  prev_filename = tilde_expand (bfd_get_filename (exec_bfd));
+	  return prev_filename;
+	}
+      else
+	return "";
+    }
 
   return remote_exec_file;
 }
