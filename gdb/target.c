@@ -447,7 +447,7 @@ enum terminal_state
     terminal_is_ours = 2
   };
 
-static enum terminal_state terminal_state = terminal_is_ours;
+static enum terminal_state the_terminal_state = terminal_is_ours;
 
 /* See target.h.  */
 
@@ -456,7 +456,7 @@ target_terminal_init (void)
 {
   (*current_target.to_terminal_init) (&current_target);
 
-  terminal_state = terminal_is_ours;
+  the_terminal_state = terminal_is_ours;
 }
 
 /* See target.h.  */
@@ -464,7 +464,7 @@ target_terminal_init (void)
 int
 target_terminal_is_inferior (void)
 {
-  return (terminal_state == terminal_is_inferior);
+  return (the_terminal_state == terminal_is_inferior);
 }
 
 /* See target.h.  */
@@ -472,7 +472,7 @@ target_terminal_is_inferior (void)
 int
 target_terminal_is_ours (void)
 {
-  return (terminal_state == terminal_is_ours);
+  return (the_terminal_state == terminal_is_ours);
 }
 
 /* See target.h.  */
@@ -494,13 +494,13 @@ target_terminal_inferior (void)
   if (ui != main_ui)
     return;
 
-  if (terminal_state == terminal_is_inferior)
+  if (the_terminal_state == terminal_is_inferior)
     return;
 
   /* If GDB is resuming the inferior in the foreground, install
      inferior's terminal modes.  */
   (*current_target.to_terminal_inferior) (&current_target);
-  terminal_state = terminal_is_inferior;
+  the_terminal_state = terminal_is_inferior;
 
   /* If the user hit C-c before, pretend that it was hit right
      here.  */
@@ -519,11 +519,11 @@ target_terminal_ours (void)
   if (ui != main_ui)
     return;
 
-  if (terminal_state == terminal_is_ours)
+  if (the_terminal_state == terminal_is_ours)
     return;
 
   (*current_target.to_terminal_ours) (&current_target);
-  terminal_state = terminal_is_ours;
+  the_terminal_state = terminal_is_ours;
 }
 
 /* See target.h.  */
@@ -537,10 +537,10 @@ target_terminal_ours_for_output (void)
   if (ui != main_ui)
     return;
 
-  if (terminal_state != terminal_is_inferior)
+  if (the_terminal_state != terminal_is_inferior)
     return;
   (*current_target.to_terminal_ours_for_output) (&current_target);
-  terminal_state = terminal_is_ours_for_output;
+  the_terminal_state = terminal_is_ours_for_output;
 }
 
 /* See target.h.  */
@@ -589,7 +589,7 @@ make_cleanup_restore_target_terminal (void)
 {
   enum terminal_state *ts = XNEW (enum terminal_state);
 
-  *ts = terminal_state;
+  *ts = the_terminal_state;
 
   return make_cleanup_dtor (cleanup_restore_target_terminal, ts, xfree);
 }
