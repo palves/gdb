@@ -4661,6 +4661,7 @@ Change the set of current inferiors/threads."));
 Define a new named set.\n\
 Usage: itset NAME SPEC"),
 		  &itset_cmd_list, "itset ", 1, &cmdlist);
+  add_com_alias ("tset", "itset", class_alias, 0);
 
   add_cmd ("itset", class_trace, delete_itset_command, _("\
 Delete one or more named itsets.\n\
@@ -4677,6 +4678,11 @@ List the members of a set.\n\
 Usage: viewset SET.\n\
 Defaults to all named sets."),
 	   &showlist);
+  add_cmd ("tset", class_run, viewset_command, _("\
+List the members of a thread set.\n\
+Usage: show tset SET.\n\
+Defaults to showing all named sets."),
+	   &showlist);
 
   add_info ("itsets", info_itsets_command, _("\
 Display the list of defined named itsets.\n\
@@ -4684,6 +4690,7 @@ You can specify numbers (e.g. \"info itsets 1 3\"),\n\
 ranges (e.g. \"info itsets 4-8\"), or both (e.g. \"info itsets 1 3 4-8\").\n\n\
 If you don't specify any numbers or ranges, we'll show all itsets.\n\n\
 Usage: info itsets [NUMBERS AND/OR RANGES]\n"));
+  add_info_alias ("tset", "itset", 0);
 
   add_cmd ("itsets", class_maintenance, maintenance_info_itsets_command, _("\
 Display the list of all defined named itsets, user-defined and built-in.\n"),
