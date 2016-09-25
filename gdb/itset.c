@@ -4647,7 +4647,7 @@ _initialize_itset (void)
   make_internal_itset (stopped_itset, "stopped");
   make_internal_itset (curinf_itset, "I");
   make_internal_itset (curthr_itset, "T");
-  make_internal_itset (lockstep_itset, "L");
+  //  make_internal_itset (lockstep_itset, "L");
 
   current_itset = itset_reference (itset_create_default ());
   //  current_itset = itset_reference (all_itset);
@@ -4656,6 +4656,7 @@ _initialize_itset (void)
 Change the set of current inferiors/threads."));
   set_cmd_completer (c, itfocus_completer);
   add_com_alias ("a", "itfocus", class_alias, 0);
+  add_com_alias ("tfocus", "itfocus", class_alias, 0);
 
   add_prefix_cmd ("itset", class_run, itset_command, _("\
 Define a new named set.\n\
