@@ -299,7 +299,8 @@ child_terminal_inferior (struct target_ops *self)
       if (job_control)
 	{
 #ifdef HAVE_TERMIOS
-	  result = tcsetpgrp (0, tinfo->process_group);
+	  result = tcsetpgrp (0, current_inferior ()->pid);
+	  // result = tcsetpgrp (0, tinfo->process_group);
 	  if (!inf->attach_flag)
 	    OOPSY ("tcsetpgrp");
 #endif
