@@ -214,9 +214,9 @@ public:
   itset *set;
 };
 
-/* The head of the list of named I/T sets.  */
+/* The list of named I/T sets.  */
 
-static named_itset *named_itsets;
+static std::vector<named_itset *> named_itsets;
 
 /* Number of last named itset made.  */
 
@@ -228,38 +228,33 @@ static int internal_named_itset_count;
 
 /* Traverse all named itsets.  */
 
-#define ALL_NAMED_ITSETS(E) \
-  for ((E) = named_itsets; (E); (E) = (E)->next)
+#define ALL_NAMED_ITSETS_IT(it, set) \
+  for (std::vector<struct named_itset *>::iterator it = named_itsets.begin (); \
+       it != named_itsets.end ();					\
+       ++it)								\
+    if ((set = *it), true)
+
+#define ALL_NAMED_ITSETS(set) \
+  ALL_NAMED_ITSETS_IT(it, set)
 
 /* Add IT at the end of the named itset chain.  */
 
 static void
-add_to_named_itset_chain (struct named_itset *it)
+add_to_named_itset_chain (named_itset *it)
 {
-  struct named_itset *it1;
-
-  /* Add this itset to the end of the chain so that a list of itsets
-     will come out in order of increasing numbers.  */
-
-  it1 = named_itsets;
-  if (it1 == 0)
-    named_itsets = it;
-  else
-    {
-      while (it1->next)
-	it1 = it1->next;
-      it1->next = it;
-    }
+  /* Add this itset to the end of the vector so that a listing of
+     itsets will come out in order of increasing numbers.  */
+  named_itsets.push_back (it);
 }
 
-static struct named_itset *
-get_named_itset (char *name)
+static named_itset *
+get_named_itset (const char *name)
 {
-  struct named_itset *it;
-
-  for (it = named_itsets; it != NULL; it = it->next)
-    if (strcmp (it->set->name, name) == 0)
-      return it;
+  for (std::vector<named_itset *>::iterator it = named_itsets.begin ();
+       it != named_itsets.end ();
+       ++it)
+    if (strcmp ((*it)->set->name, name) == 0)
+      return *it;
   return NULL;
 }
 
@@ -4017,7 +4012,7 @@ itset_is_static (itset *itset)
 #endif
 
 static void
-defset_command (char *arg, int from_tty)
+itset_command (char *arg, int from_tty)
 {
   char *endp;
   char *name;
@@ -4058,57 +4053,115 @@ defset_command (char *arg, int from_tty)
 }
 
 static void
-undefset_command (char *arg, int from_tty)
+delete_itset_command (char *arg_mut, int from_tty)
 {
   char *name;
   struct named_itset *it, **it_link;
   int found;
+  struct get_number_or_range_state state;
+  const char *arg = arg_mut;
 
   if (arg == NULL || *arg == '\0')
-    error_no_arg (_("no args"));
-
-  name = skip_spaces (arg);
-
-  if (strcmp (name, "-all") == 0)
     {
-      it = named_itsets;
-      it_link = &named_itsets;
-      while (it != NULL)
+      bool any_to_delete = false;
+      struct named_itset *set;
+
+      ALL_NAMED_ITSETS (set)
 	{
-	  if (it->number > 0)
+	  if (set->number > 0)
 	    {
-	      *it_link = it->next;
-	      delete it;
+	      any_to_delete = true;
+	      break;
 	    }
-	  else
-	    it_link = &it->next;
-	  it = *it_link;
 	}
+
+      /* Ask user only if there are some itsets to delete.  */
+      if (!from_tty
+	  || (any_to_delete && query (_("Delete all named itsets? "))))
+	{
+	  ALL_NAMED_ITSETS_IT (it, set)
+	    {
+	      if (set->number > 0)
+		{
+		  delete set;
+		  named_itsets.erase (it);
+
+		  // iterator invalidated, or not?
+		}
+	    }
+	}
+
       return;
     }
 
-  found = 0;
-  it = named_itsets;
-  it_link = &named_itsets;
-  while (it != NULL)
+  while (*arg != '\0')
     {
-      if (strcmp (it->set->name, name) == 0)
+      arg = skip_spaces_const (arg);
+
+      if (isdigit (arg[0]))
 	{
-	  if (it->number < 0)
-	    error (_("cannot delete builtin I/T set"));
+	  init_number_or_range (&state, arg);
 
-	  *it_link = it->next;
-	  delete it;
-	  found = 1;
-	  break;
+	  while (!state.finished)
+	    {
+	      const char *p = state.string;
+
+	      int num = get_number_or_range (&state);
+	      if (num <= 0)
+		{
+		  warning (_("bad itset number at or near '%s'"), p);
+		}
+	      else
+		{
+		  struct named_itset *set;
+		  bool match = false;
+
+		  ALL_NAMED_ITSETS_IT (it, set)
+		  {
+		    if (set->number == num)
+		      {
+			match = true;
+			named_itsets.erase (it);
+			break;
+		      }
+		  }
+
+		  if (!match)
+		    printf_unfiltered (_("No itset number %d.\n"), num);
+		}
+	    }
+
+	  arg = state.string;
 	}
+      else
+	{
+	  const char *name = arg;
+	  const char *endname = skip_to_space_const (name);
 
-      it_link = &it->next;
-      it = *it_link;
+	  bool found = false;
+	  struct named_itset *set;
+
+	  ALL_NAMED_ITSETS_IT (it, set)
+	    {
+	      if (strncmp (set->set->name, name, endname - name) == 0
+		  && set->set->name[endname - name] == '\0')
+		{
+		  if (set->number < 0)
+		    error (_("cannot delete builtin I/T set"));
+
+		  delete set;
+		  named_itsets.erase (it);
+		  found = true;
+		  break;
+		}
+	    }
+
+	  arg = endname;
+
+	  if (!found)
+	    warning (_("itset %s does not exist"), name);
+	}
     }
-
-  if (!found)
-    warning (_("itset %s does not exist"), name);
 }
 
 static void
@@ -4120,6 +4173,7 @@ itsets_info (char *arg, int allflag, int from_tty)
 
   /* Compute the number of rows in the table.  */
   num_printable_entries = 0;
+
   ALL_NAMED_ITSETS (e)
     if (allflag
 	|| (e->number > 0
@@ -4185,7 +4239,7 @@ whichsets_callback (struct thread_info *thr, void *data)
 {
   struct named_itset *named_itset;
   struct inferior *inf = get_thread_inferior (thr);
-  int printed = 0;
+  bool printed = false;
 
   ALL_NAMED_ITSETS (named_itset)
     {
@@ -4199,7 +4253,7 @@ whichsets_callback (struct thread_info *thr, void *data)
 			       print_thread_id (thr),
 			       target_pid_to_str (thr->ptid));
 	      printf_filtered (" %s", itset_name (named_itset->set));
-	      printed = 1;
+	      printed = true;
 	    }
 	  else
 	    printf_filtered (", %s", itset_name (named_itset->set));
@@ -4571,6 +4625,9 @@ itfocus_completer (struct cmd_list_element *ignore,
 /* Provide a prototype to silence -Wmissing-prototypes.  */
 extern initialize_file_ftype _initialize_itset;
 
+/* Commands with a prefix of `itset'.  */
+static struct cmd_list_element *itset_cmd_list = NULL;
+
 void
 _initialize_itset (void)
 {
@@ -4600,23 +4657,26 @@ Change the set of current inferiors/threads."));
   set_cmd_completer (c, itfocus_completer);
   add_com_alias ("a", "itfocus", class_alias, 0);
 
-  add_com ("defset", no_class, defset_command, _("\
+  add_prefix_cmd ("itset", class_run, itset_command, _("\
 Define a new named set.\n\
-Usage: defset NAME SPEC"));
+Usage: itset NAME SPEC"),
+		  &itset_cmd_list, "itset ", 1, &cmdlist);
 
-  add_com ("undefset", no_class, undefset_command, _("\
-Undefine an existing named set.\n\
-Usage: undefset NAME | -all"));
+  add_cmd ("itset", class_trace, delete_itset_command, _("\
+Delete one or more named itsets.\n\
+Arguments may be numbers, number ranges, or an itset name to delete.\n\
+If no arguments are supplied, delete all named itsets."), &deletelist);
 
   add_com ("whichsets", no_class, whichsets_command, _("\
 List all sets to which threads in a given set belong to.\n\
 Usage: whichsets SET.\n\
 Defaults to the current set."));
 
-  add_com ("viewset", no_class, viewset_command, _("\
+  add_cmd ("itset", class_run, viewset_command, _("\
 List the members of a set.\n\
 Usage: viewset SET.\n\
-Defaults to all named sets."));
+Defaults to all named sets."),
+	   &showlist);
 
   add_info ("itsets", info_itsets_command, _("\
 Display the list of defined named itsets.\n\
