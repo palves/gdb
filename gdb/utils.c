@@ -1958,6 +1958,14 @@ reinitialize_more_filter (void)
 void
 wrap_here (char *indent)
 {
+  if (gdb_stdout == current_ui->async_output)
+    {
+      fputc_unfiltered (ASYNC_OUTPUT_WRAP_HERE_MARKER, gdb_stdout);
+      fputs_unfiltered (indent, gdb_stdout);
+      fputc_unfiltered (ASYNC_OUTPUT_WRAP_HERE_MARKER, gdb_stdout);
+      return;
+    }
+
   /* This should have been allocated, but be paranoid anyway.  */
   if (!wrap_buffer)
     internal_error (__FILE__, __LINE__,

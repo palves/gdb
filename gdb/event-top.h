@@ -36,6 +36,8 @@ extern void change_line_handler (int);
 extern void flush_pending_async_output (void);
 struct cleanup *prepare_for_async_output (void);
 
+#define ASYNC_OUTPUT_WRAP_HERE_MARKER '\1'
+
 extern void command_line_handler (char *rl);
 extern void command_handler (char *command);
 

@@ -461,8 +461,33 @@ flush_pending_async_output (void)
     {
       int paginate = current_ui->prompt_state != PROMPTED;
 
-      fputs_filtered_maybe_paginate (async_output_buffer,
-				     gdb_stdout, paginate);
+      char *buf = async_output_buffer;
+
+      while (*buf != '\0')
+	{
+	  char *marker = strchr (buf, ASYNC_OUTPUT_WRAP_HERE_MARKER);
+
+	  if (marker != NULL)
+	    {
+	      char *end_marker;
+
+	      *marker = '\0';
+	      fputs_filtered_maybe_paginate (buf, gdb_stdout, paginate);
+
+	      end_marker = strchr (marker + 1, ASYNC_OUTPUT_WRAP_HERE_MARKER);
+	      gdb_assert (end_marker != NULL);
+	      *end_marker = '\0';
+
+	      wrap_here (marker + 1);
+
+	      buf = end_marker + 1;
+	    }
+	  else
+	    {
+	      fputs_filtered_maybe_paginate (buf, gdb_stdout, paginate);
+	      break;
+	    }
+	}
     }
   CATCH (ex, RETURN_MASK_ALL)
     {
