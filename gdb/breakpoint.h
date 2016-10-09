@@ -343,7 +343,7 @@ struct bp_location
      different for different locations.  Only valid for real
      breakpoints; a watchpoint's conditional expression is stored in
      the owner breakpoint object.  */
-  struct expression *cond;
+  expression_up cond;
 
   /* Conditional expression in agent expression
      bytecode form.  This is used for stub-side breakpoint
@@ -798,12 +798,12 @@ struct watchpoint
   char *exp_string_reparse;
 
   /* The expression we are watching, or NULL if not a watchpoint.  */
-  struct expression *exp;
+  expression_up exp;
   /* The largest block within which it is valid, or NULL if it is
      valid anywhere (e.g. consists just of global symbols).  */
   const struct block *exp_valid_block;
   /* The conditional expression if any.  */
-  struct expression *cond_exp;
+  expression_up cond_exp;
   /* The largest block within which it is valid, or NULL if it is
      valid anywhere (e.g. consists just of global symbols).  */
   const struct block *cond_exp_valid_block;
@@ -1456,7 +1456,7 @@ extern void enable_breakpoints_after_startup (void);
    after they've already read the commands into a struct
    command_line.  */
 extern enum command_control_type commands_from_control_command
-  (char *arg, struct command_line *cmd);
+  (const char *arg, struct command_line *cmd);
 
 extern void clear_breakpoint_hit_counts (void);
 

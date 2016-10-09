@@ -41,7 +41,7 @@ recurse_read_control_structure (char * (*read_next_line_func) (void),
 				void (*validator)(char *, void *),
 				void *closure);
 
-static char *insert_args (char *line);
+static std::string insert_args (const char *line);
 
 static struct cleanup * setup_user_args (char *p);
 
@@ -438,10 +438,23 @@ print_command_trace (const char *cmd)
   printf_filtered ("%s\n", cmd);
 }
 
+/* Execute NEW_LINE.  */
+
+static void
+do_execute_command (const std::string &new_line)
+{
+  /* execute_command writes to the passed in buffer.  Make a deep
+     copy.  */
+  gdb::unique_ptr<char[]> buf (new char[new_line.length () + 1]);
+
+  memcpy (buf.get (), new_line.c_str (), new_line.length () + 1);
+
+  execute_command (buf.get (), 0);
+}
+
 enum command_control_type
 execute_control_command (struct command_line *cmd)
 {
-  struct expression *expr;
   struct command_line *current;
   struct cleanup *old_chain = make_cleanup (null_cleanup, 0);
   struct value *val;
@@ -458,11 +471,7 @@ execute_control_command (struct command_line *cmd)
     {
     case simple_control:
       /* A simple command, execute it and return.  */
-      new_line = insert_args (cmd->line);
-      if (!new_line)
-	break;
-      make_cleanup (free_current_contents, &new_line);
-      execute_command (new_line, 0);
+      do_execute_command (insert_args (cmd->line));
       ret = cmd->control_type;
       break;
 
@@ -491,12 +500,7 @@ execute_control_command (struct command_line *cmd)
 	print_command_trace (buffer);
 
 	/* Parse the loop control expression for the while statement.  */
-	new_line = insert_args (cmd->line);
-	if (!new_line)
-	  break;
-	make_cleanup (free_current_contents, &new_line);
-	expr = parse_expression (new_line);
-	make_cleanup (free_current_contents, &expr);
+	expression_up expr = parse_expression (insert_args (cmd->line).c_str ());
 
 	ret = simple_control;
 	loop = 1;
@@ -510,7 +514,7 @@ execute_control_command (struct command_line *cmd)
 
 	    /* Evaluate the expression.  */
 	    val_mark = value_mark ();
-	    val = evaluate_expression (expr);
+	    val = evaluate_expression (expr.get ());
 	    cond_result = value_true (val);
 	    value_free_to_mark (val_mark);
 
@@ -559,20 +563,16 @@ execute_control_command (struct command_line *cmd)
 	xsnprintf (buffer, len, "if %s", cmd->line);
 	print_command_trace (buffer);
 
-	new_line = insert_args (cmd->line);
-	if (!new_line)
-	  break;
-	make_cleanup (free_current_contents, &new_line);
+	std::string new_line = insert_args (cmd->line);
 	/* Parse the conditional for the if statement.  */
-	expr = parse_expression (new_line);
-	make_cleanup (free_current_contents, &expr);
+	expression_up expr = parse_expression (new_line.c_str ());
 
 	current = NULL;
 	ret = simple_control;
 
 	/* Evaluate the conditional.  */
 	val_mark = value_mark ();
-	val = evaluate_expression (expr);
+	val = evaluate_expression (expr.get ());
 
 	/* Choose which arm to take commands from based on the value
 	   of the conditional expression.  */
@@ -604,11 +604,8 @@ execute_control_command (struct command_line *cmd)
       {
 	/* Breakpoint commands list, record the commands in the
 	   breakpoint's command list and return.  */
-	new_line = insert_args (cmd->line);
-	if (!new_line)
-	  break;
-	make_cleanup (free_current_contents, &new_line);
-	ret = commands_from_control_command (new_line, cmd);
+	std::string new_line = insert_args (cmd->line);
+	ret = commands_from_control_command (new_line.c_str (), cmd);
 	break;
       }
 
@@ -794,8 +791,8 @@ setup_user_args (char *p)
 /* Given character string P, return a point to the first argument
    ($arg), or NULL if P contains no arguments.  */
 
-static char *
-locate_arg (char *p)
+static const char *
+locate_arg (const char *p)
 {
   while ((p = strchr (p, '$')))
     {
@@ -808,95 +805,52 @@ locate_arg (char *p)
 }
 
 /* Insert the user defined arguments stored in user_arg into the $arg
-   arguments found in line, with the updated copy being placed into
-   nline.  */
+   arguments found in line.  */
 
-static char *
-insert_args (char *line)
+static std::string
+insert_args (const char *line)
 {
-  char *p, *save_line, *new_line;
-  unsigned len, i;
-
   /* If we are not in a user-defined function, treat $argc, $arg0, et
      cetera as normal convenience variables.  */
   if (user_args == NULL)
-    return xstrdup (line);
+    return line;
 
-  /* First we need to know how much memory to allocate for the new
-     line.  */
-  save_line = line;
-  len = 0;
-  while ((p = locate_arg (line)))
-    {
-      len += p - line;
-      i = p[4] - '0';
-
-      if (p[4] == 'c')
-	{
-	  /* $argc.  Number will be <=10.  */
-	  len += user_args->count == 10 ? 2 : 1;
-	}
-      else if (i >= user_args->count)
-	{
-	  error (_("Missing argument %d in user function."), i);
-	  return NULL;
-	}
-      else
-	{
-	  len += user_args->a[i].len;
-	}
-      line = p + 5;
-    }
-
-  /* Don't forget the tail.  */
-  len += strlen (line);
-
-  /* Allocate space for the new line and fill it in.  */
-  new_line = (char *) xmalloc (len + 1);
-  if (new_line == NULL)
-    return NULL;
-
-  /* Restore pointer to beginning of old line.  */
-  line = save_line;
-
-  /* Save pointer to beginning of new line.  */
-  save_line = new_line;
+  std::string new_line;
+  const char *p;
 
   while ((p = locate_arg (line)))
     {
       int i, len;
 
-      memcpy (new_line, line, p - line);
-      new_line += p - line;
+      new_line.append (line, p - line);
 
       if (p[4] == 'c')
 	{
 	  gdb_assert (user_args->count >= 0 && user_args->count <= 10);
 	  if (user_args->count == 10)
 	    {
-	      *(new_line++) = '1';
-	      *(new_line++) = '0';
+	      new_line += '1';
+	      new_line += '0';
 	    }
 	  else
-	    *(new_line++) = user_args->count + '0';
+	    new_line += user_args->count + '0';
 	}
       else
 	{
 	  i = p[4] - '0';
+	  if (i >= user_args->count)
+	    error (_("Missing argument %d in user function."), i);
+
 	  len = user_args->a[i].len;
-	  if (len)
-	    {
-	      memcpy (new_line, user_args->a[i].arg, len);
-	      new_line += len;
-	    }
+	  if (len > 0)
+	    new_line.append (user_args->a[i].arg, len);
 	}
       line = p + 5;
     }
   /* Don't forget the tail.  */
-  strcpy (new_line, line);
+  new_line.append (line);
 
-  /* Return a pointer to the beginning of the new line.  */
-  return save_line;
+  return new_line;
 }
 
 
