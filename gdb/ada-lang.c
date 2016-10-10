@@ -5878,27 +5878,22 @@ ada_iterate_over_symbols (const struct block *block,
 }
 
 /* If NAME is the name of an entity, return a string that should
-   be used to look that entity up in Ada units.  This string should
-   be deallocated after use using xfree.
+   be used to look that entity up in Ada units.
 
    NAME can have any form that the "break" or "print" commands might
    recognize.  In other words, it does not have to be the "natural"
    name, or the "encoded" name.  */
 
-char *
+std::string
 ada_name_for_lookup (const char *name)
 {
-  char *canon;
+  std::string canon;
   int nlen = strlen (name);
 
   if (name[0] == '<' && name[nlen - 1] == '>')
-    {
-      canon = (char *) xmalloc (nlen - 1);
-      memcpy (canon, name + 1, nlen - 2);
-      canon[nlen - 2] = '\0';
-    }
+    canon = std::string (name + 1, nlen - 2);
   else
-    canon = xstrdup (ada_encode (ada_fold_name (name)));
+    canon = ada_encode (ada_fold_name (name));
   return canon;
 }
 
@@ -7615,36 +7610,21 @@ ada_value_struct_elt (struct value *arg, char *name, int no_err)
 	     "a value that is not a record."));
 }
 
-/* Return a string representation of type TYPE.  Caller must free
-   result.  */
+/* Return a string representation of type TYPE.  */
 
-static char *
+static std::string
 type_as_string (struct type *type)
 {
   struct ui_file *tmp_stream = mem_fileopen ();
   struct cleanup *old_chain;
-  char *str;
 
   tmp_stream = mem_fileopen ();
   old_chain = make_cleanup_ui_file_delete (tmp_stream);
 
   type_print (type, "", tmp_stream, -1);
-  str = ui_file_xstrdup (tmp_stream, NULL);
+  std::string str = ui_file_as_string (tmp_stream);
 
   do_cleanups (old_chain);
-  return str;
-}
-
-/* Return a string representation of type TYPE, and install a cleanup
-   that releases it.  */
-
-static char *
-type_as_string_and_cleanup (struct type *type)
-{
-  char *str;
-
-  str = type_as_string (type);
-  make_cleanup (xfree, str);
   return str;
 }
 
@@ -7688,15 +7668,11 @@ ada_lookup_struct_elt_type (struct type *type, char *name, int refok,
       || (TYPE_CODE (type) != TYPE_CODE_STRUCT
           && TYPE_CODE (type) != TYPE_CODE_UNION))
     {
-      const char *type_str;
-
       if (noerr)
         return NULL;
 
-      type_str = (type != NULL
-		  ? type_as_string_and_cleanup (type)
-		  : _("(null)"));
-      error (_("Type %s is not a structure or union type"), type_str);
+      error (_("Type %s is not a structure or union type"),
+	     type != NULL ? type_as_string (type).c_str () : _("(null)"));
     }
 
   type = to_static_fixed_type (type);
@@ -7769,7 +7745,7 @@ BadName:
       const char *name_str = name != NULL ? name : _("<null>");
 
       error (_("Type %s has no component named %s"),
-	     type_as_string_and_cleanup (type), name_str);
+	     type_as_string (type).c_str (), name_str);
     }
 
   return NULL;

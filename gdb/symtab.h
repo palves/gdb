@@ -1637,8 +1637,23 @@ void iterate_over_symbols (const struct block *block, const char *name,
 			   symbol_found_callback_ftype *callback,
 			   void *data);
 
-struct cleanup *demangle_for_lookup (const char *name, enum language lang,
-				     const char **result_name);
+/* Storage type used by demangle_for_lookup.  demangle_for_lookup
+   either returns a const char * pointer that points to either of the
+   fields of this type, or a pointer to the input NAME.  This is done
+   this way because the underlying functions that demangle_for_lookup
+   calls either return a std::string (e.g., cp_canonicalize_string) or
+   a malloc'ed buffer (libiberty's demangled), and we want to avoid
+   unnecessary reallocation/string copying.  */
+struct demangle_result_storage
+{
+  /* The storage.  */
+  std::string m_string;
+  gdb::unique_malloc_ptr<char> m_malloc;
+};
+
+const char *
+  demangle_for_lookup (const char *name, enum language lang,
+		       demangle_result_storage &storage);
 
 struct symbol *allocate_symbol (struct objfile *);
 

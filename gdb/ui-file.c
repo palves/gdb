@@ -341,7 +341,7 @@ do_ui_file_xstrdup (void *context, const char *buffer, long length)
   acc->buffer[acc->length] = '\0';
 }
 
-char *
+gdb::unique_malloc_ptr<char>
 ui_file_xstrdup (struct ui_file *file, long *length)
 {
   struct accumulated_ui_file acc;
@@ -353,7 +353,27 @@ ui_file_xstrdup (struct ui_file *file, long *length)
     acc.buffer = xstrdup ("");
   if (length != NULL)
     *length = acc.length;
-  return acc.buffer;
+  return gdb::unique_malloc_ptr<char> (acc.buffer);
+}
+
+/* ui_file utility function for converting a ``struct ui_file'' into a
+   std:string.  */
+
+static void
+do_ui_file_as_string (void *context, const char *buffer, long length)
+{
+  std::string *str = (std::string *) context;
+
+  *str = std::string (buffer, length);
+}
+
+std::string
+ui_file_as_string (struct ui_file *file)
+{
+  std::string str;
+
+  ui_file_put (file, do_ui_file_as_string, &str);
+  return str;
 }
 
 static void

@@ -259,14 +259,14 @@ get_compile_file_tempdir (void)
    allocated by malloc and should be freed by the caller.  */
 
 static void
-get_new_file_names (char **source_file, char **object_file)
+get_new_file_names (std::string *source_file, std::string *object_file)
 {
   static int seq;
   const char *dir = get_compile_file_tempdir ();
 
   ++seq;
-  *source_file = xstrprintf ("%s%sout%d.c", dir, SLASH_STRING, seq);
-  *object_file = xstrprintf ("%s%sout%d.o", dir, SLASH_STRING, seq);
+  *source_file = string_printf ("%s%sout%d.c", dir, SLASH_STRING, seq);
+  *object_file = string_printf ("%s%sout%d.o", dir, SLASH_STRING, seq);
 }
 
 /* Get the block and PC at which to evaluate an expression.  */
@@ -460,14 +460,13 @@ print_callback (void *ignore, const char *message)
    error condition, error () is called.  The caller is responsible for
    freeing both strings.  */
 
-static char *
+static void
 compile_to_object (struct command_line *cmd, const char *cmd_string,
 		   enum compile_i_scope_types scope,
-		   char **source_filep)
+		   std::string *source_filep,
+		   std::string *object_filep)
 {
-  char *code;
   const char *input;
-  char *source_file, *object_file;
   struct compile_instance *compiler;
   struct cleanup *cleanup, *inner_cleanup;
   const struct block *expr_block;
@@ -503,11 +502,13 @@ compile_to_object (struct command_line *cmd, const char *cmd_string,
 
   /* From the provided expression, build a scope to pass to the
      compiler.  */
+
+  std::string input_buf;
+
   if (cmd != NULL)
     {
       struct ui_file *stream = mem_fileopen ();
       struct command_line *iter;
-      char *stream_buf;
 
       make_cleanup_ui_file_delete (stream);
       for (iter = cmd->body_list[0]; iter; iter = iter->next)
@@ -516,20 +517,19 @@ compile_to_object (struct command_line *cmd, const char *cmd_string,
 	  fputs_unfiltered ("\n", stream);
 	}
 
-      stream_buf = ui_file_xstrdup (stream, NULL);
-      make_cleanup (xfree, stream_buf);
-      input = stream_buf;
+      input_buf = ui_file_as_string (stream);
+      input = input_buf.c_str ();
     }
   else if (cmd_string != NULL)
     input = cmd_string;
   else
     error (_("Neither a simple expression, or a multi-line specified."));
 
-  code = current_language->la_compute_program (compiler, input, gdbarch,
-					       expr_block, expr_pc);
-  make_cleanup (xfree, code);
+  std::string code
+    = current_language->la_compute_program (compiler, input, gdbarch,
+					    expr_block, expr_pc);
   if (compile_debug)
-    fprintf_unfiltered (gdb_stdlog, "debug output:\n\n%s", code);
+    fprintf_unfiltered (gdb_stdlog, "debug output:\n\n%s", code.c_str ());
 
   os_rx = osabi_triplet_regexp (gdbarch_osabi (gdbarch));
   arch_rx = gdbarch_gnu_triplet_regexp (gdbarch);
@@ -560,37 +560,34 @@ compile_to_object (struct command_line *cmd, const char *cmd_string,
 			    argi, argv[argi]);
     }
 
-  get_new_file_names (&source_file, &object_file);
-  inner_cleanup = make_cleanup (xfree, source_file);
-  make_cleanup (xfree, object_file);
+  get_new_file_names (source_filep, object_filep);
 
-  src = gdb_fopen_cloexec (source_file, "w");
+  src = gdb_fopen_cloexec (source_filep->c_str (), "w");
   if (src == NULL)
     perror_with_name (_("Could not open source file for writing"));
-  make_cleanup (cleanup_unlink_file, source_file);
-  if (fputs (code, src) == EOF)
+  inner_cleanup = make_cleanup (cleanup_unlink_file,
+				(void *) source_filep->c_str ());
+  if (fputs (code.c_str (), src) == EOF)
     perror_with_name (_("Could not write to source file"));
   fclose (src);
 
   if (compile_debug)
     fprintf_unfiltered (gdb_stdlog, "source file produced: %s\n\n",
-			source_file);
+			source_filep->c_str ());
 
   /* Call the compiler and start the compilation process.  */
-  compiler->fe->ops->set_source_file (compiler->fe, source_file);
+  compiler->fe->ops->set_source_file (compiler->fe, source_filep->c_str ());
 
-  if (!compiler->fe->ops->compile (compiler->fe, object_file,
+  if (!compiler->fe->ops->compile (compiler->fe, object_filep->c_str (),
 				   compile_debug))
     error (_("Compilation failed."));
 
   if (compile_debug)
     fprintf_unfiltered (gdb_stdlog, "object file produced: %s\n\n",
-			object_file);
+			object_filep->c_str ());
 
   discard_cleanups (inner_cleanup);
   do_cleanups (cleanup);
-  *source_filep = source_file;
-  return object_file;
 }
 
 /* The "compile" prefix command.  */
@@ -609,30 +606,27 @@ void
 eval_compile_command (struct command_line *cmd, const char *cmd_string,
 		      enum compile_i_scope_types scope, void *scope_data)
 {
-  char *object_file, *source_file;
+  std::string source_file, object_file;
 
-  object_file = compile_to_object (cmd, cmd_string, scope, &source_file);
-  if (object_file != NULL)
+  compile_to_object (cmd, cmd_string, scope, &source_file, &object_file);
+  if (!object_file.empty ())
     {
-      struct cleanup *cleanup_xfree, *cleanup_unlink;
+      struct cleanup *cleanup_unlink;
       struct compile_module *compile_module;
 
-      cleanup_xfree = make_cleanup (xfree, object_file);
-      make_cleanup (xfree, source_file);
-      cleanup_unlink = make_cleanup (cleanup_unlink_file, object_file);
-      make_cleanup (cleanup_unlink_file, source_file);
-      compile_module = compile_object_load (object_file, source_file,
+      cleanup_unlink = make_cleanup (cleanup_unlink_file,
+				     (void *) object_file.c_str ());
+      make_cleanup (cleanup_unlink_file, (void *) source_file.c_str ());
+      compile_module = compile_object_load (object_file.c_str (), source_file.c_str (),
 					    scope, scope_data);
       if (compile_module == NULL)
 	{
 	  gdb_assert (scope == COMPILE_I_PRINT_ADDRESS_SCOPE);
-	  do_cleanups (cleanup_xfree);
 	  eval_compile_command (cmd, cmd_string,
 				COMPILE_I_PRINT_VALUE_SCOPE, scope_data);
 	  return;
 	}
       discard_cleanups (cleanup_unlink);
-      do_cleanups (cleanup_xfree);
       compile_object_run (compile_module);
     }
 }

@@ -895,7 +895,7 @@ valpy_call (PyObject *self, PyObject *args, PyObject *keywords)
 static PyObject *
 valpy_str (PyObject *self)
 {
-  char *s = NULL;
+  std::string s;
   PyObject *result;
   struct value_print_options opts;
 
@@ -909,7 +909,7 @@ valpy_str (PyObject *self)
 
       common_val_print (((value_object *) self)->value, stb, 0,
 			&opts, python_language);
-      s = ui_file_xstrdup (stb, NULL);
+      s = ui_file_as_string (stb);
 
       do_cleanups (old_chain);
     }
@@ -919,8 +919,7 @@ valpy_str (PyObject *self)
     }
   END_CATCH
 
-  result = PyUnicode_Decode (s, strlen (s), host_charset (), NULL);
-  xfree (s);
+  result = PyUnicode_Decode (s.c_str (), s.length (), host_charset (), NULL);
 
   return result;
 }

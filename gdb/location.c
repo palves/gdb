@@ -228,7 +228,7 @@ explicit_to_string_internal (int as_linespec,
 			     const struct explicit_location *explicit_loc)
 {
   struct ui_file *buf;
-  char space, *result;
+  char space;
   int need_space = 0;
   struct cleanup *cleanup;
 
@@ -277,14 +277,15 @@ explicit_to_string_internal (int as_linespec,
 			explicit_loc->line_offset.offset);
     }
 
-  result = ui_file_xstrdup (buf, NULL);
+  std::string result = ui_file_as_string (buf);
   do_cleanups (cleanup);
-  return result;
+  return xstrdup (result.c_str ());
 }
 
-/* See description in location.h.  */
+/* Return a string representation of the given explicit location.  The
+   location must already be canonicalized/valid.  */
 
-char *
+static char *
 explicit_location_to_string (const struct explicit_location *explicit_loc)
 {
   return explicit_to_string_internal (0, explicit_loc);

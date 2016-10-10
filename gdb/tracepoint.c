@@ -1145,8 +1145,7 @@ do_collect_symbol (const char *print_name,
 		  p->frame_offset, p->pc, p->trace_string);
   p->count++;
 
-  VEC_safe_push (char_ptr, p->collect->wholly_collected,
-		 xstrdup (print_name));
+  p->collect->wholly_collected.push_back (print_name);
 }
 
 /* Add all locals (or args) symbols to collection list.  */
@@ -1205,51 +1204,32 @@ add_static_trace_data (struct collection_list *collection)
   collection->strace_data = 1;
 }
 
-/* worker function */
-static void
-clear_collection_list (struct collection_list *list)
+/* Initialize collection_list CLIST.  */
+
+collection_list::collection_list ()
+{
+  memset (regs_mask, 0, sizeof regs_mask);
+
+  listsize = 128;
+  list = XCNEWVEC (struct memrange, listsize);
+  next_memrange = 0;
+
+  aexpr_listsize = 128;
+  aexpr_list = XCNEWVEC (struct agent_expr *, aexpr_listsize);
+  next_aexpr_elt = 0;
+
+  strace_data = 0;
+}
+
+collection_list::~collection_list ()
 {
   int ndx;
 
-  list->next_memrange = 0;
-  for (ndx = 0; ndx < list->next_aexpr_elt; ndx++)
-    {
-      free_agent_expr (list->aexpr_list[ndx]);
-      list->aexpr_list[ndx] = NULL;
-    }
-  list->next_aexpr_elt = 0;
-  memset (list->regs_mask, 0, sizeof (list->regs_mask));
-  list->strace_data = 0;
+  for (ndx = 0; ndx < next_aexpr_elt; ndx++)
+    free_agent_expr (aexpr_list[ndx]);
 
-  xfree (list->aexpr_list);
-  xfree (list->list);
-
-  VEC_free (char_ptr, list->wholly_collected);
-  VEC_free (char_ptr, list->computed);
-}
-
-/* A cleanup wrapper for function clear_collection_list.  */
-
-static void
-do_clear_collection_list (void *list)
-{
-  struct collection_list *l = (struct collection_list *) list;
-
-  clear_collection_list (l);
-}
-
-/* Initialize collection_list CLIST.  */
-
-static void
-init_collection_list (struct collection_list *clist)
-{
-  memset (clist, 0, sizeof *clist);
-
-  clist->listsize = 128;
-  clist->list = XCNEWVEC (struct memrange, clist->listsize);
-
-  clist->aexpr_listsize = 128;
-  clist->aexpr_list = XCNEWVEC (struct agent_expr *, clist->aexpr_listsize);
+  xfree (aexpr_list);
+  xfree (list);
 }
 
 /* Reduce a collection list to string form (for gdb protocol).  */
@@ -1377,16 +1357,13 @@ stringify_collection_list (struct collection_list *list)
 /* Add the printed expression EXP to *LIST.  */
 
 static void
-append_exp (struct expression *exp, VEC(char_ptr) **list)
+append_exp (struct expression *exp, std::vector<std::string> *list)
 {
   struct ui_file *tmp_stream = mem_fileopen ();
-  char *text;
 
   print_expression (exp, tmp_stream);
 
-  text = ui_file_xstrdup (tmp_stream, NULL);
-
-  VEC_safe_push (char_ptr, *list, text);
+  list->push_back (ui_file_as_string (tmp_stream));
   ui_file_delete (tmp_stream);
 }
 
@@ -1549,9 +1526,7 @@ encode_actions_1 (struct command_line *action,
 					frame_offset,
 					tloc->address,
 					trace_string);
-			VEC_safe_push (char_ptr,
-				       collect->wholly_collected,
-				       name);
+			collect->wholly_collected.push_back (name);
 		      }
 		      break;
 
@@ -1644,27 +1619,17 @@ encode_actions_1 (struct command_line *action,
 }
 
 /* Encode actions of tracepoint TLOC->owner and fill TRACEPOINT_LIST
-   and STEPPING_LIST.  Return a cleanup pointer to clean up both
-   TRACEPOINT_LIST and STEPPING_LIST.  */
+   and STEPPING_LIST.  */
 
-struct cleanup *
-encode_actions_and_make_cleanup (struct bp_location *tloc,
-				 struct collection_list *tracepoint_list,
-				 struct collection_list *stepping_list)
+void
+encode_actions (struct bp_location *tloc,
+		struct collection_list *tracepoint_list,
+		struct collection_list *stepping_list)
 {
   struct command_line *actions;
   int frame_reg;
   LONGEST frame_offset;
-  struct cleanup *back_to, *return_chain;
 
-  return_chain = make_cleanup (null_cleanup, NULL);
-  init_collection_list (tracepoint_list);
-  init_collection_list (stepping_list);
-
-  make_cleanup (do_clear_collection_list, tracepoint_list);
-  make_cleanup (do_clear_collection_list, stepping_list);
-
-  back_to = make_cleanup (null_cleanup, NULL);
   gdbarch_virtual_frame_pointer (tloc->gdbarch,
 				 tloc->address, &frame_reg, &frame_offset);
 
@@ -1675,9 +1640,6 @@ encode_actions_and_make_cleanup (struct bp_location *tloc,
 
   memrange_sortmerge (tracepoint_list);
   memrange_sortmerge (stepping_list);
-
-  do_cleanups (back_to);
-  return return_chain;
 }
 
 /* Render all actions into gdb protocol.  */
@@ -1687,18 +1649,14 @@ encode_actions_rsp (struct bp_location *tloc, char ***tdp_actions,
 		    char ***stepping_actions)
 {
   struct collection_list tracepoint_list, stepping_list;
-  struct cleanup *cleanup;
 
   *tdp_actions = NULL;
   *stepping_actions = NULL;
 
-  cleanup = encode_actions_and_make_cleanup (tloc, &tracepoint_list,
-					     &stepping_list);
+  encode_actions (tloc, &tracepoint_list, &stepping_list);
 
   *tdp_actions = stringify_collection_list (&tracepoint_list);
   *stepping_actions = stringify_collection_list (&stepping_list);
-
-  do_cleanups (cleanup);
 }
 
 static void

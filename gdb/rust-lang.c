@@ -70,8 +70,8 @@ rust_crate_for_block (const struct block *block)
 
 struct disr_info
 {
-  /* Name of field.  Must be freed by caller.  */
-  char *name;
+  /* Name of field.  */
+  std::string name;
   /* Field number in union.  Negative on error.  For an encoded enum,
      the "hidden" member will always be field 1, and the "real" member
      will always be field 0.  */
@@ -208,8 +208,8 @@ rust_get_disr_info (struct type *type, const gdb_byte *valaddr,
 	       address, temp_file,
 	       0, val, &opts);
 
-  ret.name = ui_file_xstrdup (temp_file, NULL);
-  name_segment = rust_last_path_segment (ret.name);
+  ret.name = ui_file_as_string (temp_file);
+  name_segment = rust_last_path_segment (ret.name.c_str ());
   if (name_segment != NULL)
     {
       for (i = 0; i < TYPE_NFIELDS (type); ++i)
@@ -233,12 +233,11 @@ rust_get_disr_info (struct type *type, const gdb_byte *valaddr,
 	}
     }
 
-  if (ret.field_no == -1 && ret.name != NULL)
+  if (ret.field_no == -1 && !ret.name.empty ())
     {
       /* Somehow the discriminant wasn't found.  */
-      make_cleanup (xfree, ret.name);
       error (_("Could not find variant of %s with discriminant %s"),
-	     TYPE_TAG_NAME (type), ret.name);
+	     TYPE_TAG_NAME (type), ret.name.c_str ());
     }
 
   do_cleanups (cleanup);
@@ -553,19 +552,17 @@ rust_val_print (struct type *type, const gdb_byte *valaddr, int embedded_offset,
 	struct type *variant_type;
 	struct disr_info disr;
 	struct value_print_options opts;
-	struct cleanup *cleanup;
 
 	opts = *options;
 	opts.deref_ref = 0;
 
 	disr = rust_get_disr_info (type, valaddr, embedded_offset, address,
 				   val);
-	cleanup = make_cleanup (xfree, disr.name);
 
 	if (disr.is_encoded && disr.field_no == RUST_ENCODED_ENUM_HIDDEN)
 	  {
-	    fprintf_filtered (stream, "%s", disr.name);
-	    goto cleanup;
+	    fprintf_filtered (stream, "%s", disr.name.c_str ());
+	    break;
 	  }
 
 	first_field = 1;
@@ -581,19 +578,19 @@ rust_val_print (struct type *type, const gdb_byte *valaddr, int embedded_offset,
 	  {
 	    /* In case of a non-nullary variant, we output 'Foo(x,y,z)'. */
 	    if (is_tuple)
-	      fprintf_filtered (stream, "%s(", disr.name);
+	      fprintf_filtered (stream, "%s(", disr.name.c_str ());
 	    else
 	      {
 		/* struct variant.  */
-		fprintf_filtered (stream, "%s{", disr.name);
+		fprintf_filtered (stream, "%s{", disr.name.c_str ());
 	      }
 	  }
 	else
 	  {
 	    /* In case of a nullary variant like 'None', just output
 	       the name. */
-	    fprintf_filtered (stream, "%s", disr.name);
-	    goto cleanup;
+	    fprintf_filtered (stream, "%s", disr.name.c_str ());
+	    break;
 	  }
 
 	for (j = start; j < TYPE_NFIELDS (variant_type); j++)
@@ -620,9 +617,6 @@ rust_val_print (struct type *type, const gdb_byte *valaddr, int embedded_offset,
 	  fputs_filtered (")", stream);
 	else
 	  fputs_filtered ("}", stream);
-
-      cleanup:
-	do_cleanups (cleanup);
       }
       break;
 
@@ -1628,13 +1622,9 @@ rust_evaluate_subexp (struct type *expect_type, struct expression *exp,
         type = value_type (lhs);
         if (TYPE_CODE (type) == TYPE_CODE_UNION)
 	  {
-	    struct cleanup *cleanup;
-
 	    disr = rust_get_disr_info (type, value_contents (lhs),
 				       value_embedded_offset (lhs),
 				       value_address (lhs), lhs);
-
-	    cleanup = make_cleanup (xfree, disr.name);
 
 	    if (disr.is_encoded && disr.field_no == RUST_ENCODED_ENUM_HIDDEN)
 	      {
@@ -1654,17 +1644,16 @@ rust_evaluate_subexp (struct type *expect_type, struct expression *exp,
 	      error(_("Cannot access field %d of variant %s, \
 there are only %d fields"),
 		    disr.is_encoded ? field_number : field_number - 1,
-		    disr.name,
+		    disr.name.c_str (),
 		    disr.is_encoded ? nfields : nfields - 1);
 
 	    if (!(disr.is_encoded
 		  ? rust_tuple_struct_type_p (variant_type)
 		  : rust_tuple_variant_type_p (variant_type)))
-	      error(_("Variant %s is not a tuple variant"), disr.name);
+	      error(_("Variant %s is not a tuple variant"), disr.name.c_str ());
 
 	    result = value_primitive_field (lhs, 0, field_number,
 					    variant_type);
-	    do_cleanups (cleanup);
 	  }
 	else if (TYPE_CODE (type) == TYPE_CODE_STRUCT)
 	  {
@@ -1706,7 +1695,6 @@ tuple structs, and tuple-like enum variants"));
 	  {
 	    int i, start;
 	    struct disr_info disr;
-	    struct cleanup* cleanup;
 	    struct type* variant_type;
 	    char* field_name;
 
@@ -1716,11 +1704,9 @@ tuple structs, and tuple-like enum variants"));
 				       value_embedded_offset (lhs),
 				       value_address (lhs), lhs);
 
-	    cleanup = make_cleanup (xfree, disr.name);
-
 	    if (disr.is_encoded && disr.field_no == RUST_ENCODED_ENUM_HIDDEN)
 	      error(_("Could not find field %s of struct variant %s"),
-		    field_name, disr.name);
+		    field_name, disr.name.c_str ());
 
 	    variant_type = TYPE_FIELD_TYPE (type, disr.field_no);
 
@@ -1728,7 +1714,7 @@ tuple structs, and tuple-like enum variants"));
 		|| rust_tuple_variant_type_p (variant_type))
 	      error(_("Attempting to access named field %s of tuple variant %s, \
 which has only anonymous fields"),
-		    field_name, disr.name);
+		    field_name, disr.name.c_str ());
 
 	    start = disr.is_encoded ? 0 : 1;
 	    for (i = start; i < TYPE_NFIELDS (variant_type); i++)
@@ -1743,9 +1729,7 @@ which has only anonymous fields"),
 	    if (i == TYPE_NFIELDS (variant_type))
 	      /* We didn't find it.  */
 	      error(_("Could not find field %s of struct variant %s"),
-		    field_name, disr.name);
-
-	    do_cleanups (cleanup);
+		    field_name, disr.name.c_str ());
 	  }
 	else
 	  {

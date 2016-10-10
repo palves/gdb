@@ -150,6 +150,37 @@ xsnprintf (char *str, size_t size, const char *format, ...)
   return ret;
 }
 
+std::string
+string_printf (const char* fmt, ...)
+{
+  std::string str;
+  va_list vp;
+
+  /* Start by assuming some fixed size.  */
+  str.resize (1024);
+
+  while (1)
+    {
+      size_t size;
+      int result;
+
+      va_start (vp, fmt);
+      /* While only C++11 or later guarantee std::string has contiguous
+	 memory, no known C++03 compiler lays memory non-contiguously.
+	 This is a _very_ common hack.  */
+      size = str.size () + 1;
+      result = vsnprintf (const_cast<char*> (str.data ()), size, fmt, vp);
+      va_end (vp);
+
+      str.resize (result);
+
+      if (result < size)
+	break;
+    }
+
+  return str;
+}
+
 char *
 savestring (const char *ptr, size_t len)
 {

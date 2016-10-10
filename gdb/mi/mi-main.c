@@ -2740,7 +2740,7 @@ mi_cmd_ada_task_info (char *command, char **argv, int argc)
 /* Print EXPRESSION according to VALUES.  */
 
 static void
-print_variable_or_computed (char *expression, enum print_values values)
+print_variable_or_computed (const char *expression, enum print_values values)
 {
   struct expression *expr;
   struct cleanup *old_chain;
@@ -2869,8 +2869,7 @@ mi_cmd_trace_frame_collected (char *command, char **argv, int argc)
   old_chain = make_cleanup_restore_current_thread ();
   select_frame (get_current_frame ());
 
-  encode_actions_and_make_cleanup (tloc, &tracepoint_list,
-				   &stepping_list);
+  encode_actions (tloc, &tracepoint_list, &stepping_list);
 
   if (stepping_frame)
     clist = &stepping_list;
@@ -2882,13 +2881,18 @@ mi_cmd_trace_frame_collected (char *command, char **argv, int argc)
   /* Explicitly wholly collected variables.  */
   {
     struct cleanup *list_cleanup;
-    char *p;
     int i;
 
     list_cleanup = make_cleanup_ui_out_list_begin_end (uiout,
 						       "explicit-variables");
-    for (i = 0; VEC_iterate (char_ptr, clist->wholly_collected, i, p); i++)
-      print_variable_or_computed (p, var_print_values);
+
+    for (std::vector<std::string>::iterator
+	   it = clist->wholly_collected.begin (),
+	   end = clist->wholly_collected.end ();
+	 it != end;
+	 ++it)
+      print_variable_or_computed (it->c_str (), var_print_values);
+
     do_cleanups (list_cleanup);
   }
 
@@ -2901,8 +2905,13 @@ mi_cmd_trace_frame_collected (char *command, char **argv, int argc)
     list_cleanup
       = make_cleanup_ui_out_list_begin_end (uiout,
 					    "computed-expressions");
-    for (i = 0; VEC_iterate (char_ptr, clist->computed, i, p); i++)
-      print_variable_or_computed (p, comp_print_values);
+
+    for (std::vector<std::string>::iterator
+	   it = clist->computed.begin (),
+	   end = clist->computed.end ();
+	 it != end;
+	 ++it)
+      print_variable_or_computed (it->c_str (), comp_print_values);
     do_cleanups (list_cleanup);
   }
 

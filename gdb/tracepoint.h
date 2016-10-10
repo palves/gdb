@@ -24,6 +24,9 @@
 #include "memrange.h"
 #include "gdb_vecs.h"
 
+#include <vector>
+#include <string>
+
 /* An object describing the contents of a traceframe.  */
 
 struct traceframe_info
@@ -231,6 +234,9 @@ struct memrange
 
 struct collection_list
 {
+  collection_list ();
+  ~collection_list ();
+
   /* room for up to 256 regs */
   unsigned char regs_mask[32];
   long listsize;
@@ -247,9 +253,9 @@ struct collection_list
   int strace_data;
 
   /* A set of names of wholly collected objects.  */
-  VEC(char_ptr) *wholly_collected;
+  std::vector<std::string> wholly_collected;
   /* A set of computed expressions.  */
-  VEC(char_ptr) *computed;
+  std::vector<std::string> computed;
 };
 
 extern void parse_static_tracepoint_marker_definition
@@ -280,10 +286,10 @@ void free_actions (struct breakpoint *);
 
 extern const char *decode_agent_options (const char *exp, int *trace_string);
 
-extern struct cleanup *
-  encode_actions_and_make_cleanup (struct bp_location *tloc,
-				   struct collection_list *tracepoint_list,
-				   struct collection_list *stepping_list);
+extern void
+  encode_actions (struct bp_location *tloc,
+		  struct collection_list *tracepoint_list,
+		  struct collection_list *stepping_list);
 
 extern void encode_actions_rsp (struct bp_location *tloc,
 				char ***tdp_actions, char ***stepping_actions);

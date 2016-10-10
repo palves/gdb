@@ -2741,14 +2741,15 @@ eval_command (char *arg, int from_tty)
 {
   struct ui_file *ui_out = mem_fileopen ();
   struct cleanup *cleanups = make_cleanup_ui_file_delete (ui_out);
-  char *expanded;
 
   ui_printf (arg, ui_out);
 
-  expanded = ui_file_xstrdup (ui_out, NULL);
-  make_cleanup (xfree, expanded);
+  /* We don't use a std:string here because execute_command and
+     several command implementations want to write to the passed in
+     string, sometimes changing (reducing) its length.  */
+  gdb::unique_malloc_ptr<char> expanded (ui_file_xstrdup (ui_out, NULL));
 
-  execute_command (expanded, from_tty);
+  execute_command (expanded.get (), from_tty);
 
   do_cleanups (cleanups);
 }

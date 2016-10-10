@@ -104,11 +104,9 @@ tyscm_type_smob_type (type_smob *t_smob)
    If there's an error computing the name, the result is NULL and the
    exception is stored in *EXCP.  */
 
-static char *
-tyscm_type_name (struct type *type, SCM *excp)
+static bool
+tyscm_type_name (struct type *type, std::string *name, SCM *excp)
 {
-  char *name = NULL;
-
   TRY
     {
       struct cleanup *old_chain;
@@ -119,17 +117,17 @@ tyscm_type_name (struct type *type, SCM *excp)
 
       LA_PRINT_TYPE (type, "", stb, -1, 0, &type_print_raw_options);
 
-      name = ui_file_xstrdup (stb, NULL);
+      *name = ui_file_as_string (stb);
       do_cleanups (old_chain);
     }
   CATCH (except, RETURN_MASK_ALL)
     {
       *excp = gdbscm_scm_from_gdb_exception (except);
-      return NULL;
+      return false;
     }
   END_CATCH
 
-  return name;
+  return true;
 }
 
 /* Administrivia for type smobs.  */
@@ -208,9 +206,9 @@ tyscm_print_type_smob (SCM self, SCM port, scm_print_state *pstate)
 {
   type_smob *t_smob = (type_smob *) SCM_SMOB_DATA (self);
   SCM exception;
-  char *name = tyscm_type_name (t_smob->type, &exception);
+  std::string name;
 
-  if (name == NULL)
+  if (!tyscm_type_name (t_smob->type, &name, &exception))
     gdbscm_throw (exception);
 
   /* pstate->writingp = zero if invoked by display/~A, and nonzero if
@@ -220,7 +218,7 @@ tyscm_print_type_smob (SCM self, SCM port, scm_print_state *pstate)
   if (pstate->writingp)
     gdbscm_printf (port, "#<%s ", type_smob_name);
 
-  scm_puts (name, port);
+  scm_puts (name.c_str (), port);
 
   if (pstate->writingp)
     scm_puts (">", port);
@@ -608,16 +606,13 @@ gdbscm_type_print_name (SCM self)
   type_smob *t_smob
     = tyscm_get_type_smob_arg_unsafe (self, SCM_ARG1, FUNC_NAME);
   struct type *type = t_smob->type;
-  char *thetype;
+  std::string thetype;
   SCM exception, result;
 
-  thetype = tyscm_type_name (type, &exception);
-
-  if (thetype == NULL)
+  if (!tyscm_type_name (type, &thetype, &exception))
     gdbscm_throw (exception);
 
-  result = gdbscm_scm_from_c_string (thetype);
-  xfree (thetype);
+  result = gdbscm_scm_from_c_string (thetype.c_str ());
 
   return result;
 }
