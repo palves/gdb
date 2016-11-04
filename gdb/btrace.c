@@ -229,7 +229,7 @@ ftrace_new_function (struct btrace_function *prev,
 static void
 ftrace_update_caller (struct btrace_function *bfun,
 		      struct btrace_function *caller,
-		      enum btrace_function_flag flags)
+		      btrace_function_flags flags)
 {
   if (bfun->up != NULL)
     ftrace_debug (bfun, "updating caller");
@@ -246,7 +246,7 @@ ftrace_update_caller (struct btrace_function *bfun,
 static void
 ftrace_fixup_caller (struct btrace_function *bfun,
 		     struct btrace_function *caller,
-		     enum btrace_function_flag flags)
+		     btrace_function_flags flags)
 {
   struct btrace_function *prev, *next;
 
