@@ -268,7 +268,6 @@ static const char *
 find_global_typedef (const struct type_print_options *flags,
 		     struct type *t)
 {
-  char *applied;
   void **slot;
   struct typedef_field tf, *new_tf;
 
@@ -293,14 +292,13 @@ find_global_typedef (const struct type_print_options *flags,
 
   *slot = new_tf;
 
-  applied = apply_ext_lang_type_printers (flags->global_printers, t);
+  std::string applied = apply_ext_lang_type_printers (flags->global_printers, t);
 
-  if (applied != NULL)
+  if (applied.empty ())
     {
       new_tf->name
 	= (const char *) obstack_copy0 (&flags->global_typedefs->storage,
-					applied, strlen (applied));
-      xfree (applied);
+					applied.c_str (), applied.size ());
     }
 
   return new_tf->name;

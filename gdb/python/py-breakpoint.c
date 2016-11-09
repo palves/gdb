@@ -41,7 +41,7 @@ static int bppy_live;
 gdbpy_breakpoint_object *bppy_pending_object;
 
 /* Function that is called when a Python condition is evaluated.  */
-static char * const stop_func = "stop";
+static const char stop_func[] = "stop";
 
 /* This is used to initialize various gdb.bp_* constants.  */
 struct pybp_code
@@ -440,8 +440,7 @@ bppy_get_condition (PyObject *self, void *closure)
 static int
 bppy_set_condition (PyObject *self, PyObject *newvalue, void *closure)
 {
-  gdb::unique_xmalloc_ptr<char> exp_holder;
-  const char *exp = NULL;
+  std::string exp;
   gdbpy_breakpoint_object *self_bp = (gdbpy_breakpoint_object *) self;
   struct gdb_exception except = exception_none;
 
@@ -453,19 +452,16 @@ bppy_set_condition (PyObject *self, PyObject *newvalue, void *closure)
 		       _("Cannot delete `condition' attribute."));
       return -1;
     }
-  else if (newvalue == Py_None)
-    exp = "";
-  else
+  else if (newvalue != Py_None)
     {
-      exp_holder = python_string_to_host_string (newvalue);
-      if (exp_holder == NULL)
+      exp = python_string_to_host_string (newvalue);
+      if (exp.empty ())
 	return -1;
-      exp = exp_holder.get ();
     }
 
   TRY
     {
-      set_breakpoint_condition (self_bp->bp, exp, 0);
+      set_breakpoint_condition (self_bp->bp, exp.c_str (), 0);
     }
   CATCH (ex, RETURN_MASK_ALL)
     {
@@ -813,7 +809,7 @@ gdbpy_breakpoint_cond_says_stop (const struct extension_language_defn *extlang,
 
   if (PyObject_HasAttrString (py_bp, stop_func))
     {
-      PyObject *result = PyObject_CallMethod (py_bp, stop_func, NULL);
+      PyObject *result = PyObject_CallMethod (py_bp, (char *) stop_func, NULL);
 
       stop = 1;
       if (result)
@@ -1044,15 +1040,15 @@ static int
 local_setattro (PyObject *self, PyObject *name, PyObject *v)
 {
   gdbpy_breakpoint_object *obj = (gdbpy_breakpoint_object *) self;
-  gdb::unique_xmalloc_ptr<char> attr (python_string_to_host_string (name));
+  std::string attr = python_string_to_host_string (name);
 
-  if (attr == NULL)
+  if (attr.empty ())
     return -1;
 
   /* If the attribute trying to be set is the "stop" method,
      but we already have a condition set in the CLI or other extension
      language, disallow this operation.  */
-  if (strcmp (attr.get (), stop_func) == 0)
+  if (attr == stop_func)
     {
       const struct extension_language_defn *extlang = NULL;
 
@@ -1062,15 +1058,12 @@ local_setattro (PyObject *self, PyObject *name, PyObject *v)
 	extlang = get_breakpoint_cond_ext_lang (obj->bp, EXT_LANG_PYTHON);
       if (extlang != NULL)
 	{
-	  char *error_text;
-
-	  error_text
-	    = xstrprintf (_("Only one stop condition allowed.  There is"
-			    " currently a %s stop condition defined for"
-			    " this breakpoint."),
-			  ext_lang_capitalized_name (extlang));
-	  PyErr_SetString (PyExc_RuntimeError, error_text);
-	  xfree (error_text);
+	  std::string error_text
+	    = string_printf (_("Only one stop condition allowed.  There is"
+			       " currently a %s stop condition defined for"
+			       " this breakpoint."),
+			     ext_lang_capitalized_name (extlang));
+	  PyErr_SetString (PyExc_RuntimeError, error_text.c_str ());
 	  return -1;
 	}
     }

@@ -101,10 +101,9 @@ fnpy_call (struct gdbarch *gdbarch, const struct language_defn *language,
 	 When fetching the error message we need to make our own copy,
 	 we no longer own ptype, pvalue after the call to PyErr_Restore.  */
 
-      gdb::unique_xmalloc_ptr<char>
-	msg (gdbpy_exception_to_string (ptype, pvalue));
+      std::string msg = gdbpy_exception_to_string (ptype, pvalue);
 
-      if (msg == NULL)
+      if (msg.empty ())
 	{
 	  /* An error occurred computing the string representation of the
 	     error message.  This is rare, but we should inform the user.  */
@@ -124,13 +123,14 @@ fnpy_call (struct gdbarch *gdbarch, const struct language_defn *language,
 	 exceptions is arguably a bug, so we flag it as such.  */
 
       if (!PyErr_GivenExceptionMatches (ptype, gdbpy_gdberror_exc)
-	  || msg == NULL || *msg == '\0')
+	  || msg.empty ())
 	{
 	  PyErr_Restore (ptype, pvalue, ptraceback);
 	  gdbpy_print_stack ();
-	  if (msg != NULL && *msg != '\0')
+
+	  if (!msg.empty ())
 	    error (_("Error occurred in Python convenience function: %s"),
-		   msg.get ());
+		   msg.c_str ());
 	  else
 	    error (_("Error occurred in Python convenience function."));
 	}
@@ -139,7 +139,7 @@ fnpy_call (struct gdbarch *gdbarch, const struct language_defn *language,
 	  Py_XDECREF (ptype);
 	  Py_XDECREF (pvalue);
 	  Py_XDECREF (ptraceback);
-	  error ("%s", msg.get ());
+	  error ("%s", msg.c_str ());
 	}
     }
 
@@ -164,7 +164,7 @@ static int
 fnpy_init (PyObject *self, PyObject *args, PyObject *kwds)
 {
   const char *name;
-  gdb::unique_xmalloc_ptr<char> docstring;
+  std::string docstring;
 
   if (! PyArg_ParseTuple (args, "s", &name))
     return -1;
@@ -178,7 +178,7 @@ fnpy_init (PyObject *self, PyObject *args, PyObject *kwds)
 	  if (gdbpy_is_string (ds_obj))
 	    {
 	      docstring = python_string_to_host_string (ds_obj);
-	      if (docstring == NULL)
+	      if (docstring.empty ())
 		{
 		  Py_DECREF (self);
 		  Py_DECREF (ds_obj);
@@ -189,10 +189,11 @@ fnpy_init (PyObject *self, PyObject *args, PyObject *kwds)
 	  Py_DECREF (ds_obj);
 	}
     }
-  if (! docstring)
-    docstring.reset (xstrdup (_("This function is not documented.")));
 
-  add_internal_function (name, docstring.release (), fnpy_call, self);
+  const char *doc = (docstring.empty ()
+		     ? _("This function is not documented.")
+		     : docstring.c_str ());
+  add_internal_function (name, xstrdup (doc), fnpy_call, self);
   return 0;
 }
 

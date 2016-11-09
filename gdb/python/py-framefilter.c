@@ -52,7 +52,7 @@ enum mi_print_types
    appropriate Python exception set, and EXT_LANG_BT_OK on success.  */
 
 static enum ext_lang_bt_status
-extract_sym (PyObject *obj, gdb::unique_xmalloc_ptr<char> *name,
+extract_sym (PyObject *obj, std::string *name,
 	     struct symbol **sym, struct block **sym_block,
 	     const struct language_defn **language)
 {
@@ -68,7 +68,7 @@ extract_sym (PyObject *obj, gdb::unique_xmalloc_ptr<char> *name,
       *name = python_string_to_host_string (result);
       Py_DECREF (result);
 
-      if (*name == NULL)
+      if (name->empty ())
 	return EXT_LANG_BT_ERROR;
       /* If the API returns a string (and not a symbol), then there is
 	no symbol derived language available and the frame filter has
@@ -100,9 +100,7 @@ extract_sym (PyObject *obj, gdb::unique_xmalloc_ptr<char> *name,
 	  return EXT_LANG_BT_ERROR;
 	}
 
-      /* Duplicate the symbol name, so the caller has consistency
-	 in garbage collection.  */
-      name->reset (xstrdup (SYMBOL_PRINT_NAME (*sym)));
+      *name = SYMBOL_PRINT_NAME (*sym);
 
       /* If a symbol is specified attempt to determine the language
 	 from the symbol.  If mode is not "auto", then the language
@@ -539,7 +537,7 @@ enumerate_args (PyObject *iter,
   while (item)
     {
       const struct language_defn *language;
-      gdb::unique_xmalloc_ptr<char> sym_name;
+      std::string sym_name;
       struct symbol *sym;
       struct block *sym_block;
       struct value *val;
@@ -647,7 +645,7 @@ enumerate_args (PyObject *iter,
 	  /* If the object has provided a value, we just print that.  */
 	  if (val != NULL)
 	    {
-	      if (py_print_single_arg (out, sym_name.get (), NULL, val, &opts,
+	      if (py_print_single_arg (out, sym_name.c_str (), NULL, val, &opts,
 				       args_type, print_args_field,
 				       language) == EXT_LANG_BT_ERROR)
 		goto error;
@@ -723,7 +721,7 @@ enumerate_locals (PyObject *iter,
   while ((item = PyIter_Next (iter)))
     {
       const struct language_defn *language;
-      gdb::unique_xmalloc_ptr<char> sym_name;
+      std::string sym_name;
       struct value *val;
       enum ext_lang_bt_status success = EXT_LANG_BT_ERROR;
       struct symbol *sym;
@@ -786,7 +784,7 @@ enumerate_locals (PyObject *iter,
 	      ui_out_spaces (out, local_indent);
 	    }
 
-	  ui_out_field_string (out, "name", sym_name.get ());
+	  ui_out_field_string (out, "name", sym_name.c_str ());
 
 	  if (! ui_out_is_mi_like_p (out))
 	    ui_out_text (out, " = ");
@@ -1018,7 +1016,7 @@ py_print_frame (PyObject *filter, int flags,
   struct value_print_options opts;
   PyObject *py_inf_frame;
   int print_level, print_frame_info, print_args, print_locals;
-  gdb::unique_xmalloc_ptr<char> function_to_free;
+  std::string function_to_free;
 
   /* Extract print settings from FLAGS.  */
   print_level = (flags & PRINT_LEVEL) ? 1 : 0;
@@ -1193,13 +1191,13 @@ py_print_frame (PyObject *filter, int flags,
 	    {
 	      function_to_free = python_string_to_host_string (py_func);
 
-	      if (function_to_free == NULL)
+	      if (function_to_free.empty ())
 		{
 		  do_cleanups (cleanup_stack);
 		  return EXT_LANG_BT_ERROR;
 		}
 
-	      function = function_to_free.get ();
+	      function = function_to_free.c_str ();
 	    }
 	  else if (PyLong_Check (py_func))
 	    {
@@ -1286,10 +1284,9 @@ py_print_frame (PyObject *filter, int flags,
 
 	  if (py_fn != Py_None)
 	    {
-	      gdb::unique_xmalloc_ptr<char>
-		filename (python_string_to_host_string (py_fn));
+	      std::string filename = python_string_to_host_string (py_fn);
 
-	      if (filename == NULL)
+	      if (filename.empty ())
 		{
 		  do_cleanups (cleanup_stack);
 		  return EXT_LANG_BT_ERROR;
@@ -1300,7 +1297,7 @@ py_print_frame (PyObject *filter, int flags,
 		  ui_out_wrap_hint (out, "   ");
 		  ui_out_text (out, " at ");
 		  annotate_frame_source_file ();
-		  ui_out_field_string (out, "file", filename.get ());
+		  ui_out_field_string (out, "file", filename.c_str ());
 		  annotate_frame_source_file_end ();
 		}
 	      CATCH (except, RETURN_MASK_ERROR)

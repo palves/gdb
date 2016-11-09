@@ -219,8 +219,8 @@ extern void auto_load_ext_lang_scripts_for_objfile (struct objfile *);
 
 extern struct ext_lang_type_printers *start_ext_lang_type_printers (void);
 
-extern char *apply_ext_lang_type_printers (struct ext_lang_type_printers *,
-					   struct type *);
+extern std::string apply_ext_lang_type_printers (struct ext_lang_type_printers *,
+						 struct type *);
 
 extern void free_ext_lang_type_printers (struct ext_lang_type_printers *);
 

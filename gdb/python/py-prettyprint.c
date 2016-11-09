@@ -240,18 +240,19 @@ pretty_print_one_value (PyObject *printer, struct value **out_value)
   return result;
 }
 
-/* Return the display hint for the object printer, PRINTER.  Return
-   NULL if there is no display_hint method, or if the method did not
-   return a string.  On error, print stack trace and return NULL.  On
-   success, return an xmalloc()d string.  */
-gdb::unique_xmalloc_ptr<char>
+/* Return the display hint for the object printer, PRINTER.  Return an
+   empty string if there is no display_hint method, or if the method
+   did not return a string.  On error, print stack trace and return
+   empty.  */
+
+std::string
 gdbpy_get_display_hint (PyObject *printer)
 {
   PyObject *hint;
-  gdb::unique_xmalloc_ptr<char> result;
+  std::string result;
 
   if (! PyObject_HasAttr (printer, gdbpy_display_hint_cst))
-    return NULL;
+    return result;
 
   hint = PyObject_CallMethodObjArgs (printer, gdbpy_display_hint_cst, NULL);
   if (hint)
@@ -259,7 +260,7 @@ gdbpy_get_display_hint (PyObject *printer)
       if (gdbpy_is_string (hint))
 	{
 	  result = python_string_to_host_string (hint);
-	  if (result == NULL)
+	  if (result.empty ())
 	    gdbpy_print_stack ();
 	}
       Py_DECREF (hint);
@@ -285,14 +286,13 @@ print_stack_unless_memory_error (struct ui_file *stream)
       make_cleanup_py_decref (value);
       make_cleanup_py_decref (trace);
 
-      gdb::unique_xmalloc_ptr<char>
-	msg (gdbpy_exception_to_string (type, value));
+      std::string msg = gdbpy_exception_to_string (type, value);
 
-      if (msg == NULL || *msg == '\0')
+      if (msg.empty ())
 	fprintf_filtered (stream, _("<error reading variable>"));
       else
 	fprintf_filtered (stream, _("<error reading variable: %s>"),
-			  msg.get ());
+			  msg.c_str ());
 
       do_cleanups (cleanup);
     }
@@ -647,13 +647,11 @@ print_children (PyObject *printer, const char *hint,
 	}
       else if (gdbpy_is_string (py_v))
 	{
-	  gdb::unique_xmalloc_ptr<char> output;
-
-	  output = python_string_to_host_string (py_v);
-	  if (!output)
+	  std::string output = python_string_to_host_string (py_v);
+	  if (output.empty ())
 	    gdbpy_print_stack ();
 	  else
-	    fputs_filtered (output.get (), stream);
+	    fputs_filtered (output.c_str (), stream);
 	}
       else
 	{
@@ -710,7 +708,7 @@ gdbpy_apply_val_pretty_printer (const struct extension_language_defn *extlang,
   PyObject *printer = NULL;
   PyObject *val_obj = NULL;
   struct value *value;
-  gdb::unique_xmalloc_ptr<char> hint;
+  std::string hint;
   struct cleanup *cleanups;
   enum ext_lang_rc result = EXT_LANG_RC_NOP;
   enum string_repr_result print_result;
@@ -766,10 +764,10 @@ gdbpy_apply_val_pretty_printer (const struct extension_language_defn *extlang,
   hint = gdbpy_get_display_hint (printer);
 
   /* Print the section */
-  print_result = print_string_repr (printer, hint.get (), stream, recurse,
+  print_result = print_string_repr (printer, hint.c_str (), stream, recurse,
 				    options, language, gdbarch);
   if (print_result != string_repr_error)
-    print_children (printer, hint.get (), stream, recurse, options, language,
+    print_children (printer, hint.c_str (), stream, recurse, options, language,
 		    print_result == string_repr_none);
 
   result = EXT_LANG_RC_OK;

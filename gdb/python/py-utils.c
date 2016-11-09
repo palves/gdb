@@ -102,26 +102,26 @@ python_string_to_unicode (PyObject *obj)
   return unicode_str;
 }
 
-/* Returns a newly allocated string with the contents of the given unicode
-   string object converted to CHARSET.  If an error occurs during the
-   conversion, NULL will be returned and a python exception will be set.
+/* Returns a std::string with the contents of the given unicode string
+   object converted to CHARSET.  If an error occurs during the
+   conversion, returns an empty string and a python exception is
+   set.  */
 
-   The caller is responsible for xfree'ing the string.  */
-static gdb::unique_xmalloc_ptr<char>
+static std::string
 unicode_to_encoded_string (PyObject *unicode_str, const char *charset)
 {
-  gdb::unique_xmalloc_ptr<char> result;
   PyObject *string;
+  std::string result;
 
   /* Translate string to named charset.  */
   string = PyUnicode_AsEncodedString (unicode_str, charset, NULL);
   if (string == NULL)
-    return NULL;
+    return result;
 
 #ifdef IS_PY3K
-  result.reset (xstrdup (PyBytes_AsString (string)));
+  result = PyBytes_AsString (string);
 #else
-  result.reset (xstrdup (PyString_AsString (string)));
+  result = PyString_AsString (string);
 #endif
 
   Py_DECREF (string);
@@ -144,7 +144,7 @@ unicode_to_encoded_python_string (PyObject *unicode_str, const char *charset)
    unicode string object converted to the target's charset.  If an
    error occurs during the conversion, NULL will be returned and a
    python exception will be set.  */
-gdb::unique_xmalloc_ptr<char>
+std::string
 unicode_to_target_string (PyObject *unicode_str)
 {
   return unicode_to_encoded_string (unicode_str,
@@ -165,16 +165,17 @@ unicode_to_target_python_string (PyObject *unicode_str)
 /* Converts a python string (8-bit or unicode) to a target string in
    the target's charset.  Returns NULL on error, with a python
    exception set.  */
-gdb::unique_xmalloc_ptr<char>
+std::string
 python_string_to_target_string (PyObject *obj)
 {
   PyObject *str;
+  std::string result;
 
   str = python_string_to_unicode (obj);
   if (str == NULL)
-    return NULL;
+    return result;
 
-  gdb::unique_xmalloc_ptr<char> result (unicode_to_target_string (str));
+  result = unicode_to_target_string (str);
   Py_DECREF (str);
   return result;
 }
@@ -200,19 +201,20 @@ python_string_to_target_python_string (PyObject *obj)
 }
 
 /* Converts a python string (8-bit or unicode) to a target string in
-   the host's charset.  Returns NULL on error, with a python exception
-   set.  */
-gdb::unique_xmalloc_ptr<char>
+   the host's charset.  Returns empty on error, with a python
+   exception set.  */
+
+std::string
 python_string_to_host_string (PyObject *obj)
 {
   PyObject *str;
+  std::string result;
 
   str = python_string_to_unicode (obj);
   if (str == NULL)
-    return NULL;
+    return result;
 
-  gdb::unique_xmalloc_ptr<char>
-    result (unicode_to_encoded_string (str, host_charset ()));
+  result = unicode_to_encoded_string (str, host_charset ());
   Py_DECREF (str);
   return result;
 }
@@ -238,37 +240,36 @@ gdbpy_is_string (PyObject *obj)
 #endif
 }
 
-/* Return the string representation of OBJ, i.e., str (obj).
-   If the result is NULL a python error occurred, the caller must clear it.  */
+/* Return the string representation of OBJ, i.e., str (obj).  If the
+   result is empty a python error occurred, the caller must clear
+   it.  */
 
-gdb::unique_xmalloc_ptr<char>
+std::string
 gdbpy_obj_to_string (PyObject *obj)
 {
   PyObject *str_obj = PyObject_Str (obj);
+  std::string msg;
 
   if (str_obj != NULL)
     {
-      gdb::unique_xmalloc_ptr<char> msg;
-
 #ifdef IS_PY3K
       msg = python_string_to_host_string (str_obj);
 #else
-      msg.reset (xstrdup (PyString_AsString (str_obj)));
+      msg = PyString_AsString (str_obj);
 #endif
-
       Py_DECREF (str_obj);
-      return msg;
     }
 
-  return NULL;
+  return msg;
 }
 
 /* Return the string representation of the exception represented by
-   TYPE, VALUE which is assumed to have been obtained with PyErr_Fetch,
-   i.e., the error indicator is currently clear.
-   If the result is NULL a python error occurred, the caller must clear it.  */
+   TYPE, VALUE which is assumed to have been obtained with
+   PyErr_Fetch, i.e., the error indicator is currently clear.  If the
+   result is empty a python error occurred, the caller must clear
+   it.  */
 
-gdb::unique_xmalloc_ptr<char>
+std::string
 gdbpy_exception_to_string (PyObject *ptype, PyObject *pvalue)
 {
   /* There are a few cases to consider.

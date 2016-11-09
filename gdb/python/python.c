@@ -143,7 +143,7 @@ static void gdbpy_start_type_printers (const struct extension_language_defn *,
 				       struct ext_lang_type_printers *);
 static enum ext_lang_rc gdbpy_apply_type_printers
   (const struct extension_language_defn *,
-   const struct ext_lang_type_printers *, struct type *, char **);
+   const struct ext_lang_type_printers *, struct type *, std::string *);
 static void gdbpy_free_type_printers (const struct extension_language_defn *,
 				      struct ext_lang_type_printers *);
 static void gdbpy_set_quit_flag (const struct extension_language_defn *);
@@ -1020,7 +1020,7 @@ gdbpy_before_prompt_hook (const struct extension_language_defn *extlang,
 			  const char *current_gdb_prompt)
 {
   struct cleanup *cleanup;
-  gdb::unique_xmalloc_ptr<char> prompt;
+  std::string prompt;
 
   if (!gdb_python_initialized)
     return EXT_LANG_RC_NOP;
@@ -1071,19 +1071,19 @@ gdbpy_before_prompt_hook (const struct extension_language_defn *extlang,
 	    {
 	      prompt = python_string_to_host_string (result);
 
-	      if (prompt == NULL)
+	      if (prompt.empty ())
 		goto fail;
 	    }
 	}
     }
 
-  /* If a prompt has been set, PROMPT will not be NULL.  If it is
-     NULL, do not set the prompt.  */
-  if (prompt != NULL)
-    set_prompt (prompt.get ());
+  /* If a prompt has been set, PROMPT will not be empty.  If it is
+     empty, do not set the prompt.  */
+  if (!prompt.empty ())
+    set_prompt (prompt.c_str ());
 
   do_cleanups (cleanup);
-  return prompt != NULL ? EXT_LANG_RC_OK : EXT_LANG_RC_NOP;
+  return !prompt.empty () ? EXT_LANG_RC_OK : EXT_LANG_RC_NOP;
 
  fail:
   gdbpy_print_stack ();
@@ -1215,13 +1215,12 @@ gdbpy_print_stack (void)
       PyErr_Fetch (&ptype, &pvalue, &ptraceback);
 
       /* Fetch the error message contained within ptype, pvalue.  */
-      gdb::unique_xmalloc_ptr<char>
-	msg (gdbpy_exception_to_string (ptype, pvalue));
-      gdb::unique_xmalloc_ptr<char> type (gdbpy_obj_to_string (ptype));
+      std::string msg = gdbpy_exception_to_string (ptype, pvalue);
+      std::string type = gdbpy_obj_to_string (ptype);
 
       TRY
 	{
-	  if (msg == NULL)
+	  if (msg.empty ())
 	    {
 	      /* An error occurred computing the string representation of the
 		 error message.  */
@@ -1231,7 +1230,7 @@ gdbpy_print_stack (void)
 	    }
 	  else
 	    fprintf_filtered (gdb_stderr, "Python Exception %s %s: \n",
-			      type.get (), msg.get ());
+			      type.c_str (), msg.c_str ());
 	}
       CATCH (except, RETURN_MASK_ALL)
 	{
@@ -1439,13 +1438,13 @@ gdbpy_start_type_printers (const struct extension_language_defn *extlang,
 static enum ext_lang_rc
 gdbpy_apply_type_printers (const struct extension_language_defn *extlang,
 			   const struct ext_lang_type_printers *ext_printers,
-			   struct type *type, char **prettied_type)
+			   struct type *type, std::string *prettied_type)
 {
   struct cleanup *cleanups;
   PyObject *type_obj, *type_module = NULL, *func = NULL;
   PyObject *result_obj = NULL;
   PyObject *printers_obj = (PyObject *) ext_printers->py_type_printers;
-  gdb::unique_xmalloc_ptr<char> result;
+  std::string result;
 
   if (printers_obj == NULL)
     return EXT_LANG_RC_NOP;
@@ -1486,8 +1485,8 @@ gdbpy_apply_type_printers (const struct extension_language_defn *extlang,
 
   if (result_obj != Py_None)
     {
-      result = python_string_to_host_string (result_obj);
-      if (result == NULL)
+      *prettied_type = python_string_to_host_string (result_obj);
+      if (result.empty ())
 	gdbpy_print_stack ();
     }
 
@@ -1497,9 +1496,9 @@ gdbpy_apply_type_printers (const struct extension_language_defn *extlang,
   Py_XDECREF (func);
   Py_XDECREF (result_obj);
   do_cleanups (cleanups);
-  if (result != NULL)
+  if (!result.empty ())
     {
-      *prettied_type = result.release ();
+      *prettied_type = std::move (result);
       return EXT_LANG_RC_OK;
     }
   return EXT_LANG_RC_ERROR;

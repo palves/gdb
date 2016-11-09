@@ -4813,7 +4813,8 @@ maybe_print_thread_hit_breakpoint (struct ui_out *uiout)
       ui_out_text (uiout, "Thread ");
       ui_out_field_fmt (uiout, "thread-id", "%s", print_thread_id (thr));
 
-      name = thr->name != NULL ? thr->name : target_thread_name (thr);
+      name = (!thr->name.empty ()
+	      ? thr->name.c_str () : target_thread_name (thr));
       if (name != NULL)
 	{
 	  ui_out_text (uiout, " \"");

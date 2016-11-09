@@ -62,25 +62,25 @@ static PyObject *
 thpy_get_name (PyObject *self, void *ignore)
 {
   thread_object *thread_obj = (thread_object *) self;
-  const char *name;
 
   THPY_REQUIRE_VALID (thread_obj);
 
-  name = thread_obj->thread->name;
-  if (name == NULL)
-    name = target_thread_name (thread_obj->thread);
+  const std::string &name = thread_obj->thread->name;
+  if (!name.empty ())
+    return PyString_FromString (name.c_str ());
 
-  if (name == NULL)
-    Py_RETURN_NONE;
+  const char *tname = target_thread_name (thread_obj->thread);
+  if (tname != NULL)
+    return PyString_FromString (tname);
 
-  return PyString_FromString (name);
+  Py_RETURN_NONE;
 }
 
 static int
 thpy_set_name (PyObject *self, PyObject *newvalue, void *ignore)
 {
   thread_object *thread_obj = (thread_object *) self;
-  gdb::unique_xmalloc_ptr<char> name;
+  std::string name;
 
   if (! thread_obj->thread)
     {
@@ -107,13 +107,11 @@ thpy_set_name (PyObject *self, PyObject *newvalue, void *ignore)
   else
     {
       name = python_string_to_host_string (newvalue);
-      if (! name)
+      if (name.empty ())
 	return -1;
     }
 
-  xfree (thread_obj->thread->name);
-  thread_obj->thread->name = name.release ();
-
+  thread_obj->thread->name = std::move (name);
   return 0;
 }
 

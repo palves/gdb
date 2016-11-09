@@ -557,16 +557,16 @@ varobj_get_display_format (const struct varobj *var)
   return var->format;
 }
 
-gdb::unique_xmalloc_ptr<char>
+std::string
 varobj_get_display_hint (const struct varobj *var)
 {
-  gdb::unique_xmalloc_ptr<char> result;
+  std::string result;
 
 #if HAVE_PYTHON
   struct cleanup *back_to;
 
   if (!gdb_python_initialized)
-    return NULL;
+    return result;
 
   back_to = varobj_ensure_python_env (var);
 
@@ -2484,21 +2484,19 @@ varobj_value_get_print_value (struct value *value,
 			 string_print.  Otherwise just return the extracted
 			 string as a value.  */
 
-		      gdb::unique_xmalloc_ptr<char> s
-			= python_string_to_target_string (output);
+		      thevalue = python_string_to_target_string (output);
 
-		      if (s)
+		      if (!thevalue.empty ())
 			{
 			  struct gdbarch *gdbarch;
-			  gdb::unique_xmalloc_ptr<char> hint
+			  std::string hint
 			    = gdbpy_get_display_hint (value_formatter);
-			  if (hint)
+			  if (!hint.empty ())
 			    {
-			      if (!strcmp (hint.get (), "string"))
+			      if (hint == "string")
 				string_print = 1;
 			    }
 
-			  thevalue = std::string (s.get ());
 			  len = thevalue.size ();
 			  gdbarch = get_type_arch (value_type (value));
 			  type = builtin_type (gdbarch)->builtin_char;

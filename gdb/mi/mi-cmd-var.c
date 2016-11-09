@@ -78,9 +78,9 @@ print_varobj (struct varobj *var, enum print_values print_values,
   if (varobj_get_frozen (var))
     ui_out_field_int (uiout, "frozen", 1);
 
-  gdb::unique_xmalloc_ptr<char> display_hint = varobj_get_display_hint (var);
-  if (display_hint)
-    ui_out_field_string (uiout, "displayhint", display_hint.get ());
+  std::string display_hint = varobj_get_display_hint (var);
+  if (!display_hint.empty ())
+    ui_out_field_string (uiout, "displayhint", display_hint.c_str ());
 
   if (varobj_is_dynamic_p (var))
     ui_out_field_int (uiout, "dynamic", 1);
@@ -403,9 +403,9 @@ mi_cmd_var_list_children (char *command, char **argv, int argc)
   else
     print_values = PRINT_NO_VALUES;
 
-  gdb::unique_xmalloc_ptr<char> display_hint = varobj_get_display_hint (var);
-  if (display_hint)
-    ui_out_field_string (uiout, "displayhint", display_hint.get ());
+  std::string display_hint = varobj_get_display_hint (var);
+  if (!display_hint.empty ())
+    ui_out_field_string (uiout, "displayhint", display_hint.c_str ());
 
   if (from < to)
     {
@@ -758,10 +758,9 @@ varobj_update_one (struct varobj *var, enum print_values print_values,
 	ui_out_field_int (uiout, "new_num_children", 
 			  varobj_get_num_children (r->varobj));
 
-      gdb::unique_xmalloc_ptr<char> display_hint
-	= varobj_get_display_hint (r->varobj);
-      if (display_hint)
-	ui_out_field_string (uiout, "displayhint", display_hint.get ());
+      std::string display_hint = varobj_get_display_hint (r->varobj);
+      if (!display_hint.empty ())
+	ui_out_field_string (uiout, "displayhint", display_hint.c_str ());
 
       if (varobj_is_dynamic_p (r->varobj))
 	ui_out_field_int (uiout, "dynamic", 1);

@@ -75,24 +75,21 @@ py_varobj_iter_next (struct varobj_iter *self)
       if (PyErr_ExceptionMatches (gdbpy_gdb_memory_error))
 	{
 	  PyObject *type, *value, *trace;
-	  char *name_str;
 
 	  PyErr_Fetch (&type, &value, &trace);
-	  gdb::unique_xmalloc_ptr<char>
-	    value_str (gdbpy_exception_to_string (type, value));
+	  std::string value_str = gdbpy_exception_to_string (type, value);
 	  Py_XDECREF (type);
 	  Py_XDECREF (value);
 	  Py_XDECREF (trace);
-	  if (value_str == NULL)
+	  if (value_str.empty ())
 	    {
 	      gdbpy_print_stack ();
 	      return NULL;
 	    }
 
-	  name_str = xstrprintf ("<error at %d>",
-				 self->next_raw_index++);
-	  item = Py_BuildValue ("(ss)", name_str, value_str.get ());
-	  xfree (name_str);
+	  std::string name_str
+	    = string_printf ("<error at %d>", self->next_raw_index++);
+	  item = Py_BuildValue ("(ss)", name_str.c_str (), value_str.c_str ());
 	  if (item == NULL)
 	    {
 	      gdbpy_print_stack ();

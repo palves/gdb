@@ -427,16 +427,16 @@ start_ext_lang_type_printers (void)
    returning the result of the first one that succeeds.
    If there was an error, or if no printer succeeds, then NULL is returned.  */
 
-char *
+std::string
 apply_ext_lang_type_printers (struct ext_lang_type_printers *printers,
 			      struct type *type)
 {
+  std::string result;
   int i;
   const struct extension_language_defn *extlang;
 
   ALL_ENABLED_EXTENSION_LANGUAGES (i, extlang)
     {
-      char *result = NULL;
       enum ext_lang_rc rc;
 
       if (extlang->ops->apply_type_printers == NULL)
@@ -446,7 +446,7 @@ apply_ext_lang_type_printers (struct ext_lang_type_printers *printers,
       switch (rc)
 	{
 	case EXT_LANG_RC_OK:
-	  gdb_assert (result != NULL);
+	  gdb_assert (!result.empty ());
 	  return result;
 	case EXT_LANG_RC_ERROR:
 	  return NULL;
@@ -457,7 +457,7 @@ apply_ext_lang_type_printers (struct ext_lang_type_printers *printers,
 	}
     }
 
-  return NULL;
+  return result;
 }
 
 /* Call this after pretty-printing a type to release all memory held

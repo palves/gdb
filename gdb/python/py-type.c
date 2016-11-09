@@ -1199,8 +1199,8 @@ typy_getitem (PyObject *self, PyObject *key)
   struct type *type = ((type_object *) self)->type;
   int i;
 
-  gdb::unique_xmalloc_ptr<char> field = python_string_to_host_string (key);
-  if (field == NULL)
+  std::string field = python_string_to_host_string (key);
+  if (field.empty ())
     return NULL;
 
   /* We want just fields of this type, not of base types, so instead of
@@ -1215,7 +1215,7 @@ typy_getitem (PyObject *self, PyObject *key)
     {
       const char *t_field_name = TYPE_FIELD_NAME (type, i);
 
-      if (t_field_name && (strcmp_iw (t_field_name, field.get ()) == 0))
+      if (t_field_name && (strcmp_iw (t_field_name, field.c_str ()) == 0))
 	{
 	  return convert_field (type, i);
 	}

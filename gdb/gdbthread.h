@@ -224,9 +224,9 @@ struct thread_info
   /* The inferior this thread belongs to.  */
   struct inferior *inf;
 
-  /* The name of the thread, as specified by the user.  This is NULL
+  /* The name of the thread, as specified by the user.  This is empty
      if the thread does not have a user-given name.  */
-  char *name;
+  std::string name;
 
   /* Non-zero means the thread is executing.  Note: this is different
      from saying that there is an active target and we are stopped at

@@ -203,8 +203,7 @@ free_thread (struct thread_info *tp)
 	xfree (tp->priv);
     }
 
-  xfree (tp->name);
-  xfree (tp);
+  delete tp;
 }
 
 void
@@ -237,7 +236,7 @@ new_thread (struct inferior *inf, ptid_t ptid)
 
   gdb_assert (inf != NULL);
 
-  tp = XCNEW (struct thread_info);
+  tp = new thread_info ();
 
   tp->ptid = ptid;
   tp->global_num = ++highest_thread_num;
@@ -1297,7 +1296,7 @@ print_thread_info_1 (struct ui_out *uiout, char *requested_threads,
 
       target_id = target_pid_to_str (tp->ptid);
       extra_info = target_extra_thread_info (tp);
-      name = tp->name ? tp->name : target_thread_name (tp);
+      name = !tp->name.empty () ? tp->name.c_str () : target_thread_name (tp);
 
       if (ui_out_is_mi_like_p (uiout))
 	{
@@ -1980,8 +1979,10 @@ thread_name_command (char *arg, int from_tty)
   arg = skip_spaces (arg);
 
   info = inferior_thread ();
-  xfree (info->name);
-  info->name = arg ? xstrdup (arg) : NULL;
+  if (arg != NULL)
+    info->name = arg;
+  else
+    info->name.clear ();
 }
 
 /* Find thread ids with a name, target pid, or extra info matching ARG.  */
@@ -2003,10 +2004,10 @@ thread_find_command (char *arg, int from_tty)
   update_thread_list ();
   for (tp = thread_list; tp; tp = tp->next)
     {
-      if (tp->name != NULL && re_exec (tp->name))
+      if (!tp->name.empty () && re_exec (tp->name.c_str ()))
 	{
 	  printf_filtered (_("Thread %s has name '%s'\n"),
-			   print_thread_id (tp), tp->name);
+			   print_thread_id (tp), tp->name.c_str ());
 	  match++;
 	}
 

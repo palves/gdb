@@ -164,7 +164,7 @@ struct extension_language_ops
   enum ext_lang_rc (*apply_type_printers)
     (const struct extension_language_defn *,
      const struct ext_lang_type_printers *,
-     struct type *, char **prettied_type);
+     struct type *, std::string *prettied_type);
 
   /* Called after a type has been printed to give the type pretty-printer
      mechanism an opportunity to clean up.  */
