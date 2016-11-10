@@ -1150,6 +1150,8 @@ captured_main (void *data)
   /* No exit -- exit is through quit_command.  */
 }
 
+#include <iostream>
+
 int
 gdb_main (struct captured_main_args *args)
 {
@@ -1160,6 +1162,14 @@ gdb_main (struct captured_main_args *args)
   CATCH (ex, RETURN_MASK_ALL)
     {
       exception_print (gdb_stderr, ex);
+    }
+  catch (const std::exception &exc)
+    {
+      /*  */
+      std::cerr << exc.what();
+
+      /* Let GDB die.  */
+      throw;
     }
   END_CATCH
 
