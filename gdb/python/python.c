@@ -37,6 +37,8 @@
 #include "location.h"
 #include "ser-event.h"
 
+#include "common/optional"
+
 /* Declared constants and enum for python stack printing.  */
 static const char python_excp_none[] = "none";
 static const char python_excp_full[] = "full";

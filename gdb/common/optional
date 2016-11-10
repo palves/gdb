@@ -26,25 +26,281 @@
  *  This is a Standard C++ Library header.
  */
 
-#ifndef _GLIBCXX_OPTIONAL
-#define _GLIBCXX_OPTIONAL 1
-
-#if __cplusplus <= 201402L
-# include <bits/c++17_warning.h>
-#else
+#ifndef GNU_OPTIONAL
+#define GNU_OPTIONAL 1
 
 #include <utility>
 #include <type_traits>
 #include <stdexcept>
 #include <new>
 #include <initializer_list>
-#include <bits/functexcept.h>
-#include <bits/functional_hash.h>
-#include <bits/enable_special_members.h>
 
-namespace std _GLIBCXX_VISIBILITY(default)
+#define CONSTEXPR14
+
+namespace gnu
 {
-_GLIBCXX_BEGIN_NAMESPACE_VERSION
+/* Define replacements for C++14 helper types.  */
+
+template< bool B, class T = void >
+using enable_if_t = typename std::enable_if<B, T>::type;
+
+template< class T >
+using remove_cv_t = typename std::remove_cv<T>::type;
+
+template< class T >
+using remove_const_t = typename std::remove_const<T>::type;
+
+template< class T >
+using decay_t = typename std::decay<T>::type;
+
+/* Define C++17 helper types.  */
+template< class... >
+using void_t = void;
+
+struct in_place_t {};
+
+/* Meta programming helper types pulled out of type_traits.  */
+
+template<typename...>
+  struct __or_;
+
+template<>
+  struct __or_<>
+  : public std::false_type
+  { };
+
+template<typename _B1>
+  struct __or_<_B1>
+  : public _B1
+  { };
+
+template<typename _B1, typename _B2>
+  struct __or_<_B1, _B2>
+	: public std::conditional<_B1::value, _B1, _B2>::type
+  { };
+
+template<typename _B1, typename _B2, typename _B3, typename... _Bn>
+  struct __or_<_B1, _B2, _B3, _Bn...>
+	: public std::conditional<_B1::value, _B1, __or_<_B2, _B3, _Bn...>>::type
+  { };
+
+template<typename...>
+  struct __and_;
+
+template<>
+  struct __and_<>
+  : public std::true_type
+  { };
+
+template<typename _B1>
+  struct __and_<_B1>
+  : public _B1
+  { };
+
+template<typename _B1, typename _B2>
+  struct __and_<_B1, _B2>
+  : public std::conditional<_B1::value, _B2, _B1>::type
+  { };
+
+template<typename _B1, typename _B2, typename _B3, typename... _Bn>
+  struct __and_<_B1, _B2, _B3, _Bn...>
+  : public std::conditional<_B1::value, __and_<_B2, _B3, _Bn...>, _B1>::type
+  { };
+
+template<typename _Pp>
+  struct __not_
+  : public std::integral_constant<bool, !_Pp::value>
+  { };
+
+/**
+  * @brief A mixin helper to conditionally enable or disable the copy/move
+  * special members.
+  * @sa _Enable_special_members
+  */
+template<bool _Copy, bool _CopyAssignment,
+         bool _Move, bool _MoveAssignment,
+         typename _Tag = void>
+  struct _Enable_copy_move { };
+
+template<typename _Tag>
+  struct _Enable_copy_move<false, true, true, true, _Tag>
+  {
+    constexpr _Enable_copy_move() noexcept                          = default;
+    constexpr _Enable_copy_move(_Enable_copy_move const&) noexcept  = delete;
+    constexpr _Enable_copy_move(_Enable_copy_move&&) noexcept       = default;
+    _Enable_copy_move&
+    operator=(_Enable_copy_move const&) noexcept                    = default;
+    _Enable_copy_move&
+    operator=(_Enable_copy_move&&) noexcept                         = default;
+  };
+
+template<typename _Tag>
+  struct _Enable_copy_move<true, false, true, true, _Tag>
+  {
+    constexpr _Enable_copy_move() noexcept                          = default;
+    constexpr _Enable_copy_move(_Enable_copy_move const&) noexcept  = default;
+    constexpr _Enable_copy_move(_Enable_copy_move&&) noexcept       = default;
+    _Enable_copy_move&
+    operator=(_Enable_copy_move const&) noexcept                    = delete;
+    _Enable_copy_move&
+    operator=(_Enable_copy_move&&) noexcept                         = default;
+  };
+
+template<typename _Tag>
+  struct _Enable_copy_move<false, false, true, true, _Tag>
+  {
+    constexpr _Enable_copy_move() noexcept                          = default;
+    constexpr _Enable_copy_move(_Enable_copy_move const&) noexcept  = delete;
+    constexpr _Enable_copy_move(_Enable_copy_move&&) noexcept       = default;
+    _Enable_copy_move&
+    operator=(_Enable_copy_move const&) noexcept                    = delete;
+    _Enable_copy_move&
+    operator=(_Enable_copy_move&&) noexcept                         = default;
+  };
+
+template<typename _Tag>
+  struct _Enable_copy_move<true, true, false, true, _Tag>
+  {
+    constexpr _Enable_copy_move() noexcept                          = default;
+    constexpr _Enable_copy_move(_Enable_copy_move const&) noexcept  = default;
+    constexpr _Enable_copy_move(_Enable_copy_move&&) noexcept       = delete;
+    _Enable_copy_move&
+    operator=(_Enable_copy_move const&) noexcept                    = default;
+    _Enable_copy_move&
+    operator=(_Enable_copy_move&&) noexcept                         = default;
+  };
+
+template<typename _Tag>
+  struct _Enable_copy_move<false, true, false, true, _Tag>
+  {
+    constexpr _Enable_copy_move() noexcept                          = default;
+    constexpr _Enable_copy_move(_Enable_copy_move const&) noexcept  = delete;
+    constexpr _Enable_copy_move(_Enable_copy_move&&) noexcept       = delete;
+    _Enable_copy_move&
+    operator=(_Enable_copy_move const&) noexcept                    = default;
+    _Enable_copy_move&
+    operator=(_Enable_copy_move&&) noexcept                         = default;
+  };
+
+template<typename _Tag>
+  struct _Enable_copy_move<true, false, false, true, _Tag>
+  {
+    constexpr _Enable_copy_move() noexcept                          = default;
+    constexpr _Enable_copy_move(_Enable_copy_move const&) noexcept  = default;
+    constexpr _Enable_copy_move(_Enable_copy_move&&) noexcept       = delete;
+    _Enable_copy_move&
+    operator=(_Enable_copy_move const&) noexcept                    = delete;
+    _Enable_copy_move&
+    operator=(_Enable_copy_move&&) noexcept                         = default;
+  };
+
+template<typename _Tag>
+  struct _Enable_copy_move<false, false, false, true, _Tag>
+  {
+    constexpr _Enable_copy_move() noexcept                          = default;
+    constexpr _Enable_copy_move(_Enable_copy_move const&) noexcept  = delete;
+    constexpr _Enable_copy_move(_Enable_copy_move&&) noexcept       = delete;
+    _Enable_copy_move&
+    operator=(_Enable_copy_move const&) noexcept                    = delete;
+    _Enable_copy_move&
+    operator=(_Enable_copy_move&&) noexcept                         = default;
+  };
+
+template<typename _Tag>
+  struct _Enable_copy_move<true, true, true, false, _Tag>
+  {
+    constexpr _Enable_copy_move() noexcept                          = default;
+    constexpr _Enable_copy_move(_Enable_copy_move const&) noexcept  = default;
+    constexpr _Enable_copy_move(_Enable_copy_move&&) noexcept       = default;
+    _Enable_copy_move&
+    operator=(_Enable_copy_move const&) noexcept                    = default;
+    _Enable_copy_move&
+    operator=(_Enable_copy_move&&) noexcept                         = delete;
+  };
+
+template<typename _Tag>
+  struct _Enable_copy_move<false, true, true, false, _Tag>
+  {
+    constexpr _Enable_copy_move() noexcept                          = default;
+    constexpr _Enable_copy_move(_Enable_copy_move const&) noexcept  = delete;
+    constexpr _Enable_copy_move(_Enable_copy_move&&) noexcept       = default;
+    _Enable_copy_move&
+    operator=(_Enable_copy_move const&) noexcept                    = default;
+    _Enable_copy_move&
+    operator=(_Enable_copy_move&&) noexcept                         = delete;
+  };
+
+template<typename _Tag>
+  struct _Enable_copy_move<true, false, true, false, _Tag>
+  {
+    constexpr _Enable_copy_move() noexcept                          = default;
+    constexpr _Enable_copy_move(_Enable_copy_move const&) noexcept  = default;
+    constexpr _Enable_copy_move(_Enable_copy_move&&) noexcept       = default;
+    _Enable_copy_move&
+    operator=(_Enable_copy_move const&) noexcept                    = delete;
+    _Enable_copy_move&
+    operator=(_Enable_copy_move&&) noexcept                         = delete;
+  };
+
+template<typename _Tag>
+  struct _Enable_copy_move<false, false, true, false, _Tag>
+  {
+    constexpr _Enable_copy_move() noexcept                          = default;
+    constexpr _Enable_copy_move(_Enable_copy_move const&) noexcept  = delete;
+    constexpr _Enable_copy_move(_Enable_copy_move&&) noexcept       = default;
+    _Enable_copy_move&
+    operator=(_Enable_copy_move const&) noexcept                    = delete;
+    _Enable_copy_move&
+    operator=(_Enable_copy_move&&) noexcept                         = delete;
+  };
+
+template<typename _Tag>
+  struct _Enable_copy_move<true, true, false, false, _Tag>
+  {
+    constexpr _Enable_copy_move() noexcept                          = default;
+    constexpr _Enable_copy_move(_Enable_copy_move const&) noexcept  = default;
+    constexpr _Enable_copy_move(_Enable_copy_move&&) noexcept       = delete;
+    _Enable_copy_move&
+    operator=(_Enable_copy_move const&) noexcept                    = default;
+    _Enable_copy_move&
+    operator=(_Enable_copy_move&&) noexcept                         = delete;
+  };
+
+template<typename _Tag>
+  struct _Enable_copy_move<false, true, false, false, _Tag>
+  {
+    constexpr _Enable_copy_move() noexcept                          = default;
+    constexpr _Enable_copy_move(_Enable_copy_move const&) noexcept  = delete;
+    constexpr _Enable_copy_move(_Enable_copy_move&&) noexcept       = delete;
+    _Enable_copy_move&
+    operator=(_Enable_copy_move const&) noexcept                    = default;
+    _Enable_copy_move&
+    operator=(_Enable_copy_move&&) noexcept                         = delete;
+  };
+
+template<typename _Tag>
+  struct _Enable_copy_move<true, false, false, false, _Tag>
+  {
+    constexpr _Enable_copy_move() noexcept                          = default;
+    constexpr _Enable_copy_move(_Enable_copy_move const&) noexcept  = default;
+    constexpr _Enable_copy_move(_Enable_copy_move&&) noexcept       = delete;
+    _Enable_copy_move&
+    operator=(_Enable_copy_move const&) noexcept                    = delete;
+    _Enable_copy_move&
+    operator=(_Enable_copy_move&&) noexcept                         = delete;
+  };
+
+template<typename _Tag>
+  struct _Enable_copy_move<false, false, false, false, _Tag>
+  {
+    constexpr _Enable_copy_move() noexcept                          = default;
+    constexpr _Enable_copy_move(_Enable_copy_move const&) noexcept  = delete;
+    constexpr _Enable_copy_move(_Enable_copy_move&&) noexcept       = delete;
+    _Enable_copy_move&
+    operator=(_Enable_copy_move const&) noexcept                    = delete;
+    _Enable_copy_move&
+    operator=(_Enable_copy_move&&) noexcept                         = delete;
+  };
 
   /**
    *  @addtogroup utilities
@@ -76,7 +332,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
    *  dereferenced.
    *  @ingroup exceptions
    */
-  class bad_optional_access : public logic_error
+  class bad_optional_access : public std::logic_error
   {
     // XXX See LEWG 72, https://issues.isocpp.org/show_bug.cgi?id=72
   public:
@@ -101,7 +357,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 
   template<typename _Tp>
     struct _Has_addressof_mem<_Tp,
-         __void_t<decltype( std::declval<const _Tp&>().operator&() )>
+         void_t<decltype( std::declval<const _Tp&>().operator&() )>
       >
     : std::true_type { };
 
@@ -110,7 +366,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 
   template<typename _Tp>
     struct _Has_addressof_free<_Tp,
-         __void_t<decltype( operator&(std::declval<const _Tp&>()) )>
+         void_t<decltype( operator&(std::declval<const _Tp&>()) )>
       >
     : std::true_type { };
 
@@ -156,7 +412,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
     * @see optional, _Enable_special_members
     */
   template<typename _Tp, bool _ShouldProvideDestructor =
-	   !is_trivially_destructible<_Tp>::value>
+	   !std::is_trivially_destructible<_Tp>::value>
     class _Optional_base
     {
     private:
@@ -180,12 +436,12 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
         : _M_payload(std::forward<_Args>(__args)...), _M_engaged(true) { }
 
       template<typename _Up, typename... _Args,
-               enable_if_t<is_constructible<_Tp,
-                                            initializer_list<_Up>&,
+               enable_if_t<std::is_constructible<_Tp,
+					    std::initializer_list<_Up>&,
                                             _Args&&...>::value,
                            int>...>
         constexpr explicit _Optional_base(in_place_t,
-                                          initializer_list<_Up> __il,
+                                          std::initializer_list<_Up> __il,
                                           _Args&&... __args)
         : _M_payload(__il, std::forward<_Args>(__args)...),
           _M_engaged(true) { }
@@ -198,7 +454,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
       }
 
       _Optional_base(_Optional_base&& __other)
-      noexcept(is_nothrow_move_constructible<_Tp>())
+      noexcept(std::is_nothrow_move_constructible<_Tp>())
       {
         if (__other._M_engaged)
           this->_M_construct(std::move(__other._M_get()));
@@ -223,8 +479,8 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 
       _Optional_base&
       operator=(_Optional_base&& __other)
-      noexcept(__and_<is_nothrow_move_constructible<_Tp>,
-		      is_nothrow_move_assignable<_Tp>>())
+      noexcept(__and_<std::is_nothrow_move_constructible<_Tp>,
+		      std::is_nothrow_move_assignable<_Tp>>())
       {
 	if (this->_M_engaged && __other._M_engaged)
 	  this->_M_get() = std::move(__other._M_get());
@@ -252,11 +508,11 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
       { return this->_M_engaged; }
 
       // The _M_get operations have _M_engaged as a precondition.
-      constexpr _Tp&
+      CONSTEXPR14 _Tp&
       _M_get() noexcept
       { return _M_payload; }
 
-      constexpr const _Tp&
+      CONSTEXPR14 const _Tp&
       _M_get() const noexcept
       { return _M_payload; }
 
@@ -265,7 +521,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
       template<typename... _Args>
         void
         _M_construct(_Args&&... __args)
-        noexcept(is_nothrow_constructible<_Stored_type, _Args...>())
+	noexcept(std::is_nothrow_constructible<_Stored_type, _Args...>())
         {
           ::new (std::__addressof(this->_M_payload))
             _Stored_type(std::forward<_Args>(__args)...);
@@ -316,12 +572,12 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
         : _M_payload(std::forward<_Args>(__args)...), _M_engaged(true) { }
 
       template<typename _Up, typename... _Args,
-               enable_if_t<is_constructible<_Tp,
-                                            initializer_list<_Up>&,
+               enable_if_t<std::is_constructible<_Tp,
+					    std::initializer_list<_Up>&,
                                             _Args&&...>::value,
 			   int>...>
         constexpr explicit _Optional_base(in_place_t,
-                                          initializer_list<_Up> __il,
+                                          std::initializer_list<_Up> __il,
                                           _Args&&... __args)
         : _M_payload(__il, std::forward<_Args>(__args)...),
           _M_engaged(true) { }
@@ -333,7 +589,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
       }
 
       _Optional_base(_Optional_base&& __other)
-      noexcept(is_nothrow_move_constructible<_Tp>())
+      noexcept(std::is_nothrow_move_constructible<_Tp>())
       {
         if (__other._M_engaged)
           this->_M_construct(std::move(__other._M_get()));
@@ -356,8 +612,8 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 
       _Optional_base&
       operator=(_Optional_base&& __other)
-      noexcept(__and_<is_nothrow_move_constructible<_Tp>,
-		      is_nothrow_move_assignable<_Tp>>())
+      noexcept(__and_<std::is_nothrow_move_constructible<_Tp>,
+		      std::is_nothrow_move_assignable<_Tp>>())
       {
 	if (this->_M_engaged && __other._M_engaged)
 	  this->_M_get() = std::move(__other._M_get());
@@ -378,18 +634,18 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
       constexpr bool _M_is_engaged() const noexcept
       { return this->_M_engaged; }
 
-      constexpr _Tp&
+      CONSTEXPR14 _Tp&
       _M_get() noexcept
       { return _M_payload; }
 
-      constexpr const _Tp&
+      CONSTEXPR14 const _Tp&
       _M_get() const noexcept
       { return _M_payload; }
 
       template<typename... _Args>
         void
         _M_construct(_Args&&... __args)
-        noexcept(is_nothrow_constructible<_Stored_type, _Args...>())
+        noexcept(std::is_nothrow_constructible<_Stored_type, _Args...>())
         {
           ::new (std::__addressof(this->_M_payload))
             _Stored_type(std::forward<_Args>(__args)...);
@@ -425,21 +681,21 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 
   template<typename _Tp, typename _Up>
     using __converts_from_optional =
-      __or_<is_constructible<_Tp, const optional<_Up>&>,
-	    is_constructible<_Tp, optional<_Up>&>,
-	    is_constructible<_Tp, const optional<_Up>&&>,
-	    is_constructible<_Tp, optional<_Up>&&>,
-	    is_convertible<const optional<_Up>&, _Tp>,
-	    is_convertible<optional<_Up>&, _Tp>,
-	    is_convertible<const optional<_Up>&&, _Tp>,
-	    is_convertible<optional<_Up>&&, _Tp>>;
+	  __or_<std::is_constructible<_Tp, const optional<_Up>&>,
+	    std::is_constructible<_Tp, optional<_Up>&>,
+	    std::is_constructible<_Tp, const optional<_Up>&&>,
+	    std::is_constructible<_Tp, optional<_Up>&&>,
+	    std::is_convertible<const optional<_Up>&, _Tp>,
+	    std::is_convertible<optional<_Up>&, _Tp>,
+	    std::is_convertible<const optional<_Up>&&, _Tp>,
+	    std::is_convertible<optional<_Up>&&, _Tp>>;
 
   template<typename _Tp, typename _Up>
     using __assigns_from_optional =
-      __or_<is_assignable<_Tp&, const optional<_Up>&>,
-	    is_assignable<_Tp&, optional<_Up>&>,
-	    is_assignable<_Tp&, const optional<_Up>&&>,
-	    is_assignable<_Tp&, optional<_Up>&&>>;
+	  __or_<std::is_assignable<_Tp&, const optional<_Up>&>,
+	    std::is_assignable<_Tp&, optional<_Up>&>,
+	    std::is_assignable<_Tp&, const optional<_Up>&&>,
+	    std::is_assignable<_Tp&, optional<_Up>&&>>;
 
   /**
     * @brief Class template for optional values.
@@ -449,19 +705,19 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
     : private _Optional_base<_Tp>,
       private _Enable_copy_move<
         // Copy constructor.
-        is_copy_constructible<_Tp>::value,
+	std::is_copy_constructible<_Tp>::value,
         // Copy assignment.
-        __and_<is_copy_constructible<_Tp>, is_copy_assignable<_Tp>>::value,
+        __and_<std::is_copy_constructible<_Tp>, std::is_copy_assignable<_Tp>>::value,
         // Move constructor.
-        is_move_constructible<_Tp>::value,
+        std::is_move_constructible<_Tp>::value,
         // Move assignment.
-        __and_<is_move_constructible<_Tp>, is_move_assignable<_Tp>>::value,
+        __and_<std::is_move_constructible<_Tp>, std::is_move_assignable<_Tp>>::value,
         // Unique tag type.
         optional<_Tp>>
     {
-      static_assert(__and_<__not_<is_same<remove_cv_t<_Tp>, nullopt_t>>,
-			   __not_<is_same<remove_cv_t<_Tp>, in_place_t>>,
-			   __not_<is_reference<_Tp>>>(),
+      static_assert(__and_<__not_<std::is_same<remove_cv_t<_Tp>, nullopt_t>>,
+			   __not_<std::is_same<remove_cv_t<_Tp>, in_place_t>>,
+			   __not_<std::is_reference<_Tp>>>(),
                     "Invalid instantiation of optional<T>");
 
     private:
@@ -478,87 +734,100 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
       // Converting constructors for engaged optionals.
       template <typename _Up = _Tp,
                 enable_if_t<__and_<
-			      __not_<is_same<optional<_Tp>, decay_t<_Up>>>,
-			      is_constructible<_Tp, _Up&&>,
-			      is_convertible<_Up&&, _Tp>
+			      __not_<std::is_same<optional<_Tp>, decay_t<_Up>>>,
+			      std::is_constructible<_Tp, _Up&&>,
+			      std::is_convertible<_Up&&, _Tp>
 			      >::value, bool> = true>
       constexpr optional(_Up&& __t)
-        : _Base(std::in_place, std::forward<_Up>(__t)) { }
+	  : _Base(in_place_t (), std::forward<_Up>(__t)) { }
 
       template <typename _Up = _Tp,
                 enable_if_t<__and_<
-			      __not_<is_same<optional<_Tp>, decay_t<_Up>>>,
-			      is_constructible<_Tp, _Up&&>,
-			      __not_<is_convertible<_Up&&, _Tp>>
+				    __not_<std::is_same<optional<_Tp>, decay_t<_Up>>>,
+			      std::is_constructible<_Tp, _Up&&>,
+			      __not_<std::is_convertible<_Up&&, _Tp>>
 			      >::value, bool> = false>
       explicit constexpr optional(_Up&& __t)
-        : _Base(std::in_place, std::forward<_Up>(__t)) { }
+	      : _Base(in_place_t(), std::forward<_Up>(__t)) { }
 
       template <typename _Up,
                 enable_if_t<__and_<
-			    __not_<is_same<_Tp, _Up>>,
-			    is_constructible<_Tp, const _Up&>,
-			    is_convertible<const _Up&, _Tp>,
+			    __not_<std::is_same<_Tp, _Up>>,
+			    std::is_constructible<_Tp, const _Up&>,
+			    std::is_convertible<const _Up&, _Tp>,
 			    __not_<__converts_from_optional<_Tp, _Up>>
 			    >::value, bool> = true>
       constexpr optional(const optional<_Up>& __t)
+#if 1
+        : _Base(__t ? optional<_Tp>(*__t) : optional<_Tp>()) { }
+#else
       {
 	if (__t)
 	  emplace(*__t);
       }
+#endif
 
       template <typename _Up,
                  enable_if_t<__and_<
-			       __not_<is_same<_Tp, _Up>>,
-			       is_constructible<_Tp, const _Up&>,
-			       __not_<is_convertible<const _Up&, _Tp>>,
+			       __not_<std::is_same<_Tp, _Up>>,
+			       std::is_constructible<_Tp, const _Up&>,
+			       __not_<std::is_convertible<const _Up&, _Tp>>,
 			       __not_<__converts_from_optional<_Tp, _Up>>
 			       >::value, bool> = false>
       explicit constexpr optional(const optional<_Up>& __t)
+	      : _Base(__t ? optional<_Tp>(*__t) : optional<_Tp>()) { }
+#if 0
       {
 	if (__t)
 	  emplace(*__t);
       }
+#endif
 
       template <typename _Up,
                 enable_if_t<__and_<
-			      __not_<is_same<_Tp, _Up>>,
-			      is_constructible<_Tp, _Up&&>,
-			      is_convertible<_Up&&, _Tp>,
+			      __not_<std::is_same<_Tp, _Up>>,
+			      std::is_constructible<_Tp, _Up&&>,
+			      std::is_convertible<_Up&&, _Tp>,
 			      __not_<__converts_from_optional<_Tp, _Up>>
 			      >::value, bool> = true>
       constexpr optional(optional<_Up>&& __t)
-      {
+        : _Base(__t ? optional<_Tp>(std::move(*__t)) : optional<_Tp>()) { }
+#if 0
+     {
 	if (__t)
 	  emplace(std::move(*__t));
       }
+#endif
 
       template <typename _Up,
                 enable_if_t<__and_<
-			    __not_<is_same<_Tp, _Up>>,
-			    is_constructible<_Tp, _Up&&>,
-			    __not_<is_convertible<_Up&&, _Tp>>,
+			    __not_<std::is_same<_Tp, _Up>>,
+			    std::is_constructible<_Tp, _Up&&>,
+			    __not_<std::is_convertible<_Up&&, _Tp>>,
 			    __not_<__converts_from_optional<_Tp, _Up>>
 			    >::value, bool> = false>
       explicit constexpr optional(optional<_Up>&& __t)
+       : _Base(__t ? optional<_Tp>(std::move(*__t)) : optional<_Tp>()) { }
+#if 0
       {
 	if (__t)
 	  emplace(std::move(*__t));
       }
+#endif
 
       template<typename... _Args>
-      explicit constexpr optional(in_place_t, _Args&&... __args)
-        : _Base(std::in_place, std::forward<_Args>(__args)...) { }
+      explicit constexpr optional(in_place_t in_place, _Args&&... __args)
+	      : _Base(in_place, std::forward<_Args>(__args)...) { }
 
       template<typename _Up, typename... _Args,
-               enable_if_t<is_constructible<_Tp,
-                                            initializer_list<_Up>&,
+               enable_if_t<std::is_constructible<_Tp,
+                                            std::initializer_list<_Up>&,
                                             _Args&&...>::value,
                            int>...>
-      explicit constexpr optional(in_place_t,
-				  initializer_list<_Up> __il,
+      explicit constexpr optional(in_place_t in_place,
+				  std::initializer_list<_Up> __il,
 				  _Args&&... __args)
-        : _Base(std::in_place, __il, std::forward<_Args>(__args)...) { }
+        : _Base(in_place, __il, std::forward<_Args>(__args)...) { }
 
       // Assignment operators.
       optional&
@@ -570,11 +839,11 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 
       template<typename _Up = _Tp>
         enable_if_t<__and_<
-		      __not_<is_same<optional<_Tp>, decay_t<_Up>>>,
-		      is_constructible<_Tp, _Up>,
-		      __not_<__and_<is_scalar<_Tp>,
-				    is_same<_Tp, decay_t<_Up>>>>,
-		      is_assignable<_Tp&, _Up>>::value,
+		      __not_<std::is_same<optional<_Tp>, decay_t<_Up>>>,
+		      std::is_constructible<_Tp, _Up>,
+		      __not_<__and_<std::is_scalar<_Tp>,
+				    std::is_same<_Tp, decay_t<_Up>>>>,
+		      std::is_assignable<_Tp&, _Up>>::value,
 		    optional&>
         operator=(_Up&& __u)
         {
@@ -588,9 +857,9 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 
       template<typename _Up>
 	enable_if_t<__and_<
-		      __not_<is_same<_Tp, _Up>>,
-		      is_constructible<_Tp, const _Up&>,
-		      is_assignable<_Tp&, _Up>,
+		      __not_<std::is_same<_Tp, _Up>>,
+		      std::is_constructible<_Tp, const _Up&>,
+		      std::is_assignable<_Tp&, _Up>,
 		      __not_<__converts_from_optional<_Tp, _Up>>,
 		      __not_<__assigns_from_optional<_Tp, _Up>>
 		      >::value,
@@ -613,9 +882,9 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 
       template<typename _Up>
 	enable_if_t<__and_<
-		      __not_<is_same<_Tp, _Up>>,
-		      is_constructible<_Tp, _Up>,
-		      is_assignable<_Tp&, _Up>,
+		      __not_<std::is_same<_Tp, _Up>>,
+		      std::is_constructible<_Tp, _Up>,
+		      std::is_assignable<_Tp&, _Up>,
 		      __not_<__converts_from_optional<_Tp, _Up>>,
 		      __not_<__assigns_from_optional<_Tp, _Up>>
 		      >::value,
@@ -638,7 +907,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
         }
 
       template<typename... _Args>
-	enable_if_t<is_constructible<_Tp, _Args&&...>::value>
+	enable_if_t<std::is_constructible<_Tp, _Args&&...>::value>
 	emplace(_Args&&... __args)
 	{
 	  this->_M_reset();
@@ -646,9 +915,9 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 	}
 
       template<typename _Up, typename... _Args>
-	enable_if_t<is_constructible<_Tp, initializer_list<_Up>&,
+	enable_if_t<std::is_constructible<_Tp, std::initializer_list<_Up>&,
 				     _Args&&...>::value>
-	emplace(initializer_list<_Up> __il, _Args&&... __args)
+	emplace(std::initializer_list<_Up> __il, _Args&&... __args)
 	{
 	  this->_M_reset();
 	  this->_M_construct(__il, std::forward<_Args>(__args)...);
@@ -659,8 +928,8 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
       // Swap.
       void
       swap(optional& __other)
-      noexcept(is_nothrow_move_constructible<_Tp>()
-               && noexcept(swap(declval<_Tp&>(), declval<_Tp&>())))
+      noexcept(std::is_nothrow_move_constructible<_Tp>()
+               && noexcept(swap(std::declval<_Tp&>(), std::declval<_Tp&>())))
       {
         using std::swap;
 
@@ -687,19 +956,19 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
       operator->()
       { return std::__addressof(this->_M_get()); }
 
-      constexpr const _Tp&
+      CONSTEXPR14 const _Tp&
       operator*() const&
       { return this->_M_get(); }
 
-      constexpr _Tp&
+      CONSTEXPR14 _Tp&
       operator*()&
       { return this->_M_get(); }
 
-      constexpr _Tp&&
+      CONSTEXPR14 _Tp&&
       operator*()&&
       { return std::move(this->_M_get()); }
 
-      constexpr const _Tp&&
+      CONSTEXPR14 const _Tp&&
       operator*() const&&
       { return std::move(this->_M_get()); }
 
@@ -709,7 +978,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
       constexpr bool has_value() const noexcept
       { return this->_M_is_engaged(); }
 
-      constexpr const _Tp&
+      CONSTEXPR14 const _Tp&
       value() const&
       {
 	return this->_M_is_engaged()
@@ -719,7 +988,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 	     this->_M_get());
       }
 
-      constexpr _Tp&
+      CONSTEXPR14 _Tp&
       value()&
       {
 	return this->_M_is_engaged()
@@ -729,7 +998,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 	     this->_M_get());
       }
 
-      constexpr _Tp&&
+      CONSTEXPR14 _Tp&&
       value()&&
       {
 	return this->_M_is_engaged()
@@ -739,7 +1008,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 	     std::move(this->_M_get()));
       }
 
-      constexpr const _Tp&&
+      CONSTEXPR14 const _Tp&&
       value() const&&
       {
 	return this->_M_is_engaged()
@@ -753,8 +1022,8 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 	constexpr _Tp
 	value_or(_Up&& __u) const&
 	{
-	  static_assert(__and_<is_copy_constructible<_Tp>,
-			       is_convertible<_Up&&, _Tp>>(),
+		static_assert(__and_<std::is_copy_constructible<_Tp>,
+			       std::is_convertible<_Up&&, _Tp>>(),
 			"Cannot return value");
 
 	  return this->_M_is_engaged()
@@ -766,8 +1035,8 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 	_Tp
 	value_or(_Up&& __u) &&
 	{
-	  static_assert(__and_<is_move_constructible<_Tp>,
-			       is_convertible<_Up&&, _Tp>>(),
+	  static_assert(__and_<std::is_move_constructible<_Tp>,
+			       std::is_convertible<_Up&&, _Tp>>(),
 			"Cannot return value" );
 
 	  return this->_M_is_engaged()
@@ -779,13 +1048,13 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 
   template<typename _Tp>
     using __optional_relop_t =
-    enable_if_t<is_convertible<_Tp, bool>::value, bool>;
+	  enable_if_t<std::is_convertible<_Tp, bool>::value, bool>;
 
   // Comparisons between optional values.
   template<typename _Tp>
     constexpr auto
     operator==(const optional<_Tp>& __lhs, const optional<_Tp>& __rhs)
-    -> __optional_relop_t<decltype(declval<_Tp>() == declval<_Tp>())>
+	  -> __optional_relop_t<decltype(std::declval<_Tp>() == std::declval<_Tp>())>
     {
       return static_cast<bool>(__lhs) == static_cast<bool>(__rhs)
 	     && (!__lhs || *__lhs == *__rhs);
@@ -794,7 +1063,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
   template<typename _Tp>
     constexpr auto
     operator!=(const optional<_Tp>& __lhs, const optional<_Tp>& __rhs)
-    -> __optional_relop_t<decltype(declval<_Tp>() != declval<_Tp>())>
+    -> __optional_relop_t<decltype(std::declval<_Tp>() != std::declval<_Tp>())>
     {
       return static_cast<bool>(__lhs) != static_cast<bool>(__rhs)
 	|| (static_cast<bool>(__lhs) && *__lhs != *__rhs);
@@ -803,7 +1072,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
   template<typename _Tp>
     constexpr auto
     operator<(const optional<_Tp>& __lhs, const optional<_Tp>& __rhs)
-    -> __optional_relop_t<decltype(declval<_Tp>() < declval<_Tp>())>
+    -> __optional_relop_t<decltype(std::declval<_Tp>() < std::declval<_Tp>())>
     {
       return static_cast<bool>(__rhs) && (!__lhs || *__lhs < *__rhs);
     }
@@ -811,7 +1080,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
   template<typename _Tp>
     constexpr auto
     operator>(const optional<_Tp>& __lhs, const optional<_Tp>& __rhs)
-    -> __optional_relop_t<decltype(declval<_Tp>() > declval<_Tp>())>
+    -> __optional_relop_t<decltype(std::declval<_Tp>() > std::declval<_Tp>())>
     {
       return static_cast<bool>(__lhs) && (!__rhs || *__lhs > *__rhs);
     }
@@ -819,7 +1088,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
   template<typename _Tp>
     constexpr auto
     operator<=(const optional<_Tp>& __lhs, const optional<_Tp>& __rhs)
-    -> __optional_relop_t<decltype(declval<_Tp>() <= declval<_Tp>())>
+    -> __optional_relop_t<decltype(std::declval<_Tp>() <= std::declval<_Tp>())>
     {
       return !__lhs || (static_cast<bool>(__rhs) && *__lhs <= *__rhs);
     }
@@ -827,7 +1096,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
   template<typename _Tp>
     constexpr auto
     operator>=(const optional<_Tp>& __lhs, const optional<_Tp>& __rhs)
-    -> __optional_relop_t<decltype(declval<_Tp>() >= declval<_Tp>())>
+    -> __optional_relop_t<decltype(std::declval<_Tp>() >= std::declval<_Tp>())>
     {
       return !__rhs || (static_cast<bool>(__lhs) && *__lhs >= *__rhs);
     }
@@ -897,73 +1166,73 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
   template<typename _Tp>
     constexpr auto
     operator==(const optional<_Tp>& __lhs, const _Tp& __rhs)
-    -> __optional_relop_t<decltype(declval<_Tp>() == declval<_Tp>())>
+    -> __optional_relop_t<decltype(std::declval<_Tp>() == std::declval<_Tp>())>
     { return __lhs && *__lhs == __rhs; }
 
   template<typename _Tp>
     constexpr auto
     operator==(const _Tp& __lhs, const optional<_Tp>& __rhs)
-    -> __optional_relop_t<decltype(declval<_Tp>() == declval<_Tp>())>
+    -> __optional_relop_t<decltype(std::declval<_Tp>() == std::declval<_Tp>())>
     { return __rhs && __lhs == *__rhs; }
 
   template<typename _Tp>
     constexpr auto
     operator!=(const optional<_Tp>& __lhs, const _Tp& __rhs)
-    -> __optional_relop_t<decltype(declval<_Tp>() != declval<_Tp>())>
+    -> __optional_relop_t<decltype(std::declval<_Tp>() != std::declval<_Tp>())>
     { return !__lhs || *__lhs != __rhs; }
 
   template<typename _Tp>
     constexpr auto
     operator!=(const _Tp& __lhs, const optional<_Tp>& __rhs)
-    -> __optional_relop_t<decltype(declval<_Tp>() != declval<_Tp>())>
+    -> __optional_relop_t<decltype(std::declval<_Tp>() != std::declval<_Tp>())>
     { return !__rhs || __lhs != *__rhs; }
 
   template<typename _Tp>
     constexpr auto
     operator<(const optional<_Tp>& __lhs, const _Tp& __rhs)
-    -> __optional_relop_t<decltype(declval<_Tp>() < declval<_Tp>())>
+    -> __optional_relop_t<decltype(std::declval<_Tp>() < std::declval<_Tp>())>
     { return !__lhs || *__lhs < __rhs; }
 
   template<typename _Tp>
     constexpr auto
     operator<(const _Tp& __lhs, const optional<_Tp>& __rhs)
-    -> __optional_relop_t<decltype(declval<_Tp>() < declval<_Tp>())>
+    -> __optional_relop_t<decltype(std::declval<_Tp>() < std::declval<_Tp>())>
     { return __rhs && __lhs < *__rhs; }
 
   template<typename _Tp>
     constexpr auto
     operator>(const optional<_Tp>& __lhs, const _Tp& __rhs)
-    -> __optional_relop_t<decltype(declval<_Tp>() > declval<_Tp>())>
+    -> __optional_relop_t<decltype(std::declval<_Tp>() > std::declval<_Tp>())>
     { return __lhs && *__lhs > __rhs; }
 
   template<typename _Tp>
     constexpr auto
     operator>(const _Tp& __lhs, const optional<_Tp>& __rhs)
-    -> __optional_relop_t<decltype(declval<_Tp>() > declval<_Tp>())>
+    -> __optional_relop_t<decltype(std::declval<_Tp>() > std::declval<_Tp>())>
     { return !__rhs || __lhs > *__rhs; }
 
   template<typename _Tp>
     constexpr auto
     operator<=(const optional<_Tp>& __lhs, const _Tp& __rhs)
-    -> __optional_relop_t<decltype(declval<_Tp>() <= declval<_Tp>())>
+    -> __optional_relop_t<decltype(std::declval<_Tp>() <= std::declval<_Tp>())>
     { return !__lhs || *__lhs <= __rhs; }
 
   template<typename _Tp>
     constexpr auto
     operator<=(const _Tp& __lhs, const optional<_Tp>& __rhs)
-    -> __optional_relop_t<decltype(declval<_Tp>() <= declval<_Tp>())>
+    -> __optional_relop_t<decltype(std::declval<_Tp>() <= std::declval<_Tp>())>
     { return __rhs && __lhs <= *__rhs; }
 
   template<typename _Tp>
     constexpr auto
     operator>=(const optional<_Tp>& __lhs, const _Tp& __rhs)
-    -> __optional_relop_t<decltype(declval<_Tp>() >= declval<_Tp>())>
+    -> __optional_relop_t<decltype(std::declval<_Tp>() >= std::declval<_Tp>())>
     { return __lhs && *__lhs >= __rhs; }
 
   template<typename _Tp>
     constexpr auto
     operator>=(const _Tp& __lhs, const optional<_Tp>& __rhs)
-    -> __optional_relop_t<decltype(declval<_Tp>() >= declval<_Tp>())>
+    -> __optional_relop_t<decltype(std::declval<_Tp>() >= std::declval<_Tp>())>
     { return !__rhs || __lhs >= *__rhs; }
 
   // Swap and creation functions.
@@ -981,22 +1250,25 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
   template<typename _Tp, typename ..._Args>
     constexpr optional<_Tp>
     make_optional(_Args&&... __args)
-    { return optional<_Tp> { in_place, std::forward<_Args>(__args)... }; }
+    { return optional<_Tp> { in_place_t (), std::forward<_Args>(__args)... }; }
 
   template<typename _Tp, typename _Up, typename ..._Args>
     constexpr optional<_Tp>
-    make_optional(initializer_list<_Up> __il, _Args&&... __args)
-    { return optional<_Tp> { in_place, __il, std::forward<_Args>(__args)... }; }
+  make_optional(std::initializer_list<_Up> __il, _Args&&... __args)
+  { return optional<_Tp> { in_place_t (), __il, std::forward<_Args>(__args)... }; }
+}
+
+namespace std {
 
   // Hash.
   template<typename _Tp>
-    struct hash<optional<_Tp>>
+  struct hash<gnu::optional<_Tp>>
     {
       using result_type = size_t;
-      using argument_type = optional<_Tp>;
+      using argument_type = gnu::optional<_Tp>;
 
       size_t
-      operator()(const optional<_Tp>& __t) const
+      operator()(const gnu::optional<_Tp>& __t) const
       noexcept(noexcept(hash<_Tp> {}(*__t)))
       {
         // We pick an arbitrary hash for disengaged optionals which hopefully
@@ -1008,9 +1280,6 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 
   /// @}
 
-_GLIBCXX_END_NAMESPACE_VERSION
-} // namespace std
-
-#endif // C++17
+} // namespace gnu
 
 #endif // _GLIBCXX_OPTIONAL
