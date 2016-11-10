@@ -22,6 +22,7 @@
 
 #include "extension.h"
 #include "extension-priv.h"
+#include "common/optional"
 
 /* These WITH_* macros are defined by the CPython API checker that
    comes with the Python plugin for GCC.  See:
@@ -533,14 +534,15 @@ int gdbpy_print_python_errors_p (void);
 void gdbpy_print_stack (void);
 
 PyObject *python_string_to_unicode (PyObject *obj);
-std::string unicode_to_target_string (PyObject *unicode_str);
-std::string python_string_to_target_string (PyObject *obj);
+gnu::optional<std::string> unicode_to_target_string (PyObject *unicode_str);
+gnu::optional<std::string> python_string_to_target_string (PyObject *obj);
 PyObject *python_string_to_target_python_string (PyObject *obj);
-std::string python_string_to_host_string (PyObject *obj);
+gnu::optional<std::string> python_string_to_host_string (PyObject *obj);
 PyObject *host_string_to_python_string (const char *str);
 int gdbpy_is_string (PyObject *obj);
-std::string gdbpy_obj_to_string (PyObject *obj);
-std::string gdbpy_exception_to_string (PyObject *ptype, PyObject *pvalue);
+gnu::optional<std::string> gdbpy_obj_to_string (PyObject *obj);
+gnu::optional<std::string> gdbpy_exception_to_string (PyObject *ptype,
+						      PyObject *pvalue);
 
 int gdbpy_is_lazy_string (PyObject *result);
 void gdbpy_extract_lazy_string (PyObject *string, CORE_ADDR *addr,

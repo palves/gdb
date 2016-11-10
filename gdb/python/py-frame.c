@@ -514,9 +514,10 @@ frapy_read_var (PyObject *self, PyObject *args)
     var = symbol_object_to_symbol (sym_obj);
   else if (gdbpy_is_string (sym_obj))
     {
-      std::string var_name = python_string_to_target_string (sym_obj);
+      gnu::optional<std::string> var_name
+	= python_string_to_target_string (sym_obj);
 
-      if (var_name.empty ())
+      if (!var_name)
 	return NULL;
 
       if (block_obj)
@@ -537,7 +538,7 @@ frapy_read_var (PyObject *self, PyObject *args)
 
 	  if (!block)
 	    block = get_frame_block (frame, NULL);
-	  lookup_sym = lookup_symbol (var_name.c_str (),
+	  lookup_sym = lookup_symbol (var_name->c_str (),
 				      block, VAR_DOMAIN, NULL);
 	  var = lookup_sym.symbol;
 	  block = lookup_sym.block;
@@ -552,7 +553,7 @@ frapy_read_var (PyObject *self, PyObject *args)
       if (!var)
 	{
 	  PyErr_Format (PyExc_ValueError,
-			_("Variable '%s' not found."), var_name.c_str ());
+			_("Variable '%s' not found."), var_name->c_str ());
 
 	  return NULL;
 	}

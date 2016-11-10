@@ -116,12 +116,13 @@ pyuw_parse_register_id (struct gdbarch *gdbarch, PyObject *pyo_reg_id,
     return 0;
   if (gdbpy_is_string (pyo_reg_id))
     {
-      std::string reg_name = gdbpy_obj_to_string (pyo_reg_id);
+      gnu::optional<std::string> reg_name
+	= gdbpy_obj_to_string (pyo_reg_id);
 
-      if (reg_name.empty ())
+      if (!reg_name)
         return 0;
-      *reg_num = user_reg_map_name_to_regnum (gdbarch, reg_name.c_str (),
-                                              reg_name.size ());
+      *reg_num = user_reg_map_name_to_regnum (gdbarch, reg_name->c_str (),
+                                              reg_name->size ());
       return *reg_num >= 0;
     }
   else if (PyInt_Check (pyo_reg_id))

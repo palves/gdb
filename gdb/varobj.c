@@ -2433,7 +2433,7 @@ varobj_value_get_print_value (struct value *value,
   stb = mem_fileopen ();
   old_chain = make_cleanup_ui_file_delete (stb);
 
-  std::string thevalue;
+  gnu::optional<std::string> thevalue;
 
 #if HAVE_PYTHON
   if (gdb_python_initialized)
@@ -2486,7 +2486,7 @@ varobj_value_get_print_value (struct value *value,
 
 		      thevalue = python_string_to_target_string (output);
 
-		      if (!thevalue.empty ())
+		      if (thevalue)
 			{
 			  struct gdbarch *gdbarch;
 			  std::string hint
@@ -2497,14 +2497,14 @@ varobj_value_get_print_value (struct value *value,
 				string_print = 1;
 			    }
 
-			  len = thevalue.size ();
+			  len = thevalue->size ();
 			  gdbarch = get_type_arch (value_type (value));
 			  type = builtin_type (gdbarch)->builtin_char;
 
 			  if (!string_print)
 			    {
 			      do_cleanups (old_chain);
-			      return thevalue;
+			      return std::move (*thevalue);
 			    }
 			}
 		      else
@@ -2524,8 +2524,8 @@ varobj_value_get_print_value (struct value *value,
   varobj_formatted_print_options (&opts, format);
 
   /* If the THEVALUE has contents, it is a regular string.  */
-  if (!thevalue.empty ())
-    LA_PRINT_STRING (stb, type, (gdb_byte *) thevalue.c_str (),
+  if (thevalue)
+    LA_PRINT_STRING (stb, type, (gdb_byte *) thevalue->c_str (),
 		     len, encoding, 0, &opts);
   else if (string_print)
     /* Otherwise, if string_print is set, and it is not a regular
@@ -2538,7 +2538,7 @@ varobj_value_get_print_value (struct value *value,
   thevalue = ui_file_as_string (stb);
 
   do_cleanups (old_chain);
-  return thevalue;
+  return std::move (*thevalue);
 }
 
 int

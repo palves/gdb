@@ -77,11 +77,12 @@ py_varobj_iter_next (struct varobj_iter *self)
 	  PyObject *type, *value, *trace;
 
 	  PyErr_Fetch (&type, &value, &trace);
-	  std::string value_str = gdbpy_exception_to_string (type, value);
+	  gnu::optional<std::string> value_str
+	    = gdbpy_exception_to_string (type, value);
 	  Py_XDECREF (type);
 	  Py_XDECREF (value);
 	  Py_XDECREF (trace);
-	  if (value_str.empty ())
+	  if (!value_str)
 	    {
 	      gdbpy_print_stack ();
 	      return NULL;
@@ -89,7 +90,7 @@ py_varobj_iter_next (struct varobj_iter *self)
 
 	  std::string name_str
 	    = string_printf ("<error at %d>", self->next_raw_index++);
-	  item = Py_BuildValue ("(ss)", name_str.c_str (), value_str.c_str ());
+	  item = Py_BuildValue ("(ss)", name_str.c_str (), value_str->c_str ());
 	  if (item == NULL)
 	    {
 	      gdbpy_print_stack ();

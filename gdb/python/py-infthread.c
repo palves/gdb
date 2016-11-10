@@ -80,7 +80,7 @@ static int
 thpy_set_name (PyObject *self, PyObject *newvalue, void *ignore)
 {
   thread_object *thread_obj = (thread_object *) self;
-  std::string name;
+  gnu::optional<std::string> name;
 
   if (! thread_obj->thread)
     {
@@ -107,11 +107,11 @@ thpy_set_name (PyObject *self, PyObject *newvalue, void *ignore)
   else
     {
       name = python_string_to_host_string (newvalue);
-      if (name.empty ())
+      if (!name)
 	return -1;
     }
 
-  thread_obj->thread->name = std::move (name);
+  thread_obj->thread->name = std::move (*name);
   return 0;
 }
 

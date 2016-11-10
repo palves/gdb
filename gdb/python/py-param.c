@@ -145,12 +145,12 @@ set_parameter_value (parmpy_object *self, PyObject *value)
 	}
       else
 	{
-	  std::string string = python_string_to_host_string (value);
-	  if (string.empty ())
+	  gnu::optional<std::string> string = python_string_to_host_string (value);
+	  if (!string)
 	    return -1;
 
 	  xfree (self->value.stringval);
-	  self->value.stringval = xstrdup (string.c_str ());
+	  self->value.stringval = xstrdup (string->c_str ());
 	}
       break;
 
@@ -165,11 +165,11 @@ set_parameter_value (parmpy_object *self, PyObject *value)
 	    return -1;
 	  }
 
-	std::string str = python_string_to_host_string (value);
-	if (str.empty ())
+	gnu::optional<std::string> str = python_string_to_host_string (value);
+	if (!str)
 	  return -1;
 	for (i = 0; self->enumeration[i]; ++i)
-	  if (str == self->enumeration[i])
+	  if (*str == self->enumeration[i])
 	    break;
 	if (! self->enumeration[i])
 	  {
@@ -297,7 +297,7 @@ set_attr (PyObject *obj, PyObject *attr_name, PyObject *val)
 static std::string
 get_doc_string (PyObject *object, PyObject *attr)
 {
-  std::string result;
+  gnu::optional<std::string> result;
 
   if (PyObject_HasAttr (object, attr))
     {
@@ -306,14 +306,14 @@ get_doc_string (PyObject *object, PyObject *attr)
       if (ds_obj && gdbpy_is_string (ds_obj))
 	{
 	  result = python_string_to_host_string (ds_obj);
-	  if (result.empty ())
+	  if (!result)
 	    gdbpy_print_stack ();
 	}
       Py_XDECREF (ds_obj);
     }
-  if (result.empty ())
+  if (!result)
     result = _("This command is not documented.");
-  return result;
+  return std::move (*result);
 }
 
 /* Helper function which will execute a METHOD in OBJ passing the
@@ -324,15 +324,18 @@ get_doc_string (PyObject *object, PyObject *attr)
 static std::string
 call_doc_function (PyObject *obj, PyObject *method, PyObject *arg)
 {
-  std::string data;
+  std::string doc;
   PyObject *result = PyObject_CallMethodObjArgs (obj, method, arg, NULL);
 
   if (result == NULL)
-    return data;
+    return doc;
 
   if (gdbpy_is_string (result))
     {
-      data = python_string_to_host_string (result);
+      gnu::optional<std::string> res
+	= python_string_to_host_string (result);
+      if (res)
+	doc = std::move (*res);
     }
   else
     {
@@ -341,7 +344,7 @@ call_doc_function (PyObject *obj, PyObject *method, PyObject *arg)
     }
 
   Py_DECREF (result);
-  return data;
+  return doc;
 }
 
 /* A callback function that is registered against the respective
@@ -600,7 +603,8 @@ compute_enum_values (parmpy_object *self, PyObject *enum_values)
 			   _("The enumeration item not a string."));
 	  return 0;
 	}
-      self->enumeration[i] = xstrdup (python_string_to_host_string (item).c_str ());
+      self->enumeration[i]
+	= xstrdup (python_string_to_host_string (item)->c_str ());
       Py_DECREF (item);
       if (self->enumeration[i] == NULL)
 	{

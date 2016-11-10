@@ -65,11 +65,11 @@ extract_sym (PyObject *obj, std::string *name,
      string.  */
   if (gdbpy_is_string (result))
     {
-      *name = python_string_to_host_string (result);
+      gnu::optional<std::string> str = python_string_to_host_string (result);
       Py_DECREF (result);
-
-      if (name->empty ())
+      if (!str)
 	return EXT_LANG_BT_ERROR;
+      *name = *str;
       /* If the API returns a string (and not a symbol), then there is
 	no symbol derived language available and the frame filter has
 	either overridden the symbol with a string, or supplied a
@@ -1016,7 +1016,7 @@ py_print_frame (PyObject *filter, int flags,
   struct value_print_options opts;
   PyObject *py_inf_frame;
   int print_level, print_frame_info, print_args, print_locals;
-  std::string function_to_free;
+  gnu::optional<std::string> function_to_free;
 
   /* Extract print settings from FLAGS.  */
   print_level = (flags & PRINT_LEVEL) ? 1 : 0;
@@ -1191,13 +1191,13 @@ py_print_frame (PyObject *filter, int flags,
 	    {
 	      function_to_free = python_string_to_host_string (py_func);
 
-	      if (function_to_free.empty ())
+	      if (!function_to_free)
 		{
 		  do_cleanups (cleanup_stack);
 		  return EXT_LANG_BT_ERROR;
 		}
 
-	      function = function_to_free.c_str ();
+	      function = function_to_free->c_str ();
 	    }
 	  else if (PyLong_Check (py_func))
 	    {
@@ -1284,9 +1284,10 @@ py_print_frame (PyObject *filter, int flags,
 
 	  if (py_fn != Py_None)
 	    {
-	      std::string filename = python_string_to_host_string (py_fn);
+	      gnu::optional<std::string> filename
+		= python_string_to_host_string (py_fn);
 
-	      if (filename.empty ())
+	      if (!filename)
 		{
 		  do_cleanups (cleanup_stack);
 		  return EXT_LANG_BT_ERROR;
@@ -1297,7 +1298,7 @@ py_print_frame (PyObject *filter, int flags,
 		  ui_out_wrap_hint (out, "   ");
 		  ui_out_text (out, " at ");
 		  annotate_frame_source_file ();
-		  ui_out_field_string (out, "file", filename.c_str ());
+		  ui_out_field_string (out, "file", filename->c_str ());
 		  annotate_frame_source_file_end ();
 		}
 	      CATCH (except, RETURN_MASK_ERROR)

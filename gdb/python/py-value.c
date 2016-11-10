@@ -667,7 +667,7 @@ valpy_getitem (PyObject *self, PyObject *key)
 {
   struct gdb_exception except = exception_none;
   value_object *self_value = (value_object *) self;
-  std::string field;
+  gnu::optional<std::string> field;
   struct type *base_class_type = NULL, *field_type = NULL;
   long bitpos = -1;
   PyObject *result = NULL;
@@ -675,7 +675,7 @@ valpy_getitem (PyObject *self, PyObject *key)
   if (gdbpy_is_string (key))
     {
       field = python_string_to_host_string (key);
-      if (field.empty ())
+      if (!field)
 	return NULL;
     }
   else if (gdbpy_is_field (key))
@@ -714,7 +714,7 @@ valpy_getitem (PyObject *self, PyObject *key)
 	    {
 	      field = python_string_to_host_string (name_obj);
 	      Py_DECREF (name_obj);
-	      if (field.empty ())
+	      if (!field)
 		return NULL;
 	    }
 	  else
@@ -753,8 +753,8 @@ valpy_getitem (PyObject *self, PyObject *key)
       struct cleanup *cleanup = make_cleanup_value_free_to_mark (value_mark ());
       struct value *res_val = NULL;
 
-      if (!field.empty ())
-	res_val = value_struct_elt (&tmp, NULL, field.c_str (), NULL,
+      if (field)
+	res_val = value_struct_elt (&tmp, NULL, field->c_str (), NULL,
 				    "struct/class/union");
       else if (bitpos >= 0)
 	res_val = value_struct_elt_bitpos (&tmp, bitpos, field_type,
@@ -1662,9 +1662,9 @@ convert_value_from_python (PyObject *obj)
 	}
       else if (gdbpy_is_string (obj))
 	{
-	  std::string s = python_string_to_target_string (obj);
-	  if (!s.empty ())
-	    value = value_cstring (s.c_str (), s.size (),
+	  gnu::optional<std::string> s = python_string_to_target_string (obj);
+	  if (s)
+	    value = value_cstring (s->c_str (), s->size (),
 				   builtin_type_pychar);
 	}
       else if (PyObject_TypeCheck (obj, &value_object_type))

@@ -440,7 +440,7 @@ bppy_get_condition (PyObject *self, void *closure)
 static int
 bppy_set_condition (PyObject *self, PyObject *newvalue, void *closure)
 {
-  std::string exp;
+  gnu::optional<std::string> exp;
   gdbpy_breakpoint_object *self_bp = (gdbpy_breakpoint_object *) self;
   struct gdb_exception except = exception_none;
 
@@ -455,13 +455,14 @@ bppy_set_condition (PyObject *self, PyObject *newvalue, void *closure)
   else if (newvalue != Py_None)
     {
       exp = python_string_to_host_string (newvalue);
-      if (exp.empty ())
-	return -1;
     }
+
+  if (!exp)
+    return -1;
 
   TRY
     {
-      set_breakpoint_condition (self_bp->bp, exp.c_str (), 0);
+      set_breakpoint_condition (self_bp->bp, exp->c_str (), 0);
     }
   CATCH (ex, RETURN_MASK_ALL)
     {
@@ -1040,15 +1041,15 @@ static int
 local_setattro (PyObject *self, PyObject *name, PyObject *v)
 {
   gdbpy_breakpoint_object *obj = (gdbpy_breakpoint_object *) self;
-  std::string attr = python_string_to_host_string (name);
+  gnu::optional<std::string> attr = python_string_to_host_string (name);
 
-  if (attr.empty ())
+  if (!attr)
     return -1;
 
   /* If the attribute trying to be set is the "stop" method,
      but we already have a condition set in the CLI or other extension
      language, disallow this operation.  */
-  if (attr == stop_func)
+  if (*attr == stop_func)
     {
       const struct extension_language_defn *extlang = NULL;
 

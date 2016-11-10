@@ -163,8 +163,9 @@ cmdpy_function (struct cmd_list_element *command, char *args, int from_tty)
 	 When fetching the error message we need to make our own copy,
 	 we no longer own ptype, pvalue after the call to PyErr_Restore.  */
 
-      std::string msg = gdbpy_exception_to_string (ptype, pvalue);
-      if (msg.empty ())
+      gnu::optional<std::string> msg
+	= gdbpy_exception_to_string (ptype, pvalue);
+      if (!msg)
 	{
 	  /* An error occurred computing the string representation of the
 	     error message.  This is rare, but we should inform the user.  */
@@ -182,12 +183,12 @@ cmdpy_function (struct cmd_list_element *command, char *args, int from_tty)
 	 exceptions is arguably a bug, so we flag it as such.  */
 
       if (! PyErr_GivenExceptionMatches (ptype, gdbpy_gdberror_exc)
-	  || msg.empty ())
+	  || !msg)
 	{
 	  PyErr_Restore (ptype, pvalue, ptraceback);
 	  gdbpy_print_stack ();
-	  if (!msg.empty ())
-	    error (_("Error occurred in Python command: %s"), msg.c_str ());
+	  if (msg)
+	    error (_("Error occurred in Python command: %s"), msg->c_str ());
 	  else
 	    error (_("Error occurred in Python command."));
 	}
@@ -196,7 +197,7 @@ cmdpy_function (struct cmd_list_element *command, char *args, int from_tty)
 	  Py_XDECREF (ptype);
 	  Py_XDECREF (pvalue);
 	  Py_XDECREF (ptraceback);
-	  error ("%s", msg.c_str ());
+	  error ("%s", msg->c_str ());
 	}
     }
 
@@ -378,15 +379,15 @@ cmdpy_completer (struct cmd_list_element *command,
 	      Py_DECREF (elt);
 	      continue;
 	    }
-	  std::string item = python_string_to_host_string (elt);
+	  gnu::optional<std::string> item = python_string_to_host_string (elt);
 	  Py_DECREF (elt);
-	  if (item.empty ())
+	  if (!item)
 	    {
 	      /* Skip problem elements.  */
 	      PyErr_Clear ();
 	      continue;
 	    }
-	  VEC_safe_push (char_ptr, result, xstrdup (item.c_str ()));
+	  VEC_safe_push (char_ptr, result, xstrdup (item->c_str ()));
 	}
 
       Py_DECREF (iter);
@@ -517,7 +518,7 @@ cmdpy_init (PyObject *self, PyObject *args, PyObject *kw)
   const char *name;
   int cmdtype;
   int completetype = -1;
-  std::string docstring;
+  gnu::optional<std::string> docstring;
   struct cmd_list_element **cmd_list;
   char *cmd_name, *pfx_name;
   static char *keywords[] = { "name", "command_class", "completer_class",
@@ -601,7 +602,7 @@ cmdpy_init (PyObject *self, PyObject *args, PyObject *kw)
       if (ds_obj && gdbpy_is_string (ds_obj))
 	{
 	  docstring = python_string_to_host_string (ds_obj);
-	  if (docstring.empty ())
+	  if (!docstring)
 	    {
 	      xfree (cmd_name);
 	      xfree (pfx_name);
@@ -613,9 +614,9 @@ cmdpy_init (PyObject *self, PyObject *args, PyObject *kw)
       Py_XDECREF (ds_obj);
     }
 
-  char *doc = xstrdup (docstring.empty ()
+  char *doc = xstrdup (!docstring
 		       ? _("This command is not documented.")
-		       : docstring.c_str ());
+		       : docstring->c_str ());
 
   Py_INCREF (self);
 

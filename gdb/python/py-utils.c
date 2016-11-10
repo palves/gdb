@@ -21,7 +21,7 @@
 #include "charset.h"
 #include "value.h"
 #include "python-internal.h"
-
+#include "common/optional"
 
 /* This is a cleanup function which decrements the refcount on a
    Python object.  */
@@ -107,11 +107,11 @@ python_string_to_unicode (PyObject *obj)
    conversion, returns an empty string and a python exception is
    set.  */
 
-static std::string
+static gnu::optional<std::string>
 unicode_to_encoded_string (PyObject *unicode_str, const char *charset)
 {
   PyObject *string;
-  std::string result;
+  gnu::optional<std::string> result;
 
   /* Translate string to named charset.  */
   string = PyUnicode_AsEncodedString (unicode_str, charset, NULL);
@@ -144,7 +144,7 @@ unicode_to_encoded_python_string (PyObject *unicode_str, const char *charset)
    unicode string object converted to the target's charset.  If an
    error occurs during the conversion, NULL will be returned and a
    python exception will be set.  */
-std::string
+gnu::optional<std::string>
 unicode_to_target_string (PyObject *unicode_str)
 {
   return unicode_to_encoded_string (unicode_str,
@@ -165,11 +165,11 @@ unicode_to_target_python_string (PyObject *unicode_str)
 /* Converts a python string (8-bit or unicode) to a target string in
    the target's charset.  Returns NULL on error, with a python
    exception set.  */
-std::string
+gnu::optional<std::string>
 python_string_to_target_string (PyObject *obj)
 {
   PyObject *str;
-  std::string result;
+  gnu::optional<std::string> result;
 
   str = python_string_to_unicode (obj);
   if (str == NULL)
@@ -204,15 +204,15 @@ python_string_to_target_python_string (PyObject *obj)
    the host's charset.  Returns empty on error, with a python
    exception set.  */
 
-std::string
+gnu::optional<std::string>
 python_string_to_host_string (PyObject *obj)
 {
   PyObject *str;
-  std::string result;
+  gnu::optional<std::string> result;
 
   str = python_string_to_unicode (obj);
   if (str == NULL)
-    return result;
+    return gnu::nullopt;
 
   result = unicode_to_encoded_string (str, host_charset ());
   Py_DECREF (str);
@@ -244,12 +244,12 @@ gdbpy_is_string (PyObject *obj)
    result is empty a python error occurred, the caller must clear
    it.  */
 
-std::string
+gnu::optional<std::string>
 gdbpy_obj_to_string (PyObject *obj)
 {
-  PyObject *str_obj = PyObject_Str (obj);
-  std::string msg;
+  gnu::optional<std::string> msg;
 
+  PyObject *str_obj = PyObject_Str (obj);
   if (str_obj != NULL)
     {
 #ifdef IS_PY3K
@@ -269,7 +269,7 @@ gdbpy_obj_to_string (PyObject *obj)
    result is empty a python error occurred, the caller must clear
    it.  */
 
-std::string
+gnu::optional<std::string>
 gdbpy_exception_to_string (PyObject *ptype, PyObject *pvalue)
 {
   /* There are a few cases to consider.

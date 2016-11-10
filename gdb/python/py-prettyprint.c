@@ -249,10 +249,10 @@ std::string
 gdbpy_get_display_hint (PyObject *printer)
 {
   PyObject *hint;
-  std::string result;
+  gnu::optional<std::string> result;
 
   if (! PyObject_HasAttr (printer, gdbpy_display_hint_cst))
-    return result;
+    return {};
 
   hint = PyObject_CallMethodObjArgs (printer, gdbpy_display_hint_cst, NULL);
   if (hint)
@@ -260,7 +260,7 @@ gdbpy_get_display_hint (PyObject *printer)
       if (gdbpy_is_string (hint))
 	{
 	  result = python_string_to_host_string (hint);
-	  if (result.empty ())
+	  if (!result)
 	    gdbpy_print_stack ();
 	}
       Py_DECREF (hint);
@@ -268,7 +268,7 @@ gdbpy_get_display_hint (PyObject *printer)
   else
     gdbpy_print_stack ();
 
-  return result;
+  return std::move (*result);
 }
 
 /* A wrapper for gdbpy_print_stack that ignores MemoryError.  */
@@ -286,13 +286,13 @@ print_stack_unless_memory_error (struct ui_file *stream)
       make_cleanup_py_decref (value);
       make_cleanup_py_decref (trace);
 
-      std::string msg = gdbpy_exception_to_string (type, value);
+      gnu::optional<std::string> msg = gdbpy_exception_to_string (type, value);
 
-      if (msg.empty ())
+      if (!msg)
 	fprintf_filtered (stream, _("<error reading variable>"));
       else
 	fprintf_filtered (stream, _("<error reading variable: %s>"),
-			  msg.c_str ());
+			  msg->c_str ());
 
       do_cleanups (cleanup);
     }
@@ -647,11 +647,12 @@ print_children (PyObject *printer, const char *hint,
 	}
       else if (gdbpy_is_string (py_v))
 	{
-	  std::string output = python_string_to_host_string (py_v);
-	  if (output.empty ())
+	  gnu::optional<std::string> output
+	    = python_string_to_host_string (py_v);
+	  if (!output)
 	    gdbpy_print_stack ();
 	  else
-	    fputs_filtered (output.c_str (), stream);
+	    fputs_filtered (output->c_str (), stream);
 	}
       else
 	{
