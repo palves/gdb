@@ -44,6 +44,14 @@ enum RE2
     RE2_FLAG2 = 1 << 2,
   };
 
+/* An unsigned "real enum".  */
+enum URE
+  {
+    URE_FLAG1 = 1 << 1,
+    URE_FLAG2 = 1 << 2,
+    URE_FLAG3 = 0xffffffff,
+  };
+
 /* A non-flags enum.  */
 enum NF
   {
@@ -54,6 +62,7 @@ enum NF
 /* The corresponding "enum flags" types.  */
 using EF = enum_flags<RE>;
 using EF2 = enum_flags<RE2>;
+using UEF = enum_flags<URE>;
 
 }} /* namespace selftests::enum_flags */
 
@@ -106,38 +115,46 @@ static EF ef ATTRIBUTE_UNUSED;
 									\
   /* If the expression is valid (would compile), then this overload is  \
      selected.  */							\
-  template <typename EF, typename RE, typename EF2, typename RE2>	\
+  template <typename EF, typename RE,					\
+	    typename EF2, typename RE2,					\
+	    typename UEF, typename URE>					\
   static constexpr auto check_valid (std::nullptr_t)			\
     -> decltype (EXPR, bool())						\
   { return true; }							\
 									\
   /* If the expression is ill-formed, then this overload is		\
      selected.  */							\
-  template <typename EF, typename RE, typename EF2, typename RE2>	\
+  template <typename EF, typename RE,					\
+	    typename EF2, typename RE2,					\
+	    typename UEF, typename URE>					\
   static constexpr bool check_valid (...)				\
   { return false; }							\
 									\
   static constexpr bool valid_expr					\
-    = check_valid<EF, RE, EF2, RE2> (nullptr);				\
+    = check_valid<EF, RE, EF2, RE2, UEF, URE> (nullptr);		\
   static_assert (valid_expr == VALID, "validity check failed");		\
 									\
   /* Now the expression type check.  */					\
 									\
-  template <typename EF, typename RE, typename EF2, typename RE2>	\
+  template <typename EF, typename RE,					\
+	    typename EF2, typename RE2,					\
+	    typename UEF, typename URE>					\
   static constexpr auto check_same_type (std::nullptr_t)		\
     -> decltype (EXPR, bool(false))					\
   {									\
     return std::is_same<EXPR_TYPE, decltype (EXPR)>::value;		\
   }									\
 									\
-  template <typename EF, typename RE, typename EF2, typename RE2>	\
+  template <typename EF, typename RE,					\
+	    typename EF2, typename RE2,					\
+	    typename UEF, typename URE>					\
   static constexpr bool check_same_type (...)				\
   {									\
     return true;							\
   }									\
 									\
   static constexpr bool same_type					\
-    = check_same_type<EF, RE, EF2, RE2> (nullptr);			\
+    = check_same_type<EF, RE, EF2, RE2, UEF, URE> (nullptr);		\
   static_assert (same_type, "unexpected expression type");		\
 									\
   } /* namespace */
@@ -307,6 +324,17 @@ CHECK_VALID (true,  int,  true ? EF2 () : EF ())
 #if GCC_VERSION >= 5003 || defined __clang__
 CHECK_VALID (true,  int,  true ? EF () : RE2 ())
 CHECK_VALID (true,  int,  true ? RE2 () : EF ())
+#endif
+
+/* Same, but with an unsigned enum.  */
+
+typedef unsigned int uns;
+
+CHECK_VALID (true,  uns,  true ? EF () : UEF ())
+CHECK_VALID (true,  uns,  true ? UEF () : EF ())
+#if GCC_VERSION >= 5003 || defined __clang__
+CHECK_VALID (true,  uns,  true ? EF () : URE ())
+CHECK_VALID (true,  uns,  true ? URE () : EF ())
 #endif
 
 /* Unfortunately this can't work due to the way C++ computes the
