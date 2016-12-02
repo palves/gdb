@@ -90,3 +90,5 @@
 #endif
 
 #define YYFPRINTF parser_fprintf
+
+#define YY_FATAL_ERROR(msg) internal_error (__FILE__, __LINE__, msg)
