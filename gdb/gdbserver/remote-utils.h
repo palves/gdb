@@ -40,6 +40,13 @@ void remote_open (char *name);
 void remote_close (void);
 void write_ok (char *buf);
 void write_enn (char *buf);
+
+/* Write an RSP error message in BUF, using the "E.MSG" format.  The
+   error message is constructed using a printf style argument
+   list.  */
+void write_error_msg (char *buf, const char *fmt, ...)
+  ATTRIBUTE_PRINTF (2, 3);
+
 void initialize_async_io (void);
 void enable_async_io (void);
 void disable_async_io (void);

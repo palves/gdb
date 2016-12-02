@@ -500,14 +500,14 @@ handle_btrace_general_set (char *own_buf)
   if (ptid_equal (general_thread, null_ptid)
       || ptid_equal (general_thread, minus_one_ptid))
     {
-      strcpy (own_buf, "E.Must select a single thread.");
+      write_error_msg (own_buf, "Must select a single thread.");
       return -1;
     }
 
   thread = find_thread_ptid (general_thread);
   if (thread == NULL)
     {
-      strcpy (own_buf, "E.No such thread.");
+      write_error_msg (own_buf, "No such thread.");
       return -1;
     }
 
@@ -546,14 +546,14 @@ handle_btrace_conf_general_set (char *own_buf)
   if (ptid_equal (general_thread, null_ptid)
       || ptid_equal (general_thread, minus_one_ptid))
     {
-      strcpy (own_buf, "E.Must select a single thread.");
+      write_error_msg (own_buf, "Must select a single thread.");
       return -1;
     }
 
   thread = find_thread_ptid (general_thread);
   if (thread == NULL)
     {
-      strcpy (own_buf, "E.No such thread.");
+      write_error_msg (own_buf, "No such thread.");
       return -1;
     }
 
@@ -566,7 +566,7 @@ handle_btrace_conf_general_set (char *own_buf)
       size = strtoul (op + strlen ("bts:size="), &endp, 16);
       if (endp == NULL || *endp != 0 || errno != 0 || size > UINT_MAX)
 	{
-	  strcpy (own_buf, "E.Bad size value.");
+	  write_error_msg (own_buf, "Bad size value.");
 	  return -1;
 	}
 
@@ -581,7 +581,7 @@ handle_btrace_conf_general_set (char *own_buf)
       size = strtoul (op + strlen ("pt:size="), &endp, 16);
       if (endp == NULL || *endp != 0 || errno != 0 || size > UINT_MAX)
 	{
-	  strcpy (own_buf, "E.Bad size value.");
+	  write_error_msg (own_buf, "Bad size value.");
 	  return -1;
 	}
 
@@ -589,7 +589,7 @@ handle_btrace_conf_general_set (char *own_buf)
     }
   else
     {
-      strcpy (own_buf, "E.Bad Qbtrace configuration option.");
+      write_error_msg (own_buf, "Bad Qbtrace configuration option.");
       return -1;
     }
 
@@ -673,9 +673,10 @@ handle_general_set (char *own_buf)
 	enabled = 1;
       else
 	{
-	  fprintf (stderr, "Unknown catch-syscalls mode requested: %s\n",
-		   own_buf);
-	  write_enn (own_buf);
+	  /* Must make a copy of P, since P overlaps with OWN_BUF.  */
+	  write_error_msg (own_buf,
+			   "Unknown catch-syscalls mode requested: %s",
+			   std::string (p).c_str ());
 	  return;
 	}
 
@@ -727,19 +728,18 @@ handle_general_set (char *own_buf)
 	req = 1;
       else
 	{
-	  /* We don't know what this mode is, so complain to
-	     GDB.  */
-	  fprintf (stderr, "Unknown non-stop mode requested: %s\n",
-		   own_buf);
-	  write_enn (own_buf);
+	  /* We don't know what this mode is, so complain to GDB.
+	     Must make a copy of MODE, since MODE overlaps with
+	     OWN_BUF.  */
+	  write_error_msg (own_buf, "Unknown non-stop mode requested: %s",
+			   std::string (mode).c_str ());
 	  return;
 	}
 
       req_str = req ? "non-stop" : "all-stop";
       if (start_non_stop (req) != 0)
 	{
-	  fprintf (stderr, "Setting %s mode failed\n", req_str);
-	  write_enn (own_buf);
+	  write_error_msg (own_buf, "Setting %s mode failed", req_str);
 	  return;
 	}
 
@@ -787,7 +787,7 @@ handle_general_set (char *own_buf)
       else
 	{
 	  /* We don't know what this value is, so complain to GDB.  */
-	  sprintf (own_buf, "E.Unknown QAgent value");
+	  write_error_msg (own_buf, "Unknown QAgent value");
 	  return;
 	}
 
@@ -816,12 +816,12 @@ handle_general_set (char *own_buf)
 	req = TRIBOOL_TRUE;
       else
 	{
-	  char *mode_copy = xstrdup (mode);
-
-	  /* We don't know what this mode is, so complain to GDB.  */
-	  sprintf (own_buf, "E.Unknown thread-events mode requested: %s\n",
-		   mode_copy);
-	  xfree (mode_copy);
+	  /* We don't know what this mode is, so complain to GDB.
+	     (Must make a copy of MODE, since MODE overlaps with
+	     OWN_BUF.)  */
+	  write_error_msg (own_buf,
+			   "Unknown thread-events mode requested: %s",
+			   std::string (mode).c_str ());
 	  return;
 	}
 
@@ -1735,20 +1735,20 @@ handle_qxfer_btrace (const char *annex,
   if (ptid_equal (general_thread, null_ptid)
       || ptid_equal (general_thread, minus_one_ptid))
     {
-      strcpy (own_buf, "E.Must select a single thread.");
+      write_error_msg (own_buf, "Must select a single thread.");
       return -3;
     }
 
   thread = find_thread_ptid (general_thread);
   if (thread == NULL)
     {
-      strcpy (own_buf, "E.No such thread.");
+      write_error_msg (own_buf, "No such thread.");
       return -3;
     }
 
   if (thread->btrace == NULL)
     {
-      strcpy (own_buf, "E.Btrace not enabled.");
+      write_error_msg (own_buf, "Btrace not enabled.");
       return -3;
     }
 
@@ -1760,7 +1760,7 @@ handle_qxfer_btrace (const char *annex,
     type = BTRACE_READ_DELTA;
   else
     {
-      strcpy (own_buf, "E.Bad annex.");
+      write_error_msg (own_buf, "Bad annex.");
       return -3;
     }
 
@@ -1809,20 +1809,20 @@ handle_qxfer_btrace_conf (const char *annex,
   if (ptid_equal (general_thread, null_ptid)
       || ptid_equal (general_thread, minus_one_ptid))
     {
-      strcpy (own_buf, "E.Must select a single thread.");
+      write_error_msg (own_buf, "Must select a single thread.");
       return -3;
     }
 
   thread = find_thread_ptid (general_thread);
   if (thread == NULL)
     {
-      strcpy (own_buf, "E.No such thread.");
+      write_error_msg (own_buf, "No such thread.");
       return -3;
     }
 
   if (thread->btrace == NULL)
     {
-      strcpy (own_buf, "E.Btrace not enabled.");
+      write_error_msg (own_buf, "Btrace not enabled.");
       return -3;
     }
 
@@ -2790,7 +2790,7 @@ resume (struct thread_resume *actions, size_t num_actions)
 	{
 	  /* The client does not support this stop reply.  At least
 	     return error.  */
-	  sprintf (own_buf, "E.No unwaited-for children left.");
+	  write_error_msg (own_buf, "No unwaited-for children left.");
 	  disable_async_io ();
 	  return;
 	}
@@ -3016,8 +3016,7 @@ handle_v_requests (char *own_buf, int packet_len, int *new_packet_len)
     {
       if ((!extended_protocol || !multi_process) && target_running ())
 	{
-	  fprintf (stderr, "Already debugging a process\n");
-	  write_enn (own_buf);
+	  write_error_msg (own_buf, "Already debugging a process");
 	  return;
 	}
       handle_v_attach (own_buf);
@@ -3028,8 +3027,7 @@ handle_v_requests (char *own_buf, int packet_len, int *new_packet_len)
     {
       if ((!extended_protocol || !multi_process) && target_running ())
 	{
-	  fprintf (stderr, "Already debugging a process\n");
-	  write_enn (own_buf);
+	  write_error_msg (own_buf, "Already debugging a process");
 	  return;
 	}
       handle_v_run (own_buf);
@@ -3040,8 +3038,7 @@ handle_v_requests (char *own_buf, int packet_len, int *new_packet_len)
     {
       if (!target_running ())
 	{
-	  fprintf (stderr, "No process to kill\n");
-	  write_enn (own_buf);
+	  write_error_msg (own_buf, "No process to kill");
 	  return;
 	}
       handle_v_kill (own_buf);

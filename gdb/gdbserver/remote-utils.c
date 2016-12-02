@@ -1083,6 +1083,21 @@ write_enn (char *buf)
   buf[3] = '\0';
 }
 
+/* See remote-utils.h.  */
+
+void
+write_error_msg (char *buf, const char *fmt, ...)
+{
+  va_list ap;
+
+  va_start (ap, fmt);
+
+  buf[0] = 'E';
+  buf[1] = '.';
+  vsprintf (own_buf + 2, fmt, ap);
+  va_end (ap);
+}
+
 #endif
 
 #ifndef IN_PROCESS_AGENT
