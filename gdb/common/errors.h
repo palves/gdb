@@ -42,6 +42,17 @@ extern void error (const char *fmt, ...)
 extern void verror (const char *fmt, va_list args)
      ATTRIBUTE_NORETURN ATTRIBUTE_PRINTF (1, 0);
 
+/* Inform the user about something.  Informations are not related to
+   any problem.  They're just regular program output.  An information
+   message is constructed using a printf- or vprintf-style argument
+   list.  The function "vinform" must be provided by the client.  */
+
+extern void inform (const char *fmt, ...)
+     ATTRIBUTE_PRINTF (1, 2);
+
+extern void vinform (const char *fmt, va_list args)
+     ATTRIBUTE_PRINTF (1, 0);
+
 /* An internal error was detected.  Internal errors indicate
    programming errors such as assertion failures, as opposed to
    more general errors beyond the application's control.  These

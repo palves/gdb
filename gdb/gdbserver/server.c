@@ -275,9 +275,7 @@ start_inferior (char **argv)
 
   /* FIXME: we don't actually know at this point that the create
      actually succeeded.  We won't know that until we wait.  */
-  fprintf (stderr, "Process %s created; pid = %ld\n", argv[0],
-	   signal_pid);
-  fflush (stderr);
+  inform ("Process %s created; pid = %ld\n", argv[0], signal_pid);
 
 #ifdef SIGTTOU
   signal (SIGTTOU, SIG_IGN);
@@ -343,8 +341,7 @@ attach_inferior (int pid)
   if (myattach (pid) != 0)
     return -1;
 
-  fprintf (stderr, "Attached; pid = %d\n", pid);
-  fflush (stderr);
+  inform ("Attached; pid = %d\n", pid);
 
   /* FIXME - It may be that we should get the SIGNAL_PID from the
      attach function, so that it can be the main thread instead of
@@ -3429,7 +3426,7 @@ print_started_pid (struct inferior_list_entry *entry)
   if (! process->attached)
     {
       int pid = ptid_get_pid (process->entry.id);
-      fprintf (stderr, " %d", pid);
+      inform (" %d", pid);
     }
 }
 
@@ -3444,7 +3441,7 @@ print_attached_pid (struct inferior_list_entry *entry)
   if (process->attached)
     {
       int pid = ptid_get_pid (process->entry.id);
-      fprintf (stderr, " %d", pid);
+      inform (" %d", pid);
     }
 }
 
@@ -3461,15 +3458,15 @@ detach_or_kill_for_exit (void)
 
   if (have_started_inferiors_p ())
     {
-      fprintf (stderr, "Killing process(es):");
+      inform ("Killing process(es):");
       for_each_inferior (&all_processes, print_started_pid);
-      fprintf (stderr, "\n");
+      inform ("\n");
     }
   if (have_attached_inferiors_p ())
     {
-      fprintf (stderr, "Detaching process(es):");
+      inform ("Detaching process(es):");
       for_each_inferior (&all_processes, print_attached_pid);
-      fprintf (stderr, "\n");
+      inform ("\n");
     }
 
   /* Now we can kill or detach the inferiors.  */
@@ -3494,7 +3491,7 @@ detach_or_kill_for_exit_cleanup (void *ignore)
   CATCH (exception, RETURN_MASK_ALL)
     {
       fflush (stdout);
-      fprintf (stderr, "Detach or kill failed: %s\n", exception.message);
+      inform ("Detach or kill failed: %s\n", exception.message);
       exit_code = 1;
     }
   END_CATCH
@@ -3557,7 +3554,7 @@ captured_main (int argc, char *argv[])
 
 	  if (error_msg != NULL)
 	    {
-	      fprintf (stderr, "%s", error_msg);
+	      inform ("%s", error_msg);
 	      exit (1);
 	    }
 	}
@@ -3594,8 +3591,7 @@ captured_main (int argc, char *argv[])
 		}
 	      else
 		{
-		  fprintf (stderr, "Don't know how to disable \"%s\".\n\n",
-			   tok);
+		  inform ("Don't know how to disable \"%s\".\n\n", tok);
 		  gdbserver_show_disableable (stderr);
 		  exit (1);
 		}
@@ -3616,7 +3612,7 @@ captured_main (int argc, char *argv[])
 	run_once = 1;
       else
 	{
-	  fprintf (stderr, "Unknown argument: %s\n", *next_arg);
+	  inform ("Unknown argument: %s\n", *next_arg);
 	  exit (1);
 	}
 
@@ -3766,9 +3762,8 @@ captured_main (int argc, char *argv[])
 	  if (run_once || (!extended_protocol && !target_running ()))
 	    throw_quit ("Quit");
 
-	  fprintf (stderr,
-		   "Remote side has terminated connection.  "
-		   "GDBserver will reopen the connection.\n");
+	  inform ("Remote side has terminated connection.  "
+		  "GDBserver will reopen the connection.\n");
 
 	  /* Get rid of any pending statuses.  An eventual reconnection
 	     (by the same GDB instance or another) will refresh all its
@@ -3798,9 +3793,8 @@ captured_main (int argc, char *argv[])
 		}
 	      else
 		{
-		  fprintf (stderr,
-			   "Disconnected tracing disabled; "
-			   "stopping trace run.\n");
+		  inform ("Disconnected tracing disabled; "
+			  "stopping trace run.\n");
 		  stop_tracing ();
 		}
 	    }
@@ -3808,7 +3802,7 @@ captured_main (int argc, char *argv[])
       CATCH (exception, RETURN_MASK_ERROR)
 	{
 	  fflush (stdout);
-	  fprintf (stderr, "gdbserver: %s\n", exception.message);
+	  inform ("gdbserver: %s\n", exception.message);
 
 	  if (response_needed)
 	    {
@@ -3838,8 +3832,8 @@ main (int argc, char *argv[])
       if (exception.reason == RETURN_ERROR)
 	{
 	  fflush (stdout);
-	  fprintf (stderr, "%s\n", exception.message);
-	  fprintf (stderr, "Exiting\n");
+	  inform ("%s\n", exception.message);
+	  inform ("Exiting\n");
 	  exit_code = 1;
 	}
 
@@ -3891,8 +3885,7 @@ process_point_options (struct gdb_breakpoint *bp, char **packet)
 	}
       else
 	{
-	  fprintf (stderr, "Unknown token %c, ignoring.\n",
-		   *dataptr);
+	  inform ("Unknown token %c, ignoring.\n", *dataptr);
 	  /* Skip tokens until we find one that we recognize.  */
 	  dataptr = strchrnul (dataptr, ';');
 	}
@@ -3963,14 +3956,12 @@ process_serial_event (void)
 	    }
 
 	  if (tracing && disconnected_tracing)
-	    fprintf (stderr,
-		     "Disconnected tracing in effect, "
-		     "leaving gdbserver attached to the process\n");
+	    inform ("Disconnected tracing in effect, "
+		    "leaving gdbserver attached to the process\n");
 
 	  if (any_persistent_commands ())
-	    fprintf (stderr,
-		     "Persistent commands are present, "
-		     "leaving gdbserver attached to the process\n");
+	    inform ("Persistent commands are present, "
+		    "leaving gdbserver attached to the process\n");
 
 	  /* Make sure we're in non-stop/async mode, so we we can both
 	     wait for an async socket accept, and handle async target
@@ -3995,7 +3986,7 @@ process_serial_event (void)
 	  break; /* from switch/case */
 	}
 
-      fprintf (stderr, "Detaching from process %d\n", pid);
+      inform ("Detaching from process %d\n", pid);
       stop_tracing ();
       if (detach_inferior (pid) != 0)
 	write_enn (own_buf);
@@ -4258,7 +4249,7 @@ process_serial_event (void)
 	   reply to it, either.  */
 	return 0;
 
-      fprintf (stderr, "Killing all inferiors\n");
+      inform ("Killing all inferiors\n");
       for_each_inferior (&all_processes, kill_inferior_callback);
 
       /* When using the extended protocol, we wait with no program
@@ -4302,7 +4293,7 @@ process_serial_event (void)
 	  if (target_running ())
 	    for_each_inferior (&all_processes,
 			       kill_inferior_callback);
-	  fprintf (stderr, "GDBserver restarting\n");
+	  inform ("GDBserver restarting\n");
 
 	  /* Wait till we are at 1st instruction in prog.  */
 	  if (program_argv != NULL)

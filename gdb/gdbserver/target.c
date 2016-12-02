@@ -227,12 +227,11 @@ mywait (ptid_t ptid, struct target_waitstatus *ourstatus, int options,
   if (!remote_connection_is_stdio ())
     {
       if (ourstatus->kind == TARGET_WAITKIND_EXITED)
-	fprintf (stderr,
-		 "\nChild exited with status %d\n", ourstatus->value.integer);
+	inform ("\nChild exited with status %d\n", ourstatus->value.integer);
       else if (ourstatus->kind == TARGET_WAITKIND_SIGNALLED)
-	fprintf (stderr, "\nChild terminated with signal = 0x%x (%s)\n",
-		 gdb_signal_to_host (ourstatus->value.sig),
-		 gdb_signal_to_name (ourstatus->value.sig));
+	inform ("\nChild terminated with signal = 0x%x (%s)\n",
+		gdb_signal_to_host (ourstatus->value.sig),
+		gdb_signal_to_name (ourstatus->value.sig));
     }
 
   if (connected_wait)

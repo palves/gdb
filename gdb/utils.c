@@ -432,6 +432,13 @@ free_current_contents (void *ptr)
 }
 
 
+/* See common/errors.h  */
+
+void
+vinform (const char *string, va_list args)
+{
+  vprintf_filtered (string, args);
+}
 
 /* Print a warning message.  The first argument STRING is the warning
    message, used as an fprintf format string, the second is the

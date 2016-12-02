@@ -94,6 +94,14 @@ vwarning (const char *string, va_list args)
   fprintf (stderr, "\n");
 }
 
+/* See common/errors.h.  */
+
+void
+vinform (const char *string, va_list args)
+{
+  vfprintf (stderr, string, args);
+}
+
 /* Report a problem internal to GDBserver, and exit.  */
 
 void

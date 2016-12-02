@@ -47,6 +47,18 @@ error (const char *fmt, ...)
 /* See common/errors.h.  */
 
 void
+inform (const char *fmt, ...)
+{
+  va_list ap;
+
+  va_start (ap, fmt);
+  vinform (fmt, ap);
+  va_end (ap);
+}
+
+/* See common/errors.h.  */
+
+void
 internal_error (const char *file, int line, const char *fmt, ...)
 {
   va_list ap;

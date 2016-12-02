@@ -194,8 +194,7 @@ handle_accept_event (int err, gdb_client_data client_data)
   delete_file_handler (listen_desc);
 
   /* Convert IP address to string.  */
-  fprintf (stderr, "Remote debugging from host %s\n",
-	   inet_ntoa (sockaddr.sin_addr));
+  inform ("Remote debugging from host %s\n", inet_ntoa (sockaddr.sin_addr));
 
   enable_async_notification (remote_desc);
 
@@ -296,7 +295,7 @@ remote_open (char *name)
 
   if (strcmp (name, STDIO_CONNECTION_NAME) == 0)
     {
-      fprintf (stderr, "Remote debugging using stdio\n");
+      inform ("Remote debugging using stdio\n");
 
       /* Use stdin as the handle of the connection.
 	 We only select on reads, for example.  */
@@ -368,7 +367,7 @@ remote_open (char *name)
       }
 #endif
 
-      fprintf (stderr, "Remote debugging using %s\n", name);
+      inform ("Remote debugging using %s\n", name);
 
       enable_async_notification (remote_desc);
 
@@ -389,8 +388,7 @@ remote_open (char *name)
 	perror_with_name ("Can't determine port");
       port = ntohs (sockaddr.sin_port);
 
-      fprintf (stderr, "Listening on port %d\n", port);
-      fflush (stderr);
+      inform ("Listening on port %d\n", port);
 
       /* Register the event loop handler.  */
       add_file_handler (listen_desc, handle_accept_event, NULL);
@@ -750,16 +748,16 @@ input_interrupt (int unused)
 
       if (cc == 0)
 	{
-	  fprintf (stderr, "client connection closed\n");
+	  inform ("client connection closed\n");
 	  return;
 	}
       else if (cc != 1 || c != '\003')
 	{
-	  fprintf (stderr, "input_interrupt, count = %d c = %d ", cc, c);
+	  inform ("input_interrupt, count = %d c = %d ", cc, c);
 	  if (isprint (c))
-	    fprintf (stderr, "('%c')\n", c);
+	    inform ("('%c')\n", c);
 	  else
-	    fprintf (stderr, "('\\x%02x')\n", c & 0xff);
+	    inform ("('\\x%02x')\n", c & 0xff);
 	  return;
 	}
 
@@ -1006,16 +1004,15 @@ getpkt (char *buf)
 
       if (noack_mode)
 	{
-	  fprintf (stderr,
-		   "Bad checksum, sentsum=0x%x, csum=0x%x, "
-		   "buf=%s [no-ack-mode, Bad medium?]\n",
-		   (c1 << 4) + c2, csum, buf);
+	  inform ("Bad checksum, sentsum=0x%x, csum=0x%x, "
+		  "buf=%s [no-ack-mode, Bad medium?]\n",
+		  (c1 << 4) + c2, csum, buf);
 	  /* Not much we can do, GDB wasn't expecting an ack/nac.  */
 	  break;
 	}
 
-      fprintf (stderr, "Bad checksum, sentsum=0x%x, csum=0x%x, buf=%s\n",
-	       (c1 << 4) + c2, csum, buf);
+      inform ("Bad checksum, sentsum=0x%x, csum=0x%x, buf=%s\n",
+	      (c1 << 4) + c2, csum, buf);
       if (write_prim ("-", 1) != 1)
 	return -1;
     }
