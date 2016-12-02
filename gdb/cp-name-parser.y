@@ -41,12 +41,20 @@
    state, unfortunately.  Here are all the global variables used
    in this parser.  */
 
-/* LEXPTR is the current pointer into our lex buffer.  PREV_LEXPTR
-   is the start of the last token lexed, only used for diagnostics.
-   ERROR_LEXPTR is the first place an error occurred.  GLOBAL_ERRMSG
-   is the first error message encountered.  */
+struct cpname_state
+{
+  /* The current pointer into our lex buffer.  */
+  const char *lexptr;
 
-static const char *lexptr, *prev_lexptr, *error_lexptr, *global_errmsg;
+  /* The start of the last token lexed, only used for diagnostics.  */
+  const char *prev_lexptr;
+
+  /* The first place an error occurred.  */
+  const char *error_lexptr;
+
+  /* The first error message encountered.  */
+  const char *global_errmsg;
+} cpname;
 
 /* The components built by the parser are allocated ahead of time,
    and cached in this structure.  */
@@ -1504,26 +1512,26 @@ cp_parse_escape (const char **string_ptr)
 #define HANDLE_SPECIAL(string, comp)				\
   if (strncmp (tokstart, string, sizeof (string) - 1) == 0)	\
     {								\
-      lexptr = tokstart + sizeof (string) - 1;			\
+      cpname.lexptr = tokstart + sizeof (string) - 1;		\
       yylval.lval = comp;					\
       return DEMANGLER_SPECIAL;					\
     }
 
 #define HANDLE_TOKEN2(string, token)			\
-  if (lexptr[1] == string[1])				\
+  if (cpname.lexptr[1] == string[1])			\
     {							\
-      lexptr += 2;					\
+      cpname.lexptr += 2;				\
       yylval.opname = string;				\
       return token;					\
     }      
 
-#define HANDLE_TOKEN3(string, token)			\
-  if (lexptr[1] == string[1] && lexptr[2] == string[2])	\
-    {							\
-      lexptr += 3;					\
-      yylval.opname = string;				\
-      return token;					\
-    }      
+#define HANDLE_TOKEN3(string, token)					\
+  if (cpname.lexptr[1] == string[1] && cpname.lexptr[2] == string[2])	\
+    {									\
+      cpname.lexptr += 3;						\
+      yylval.opname = string;						\
+      return token;							\
+    }
 
 /* Read one token, getting characters through LEXPTR.  */
 
@@ -1535,8 +1543,8 @@ yylex (void)
   const char *tokstart;
 
  retry:
-  prev_lexptr = lexptr;
-  tokstart = lexptr;
+  cpname.prev_lexptr = cpname.lexptr;
+  tokstart = cpname.lexptr;
 
   switch (c = *tokstart)
     {
@@ -1546,24 +1554,24 @@ yylex (void)
     case ' ':
     case '\t':
     case '\n':
-      lexptr++;
+      cpname.lexptr++;
       goto retry;
 
     case '\'':
       /* We either have a character constant ('0' or '\177' for example)
 	 or we have a quoted symbol reference ('foo(int,int)' in C++
 	 for example). */
-      lexptr++;
-      c = *lexptr++;
+      cpname.lexptr++;
+      c = *cpname.lexptr++;
       if (c == '\\')
-	c = cp_parse_escape (&lexptr);
+	c = cp_parse_escape (&cpname.lexptr);
       else if (c == '\'')
 	{
 	  yyerror (_("empty character constant"));
 	  return ERROR;
 	}
 
-      c = *lexptr++;
+      c = *cpname.lexptr++;
       if (c != '\'')
 	{
 	  yyerror (_("invalid character constant"));
@@ -1576,14 +1584,14 @@ yylex (void)
 	 allocate memory for it somewhere.  */
       yylval.comp = fill_comp (DEMANGLE_COMPONENT_LITERAL,
 				 make_builtin_type ("char"),
-				 make_name (tokstart, lexptr - tokstart));
+				 make_name (tokstart, cpname.lexptr - tokstart));
 
       return INT;
 
     case '(':
       if (strncmp (tokstart, "(anonymous namespace)", 21) == 0)
 	{
-	  lexptr += 21;
+	  cpname.lexptr += 21;
 	  yylval.comp = make_name ("(anonymous namespace)",
 				     sizeof "(anonymous namespace)" - 1);
 	  return NAME;
@@ -1592,18 +1600,18 @@ yylex (void)
 
     case ')':
     case ',':
-      lexptr++;
+      cpname.lexptr++;
       return c;
 
     case '.':
-      if (lexptr[1] == '.' && lexptr[2] == '.')
+      if (cpname.lexptr[1] == '.' && cpname.lexptr[2] == '.')
 	{
-	  lexptr += 3;
+	  cpname.lexptr += 3;
 	  return ELLIPSIS;
 	}
 
       /* Might be a floating point number.  */
-      if (lexptr[1] < '0' || lexptr[1] > '9')
+      if (cpname.lexptr[1] < '0' || cpname.lexptr[1] > '9')
 	goto symbol;		/* Nope, must be a symbol. */
 
       goto try_number;
@@ -1616,13 +1624,13 @@ yylex (void)
       /* For construction vtables.  This is kind of hokey.  */
       if (strncmp (tokstart, "-in-", 4) == 0)
 	{
-	  lexptr += 4;
+	  cpname.lexptr += 4;
 	  return CONSTRUCTION_IN;
 	}
 
-      if (lexptr[1] < '0' || lexptr[1] > '9')
+      if (cpname.lexptr[1] < '0' || cpname.lexptr[1] > '9')
 	{
-	  lexptr++;
+	  cpname.lexptr++;
 	  return '-';
 	}
       /* FALL THRU into number case.  */
@@ -1693,64 +1701,64 @@ yylex (void)
 	    yyerror (_("invalid number"));
 	    return ERROR;
 	  }
-	lexptr = p;
+	cpname.lexptr = p;
 	return toktype;
       }
 
     case '+':
       HANDLE_TOKEN2 ("+=", ASSIGN_MODIFY);
       HANDLE_TOKEN2 ("++", INCREMENT);
-      lexptr++;
+      cpname.lexptr++;
       return c;
     case '*':
       HANDLE_TOKEN2 ("*=", ASSIGN_MODIFY);
-      lexptr++;
+      cpname.lexptr++;
       return c;
     case '/':
       HANDLE_TOKEN2 ("/=", ASSIGN_MODIFY);
-      lexptr++;
+      cpname.lexptr++;
       return c;
     case '%':
       HANDLE_TOKEN2 ("%=", ASSIGN_MODIFY);
-      lexptr++;
+      cpname.lexptr++;
       return c;
     case '|':
       HANDLE_TOKEN2 ("|=", ASSIGN_MODIFY);
       HANDLE_TOKEN2 ("||", OROR);
-      lexptr++;
+      cpname.lexptr++;
       return c;
     case '&':
       HANDLE_TOKEN2 ("&=", ASSIGN_MODIFY);
       HANDLE_TOKEN2 ("&&", ANDAND);
-      lexptr++;
+      cpname.lexptr++;
       return c;
     case '^':
       HANDLE_TOKEN2 ("^=", ASSIGN_MODIFY);
-      lexptr++;
+      cpname.lexptr++;
       return c;
     case '!':
       HANDLE_TOKEN2 ("!=", NOTEQUAL);
-      lexptr++;
+      cpname.lexptr++;
       return c;
     case '<':
       HANDLE_TOKEN3 ("<<=", ASSIGN_MODIFY);
       HANDLE_TOKEN2 ("<=", LEQ);
       HANDLE_TOKEN2 ("<<", LSH);
-      lexptr++;
+      cpname.lexptr++;
       return c;
     case '>':
       HANDLE_TOKEN3 (">>=", ASSIGN_MODIFY);
       HANDLE_TOKEN2 (">=", GEQ);
       HANDLE_TOKEN2 (">>", RSH);
-      lexptr++;
+      cpname.lexptr++;
       return c;
     case '=':
       HANDLE_TOKEN2 ("==", EQUAL);
-      lexptr++;
+      cpname.lexptr++;
       return c;
     case ':':
       HANDLE_TOKEN2 ("::", COLONCOLON);
-      lexptr++;
+      cpname.lexptr++;
       return c;
 
     case '[':
@@ -1761,7 +1769,7 @@ yylex (void)
     case '{':
     case '}':
     symbol:
-      lexptr++;
+      cpname.lexptr++;
       return c;
 
     case '"':
@@ -1783,7 +1791,7 @@ yylex (void)
     c = tokstart[++namelen];
   while (ISALNUM (c) || c == '_' || c == '$');
 
-  lexptr += namelen;
+  cpname.lexptr += namelen;
 
   /* Catch specific keywords.  Notice that some of the keywords contain
      spaces, and are sorted by the length of the first word.  They must
@@ -1797,7 +1805,7 @@ yylex (void)
     case 12:
       if (strncmp (tokstart, "construction vtable for ", 24) == 0)
 	{
-	  lexptr = tokstart + 24;
+	  cpname.lexptr = tokstart + 24;
 	  return CONSTRUCTION_VTABLE;
 	}
       if (strncmp (tokstart, "dynamic_cast", 12) == 0)
@@ -1835,23 +1843,23 @@ yylex (void)
       if (strncmp (tokstart, "global constructors keyed to ", 29) == 0)
 	{
 	  const char *p;
-	  lexptr = tokstart + 29;
+	  cpname.lexptr = tokstart + 29;
 	  yylval.lval = DEMANGLE_COMPONENT_GLOBAL_CONSTRUCTORS;
 	  /* Find the end of the symbol.  */
-	  p = symbol_end (lexptr);
-	  yylval.comp = make_name (lexptr, p - lexptr);
-	  lexptr = p;
+	  p = symbol_end (cpname.lexptr);
+	  yylval.comp = make_name (cpname.lexptr, p - cpname.lexptr);
+	  cpname.lexptr = p;
 	  return DEMANGLER_SPECIAL;
 	}
       if (strncmp (tokstart, "global destructors keyed to ", 28) == 0)
 	{
 	  const char *p;
-	  lexptr = tokstart + 28;
+	  cpname.lexptr = tokstart + 28;
 	  yylval.lval = DEMANGLE_COMPONENT_GLOBAL_DESTRUCTORS;
 	  /* Find the end of the symbol.  */
-	  p = symbol_end (lexptr);
-	  yylval.comp = make_name (lexptr, p - lexptr);
-	  lexptr = p;
+	  p = symbol_end (cpname.lexptr);
+	  yylval.comp = make_name (cpname.lexptr, p - cpname.lexptr);
+	  cpname.lexptr = p;
 	  return DEMANGLER_SPECIAL;
 	}
 
@@ -1915,11 +1923,11 @@ yylex (void)
 static void
 yyerror (char *msg)
 {
-  if (global_errmsg)
+  if (cpname.global_errmsg)
     return;
 
-  error_lexptr = prev_lexptr;
-  global_errmsg = msg ? msg : "parse error";
+  cpname.error_lexptr = cpname.prev_lexptr;
+  cpname.global_errmsg = msg ? msg : "parse error";
 }
 
 /* Allocate a chunk of the components we'll need to build a tree.  We
@@ -2036,9 +2044,9 @@ cp_demangled_name_to_comp (const char *demangled_name, const char **errmsg)
   static char errbuf[60];
   struct demangle_parse_info *result;
 
-  prev_lexptr = lexptr = demangled_name;
-  error_lexptr = NULL;
-  global_errmsg = NULL;
+  cpname.prev_lexptr = cpname.lexptr = demangled_name;
+  cpname.error_lexptr = NULL;
+  cpname.global_errmsg = NULL;
 
   demangle_info = allocate_info ();
 
@@ -2047,10 +2055,10 @@ cp_demangled_name_to_comp (const char *demangled_name, const char **errmsg)
 
   if (yyparse ())
     {
-      if (global_errmsg && errmsg)
+      if (cpname.global_errmsg && errmsg)
 	{
 	  snprintf (errbuf, sizeof (errbuf) - 2, "%s, near `%s",
-		    global_errmsg, error_lexptr);
+		    cpname.global_errmsg, cpname.error_lexptr);
 	  strcat (errbuf, "'");
 	  *errmsg = errbuf;
 	}
