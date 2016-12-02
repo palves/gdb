@@ -42,7 +42,7 @@ linux_proc_get_int (pid_t lwpid, const char *field, int warn)
       return -1;
     }
 
-  while (fgets (buf, sizeof (buf), status_file))
+  while (gnulib::fgets (buf, sizeof (buf), status_file))
     if (strncmp (buf, field, field_len) == 0 && buf[field_len] == ':')
       {
 	retval = strtol (&buf[field_len + 1], NULL, 10);
@@ -142,7 +142,7 @@ linux_proc_pid_get_state (pid_t pid, int warn, enum proc_state *state)
     }
 
   have_state = 0;
-  while (fgets (buffer, sizeof (buffer), procfile) != NULL)
+  while (gnulib::fgets (buffer, sizeof (buffer), procfile) != NULL)
     if (startswith (buffer, "State:"))
       {
 	have_state = 1;
@@ -254,7 +254,7 @@ linux_proc_tid_get_name (ptid_t ptid)
   if (comm_file == NULL)
     return NULL;
 
-  comm_val = fgets (comm_buf, sizeof (comm_buf), comm_file);
+  comm_val = gnulib::fgets (comm_buf, sizeof (comm_buf), comm_file);
   fclose (comm_file);
 
   if (comm_val != NULL)
@@ -355,7 +355,7 @@ linux_proc_pid_to_exec_file (int pid)
   ssize_t len;
 
   xsnprintf (name, PATH_MAX, "/proc/%d/exe", pid);
-  len = readlink (name, buf, PATH_MAX - 1);
+  len = gnulib::readlink (name, buf, PATH_MAX - 1);
   if (len <= 0)
     strcpy (buf, name);
   else

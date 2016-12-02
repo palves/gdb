@@ -241,7 +241,7 @@ i386_linux_sigtramp_p (struct frame_info *this_frame)
      exported from the shared C library, so the trampoline may appear to
      be part of the preceding function.  This should always be sigaction,
      __sigaction, or __libc_sigaction (all aliases to the same function).  */
-  if (name == NULL || strstr (name, "sigaction") != NULL)
+  if (name == NULL || gnulib::strstr (name, "sigaction") != NULL)
     return (i386_linux_sigtramp_start (this_frame) != 0
 	    || i386_linux_rt_sigtramp_start (this_frame) != 0);
 

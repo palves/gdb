@@ -764,7 +764,7 @@ ignore_line_p (const char *line)
 
   for (i = 0; ignore_lines[i] != NULL; ++i)
     {
-      if (strstr (line, ignore_lines[i]) != NULL)
+      if (gnulib::strstr (line, ignore_lines[i]) != NULL)
 	return 1;
     }
 
@@ -827,7 +827,7 @@ find_charset_names (void)
 	  char *start, *r;
 	  int len;
 
-	  r = fgets (buf, sizeof (buf), in);
+	  r = gnulib::fgets (buf, sizeof (buf), in);
 	  if (!r)
 	    break;
 	  len = strlen (r);

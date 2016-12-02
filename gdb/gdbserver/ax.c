@@ -36,7 +36,7 @@ ax_vdebug (const char *fmt, ...)
 
   va_start (ap, fmt);
   vsprintf (buf, fmt, ap);
-  fprintf (stderr, PROG "/ax: %s\n", buf);
+  gnulib::fprintf (stderr, PROG "/ax: %s\n", buf);
   va_end (ap);
 }
 
@@ -865,7 +865,7 @@ ax_printf (CORE_ADDR fn, CORE_ADDR chan, const char *format,
 		read_inferior_memory (tem, str, j);
 	      str[j] = 0;
 
-              printf (current_substring, (char *) str);
+	      gnulib::printf (current_substring, (char *) str);
 	    }
 	    break;
 
@@ -874,7 +874,7 @@ ax_printf (CORE_ADDR fn, CORE_ADDR chan, const char *format,
 	    {
 	      long long val = args[i];
 
-              printf (current_substring, val);
+	      gnulib::printf (current_substring, val);
 	      break;
 	    }
 #else
@@ -884,7 +884,7 @@ ax_printf (CORE_ADDR fn, CORE_ADDR chan, const char *format,
 	  {
 	    int val = args[i];
 
-	    printf (current_substring, val);
+	    gnulib::printf (current_substring, val);
 	    break;
 	  }
 
@@ -892,7 +892,7 @@ ax_printf (CORE_ADDR fn, CORE_ADDR chan, const char *format,
 	  {
 	    long val = args[i];
 
-	    printf (current_substring, val);
+	    gnulib::printf (current_substring, val);
 	    break;
 	  }
 
@@ -905,7 +905,7 @@ ax_printf (CORE_ADDR fn, CORE_ADDR chan, const char *format,
 	     have modified GCC to include -Wformat-security by
 	     default, which will warn here if there is no
 	     argument.  */
-	  printf (current_substring, 0);
+	  gnulib::printf (current_substring, 0);
 	  break;
 
 	default:

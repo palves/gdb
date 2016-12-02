@@ -419,9 +419,9 @@ convert_doublest_to_floatformat (const struct floatformat *fmt,
     }
 
 #ifdef HAVE_LONG_DOUBLE
-  mant = frexpl (dfrom, &exponent);
+  mant = gnulib::frexpl (dfrom, &exponent);
 #else
-  mant = frexp (dfrom, &exponent);
+  mant = gnulib::frexp (dfrom, &exponent);
 #endif
 
   if (exponent + fmt->exp_bias <= 0)

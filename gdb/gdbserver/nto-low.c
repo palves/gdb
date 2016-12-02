@@ -44,9 +44,9 @@ nto_trace (const char *fmt, ...)
 
   if (debug_threads == 0)
     return;
-  fprintf (stderr, "nto:");
+  gnulib::fprintf (stderr, "nto:");
   va_start (arg_list, fmt);
-  vfprintf (stderr, fmt, arg_list);
+  gnulib::vfprintf (stderr, fmt, arg_list);
   va_end (arg_list);
 }
 

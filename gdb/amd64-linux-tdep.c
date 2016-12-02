@@ -191,7 +191,7 @@ amd64_linux_sigtramp_p (struct frame_info *this_frame)
      the preceding function.  This should always be sigaction,
      __sigaction, or __libc_sigaction (all aliases to the same
      function).  */
-  if (name == NULL || strstr (name, "sigaction") != NULL)
+  if (name == NULL || gnulib::strstr (name, "sigaction") != NULL)
     return (amd64_linux_sigtramp_start (this_frame) != 0);
 
   return (strcmp ("__restore_rt", name) == 0);

@@ -37,14 +37,14 @@
 #include <sys/cygwin.h>
 #endif
 
-#define OUTMSG(X) do { printf X; fflush (stderr); } while (0)
+#define OUTMSG(X) do { gnulib::printf X; fflush (stderr); } while (0)
 
 #define OUTMSG2(X) \
   do						\
     {						\
       if (debug_threads)			\
 	{					\
-	  printf X;				\
+	  gnulib::printf X;			\
 	  fflush (stderr);			\
 	}					\
     } while (0)

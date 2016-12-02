@@ -292,7 +292,7 @@ remote_fileio_to_fio_long (LONGEST num, fio_long_t fnum)
 }
 
 static void
-remote_fileio_to_fio_timeval (struct timeval *tv, struct fio_timeval *ftv)
+remote_fileio_to_fio_timeval (gnulib::timeval *tv, struct fio_timeval *ftv)
 {
   host_to_fileio_time (tv->tv_sec, ftv->ftv_sec);
   remote_fileio_to_fio_long (tv->tv_usec, ftv->ftv_usec);
@@ -762,7 +762,7 @@ remote_fileio_func_rename (char *buf)
       return;
     }
 
-  ret = rename (oldpath, newpath);
+  ret = gnulib::rename (oldpath, newpath);
 
   if (ret == -1)
     {
@@ -915,7 +915,7 @@ remote_fileio_func_fstat (char *buf)
   LONGEST lnum;
   struct stat st;
   struct fio_stat fst;
-  struct timeval tv;
+  gnulib::timeval tv;
 
   /* 1. Parameter: file descriptor */
   if (remote_fileio_extract_int (&buf, &target_fd))
@@ -955,7 +955,7 @@ remote_fileio_func_fstat (char *buf)
 #if HAVE_STRUCT_STAT_ST_BLOCKS
       st.st_blocks = 0;
 #endif
-      if (!gettimeofday (&tv, NULL))
+      if (!gnulib::gettimeofday (&tv, NULL))
 	st.st_atime = st.st_mtime = st.st_ctime = tv.tv_sec;
       else
         st.st_atime = st.st_mtime = st.st_ctime = (time_t) 0;
@@ -989,7 +989,7 @@ remote_fileio_func_gettimeofday (char *buf)
   LONGEST lnum;
   CORE_ADDR ptrval;
   int ret;
-  struct timeval tv;
+  gnulib::timeval tv;
   struct fio_timeval ftv;
 
   /* 1. Parameter: struct timeval pointer */
@@ -1012,7 +1012,7 @@ remote_fileio_func_gettimeofday (char *buf)
       return;
     }
 
-  ret = gettimeofday (&tv, NULL);
+  ret = gnulib::gettimeofday (&tv, NULL);
 
   if (ret == -1)
     {

@@ -544,7 +544,7 @@ static ssize_t
 mnsh_handle_readlink (int sock, const char *filename)
 {
   char buf[PATH_MAX];
-  int len = readlink (filename, buf, sizeof (buf));
+  int len = gnulib::readlink (filename, buf, sizeof (buf));
 
   return mnsh_return_intstr (sock, len,
 			     buf, len < 0 ? 0 : len,
@@ -1046,7 +1046,7 @@ linux_mntns_readlink (pid_t pid, const char *filename,
     return -1;
 
   if (access == MNSH_FS_DIRECT)
-    return readlink (filename, buf, bufsiz);
+    return gnulib::readlink (filename, buf, bufsiz);
 
   gdb_assert (access == MNSH_FS_HELPER);
 

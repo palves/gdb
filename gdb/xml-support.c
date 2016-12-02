@@ -1057,7 +1057,7 @@ xml_fetch_content_from_file (const char *filename, void *baton)
 
       /* Continue reading where the last read left off.  Leave at least
 	 one byte so that we can NUL-terminate the result.  */
-      bytes_read = fread (text + offset, 1, len - offset - 1, file);
+      bytes_read = gnulib::fread (text + offset, 1, len - offset - 1, file);
       if (ferror (file))
 	{
 	  warning (_("Read error from \"%s\""), filename);

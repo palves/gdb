@@ -3237,24 +3237,24 @@ integer_types_same_name_p (const char *first, const char *second)
 
   /* If both are shorts, return 1; if neither is a short, keep
      checking.  */
-  first_p = (strstr (first, "short") != NULL);
-  second_p = (strstr (second, "short") != NULL);
+  first_p = (gnulib::strstr (first, "short") != NULL);
+  second_p = (gnulib::strstr (second, "short") != NULL);
   if (first_p && second_p)
     return 1;
   if (first_p || second_p)
     return 0;
 
   /* Likewise for long.  */
-  first_p = (strstr (first, "long") != NULL);
-  second_p = (strstr (second, "long") != NULL);
+  first_p = (gnulib::strstr (first, "long") != NULL);
+  second_p = (gnulib::strstr (second, "long") != NULL);
   if (first_p && second_p)
     return 1;
   if (first_p || second_p)
     return 0;
 
   /* Likewise for char.  */
-  first_p = (strstr (first, "char") != NULL);
-  second_p = (strstr (second, "char") != NULL);
+  first_p = (gnulib::strstr (first, "char") != NULL);
+  second_p = (gnulib::strstr (second, "char") != NULL);
   if (first_p && second_p)
     return 1;
   if (first_p || second_p)

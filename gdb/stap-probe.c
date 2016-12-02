@@ -1488,9 +1488,10 @@ handle_stap_probe (struct objfile *objfile, struct sdt_note *el,
 
   /* Provider and the name of the probe.  */
   ret->p.provider = (char *) &el->data[3 * size];
-  ret->p.name = ((const char *)
-		 memchr (ret->p.provider, '\0',
-			 (char *) el->data + el->size - ret->p.provider));
+  ret->p.name
+    = ((const char *) gnulib::memchr (ret->p.provider, '\0',
+				      ((char *) el->data
+				       + el->size - ret->p.provider)));
   /* Making sure there is a name.  */
   if (ret->p.name == NULL)
     {
@@ -1521,14 +1522,14 @@ handle_stap_probe (struct objfile *objfile, struct sdt_note *el,
   /* Arguments.  We can only extract the argument format if there is a valid
      name for this probe.  */
   probe_args = ((const char*)
-		memchr (ret->p.name, '\0',
-			(char *) el->data + el->size - ret->p.name));
+		gnulib::memchr (ret->p.name, '\0',
+				(char *) el->data + el->size - ret->p.name));
 
   if (probe_args != NULL)
     ++probe_args;
 
   if (probe_args == NULL
-      || (memchr (probe_args, '\0', (char *) el->data + el->size - ret->p.name)
+      || (gnulib::memchr (probe_args, '\0', (char *) el->data + el->size - ret->p.name)
 	  != el->data + el->size - 1))
     {
       complaint (&symfile_complaints, _("corrupt probe argument when "

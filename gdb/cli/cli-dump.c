@@ -177,7 +177,7 @@ dump_binary_file (const char *filename, const char *mode,
   int status;
 
   file = fopen_with_cleanup (filename, mode);
-  status = fwrite (buf, len, 1, file);
+  status = gnulib::fwrite (buf, len, 1, file);
   if (status != 1)
     perror_with_name (filename);
 }
@@ -551,7 +551,7 @@ restore_binary_file (const char *filename, struct callback_data *data)
 
   /* Now allocate a buffer and read the file contents.  */
   std::unique_ptr<gdb_byte[]> buf (new gdb_byte[len]);
-  if (fread (buf.get (), 1, len, file) != len)
+  if (gnulib::fread (buf.get (), 1, len, file) != len)
     perror_with_name (filename);
 
   /* Now write the buffer into target memory.  */

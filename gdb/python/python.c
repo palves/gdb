@@ -1713,14 +1713,14 @@ message == an error message without a stack will be printed."),
   if (!progname_copy)
     {
       xfree (oldloc);
-      fprintf (stderr, "out of memory\n");
+      gnulib::fprintf (stderr, "out of memory\n");
       return;
     }
   count = mbstowcs (progname_copy, progname, progsize + 1);
   if (count == (size_t) -1)
     {
       xfree (oldloc);
-      fprintf (stderr, "Could not convert python path to string\n");
+      gnulib::fprintf (stderr, "Could not convert python path to string\n");
       return;
     }
   setlocale (LC_ALL, oldloc);

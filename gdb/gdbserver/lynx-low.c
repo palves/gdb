@@ -53,9 +53,9 @@ lynx_debug (char *string, ...)
     return;
 
   va_start (args, string);
-  fprintf (stderr, "DEBUG(lynx): ");
-  vfprintf (stderr, string, args);
-  fprintf (stderr, "\n");
+  gnulib::fprintf (stderr, "DEBUG(lynx): ");
+  gnulib::vfprintf (stderr, string, args);
+  gnulib::fprintf (stderr, "\n");
   va_end (args);
 }
 
@@ -250,7 +250,7 @@ lynx_create_inferior (char *program, char **allargs)
       ioctl (0, TIOCSPGRP, &pgrp);
       lynx_ptrace (PTRACE_TRACEME, null_ptid, 0, 0, 0);
       execv (program, allargs);
-      fprintf (stderr, "Cannot exec %s: %s.\n", program, strerror (errno));
+      gnulib::fprintf (stderr, "Cannot exec %s: %s.\n", program, strerror (errno));
       fflush (stderr);
       _exit (0177);
     }
@@ -281,7 +281,7 @@ lynx_add_threads_after_attach (int pid)
   if (f == NULL)
     perror_with_name ("Cannot get thread list");
 
-  while (fgets (buf, sizeof (buf), f) != NULL)
+  while (gnulib::fgets (buf, sizeof (buf), f) != NULL)
     if ((sscanf (buf, "%d %d", &thread_pid, &thread_tid) == 2
 	 && thread_pid == pid))
     {

@@ -168,9 +168,9 @@ rust_get_disr_info (struct type *type, const gdb_byte *valaddr,
          traversed in order to find the field (which may be several fields deep)
          and the variantname is the name of the variant of the case when the
          field is zero.  */
-      for (token = strtok_r (tail, "$", &saveptr);
+      for (token = gnulib::strtok_r (tail, "$", &saveptr);
            token != NULL;
-           token = strtok_r (NULL, "$", &saveptr))
+           token = gnulib::strtok_r (NULL, "$", &saveptr))
         {
 	  if (sscanf (token, "%lu", &fieldno) != 1)
 	    {
@@ -361,7 +361,7 @@ rust_range_type_p (struct type *type)
   if (TYPE_CODE (type) != TYPE_CODE_STRUCT
       || TYPE_NFIELDS (type) > 2
       || TYPE_TAG_NAME (type) == NULL
-      || strstr (TYPE_TAG_NAME (type), "::Range") == NULL)
+      || gnulib::strstr (TYPE_TAG_NAME (type), "::Range") == NULL)
     return 0;
 
   if (TYPE_NFIELDS (type) == 0)

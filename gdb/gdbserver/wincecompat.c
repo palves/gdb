@@ -24,9 +24,9 @@ void
 perror (const char *s)
 {
   if (s && *s)
-    fprintf (stderr, "%s: %s\n", s, strwinerror (GetLastError ()));
+    gnulib::fprintf (stderr, "%s: %s\n", s, strwinerror (GetLastError ()));
   else
-    fprintf (stderr, "%s\n", strwinerror (GetLastError ()));
+    gnulib::fprintf (stderr, "%s\n", strwinerror (GetLastError ()));
 }
 
 void

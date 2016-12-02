@@ -2449,7 +2449,7 @@ simple_search_memory (struct target_ops *ops,
   if (search_space_len < search_buf_size)
     search_buf_size = search_space_len;
 
-  search_buf = (gdb_byte *) malloc (search_buf_size);
+  search_buf = (gdb_byte *) gnulib::malloc (search_buf_size);
   if (search_buf == NULL)
     error (_("Unable to allocate memory to perform the search."));
   old_cleanups = make_cleanup (free_current_contents, &search_buf);
@@ -2478,8 +2478,8 @@ simple_search_memory (struct target_ops *ops,
       unsigned nr_search_bytes
 	= std::min (search_space_len, (ULONGEST) search_buf_size);
 
-      found_ptr = (gdb_byte *) memmem (search_buf, nr_search_bytes,
-				       pattern, pattern_len);
+      found_ptr = (gdb_byte *) gnulib::memmem (search_buf, nr_search_bytes,
+					       pattern, pattern_len);
 
       if (found_ptr != NULL)
 	{

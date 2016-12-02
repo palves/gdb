@@ -186,7 +186,7 @@ match_substring (const char *string, const char *substr)
   int substr_len = strlen(substr);
   const char *tok;
 
-  while ((tok = strstr (string, substr)) != NULL)
+  while ((tok = gnulib::strstr (string, substr)) != NULL)
     {
       /* Got a partial match.  Is it a whole word?  */
       if (tok == string

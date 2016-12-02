@@ -225,6 +225,7 @@ ioctl_with_trace (int fd, long opcode, void *ptr, char *file, int line)
   int i = 0;
   int ret;
   int arg1;
+  using gnulib::fprintf;
 
   prepare_to_trace ();
 
@@ -457,6 +458,7 @@ write_with_trace (int fd, void *varg, size_t len, char *file, int line)
   int i = ARRAY_SIZE (rw_table) - 1;
   int ret;
   procfs_ctl_t *arg = (procfs_ctl_t *) varg;
+  using gnulib::fprintf;
 
   prepare_to_trace ();
   if (procfs_trace)
@@ -612,6 +614,7 @@ off_t
 lseek_with_trace (int fd, off_t offset, int whence, char *file, int line)
 {
   off_t ret;
+  using gnulib::fprintf;
 
   prepare_to_trace ();
   errno = 0;
@@ -635,6 +638,7 @@ int
 open_with_trace (char *filename, int mode, char *file, int line)
 {
   int ret;
+  using gnulib::fprintf;
 
   prepare_to_trace ();
   errno = 0;
@@ -676,6 +680,7 @@ int
 close_with_trace (int fd, char *file, int line)
 {
   int ret;
+  using gnulib::fprintf;
 
   prepare_to_trace ();
   errno = 0;
@@ -702,6 +707,7 @@ pid_t
 wait_with_trace (int *wstat, char *file, int line)
 {
   int ret, lstat = 0;
+  using gnulib::fprintf;
 
   prepare_to_trace ();
   if (procfs_trace)
@@ -736,6 +742,8 @@ wait_with_trace (int *wstat, char *file, int line)
 void
 procfs_note (char *msg, char *file, int line)
 {
+  using gnulib::fprintf;
+
   prepare_to_trace ();
   if (procfs_trace)
     {
@@ -751,6 +759,8 @@ procfs_note (char *msg, char *file, int line)
 void
 proc_prettyfprint_status (long flags, int why, int what, int thread)
 {
+  using gnulib::fprintf;
+
   prepare_to_trace ();
   if (procfs_trace)
     {

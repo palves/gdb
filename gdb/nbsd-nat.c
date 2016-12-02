@@ -32,7 +32,7 @@ nbsd_pid_to_exec_file (struct target_ops *self, int pid)
   char name[PATH_MAX];
 
   xsnprintf (name, PATH_MAX, "/proc/%d/exe", pid);
-  len = readlink (name, buf, PATH_MAX - 1);
+  len = gnulib::readlink (name, buf, PATH_MAX - 1);
   if (len != -1)
     {
       buf[len] = '\0';

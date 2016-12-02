@@ -2084,7 +2084,7 @@ cp_print (struct demangle_component *result)
   if (str == NULL)
     return;
 
-  fputs (str, stdout);
+  gnulib::fputs (str, stdout);
 
   free (str);
 }
@@ -2127,8 +2127,8 @@ internal_error (const char *file, int line, const char *fmt, ...)
   va_list ap;
 
   va_start (ap, fmt);
-  fprintf (stderr, "%s:%d: internal error: ", file, line);
-  vfprintf (stderr, fmt, ap);
+  gnulib::fprintf (stderr, "%s:%d: internal error: ", file, line);
+  gnulib::vfprintf (stderr, fmt, ap);
   exit (1);
 }
 
@@ -2142,7 +2142,7 @@ parser_fprintf (FILE *x, const char *y, ...)
   va_list args;
 
   va_start (args, y);
-  vfprintf (x, y, args);
+  gnulib::vfprintf (x, y, args);
   va_end (args);
 }
 
@@ -2163,7 +2163,7 @@ main (int argc, char **argv)
     }
 
   if (argv[arg] == NULL)
-    while (fgets (buf, 65536, stdin) != NULL)
+    while (gnulib::fgets (buf, 65536, stdin) != NULL)
       {
 	int len;
 	buf[strlen (buf) - 1] = 0;
@@ -2172,18 +2172,18 @@ main (int argc, char **argv)
 	str2 = cplus_demangle (buf, DMGL_PARAMS | DMGL_ANSI | DMGL_VERBOSE);
 	if (str2 == NULL)
 	  {
-	    printf ("Demangling error\n");
+	    gnulib::printf ("Demangling error\n");
 	    if (c)
-	      printf ("%s%c%s\n", buf, c, extra_chars);
+	      gnulib::printf ("%s%c%s\n", buf, c, extra_chars);
 	    else
-	      printf ("%s\n", buf);
+	      gnulib::printf ("%s\n", buf);
 	    continue;
 	  }
 	result = cp_demangled_name_to_comp (str2, &errmsg);
 	if (result == NULL)
 	  {
-	    fputs (errmsg, stderr);
-	    fputc ('\n', stderr);
+	    gnulib::fputs (errmsg, stderr);
+	    gnulib::fputc ('\n', stderr);
 	    continue;
 	  }
 
@@ -2193,23 +2193,23 @@ main (int argc, char **argv)
 	free (str2);
 	if (c)
 	  {
-	    putchar (c);
-	    fputs (extra_chars, stdout);
+	    gnulib::putchar (c);
+	    gnulib::fputs (extra_chars, stdout);
 	  }
-	putchar ('\n');
+	gnulib::putchar ('\n');
       }
   else
     {
       result = cp_demangled_name_to_comp (argv[arg], &errmsg);
       if (result == NULL)
 	{
-	  fputs (errmsg, stderr);
-	  fputc ('\n', stderr);
+	  gnulib::fputs (errmsg, stderr);
+	  gnulib::fputc ('\n', stderr);
 	  return 0;
 	}
       cp_print (result->tree);
       cp_demangled_name_parse_free (result);
-      putchar ('\n');
+      gnulib::putchar ('\n');
     }
   return 0;
 }

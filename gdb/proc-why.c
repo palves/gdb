@@ -105,6 +105,7 @@ void
 proc_prettyfprint_why (FILE *file, unsigned long why, unsigned long what,
 		       int verbose)
 {
+  using gnulib::fprintf;
   int i;
 
   if (why == 0)

@@ -416,7 +416,7 @@ inferior_has_bug (const char *ver_symbol, int ver_major_min, int ver_minor_min)
 
   version_addr = BMSYMBOL_VALUE_ADDRESS (version_msym);
   got = target_read_string (version_addr, &version, 32, &err);
-  if (err == 0 && memchr (version, 0, got) == &version[got -1])
+  if (err == 0 && gnulib::memchr (version, 0, got) == &version[got -1])
     {
       int major, minor;
 

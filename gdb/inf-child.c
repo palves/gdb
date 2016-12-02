@@ -345,7 +345,7 @@ inf_child_fileio_readlink (struct target_ops *self,
   int len;
   char *ret;
 
-  len = readlink (filename, buf, sizeof buf);
+  len = gnulib::readlink (filename, buf, sizeof buf);
   if (len < 0)
     {
       *target_errno = host_to_fileio_error (errno);

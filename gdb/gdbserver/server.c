@@ -1003,8 +1003,9 @@ handle_search_memory_1 (CORE_ADDR start_addr, CORE_ADDR search_space_len,
 				  ? search_space_len
 				  : search_buf_size);
 
-      found_ptr = (gdb_byte *) memmem (search_buf, nr_search_bytes, pattern,
-				       pattern_len);
+      found_ptr = (gdb_byte *) gnulib::memmem (search_buf,
+					       nr_search_bytes, pattern,
+					       pattern_len);
 
       if (found_ptr != NULL)
 	{
@@ -1072,7 +1073,7 @@ handle_search_memory (char *own_buf, int packet_len)
   CORE_ADDR found_addr;
   int cmd_name_len = sizeof ("qSearch:memory:") - 1;
 
-  pattern = (gdb_byte *) malloc (packet_len);
+  pattern = (gdb_byte *) gnulib::malloc (packet_len);
   if (pattern == NULL)
     {
       error ("Unable to allocate memory to perform the search");
@@ -1096,7 +1097,7 @@ handle_search_memory (char *own_buf, int packet_len)
   if (search_space_len < search_buf_size)
     search_buf_size = search_space_len;
 
-  search_buf = (gdb_byte *) malloc (search_buf_size);
+  search_buf = (gdb_byte *) gnulib::malloc (search_buf_size);
   if (search_buf == NULL)
     {
       free (pattern);
@@ -1447,7 +1448,7 @@ handle_qxfer_libraries (const char *annex,
   for_each_inferior_with_data (&all_dlls, accumulate_file_name_length,
 			       &total_len);
 
-  document = (char *) malloc (total_len);
+  document = (char *) gnulib::malloc (total_len);
   if (document == NULL)
     return -1;
 
@@ -1911,7 +1912,7 @@ handle_qxfer (char *own_buf, int packet_len, int *new_packet_len_p)
 		 more.  */
 	      if (len > PBUFSIZ - 2)
 		len = PBUFSIZ - 2;
-	      data = (unsigned char *) malloc (len + 1);
+	      data = (unsigned char *) gnulib::malloc (len + 1);
 	      if (data == NULL)
 		{
 		  write_enn (own_buf);
@@ -1945,7 +1946,7 @@ handle_qxfer (char *own_buf, int packet_len, int *new_packet_len_p)
 	      unsigned char *data;
 
 	      strcpy (own_buf, "E00");
-	      data = (unsigned char *) malloc (packet_len - (offset - own_buf));
+	      data = (unsigned char *) gnulib::malloc (packet_len - (offset - own_buf));
 	      if (data == NULL)
 		{
 		  write_enn (own_buf);
@@ -2473,7 +2474,7 @@ handle_query (char *own_buf, int packet_len, int *new_packet_len_p)
   /* Handle "monitor" commands.  */
   if (startswith (own_buf, "qRcmd,"))
     {
-      char *mon = (char *) malloc (PBUFSIZ);
+      char *mon = (char *) gnulib::malloc (PBUFSIZ);
       int len = strlen (own_buf + 6);
 
       if (mon == NULL)
@@ -2663,7 +2664,8 @@ handle_v_cont (char *own_buf)
       p = strchr (p, ';');
     }
 
-  resume_info = (struct thread_resume *) malloc (n * sizeof (resume_info[0]));
+  resume_info
+    = (struct thread_resume *) gnulib::malloc (n * sizeof (resume_info[0]));
   if (resume_info == NULL)
     goto err;
 
@@ -3293,18 +3295,19 @@ handle_status (char *own_buf)
 static void
 gdbserver_version (void)
 {
-  printf ("GNU gdbserver %s%s\n"
-	  "Copyright (C) 2016 Free Software Foundation, Inc.\n"
-	  "gdbserver is free software, covered by the "
-	  "GNU General Public License.\n"
-	  "This gdbserver was configured as \"%s\"\n",
-	  PKGVERSION, version, host_name);
+  gnulib::printf ("GNU gdbserver %s%s\n"
+		  "Copyright (C) 2016 Free Software Foundation, Inc.\n"
+		  "gdbserver is free software, covered by the "
+		  "GNU General Public License.\n"
+		  "This gdbserver was configured as \"%s\"\n",
+		  PKGVERSION, version, host_name);
 }
 
 static void
 gdbserver_usage (FILE *stream)
 {
-  fprintf (stream, "Usage:\tgdbserver [OPTIONS] COMM PROG [ARGS ...]\n"
+  gnulib::fprintf (stream,
+	   "Usage:\tgdbserver [OPTIONS] COMM PROG [ARGS ...]\n"
 	   "\tgdbserver [OPTIONS] --attach COMM PID\n"
 	   "\tgdbserver [OPTIONS] --multi COMM\n"
 	   "\n"
@@ -3351,13 +3354,13 @@ gdbserver_usage (FILE *stream)
 	   "For more information, consult the GDB manual (available as on-line \n"
 	   "info or a printed manual).\n");
   if (REPORT_BUGS_TO[0] && stream == stdout)
-    fprintf (stream, "Report bugs to \"%s\".\n", REPORT_BUGS_TO);
+    gnulib::fprintf (stream, "Report bugs to \"%s\".\n", REPORT_BUGS_TO);
 }
 
 static void
 gdbserver_show_disableable (FILE *stream)
 {
-  fprintf (stream, "Disableable packets:\n"
+  gnulib::fprintf (stream, "Disableable packets:\n"
 	   "  vCont       \tAll vCont packets\n"
 	   "  qC          \tQuerying the current thread\n"
 	   "  qfThreadInfo\tThread listing\n"
@@ -3871,7 +3874,7 @@ process_point_options (struct gdb_breakpoint *bp, char **packet)
 	  if (debug_threads)
 	    debug_printf ("Found breakpoint condition.\n");
 	  if (!add_breakpoint_condition (bp, &dataptr))
-	    dataptr = strchrnul (dataptr, ';');
+	    dataptr = gnulib::strchrnul (dataptr, ';');
 	}
       else if (startswith (dataptr, "cmds:"))
 	{
@@ -3881,13 +3884,13 @@ process_point_options (struct gdb_breakpoint *bp, char **packet)
 	  persist = (*dataptr == '1');
 	  dataptr += 2;
 	  if (add_breakpoint_commands (bp, &dataptr, persist))
-	    dataptr = strchrnul (dataptr, ';');
+	    dataptr = gnulib::strchrnul (dataptr, ';');
 	}
       else
 	{
 	  inform ("Unknown token %c, ignoring.\n", *dataptr);
 	  /* Skip tokens until we find one that we recognize.  */
-	  dataptr = strchrnul (dataptr, ';');
+	  dataptr = gnulib::strchrnul (dataptr, ';');
 	}
     }
   *packet = dataptr;

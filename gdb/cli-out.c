@@ -422,7 +422,7 @@ cli_mld_crlf (const struct match_list_displayer *displayer)
 static void
 cli_mld_putch (const struct match_list_displayer *displayer, int ch)
 {
-  putc (ch, rl_outstream);
+  gnulib::putc (ch, rl_outstream);
 }
 
 /* CLI version of displayer.puts.  */
@@ -430,7 +430,7 @@ cli_mld_putch (const struct match_list_displayer *displayer, int ch)
 static void
 cli_mld_puts (const struct match_list_displayer *displayer, const char *s)
 {
-  fputs (s, rl_outstream);
+  gnulib::fputs (s, rl_outstream);
 }
 
 /* CLI version of displayer.flush.  */

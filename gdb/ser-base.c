@@ -295,7 +295,7 @@ ser_base_read_error_fd (struct serial *scb, int close_fd)
 	  gdb_assert (s > 0 && s <= GDB_MI_MSG_WIDTH);
 	  buf[s] = '\0';
 	  current = buf;
-	  while ((newline = strstr (current, "\n")) != NULL)
+	  while ((newline = gnulib::strstr (current, "\n")) != NULL)
 	    {
 	      *newline = '\0';
 	      fputs_unfiltered (current, gdb_stderr);

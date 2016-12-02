@@ -91,7 +91,7 @@ fdwalk (int (*func) (void *, int), void *arg)
 	      continue;
 	    }
 
-	  if (fd == dirfd (dir))
+	  if (fd == gnulib::dirfd (dir))
 	    continue;
 
 	  result = func (arg, fd);

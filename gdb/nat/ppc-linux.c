@@ -40,7 +40,7 @@ ppc64_host_hwcap (unsigned long *valp)
   if (f == NULL)
     return;
 
-  while (fread (data, sizeof (data), 1, f) > 0)
+  while (gnulib::fread (data, sizeof (data), 1, f) > 0)
     {
       if (data[0] == AT_HWCAP)
 	{

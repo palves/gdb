@@ -559,7 +559,7 @@ compile_to_object (struct command_line *cmd, const char *cmd_string,
     perror_with_name (_("Could not open source file for writing"));
   inner_cleanup = make_cleanup (cleanup_unlink_file,
 				(void *) fnames.source_file ());
-  if (fputs (code.c_str (), src) == EOF)
+  if (gnulib::fputs (code.c_str (), src) == EOF)
     perror_with_name (_("Could not write to source file"));
   fclose (src);
 

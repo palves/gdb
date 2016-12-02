@@ -436,7 +436,7 @@ processId (const char *name0, int len)
   while (len > 0 && isspace (name0[len-1]))
     len -= 1;
 
-  if (strstr (name0, "___") != NULL)
+  if (gnulib::strstr (name0, "___") != NULL)
     {
       strncpy (name, name0, len);
       name[len] = '\000';

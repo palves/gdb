@@ -20,6 +20,8 @@
 #ifndef COMMON_DEFS_H
 #define COMMON_DEFS_H
 
+#define GNULIB_NAMESPACE gnulib
+
 #include "config.h"
 #ifdef GDBSERVER
 #include "build-gnulib-gdbserver/config.h"

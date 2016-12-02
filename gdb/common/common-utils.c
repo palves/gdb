@@ -40,7 +40,7 @@ xmalloc (size_t size)
   if (size == 0)
     size = 1;
 
-  val = malloc (size);         /* ARI: malloc */
+  val = gnulib::malloc (size);         /* ARI: malloc */
   if (val == NULL)
     malloc_failure (size);
 
@@ -60,7 +60,7 @@ xrealloc (PTR ptr, size_t size)          /* ARI: PTR */
   if (ptr != NULL)
     val = realloc (ptr, size);	/* ARI: realloc */
   else
-    val = malloc (size);	        /* ARI: malloc */
+    val = gnulib::malloc (size);	        /* ARI: malloc */
   if (val == NULL)
     malloc_failure (size);
 

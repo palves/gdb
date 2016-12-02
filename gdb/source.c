@@ -1088,7 +1088,7 @@ find_and_open_source (const char *filename,
 #define	cdir_len	5
       /* We cast strstr's result in case an ANSIhole has made it const,
          which produces a "required warning" when assigned to a nonconst.  */
-      p = (char *) strstr (source_path, "$cdir");
+      p = (char *) gnulib::strstr (source_path, "$cdir");
       if (p && (p == path || p[-1] == DIRNAME_SEPARATOR)
 	  && (p[cdir_len] == DIRNAME_SEPARATOR || p[cdir_len] == '\0'))
 	{
@@ -1459,7 +1459,7 @@ print_source_lines_base (struct symtab *s, int line, int stopline,
     {
       char buf[20];
 
-      c = fgetc (stream);
+      c = gnulib::fgetc (stream);
       if (c == EOF)
 	break;
       last_line_listed = current_source_line;
@@ -1482,7 +1482,7 @@ print_source_lines_base (struct symtab *s, int line, int stopline,
 	  else if (c == '\r')
 	    {
 	      /* Skip a \r character, but only before a \n.  */
-	      int c1 = fgetc (stream);
+	      int c1 = gnulib::fgetc (stream);
 
 	      if (c1 != '\n')
 		printf_filtered ("^%c", c + 0100);
@@ -1495,7 +1495,7 @@ print_source_lines_base (struct symtab *s, int line, int stopline,
 	      ui_out_text (uiout, buf);
 	    }
 	}
-      while (c != '\n' && (c = fgetc (stream)) >= 0);
+      while (c != '\n' && (c = gnulib::fgetc (stream)) >= 0);
     }
 
   do_cleanups (cleanup);
@@ -1675,7 +1675,7 @@ forward_search_command (char *regex, int from_tty)
       buf = (char *) xmalloc (cursize);
       p = buf;
 
-      c = fgetc (stream);
+      c = gnulib::fgetc (stream);
       if (c == EOF)
 	break;
       do
@@ -1689,7 +1689,7 @@ forward_search_command (char *regex, int from_tty)
 	      cursize = newsize;
 	    }
 	}
-      while (c != '\n' && (c = fgetc (stream)) >= 0);
+      while (c != '\n' && (c = gnulib::fgetc (stream)) >= 0);
 
       /* Remove the \r, if any, at the end of the line, otherwise
          regular expressions that end with $ or \n won't work.  */
@@ -1760,14 +1760,14 @@ reverse_search_command (char *regex, int from_tty)
       char buf[4096];		/* Should be reasonable???  */
       char *p = buf;
 
-      c = fgetc (stream);
+      c = gnulib::fgetc (stream);
       if (c == EOF)
 	break;
       do
 	{
 	  *p++ = c;
 	}
-      while (c != '\n' && (c = fgetc (stream)) >= 0);
+      while (c != '\n' && (c = gnulib::fgetc (stream)) >= 0);
 
       /* Remove the \r, if any, at the end of the line, otherwise
          regular expressions that end with $ or \n won't work.  */

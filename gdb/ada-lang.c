@@ -642,7 +642,7 @@ ada_name_prefix_len (const char *name)
     return 0;
   else
     {
-      const char *p = strstr (name, "___");
+      const char *p = gnulib::strstr (name, "___");
 
       if (p == NULL)
         return strlen (name);
@@ -1178,7 +1178,7 @@ ada_decode (const char *encoded)
      the suffix is located before the current "end" of ENCODED.  We want
      to avoid re-matching parts of ENCODED that have previously been
      marked as discarded (by decrementing LEN0).  */
-  p = strstr (encoded, "___");
+  p = gnulib::strstr (encoded, "___");
   if (p != NULL && p - encoded < len0 - 3)
     {
       if (p[3] == 'X')
@@ -2130,7 +2130,7 @@ ada_is_packed_array_type  (struct type *type)
   type = ada_check_typedef (type);
   return
     ada_type_name (type) != NULL
-    && strstr (ada_type_name (type), "___XP") != NULL;
+    && gnulib::strstr (ada_type_name (type), "___XP") != NULL;
 }
 
 /* Non-zero iff TYPE represents a standard GNAT constrained
@@ -2176,7 +2176,7 @@ decode_packed_array_bitsize (struct type *type)
   if (!raw_name)
     return 0;
 
-  tail = strstr (raw_name, "___XP");
+  tail = gnulib::strstr (raw_name, "___XP");
   gdb_assert (tail != NULL);
 
   if (sscanf (tail + sizeof ("___XP") - 1, "%ld", &bits) != 1)
@@ -2270,7 +2270,7 @@ decode_constrained_packed_array_type (struct type *type)
     return NULL;
 
   name = (char *) alloca (strlen (raw_name) + 1);
-  tail = strstr (raw_name, "___XP");
+  tail = gnulib::strstr (raw_name, "___XP");
   type = desc_base_type (type);
 
   memcpy (name, raw_name, tail - raw_name);
@@ -4343,7 +4343,7 @@ ada_parse_renaming (struct symbol *sym,
     case LOC_STATIC:
     case LOC_COMPUTED:
     case LOC_OPTIMIZED_OUT:
-      info = strstr (SYMBOL_LINKAGE_NAME (sym), "___XR");
+      info = gnulib::strstr (SYMBOL_LINKAGE_NAME (sym), "___XR");
       if (info == NULL)
 	return ADA_NOT_RENAMING;
       switch (info[5])
@@ -4371,7 +4371,7 @@ ada_parse_renaming (struct symbol *sym,
 
   if (renamed_entity != NULL)
     *renamed_entity = info;
-  suffix = strstr (info, "___XE");
+  suffix = gnulib::strstr (info, "___XE");
   if (suffix == NULL || suffix == info)
     return ADA_NOT_RENAMING;
   if (len != NULL)
@@ -4404,7 +4404,7 @@ parse_old_style_renaming (struct type *type,
   if (name == NULL)
     return ADA_NOT_RENAMING;
   
-  name = strstr (name, "___XR");
+  name = gnulib::strstr (name, "___XR");
   if (name == NULL)
     return ADA_NOT_RENAMING;
   switch (name[5])
@@ -4431,7 +4431,7 @@ parse_old_style_renaming (struct type *type,
     return ADA_NOT_RENAMING;
   if (renamed_entity != NULL)
     *renamed_entity = info;
-  suffix = strstr (info, "___XE");
+  suffix = gnulib::strstr (info, "___XE");
   if (renaming_expr != NULL)
     *renaming_expr = suffix + 5;
   if (suffix == NULL || suffix == info)
@@ -4768,7 +4768,7 @@ cache_symbol (const char *name, domain_enum domain, struct symbol *sym,
 static int
 should_use_wild_match (const char *lookup_name)
 {
-  return (strstr (lookup_name, "__") == NULL);
+  return (gnulib::strstr (lookup_name, "__") == NULL);
 }
 
 /* Return the result of a standard (literal, C-like) lookup of NAME in
@@ -5195,7 +5195,7 @@ xget_renaming_scope (struct type *renaming_type)
      and then backtrack until we find the first "__".  */
 
   const char *name = type_name_no_tag (renaming_type);
-  const char *suffix = strstr (name, "___XR");
+  const char *suffix = gnulib::strstr (name, "___XR");
   const char *last;
   int scope_len;
   char *scope;
@@ -5241,7 +5241,7 @@ is_package_name (const char *name)
 
   /* Do a quick check that NAME does not contain "__", since library-level
      functions names cannot contain "__" in them.  */
-  if (strstr (name, "__") != NULL)
+  if (gnulib::strstr (name, "__") != NULL)
     return 0;
 
   fun_name = xstrprintf ("_ada_%s", name);
@@ -5349,7 +5349,7 @@ remove_irrelevant_renamings (struct block_symbol *syms,
       if (sym == NULL || SYMBOL_CLASS (sym) == LOC_TYPEDEF)
 	continue;
       name = SYMBOL_LINKAGE_NAME (sym);
-      suffix = strstr (name, "___XR");
+      suffix = gnulib::strstr (name, "___XR");
 
       if (suffix != NULL)
 	{
@@ -6560,7 +6560,7 @@ ada_make_symbol_completion_list (const char *text0, const char *word,
       for (i = 0; i < text_len; i++)
         text[i] = tolower (text[i]);
 
-      encoded_p = (strstr (text0, "__") != NULL);
+      encoded_p = (gnulib::strstr (text0, "__") != NULL);
       /* If the name contains a ".", then the user is entering a fully
          qualified entity name, and the match must not be done in wild
          mode.  Similarly, if the user wants to complete what looks like
@@ -7946,7 +7946,7 @@ ada_find_renaming_symbol (struct symbol *name_sym, const struct block *block)
   const char *name = SYMBOL_LINKAGE_NAME (name_sym);
   struct symbol *sym;
 
-  if (strstr (name, "___XR") != NULL)
+  if (gnulib::strstr (name, "___XR") != NULL)
      return name_sym;
 
   sym = find_old_style_renaming_symbol (name, block);
@@ -7956,7 +7956,8 @@ ada_find_renaming_symbol (struct symbol *name_sym, const struct block *block)
 
   /* Not right yet.  FIXME pnh 7/20/2007.  */
   sym = ada_find_any_type_symbol (name);
-  if (sym != NULL && strstr (SYMBOL_LINKAGE_NAME (sym), "___XR") != NULL)
+  if (sym != NULL
+      && gnulib::strstr (SYMBOL_LINKAGE_NAME (sym), "___XR") != NULL)
     return sym;
   else
     return NULL;
@@ -7994,7 +7995,7 @@ find_old_style_renaming_symbol (const char *name, const struct block *block)
          pollution.  However, the renaming symbols themselves do not
          have this prefix, so we need to skip this prefix if present.  */
       if (function_name_len > 5 /* "_ada_" */
-          && strstr (function_name, "_ada_") == function_name)
+          && gnulib::strstr (function_name, "_ada_") == function_name)
         {
 	  function_name += 5;
 	  function_name_len -= 5;
@@ -8044,8 +8045,10 @@ ada_prefer_type (struct type *type0, struct type *type1)
       const char *type0_name = type_name_no_tag (type0);
       const char *type1_name = type_name_no_tag (type1);
 
-      if (type0_name != NULL && strstr (type0_name, "___XR") != NULL
-	  && (type1_name == NULL || strstr (type1_name, "___XR") == NULL))
+      if (type0_name != NULL
+	  && gnulib::strstr (type0_name, "___XR") != NULL
+	  && (type1_name == NULL
+	      || gnulib::strstr (type1_name, "___XR") == NULL))
 	return 1;
     }
   return 0;
@@ -8197,7 +8200,7 @@ is_dynamic_field (struct type *templ_type, int field_num)
 
   return name != NULL
     && TYPE_CODE (TYPE_FIELD_TYPE (templ_type, field_num)) == TYPE_CODE_PTR
-    && strstr (name, "___XVL") != NULL;
+    && gnulib::strstr (name, "___XVL") != NULL;
 }
 
 /* The index of the variant field of TYPE, or -1 if TYPE does not
@@ -8774,7 +8777,7 @@ ada_is_redundant_range_encoding (struct type *range_type,
   if (TYPE_NAME (encoding_type) == NULL)
     return 0;
 
-  bounds_str = strstr (TYPE_NAME (encoding_type), "___XDLU_");
+  bounds_str = gnulib::strstr (TYPE_NAME (encoding_type), "___XDLU_");
   if (bounds_str == NULL)
     return 0;
 
@@ -9522,7 +9525,7 @@ ada_enum_name (const char *name)
     name = tmp + 1;
   else
     {
-      while ((tmp = strstr (name, "__")) != NULL)
+      while ((tmp = gnulib::strstr (name, "__")) != NULL)
         {
           if (isdigit (tmp[2]))
             break;
@@ -9555,9 +9558,9 @@ ada_enum_name (const char *name)
     }
   else
     {
-      tmp = strstr (name, "__");
+      tmp = gnulib::strstr (name, "__");
       if (tmp == NULL)
-	tmp = strstr (name, "$");
+	tmp = gnulib::strstr (name, "$");
       if (tmp != NULL)
         {
           GROW_VECT (result, result_len, tmp - name + 1);
@@ -11497,7 +11500,7 @@ fixed_type_info (struct type *type)
 
   if ((code == TYPE_CODE_INT || code == TYPE_CODE_RANGE) && name != NULL)
     {
-      const char *tail = strstr (name, "___XF_");
+      const char *tail = gnulib::strstr (name, "___XF_");
 
       if (tail == NULL)
         return NULL;
@@ -11615,7 +11618,7 @@ scan_discrim_bound (const char *str, int k, struct value *dval, LONGEST * px,
     return 0;
 
   pstart = str + k;
-  pend = strstr (pstart, "__");
+  pend = gnulib::strstr (pstart, "__");
   if (pend == NULL)
     {
       bound = pstart;
@@ -11717,7 +11720,7 @@ to_fixed_range_type (struct type *raw_type, struct value *dval)
     base_type = raw_type;
 
   name = TYPE_NAME (raw_type);
-  subtype_info = strstr (name, "___XD");
+  subtype_info = gnulib::strstr (name, "___XD");
   if (subtype_info == NULL)
     {
       LONGEST L = ada_discrete_type_low_bound (raw_type);
@@ -11802,7 +11805,7 @@ to_fixed_range_type (struct type *raw_type, struct value *dval)
 int
 ada_is_range_type_name (const char *name)
 {
-  return (name != NULL && strstr (name, "___XD"));
+  return (name != NULL && gnulib::strstr (name, "___XD"));
 }
 
 

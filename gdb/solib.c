@@ -960,7 +960,7 @@ Do you need \"set solib-search-path\" or \"set sysroot\"?"),
 int
 libpthread_name_p (const char *name)
 {
-  return (strstr (name, "/libpthread") != NULL);
+  return (gnulib::strstr (name, "/libpthread") != NULL);
 }
 
 /* Return non-zero if SO is the libpthread shared library.  */

@@ -545,7 +545,7 @@ skip_prologue_function (struct gdbarch *gdbarch, CORE_ADDR pc, int is_thumb)
 
       /* The GNU linker's Thumb call stub to foo is named
 	 __foo_from_thumb.  */
-      if (strstr (name, "_from_thumb") != NULL)
+      if (gnulib::strstr (name, "_from_thumb") != NULL)
 	name += 2;
 
       /* On soft-float targets, __truncdfsf2 is called to convert promoted

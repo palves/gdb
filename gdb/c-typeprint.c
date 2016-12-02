@@ -1269,7 +1269,7 @@ c_type_print_base (struct type *type, struct ui_file *stream,
 
 		      /* Get rid of the `static' appended by the
 			 demangler.  */
-		      p = strstr (demangled_no_class, " static");
+		      p = gnulib::strstr (demangled_no_class, " static");
 		      if (p != NULL)
 			{
 			  int length = p - demangled_no_class;

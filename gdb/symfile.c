@@ -1597,7 +1597,7 @@ find_separate_debug_file_by_debuglink (struct objfile *objfile)
 
       struct stat st_buf;
 
-      if (lstat (objfile_name (objfile), &st_buf) == 0
+      if (gnulib::lstat (objfile_name (objfile), &st_buf) == 0
 	  && S_ISLNK (st_buf.st_mode))
 	{
 	  char *symlink_dir;

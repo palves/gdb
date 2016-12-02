@@ -111,7 +111,7 @@ ctf_save_write_metadata (struct trace_write_handler *handler,
   va_list args;
 
   va_start (args, format);
-  if (vfprintf (handler->metadata_fd, format, args) < 0)
+  if (gnulib::vfprintf (handler->metadata_fd, format, args) < 0)
     error (_("Unable to write metadata file (%s)"),
 	     safe_strerror (errno));
   va_end (args);
@@ -124,7 +124,7 @@ static int
 ctf_save_write (struct trace_write_handler *handler,
 		const gdb_byte *buf, size_t size)
 {
-  if (fwrite (buf, size, 1, handler->datastream_fd) != 1)
+  if (gnulib::fwrite (buf, size, 1, handler->datastream_fd) != 1)
     error (_("Unable to write file for saving trace data (%s)"),
 	   safe_strerror (errno));
 
@@ -319,7 +319,7 @@ ctf_start (struct trace_file_writer *self, const char *dirname)
   mode_t hmode = S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IXGRP | S_IROTH;
 
   /* Create DIRNAME.  */
-  if (mkdir (dirname, hmode) && errno != EEXIST)
+  if (gnulib::mkdir (dirname, hmode) && errno != EEXIST)
     error (_("Unable to open directory '%s' for saving trace data (%s)"),
 	   dirname, safe_strerror (errno));
 

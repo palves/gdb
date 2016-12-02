@@ -676,7 +676,7 @@ linespec_lexer_lex_string (linespec_parser *parser)
 		  && (PARSER_STREAM (parser) - start) > 8
 		  /* strlen ("operator") */)
 		{
-		  const char *p = strstr (start, "operator");
+		  const char *p = gnulib::strstr (start, "operator");
 
 		  if (p != NULL && is_operator_name (p))
 		    {

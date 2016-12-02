@@ -496,7 +496,7 @@ static void ATTRIBUTE_NORETURN
 abort_with_message (const char *msg)
 {
   if (gdb_stderr == NULL)
-    fputs (msg, stderr);
+    gnulib::fputs (msg, stderr);
   else
     fputs_unfiltered (msg, gdb_stderr);
 
@@ -659,7 +659,7 @@ internal_vproblem (struct internal_problem *problem,
   /* Fall back to abort_with_message if gdb_stderr is not set up.  */
   if (gdb_stderr == NULL)
     {
-      fputs (reason, stderr);
+      gnulib::fputs (reason, stderr);
       abort_with_message ("\n");
     }
 
@@ -2867,7 +2867,7 @@ gdb_realpath (const char *filename)
   }
 #else
   {
-    char *rp = canonicalize_file_name (filename);
+    char *rp = gnulib::canonicalize_file_name (filename);
 
     if (rp != NULL)
       return rp;
@@ -3222,7 +3222,7 @@ substitute_path_component (char **stringp, const char *from, const char *to)
 
   for (s = string;;)
     {
-      s = strstr (s, from);
+      s = gnulib::strstr (s, from);
       if (s == NULL)
 	break;
 

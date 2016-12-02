@@ -439,7 +439,7 @@ go32_wait (struct target_ops *ops,
     /* Initialize child's cwd with the current one.  */
     getcwd (child_cwd, sizeof (child_cwd));
 
-  chdir (child_cwd);
+  gnulib::chdir (child_cwd);
 
 #if __DJGPP_MINOR__ < 3
   load_npx ();
@@ -461,7 +461,7 @@ go32_wait (struct target_ops *ops,
     }
 
   getcwd (child_cwd, sizeof (child_cwd)); /* in case it has changed */
-  chdir (current_directory);
+  gnulib::chdir (current_directory);
 
   if (a_tss.tss_irqn == 0x21)
     {
@@ -1333,7 +1333,7 @@ go32_sysinfo (char *arg, int from_tty)
     {
       /* The DPMI spec says the vendor string should be ASCIIZ, but
 	 I don't trust the vendors to follow that...  */
-      if (!memchr (&dpmi_vendor_info[2], 0, 126))
+      if (!gnulib::memchr (&dpmi_vendor_info[2], 0, 126))
 	dpmi_vendor_info[128] = '\0';
       printf_filtered ("DPMI Host......................"
 		       "%s v%d.%d (capabilities: %#x)\n",

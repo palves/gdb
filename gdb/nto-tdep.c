@@ -352,9 +352,9 @@ nto_sniff_abi_note_section (bfd *abfd, asection *sect, void *obj)
   if (sectsize > 128)
     sectsize = 128;
 
-  if (sectname != NULL && strstr (sectname, QNX_INFO_SECT_NAME) != NULL)
+  if (sectname != NULL && gnulib::strstr (sectname, QNX_INFO_SECT_NAME) != NULL)
     *(enum gdb_osabi *) obj = GDB_OSABI_QNXNTO;
-  else if (sectname != NULL && strstr (sectname, "note") != NULL
+  else if (sectname != NULL && gnulib::strstr (sectname, "note") != NULL
 	   && sectsize > sizeof_Elf_Nhdr)
     {
       note = XNEWVEC (char, sectsize);

@@ -68,7 +68,7 @@ decoded_type_name (struct type *type)
 	}
       strcpy (name_buffer, raw_name);
 
-      s = (char *) strstr (name_buffer, "___");
+      s = (char *) gnulib::strstr (name_buffer, "___");
       if (s != NULL)
 	*s = '\0';
 
@@ -233,7 +233,7 @@ print_range_bound (struct type *type, const char *bounds, int *n,
       const char *bound = bounds + *n;
       const char *pend;
 
-      pend = strstr (bound, "__");
+      pend = gnulib::strstr (bound, "__");
       if (pend == NULL)
 	*n += bound_len = strlen (bound);
       else
@@ -294,7 +294,7 @@ print_range_type (struct type *raw_type, struct ui_file *stream,
   else
     base_type = raw_type;
 
-  subtype_info = strstr (name, "___XD");
+  subtype_info = gnulib::strstr (name, "___XD");
   if (subtype_info == NULL)
     print_range (raw_type, stream, bounds_prefered_p);
   else

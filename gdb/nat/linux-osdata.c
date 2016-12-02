@@ -79,7 +79,7 @@ linux_common_core_of_thread (ptid_t ptid)
     {
       int n;
       content = (char *) xrealloc (content, content_read + 1024);
-      n = fread (content + content_read, 1, 1024, f);
+      n = gnulib::fread (content + content_read, 1, 1024, f);
       content_read += n;
       if (n < 1024)
 	{
@@ -96,9 +96,9 @@ linux_common_core_of_thread (ptid_t ptid)
   /* If the first field after program name has index 0, then core number is
      the field with index 36.  There's no constant for that anywhere.  */
   if (p != NULL)
-    p = strtok_r (p, " ", &ts);
+    p = gnulib::strtok_r (p, " ", &ts);
   for (i = 0; p != NULL && i != 36; ++i)
-    p = strtok_r (NULL, " ", &ts);
+    p = gnulib::strtok_r (NULL, " ", &ts);
 
   if (p == NULL || sscanf (p, "%d", &core) == 0)
     core = -1;
@@ -128,7 +128,7 @@ command_from_pid (char *command, int maxlen, PID_T pid)
 	 (for the brackets).  */
       char cmd[18];
       PID_T stat_pid;
-      int items_read = fscanf (fp, "%lld %17s", &stat_pid, cmd);
+      int items_read = gnulib::fscanf (fp, "%lld %17s", &stat_pid, cmd);
 	  
       if (items_read == 2 && pid == stat_pid)
 	{
@@ -166,7 +166,7 @@ commandline_from_pid (PID_T pid)
       while (!feof (f))
 	{
 	  char buf[1024];
-	  size_t read_bytes = fread (buf, 1, sizeof (buf), f);
+	  size_t read_bytes = gnulib::fread (buf, 1, sizeof (buf), f);
      
 	  if (read_bytes)
 	    {
@@ -692,7 +692,7 @@ linux_xfer_osdata_cpus (gdb_byte *readbuf,
 
 	  do
 	    {
-	      if (fgets (buf, sizeof (buf), fp))
+	      if (gnulib::fgets (buf, sizeof (buf), fp))
 		{
 		  char *key, *value;
 		  int i = 0;
@@ -828,7 +828,7 @@ linux_xfer_osdata_fds (gdb_byte *readbuf,
 			    continue;
 
 			  fdname = xstrprintf ("%s/%s", pathname, dp2->d_name);
-			  rslt = readlink (fdname, buf, sizeof (buf) - 1);
+			  rslt = gnulib::readlink (fdname, buf, sizeof (buf) - 1);
 			  if (rslt >= 0)
 			    buf[rslt] = '\0';
 
@@ -958,7 +958,7 @@ print_sockets (unsigned short family, int tcp, struct buffer *buffer)
 
       do
 	{
-	  if (fgets (buf, sizeof (buf), fp))
+	  if (gnulib::fgets (buf, sizeof (buf), fp))
 	    {
 	      uid_t uid;
 	      unsigned int local_port, remote_port, state;
@@ -1179,7 +1179,7 @@ linux_xfer_osdata_shm (gdb_byte *readbuf,
 
 	  do
 	    {
-	      if (fgets (buf, sizeof (buf), fp))
+	      if (gnulib::fgets (buf, sizeof (buf), fp))
 		{
 		  key_t key;
 		  uid_t uid, cuid;
@@ -1307,7 +1307,7 @@ linux_xfer_osdata_sem (gdb_byte *readbuf,
 	  
 	  do
 	    {
-	      if (fgets (buf, sizeof (buf), fp))
+	      if (gnulib::fgets (buf, sizeof (buf), fp))
 		{
 		  key_t key;
 		  uid_t uid, cuid;
@@ -1419,7 +1419,7 @@ linux_xfer_osdata_msg (gdb_byte *readbuf,
 	  
 	  do
 	    {
-	      if (fgets (buf, sizeof (buf), fp))
+	      if (gnulib::fgets (buf, sizeof (buf), fp))
 		{
 		  key_t key;
 		  PID_T lspid, lrpid;
@@ -1545,7 +1545,7 @@ linux_xfer_osdata_modules (gdb_byte *readbuf,
 	  
 	  do
 	    {
-	      if (fgets (buf, sizeof (buf), fp))
+	      if (gnulib::fgets (buf, sizeof (buf), fp))
 		{
 		  char *name, *dependencies, *status, *tmp;
 		  unsigned int size;

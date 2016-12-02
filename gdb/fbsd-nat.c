@@ -61,7 +61,7 @@ fbsd_pid_to_exec_file (struct target_ops *self, int pid)
 #endif
 
   xsnprintf (name, PATH_MAX, "/proc/%d/exe", pid);
-  len = readlink (name, buf, PATH_MAX - 1);
+  len = gnulib::readlink (name, buf, PATH_MAX - 1);
   if (len != -1)
     {
       buf[len] = '\0';
@@ -143,7 +143,7 @@ fbsd_read_mapping (FILE *mapfile, unsigned long *start, unsigned long *end,
      /usr/src/sys/fs/procfs/procfs_map.c.  Somewhere in 5.1-CURRENT a
      new column was added to the procfs map.  Therefore we can't use
      fscanf since we need to support older releases too.  */
-  if (fgets (buf, sizeof buf, mapfile) != NULL)
+  if (gnulib::fgets (buf, sizeof buf, mapfile) != NULL)
     ret = sscanf (buf, "%lx %lx %d %d %lx %s", start, end,
 		  &resident, &privateresident, &obj, protection);
 

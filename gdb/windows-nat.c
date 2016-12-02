@@ -2009,7 +2009,7 @@ windows_pid_to_exec_file (struct target_ops *self, int pid)
   char procexe[sizeof ("/proc/4294967295/exe")];
 
   xsnprintf (procexe, sizeof (procexe), "/proc/%u/exe", pid);
-  nchars = readlink (procexe, path, sizeof(path));
+  nchars = gnulib::readlink (procexe, path, sizeof(path));
   if (nchars > 0 && nchars < sizeof (path))
     {
       path[nchars] = '\0';	/* Got it */

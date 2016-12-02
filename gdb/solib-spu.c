@@ -531,14 +531,14 @@ set_spu_solib_ops (struct gdbarch *gdbarch)
 static void
 spu_solib_loaded (struct so_list *so)
 {
-  if (strstr (so->so_original_name, "/libspe") != NULL)
+  if (gnulib::strstr (so->so_original_name, "/libspe") != NULL)
     {
       solib_read_symbols (so, 0);
       spu_enable_break (so->objfile);
     }
   /* In case the OpenCL runtime is loaded we install a breakpoint
      to get notified whenever an OpenCL program gets loaded.  */
-  if (strstr (so->so_name, "CLRuntimeAccelCellSPU@") != NULL)
+  if (gnulib::strstr (so->so_name, "CLRuntimeAccelCellSPU@") != NULL)
     {
       solib_read_symbols (so, 0);
       ocl_enable_break (so->objfile);

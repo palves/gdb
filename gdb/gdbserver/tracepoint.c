@@ -71,7 +71,7 @@ trace_vdebug (const char *fmt, ...)
 
   va_start (ap, fmt);
   vsprintf (buf, fmt, ap);
-  fprintf (stderr, PROG "/tracepoint: %s\n", buf);
+  gnulib::fprintf (stderr, PROG "/tracepoint: %s\n", buf);
   va_end (ap);
 }
 
@@ -7387,7 +7387,7 @@ getauxval (unsigned long type)
   if (f == NULL)
     return 0;
 
-  while (fread (data, sizeof (data), 1, f) > 0)
+  while (gnulib::fread (data, sizeof (data), 1, f) > 0)
     {
       if (data[0] == type)
 	{

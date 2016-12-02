@@ -271,6 +271,7 @@ static struct trans pr_flag_table[] =
 void
 proc_prettyfprint_flags (FILE *file, unsigned long flags, int verbose)
 {
+  using gnulib::fprintf;
   int i;
 
   for (i = 0; i < sizeof (pr_flag_table) / sizeof (pr_flag_table[0]); i++)

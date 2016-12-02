@@ -810,7 +810,9 @@ gdb_readline_no_editing_callback (gdb_client_data client_data)
     {
       /* Read from stdin if we are executing a user defined command.
          This is the right thing for prompt_for_continue, at least.  */
-      c = fgetc (ui->instream != NULL ? ui->instream : ui->stdin_stream);
+      c = gnulib::fgetc (ui->instream != NULL
+			 ? ui->instream
+			 : ui->stdin_stream);
 
       if (c == EOF)
 	{

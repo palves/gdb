@@ -1360,6 +1360,8 @@ init_syscall_table (void)
 void
 proc_prettyfprint_syscall (FILE *file, int num, int verbose)
 {
+  using gnulib::fprintf;
+
   if (syscall_table[num])
     fprintf (file, "SYS_%s ", syscall_table[num]);
   else
@@ -1377,6 +1379,7 @@ proc_prettyprint_syscall (int num, int verbose)
 void
 proc_prettyfprint_syscalls (FILE *file, sysset_t *sysset, int verbose)
 {
+  using gnulib::fprintf;
   int i;
 
   for (i = 0; i < MAX_SYSCALLS; i++)
@@ -1548,6 +1551,7 @@ static struct trans signal_table[] =
 void
 proc_prettyfprint_signal (FILE *file, int signo, int verbose)
 {
+  using gnulib::fprintf;
   int i;
 
   for (i = 0; i < sizeof (signal_table) / sizeof (signal_table[0]); i++)
@@ -1574,6 +1578,7 @@ proc_prettyprint_signal (int signo, int verbose)
 void
 proc_prettyfprint_signalset (FILE *file, sigset_t *sigset, int verbose)
 {
+  using gnulib::fprintf;
   int i;
 
   /* Loop over all signal numbers from 0 to NSIG, using them as the
@@ -1654,6 +1659,8 @@ static struct trans fault_table[] =
 static void
 prettyfprint_faulttable_entry (FILE *file, int i, int verbose)
 {
+  using gnulib::fprintf;
+
   fprintf (file, "%s", fault_table[i].name);
   if (verbose)
     fprintf (file, ": %s\n", fault_table[i].desc);
@@ -1666,6 +1673,7 @@ prettyfprint_faulttable_entry (FILE *file, int i, int verbose)
 void
 proc_prettyfprint_fault (FILE *file, int faultno, int verbose)
 {
+  using gnulib::fprintf;
   int i;
 
   for (i = 0; i < ARRAY_SIZE (fault_table); i++)
@@ -1690,6 +1698,7 @@ proc_prettyprint_fault (int faultno, int verbose)
 void
 proc_prettyfprint_faultset (FILE *file, fltset_t *fltset, int verbose)
 {
+  using gnulib::fprintf;
   int i;
 
   /* Loop through the fault table, using the value field as the index

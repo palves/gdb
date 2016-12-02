@@ -994,8 +994,8 @@ linux_create_inferior (char *program, char **allargs)
       if (errno == ENOENT)
 	execvp (program, allargs);
 
-      fprintf (stderr, "Cannot exec %s: %s.\n", program,
-	       strerror (errno));
+      gnulib::fprintf (stderr, "Cannot exec %s: %s.\n", program,
+		       strerror (errno));
       fflush (stderr);
       _exit (0177);
     }

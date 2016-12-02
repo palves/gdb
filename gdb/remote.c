@@ -6876,7 +6876,7 @@ Packet: '%s'\n"),
 	      /* The value part is documented as "must be empty",
 		 though we ignore it, in case we ever decide to make
 		 use of it in a backward compatible way.  */
-	      p = strchrnul (p1 + 1, ';');
+	      p = gnulib::strchrnul (p1 + 1, ';');
 	    }
 	  else if (strprefix (p, p1, "hwbreak"))
 	    {
@@ -6888,19 +6888,19 @@ Packet: '%s'\n"),
 		error (_("Unexpected hwbreak stop reason"));
 
 	      /* See above.  */
-	      p = strchrnul (p1 + 1, ';');
+	      p = gnulib::strchrnul (p1 + 1, ';');
 	    }
 	  else if (strprefix (p, p1, "library"))
 	    {
 	      event->ws.kind = TARGET_WAITKIND_LOADED;
-	      p = strchrnul (p1 + 1, ';');
+	      p = gnulib::strchrnul (p1 + 1, ';');
 	    }
 	  else if (strprefix (p, p1, "replaylog"))
 	    {
 	      event->ws.kind = TARGET_WAITKIND_NO_HISTORY;
 	      /* p1 will indicate "begin" or "end", but it makes
 		 no difference for now, so ignore it.  */
-	      p = strchrnul (p1 + 1, ';');
+	      p = gnulib::strchrnul (p1 + 1, ';');
 	    }
 	  else if (strprefix (p, p1, "core"))
 	    {
@@ -6922,7 +6922,7 @@ Packet: '%s'\n"),
 	  else if (strprefix (p, p1, "vforkdone"))
 	    {
 	      event->ws.kind = TARGET_WAITKIND_VFORK_DONE;
-	      p = strchrnul (p1 + 1, ';');
+	      p = gnulib::strchrnul (p1 + 1, ';');
 	    }
 	  else if (strprefix (p, p1, "exec"))
 	    {
@@ -6951,7 +6951,7 @@ Packet: '%s'\n"),
 	  else if (strprefix (p, p1, "create"))
 	    {
 	      event->ws.kind = TARGET_WAITKIND_THREAD_CREATED;
-	      p = strchrnul (p1 + 1, ';');
+	      p = gnulib::strchrnul (p1 + 1, ';');
 	    }
 	  else
 	    {
@@ -6960,7 +6960,7 @@ Packet: '%s'\n"),
 
 	      if (skipregs)
 		{
-		  p = strchrnul (p1 + 1, ';');
+		  p = gnulib::strchrnul (p1 + 1, ';');
 		  p++;
 		  continue;
 		}
@@ -6997,7 +6997,7 @@ Packet: '%s'\n"),
 		{
 		  /* Not a number.  Silently skip unknown optional
 		     info.  */
-		  p = strchrnul (p1 + 1, ';');
+		  p = gnulib::strchrnul (p1 + 1, ';');
 		}
 	    }
 
@@ -11900,9 +11900,9 @@ remote_file_put (const char *local_file, const char *remote_file, int from_tty)
     {
       if (!saw_eof)
 	{
-	  bytes = fread (buffer + bytes_in_buffer, 1,
-			 io_size - bytes_in_buffer,
-			 file);
+	  bytes = gnulib::fread (buffer + bytes_in_buffer, 1,
+				 io_size - bytes_in_buffer,
+				 file);
 	  if (bytes == 0)
 	    {
 	      if (ferror (file))
@@ -11996,7 +11996,7 @@ remote_file_get (const char *remote_file, const char *local_file, int from_tty)
 
       offset += bytes;
 
-      bytes = fwrite (buffer, 1, bytes, file);
+      bytes = gnulib::fwrite (buffer, 1, bytes, file);
       if (bytes == 0)
 	perror_with_name (local_file);
     }

@@ -478,9 +478,9 @@ decode_vmflags (char *p, struct smaps_vmflags *v)
   p = skip_to_space (p);
   p = skip_spaces (p);
 
-  for (s = strtok_r (p, " ", &saveptr);
+  for (s = gnulib::strtok_r (p, " ", &saveptr);
        s != NULL;
-       s = strtok_r (NULL, " ", &saveptr))
+       s = gnulib::strtok_r (NULL, " ", &saveptr))
     {
       if (strcmp (s, "io") == 0)
 	v->io_page = 1;
@@ -1186,7 +1186,7 @@ linux_find_memory_regions_full (struct gdbarch *gdbarch,
       struct cleanup *cleanup = make_cleanup (xfree, data);
       char *line, *t;
 
-      line = strtok_r (data, "\n", &t);
+      line = gnulib::strtok_r (data, "\n", &t);
       while (line != NULL)
 	{
 	  ULONGEST addr, endaddr, offset, inode;
@@ -1215,9 +1215,9 @@ linux_find_memory_regions_full (struct gdbarch *gdbarch,
 	  mapping_file_p = !mapping_anon_p;
 
 	  /* Decode permissions.  */
-	  read = (memchr (permissions, 'r', permissions_len) != 0);
-	  write = (memchr (permissions, 'w', permissions_len) != 0);
-	  exec = (memchr (permissions, 'x', permissions_len) != 0);
+	  read = (gnulib::memchr (permissions, 'r', permissions_len) != 0);
+	  write = (gnulib::memchr (permissions, 'w', permissions_len) != 0);
+	  exec = (gnulib::memchr (permissions, 'x', permissions_len) != 0);
 	  /* 'private' here actually means VM_MAYSHARE, and not
 	     VM_SHARED.  In order to know if a mapping is really
 	     private or not, we must check the flag "sh" in the
@@ -1227,13 +1227,13 @@ linux_find_memory_regions_full (struct gdbarch *gdbarch,
 	     not have the VmFlags there.  In this case, there is
 	     really no way to know if we are dealing with VM_SHARED,
 	     so we just assume that VM_MAYSHARE is enough.  */
-	  priv = memchr (permissions, 'p', permissions_len) != 0;
+	  priv = gnulib::memchr (permissions, 'p', permissions_len) != 0;
 
 	  /* Try to detect if region should be dumped by parsing smaps
 	     counters.  */
-	  for (line = strtok_r (NULL, "\n", &t);
+	  for (line = gnulib::strtok_r (NULL, "\n", &t);
 	       line != NULL && line[0] >= 'A' && line[0] <= 'Z';
-	       line = strtok_r (NULL, "\n", &t))
+	       line = gnulib::strtok_r (NULL, "\n", &t))
 	    {
 	      char keyword[64 + 1];
 
@@ -1888,7 +1888,7 @@ linux_fill_prpsinfo (struct elf_internal_linux_prpsinfo *p)
     }
 
   /* Extracting the UID.  */
-  tmpstr = strstr (proc_status, "Uid:");
+  tmpstr = gnulib::strstr (proc_status, "Uid:");
   if (tmpstr != NULL)
     {
       /* Advancing the pointer to the beginning of the UID.  */
@@ -1901,7 +1901,7 @@ linux_fill_prpsinfo (struct elf_internal_linux_prpsinfo *p)
     }
 
   /* Extracting the GID.  */
-  tmpstr = strstr (proc_status, "Gid:");
+  tmpstr = gnulib::strstr (proc_status, "Gid:");
   if (tmpstr != NULL)
     {
       /* Advancing the pointer to the beginning of the GID.  */
@@ -2341,9 +2341,9 @@ linux_vsyscall_range_raw (struct gdbarch *gdbarch, struct mem_range *range)
       char *line;
       char *saveptr = NULL;
 
-      for (line = strtok_r (data, "\n", &saveptr);
+      for (line = gnulib::strtok_r (data, "\n", &saveptr);
 	   line != NULL;
-	   line = strtok_r (NULL, "\n", &saveptr))
+	   line = gnulib::strtok_r (NULL, "\n", &saveptr))
 	{
 	  ULONGEST addr, endaddr;
 	  const char *p = line;

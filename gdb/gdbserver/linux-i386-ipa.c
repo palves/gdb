@@ -214,7 +214,7 @@ initialize_fast_tracepoint_trampoline_buffer (void)
       return;
     }
 
-  if (fgets (buf, IPA_BUFSIZ, f))
+  if (gnulib::fgets (buf, IPA_BUFSIZ, f))
     sscanf (buf, "%llu", &mmap_min_addr);
       
   fclose (f);

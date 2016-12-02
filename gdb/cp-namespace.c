@@ -112,7 +112,7 @@ cp_scan_for_anonymous_namespaces (const struct symbol *const symbol,
 int
 cp_is_in_anonymous (const char *symbol_name)
 {
-  return (strstr (symbol_name, CP_ANONYMOUS_NAMESPACE_STR)
+  return (gnulib::strstr (symbol_name, CP_ANONYMOUS_NAMESPACE_STR)
 	  != NULL);
 }
 
@@ -171,7 +171,7 @@ cp_lookup_bare_symbol (const struct language_defn *langdef,
      ':' may be in the args of a template spec.  This isn't intended to be
      a complete test, just cheap and documentary.  */
   if (strchr (name, '<') == NULL && strchr (name, '(') == NULL)
-    gdb_assert (strstr (name, "::") == NULL);
+    gdb_assert (gnulib::strstr (name, "::") == NULL);
 
   sym = lookup_symbol_in_static_block (name, block, domain);
   if (sym.symbol != NULL)

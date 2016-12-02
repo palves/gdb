@@ -1221,10 +1221,10 @@ gnuv3_skip_trampoline (struct frame_info *frame, CORE_ADDR stop_pc)
      thunk to FUNCTION", where FUNCTION is the name of the function
      being thunked to.  */
   thunk_name = MSYMBOL_DEMANGLED_NAME (thunk_sym.minsym);
-  if (thunk_name == NULL || strstr (thunk_name, " thunk to ") == NULL)
+  if (thunk_name == NULL || gnulib::strstr (thunk_name, " thunk to ") == NULL)
     return 0;
 
-  fn_name = strstr (thunk_name, " thunk to ") + strlen (" thunk to ");
+  fn_name = gnulib::strstr (thunk_name, " thunk to ") + strlen (" thunk to ");
   fn_sym = lookup_minimal_symbol (fn_name, NULL, section->objfile);
   if (fn_sym.minsym == NULL)
     return 0;

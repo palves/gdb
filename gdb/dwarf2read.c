@@ -9220,11 +9220,11 @@ read_file_scope (struct die_info *die, struct dwarf2_cu *cu)
   /* The XLCL doesn't generate DW_LANG_OpenCL because this attribute is not
      standardised yet.  As a workaround for the language detection we fall
      back to the DW_AT_producer string.  */
-  if (cu->producer && strstr (cu->producer, "IBM XL C for OpenCL") != NULL)
+  if (cu->producer && gnulib::strstr (cu->producer, "IBM XL C for OpenCL") != NULL)
     cu->language = language_opencl;
 
   /* Similar hack for Go.  */
-  if (cu->producer && strstr (cu->producer, "GNU Go ") != NULL)
+  if (cu->producer && gnulib::strstr (cu->producer, "GNU Go ") != NULL)
     set_cu_language (DW_LANG_Go, cu);
 
   dwarf2_start_symtab (cu, name, comp_dir, lowpc);
@@ -13867,7 +13867,7 @@ read_array_order (struct die_info *die, struct dwarf2_cu *cu)
      version checking.  */
 
   if (cu->language == language_fortran
-      && cu->producer && strstr (cu->producer, "GNU F77"))
+      && cu->producer && gnulib::strstr (cu->producer, "GNU F77"))
     {
       return DW_ORD_row_major;
     }
@@ -14584,7 +14584,7 @@ read_subroutine_type (struct die_info *die, struct dwarf2_cu *cu)
   attr = dwarf2_attr (die, DW_AT_calling_convention, cu);
   if (attr)
     TYPE_CALLING_CONVENTION (ftype) = DW_UNSND (attr);
-  else if (cu->producer && strstr (cu->producer, "IBM XL C for OpenCL"))
+  else if (cu->producer && gnulib::strstr (cu->producer, "IBM XL C for OpenCL"))
     TYPE_CALLING_CONVENTION (ftype) = DW_CC_GDB_IBM_OpenCL;
   else
     TYPE_CALLING_CONVENTION (ftype) = DW_CC_normal;
@@ -23170,8 +23170,8 @@ write_psymbols (struct mapped_symtab *symtab,
 static void
 write_obstack (FILE *file, struct obstack *obstack)
 {
-  if (fwrite (obstack_base (obstack), 1, obstack_object_size (obstack),
-	      file)
+  if (gnulib::fwrite (obstack_base (obstack), 1, obstack_object_size (obstack),
+		      file)
       != obstack_object_size (obstack))
     error (_("couldn't data write to file"));
 }

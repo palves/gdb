@@ -492,7 +492,7 @@ void (*pre_init_ui_hook) (void);
 static void
 do_chdir_cleanup (void *old_dir)
 {
-  chdir ((const char *) old_dir);
+  gnulib::chdir ((const char *) old_dir);
   xfree (old_dir);
 }
 #endif
@@ -818,7 +818,7 @@ gdb_readline_no_editing (const char *prompt)
 	  perror_with_name (("select"));
 	}
 
-      c = fgetc (stream);
+      c = gnulib::fgetc (stream);
 
       if (c == EOF)
 	{
@@ -1168,7 +1168,7 @@ gdb_safe_append_history (void)
     = xstrprintf ("%s-gdb%ld~", history_filename, (long) getpid ());
   old_chain = make_cleanup (xfree, local_history_filename);
 
-  ret = rename (history_filename, local_history_filename);
+  ret = gnulib::rename (history_filename, local_history_filename);
   saved_errno = errno;
   if (ret < 0 && saved_errno != ENOENT)
     {
@@ -1198,7 +1198,7 @@ gdb_safe_append_history (void)
 	    history_truncate_file (local_history_filename, history_max_entries);
 	}
 
-      ret = rename (local_history_filename, history_filename);
+      ret = gnulib::rename (local_history_filename, history_filename);
       saved_errno = errno;
       if (ret < 0 && saved_errno != EEXIST)
         warning (_("Could not rename %s to %s: %s"),

@@ -188,7 +188,7 @@ perf_event_pt_event_type (int *type)
   if (file == NULL)
     return -1;
 
-  found = fscanf (file, "%d", type);
+  found = gnulib::fscanf (file, "%d", type);
 
   fclose (file);
 
@@ -221,7 +221,7 @@ linux_determine_kernel_start (void)
       uint64_t addr;
       int match;
 
-      line = fgets (buffer, sizeof (buffer), file);
+      line = gnulib::fgets (buffer, sizeof (buffer), file);
       if (line == NULL)
 	break;
 

@@ -123,7 +123,7 @@ tui_set_source_content (struct symtab *s,
 			= TUI_SRC_WIN->generic.content[cur_line];
 
 		      /* Get the first character in the line.  */
-		      c = fgetc (stream);
+		      c = gnulib::fgetc (stream);
 
 		      if (offset == 0)
 			src_line = TUI_SRC_WIN->generic.content[cur_line]
@@ -200,10 +200,10 @@ tui_set_source_content (struct symtab *s,
 				{ /* If we have not reached EOL, then
 				     eat chars until we do.  */
 				  while (c != EOF && c != '\n' && c != '\r')
-				    c = fgetc (stream);
+				    c = gnulib::fgetc (stream);
 				  /* Handle non-'\n' end-of-line.  */
 				  if (c == '\r' 
-				      && (c = fgetc (stream)) != '\n' 
+				      && (c = gnulib::fgetc (stream)) != '\n'
 				      && c != EOF)
 				    {
 				       ungetc (c, stream);
@@ -214,7 +214,7 @@ tui_set_source_content (struct symtab *s,
 			    }
 			  while (c != EOF && c != '\n' && c != '\r' 
 				 && i < threshold 
-				 && (c = fgetc (stream)));
+				 && (c = gnulib::fgetc (stream)));
 			}
 		      /* Now copy the line taking the offset into
 			 account.  */

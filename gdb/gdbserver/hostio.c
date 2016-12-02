@@ -573,7 +573,7 @@ handle_readlink (char *own_buf, int *new_packet_len)
 					linkname,
 					sizeof (linkname) - 1);
   else
-    ret = readlink (filename, linkname, sizeof (linkname) - 1);
+    ret = gnulib::readlink (filename, linkname, sizeof (linkname) - 1);
 
   if (ret == -1)
     {

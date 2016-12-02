@@ -65,8 +65,8 @@ typedef wchar_t gdb_wchar_t;
 typedef wint_t gdb_wint_t;
 
 #define gdb_wcslen wcslen
-#define gdb_iswprint iswprint
-#define gdb_iswdigit iswdigit
+#define gdb_iswprint gnulib::iswprint
+#define gdb_iswdigit gnulib::iswdigit
 #define gdb_btowc btowc
 #define gdb_WEOF WEOF
 

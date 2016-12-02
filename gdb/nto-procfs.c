@@ -496,8 +496,8 @@ procfs_meminfo (char *args, int from_tty)
   err = devctl (ctl_fd, DCMD_PROC_MAPINFO, NULL, 0, &num);
   if (err != EOK)
     {
-      printf ("failed devctl num mapinfos - %d (%s)\n", err,
-	      safe_strerror (err));
+      gnulib::printf ("failed devctl num mapinfos - %d (%s)\n", err,
+		      safe_strerror (err));
       return;
     }
 
@@ -511,7 +511,8 @@ procfs_meminfo (char *args, int from_tty)
 		* sizeof (procfs_mapinfo), &num);
   if (err != EOK)
     {
-      printf ("failed devctl mapinfos - %d (%s)\n", err, safe_strerror (err));
+      gnulib::printf ("failed devctl mapinfos - %d (%s)\n", err,
+		      safe_strerror (err));
       xfree (mapinfos);
       return;
     }
