@@ -35,6 +35,7 @@
 #include "safe-ctype.h"
 #include "demangle.h"
 #include "cp-support.h"
+#include "parser-defs.h"
 
 /* Bison does not make it easy to create a parser without global
    state, unfortunately.  Here are all the global variables used
@@ -117,59 +118,10 @@ static struct demangle_component *d_binary (const char *,
 #define INT_SIGNED	(1 << 4)
 #define INT_UNSIGNED	(1 << 5)
 
-/* Remap normal yacc parser interface names (yyparse, yylex, yyerror, etc),
-   as well as gratuitiously global symbol names, so we can have multiple
-   yacc generated parsers in gdb.  Note that these are only the variables
-   produced by yacc.  If other parser generators (bison, byacc, etc) produce
-   additional global names that conflict at link time, then those parser
-   generators need to be fixed instead of adding those names to this list. */
-
-#define	yymaxdepth cpname_maxdepth
-#define	yyparse	cpname_parse
-#define	yylex	cpname_lex
-#define	yyerror	cpname_error
-#define	yylval	cpname_lval
-#define	yychar	cpname_char
-#define	yydebug	cpname_debug
-#define	yypact	cpname_pact	
-#define	yyr1	cpname_r1			
-#define	yyr2	cpname_r2			
-#define	yydef	cpname_def		
-#define	yychk	cpname_chk		
-#define	yypgo	cpname_pgo		
-#define	yyact	cpname_act		
-#define	yyexca	cpname_exca
-#define yyerrflag cpname_errflag
-#define yynerrs	cpname_nerrs
-#define	yyps	cpname_ps
-#define	yypv	cpname_pv
-#define	yys	cpname_s
-#define	yy_yys	cpname_yys
-#define	yystate	cpname_state
-#define	yytmp	cpname_tmp
-#define	yyv	cpname_v
-#define	yy_yyv	cpname_yyv
-#define	yyval	cpname_val
-#define	yylloc	cpname_lloc
-#define yyreds	cpname_reds		/* With YYDEBUG defined */
-#define yytoks	cpname_toks		/* With YYDEBUG defined */
-#define yyname	cpname_name		/* With YYDEBUG defined */
-#define yyrule	cpname_rule		/* With YYDEBUG defined */
-#define yylhs	cpname_yylhs
-#define yylen	cpname_yylen
-#define yydefred cpname_yydefred
-#define yydgoto	cpname_yydgoto
-#define yysindex cpname_yysindex
-#define yyrindex cpname_yyrindex
-#define yygindex cpname_yygindex
-#define yytable	 cpname_yytable
-#define yycheck	 cpname_yycheck
-#define yyss	cpname_yyss
-#define yysslim	cpname_yysslim
-#define yyssp	cpname_yyssp
-#define yystacksize cpname_yystacksize
-#define yyvs	cpname_yyvs
-#define yyvsp	cpname_yyvsp
+/* Remap normal yacc parser interface names (yyparse, yylex, yyerror,
+   etc).  */
+#define GDB_YY_REMAP_PREFIX cpname_
+#include "yy-remap.h"
 
 int yyparse (void);
 static int yylex (void);
@@ -2170,6 +2122,20 @@ internal_error (const char *file, int line, const char *fmt, ...)
   fprintf (stderr, "%s:%d: internal error: ", file, line);
   vfprintf (stderr, fmt, ap);
   exit (1);
+}
+
+/* GDB normally defines parser_fprintf itself, but when this file is
+   built as a standalone program, we must also provide an
+   implementation.  */
+
+void
+parser_fprintf (FILE *x, const char *y, ...)
+{
+  va_list args;
+
+  va_start (args, y);
+  vfprintf (x, y, args);
+  va_end (args);
 }
 
 int
