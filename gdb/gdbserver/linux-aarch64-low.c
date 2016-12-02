@@ -270,8 +270,8 @@ aarch64_insert_point (enum raw_bkpt_type type, CORE_ADDR addr,
     = aarch64_get_debug_reg_state (pid_of (current_thread));
 
   if (show_debug_regs)
-    fprintf (stderr, "insert_point on entry (addr=0x%08lx, len=%d)\n",
-	     (unsigned long) addr, len);
+    debug_printf ("insert_point on entry (addr=0x%08lx, len=%d)\n",
+		  (unsigned long) addr, len);
 
   /* Determine the type from the raw breakpoint type.  */
   targ_type = raw_bkpt_type_to_target_hw_bp_type (type);
@@ -319,8 +319,8 @@ aarch64_remove_point (enum raw_bkpt_type type, CORE_ADDR addr,
     = aarch64_get_debug_reg_state (pid_of (current_thread));
 
   if (show_debug_regs)
-    fprintf (stderr, "remove_point on entry (addr=0x%08lx, len=%d)\n",
-	     (unsigned long) addr, len);
+    debug_printf ("remove_point on entry (addr=0x%08lx, len=%d)\n",
+		  (unsigned long) addr, len);
 
   /* Determine the type from the raw breakpoint type.  */
   targ_type = raw_bkpt_type_to_target_hw_bp_type (type);
