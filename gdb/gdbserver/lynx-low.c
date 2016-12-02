@@ -195,14 +195,14 @@ lynx_ptrace (int request, ptid_t ptid, int addr, int data, int addr2)
   int saved_errno;
 
   if (debug_threads)
-    fprintf (stderr, "PTRACE (%s, pid=%d(pid=%d, tid=%d), addr=0x%x, "
-             "data=0x%x, addr2=0x%x)",
-             ptrace_request_to_str (request), pid, PIDGET (pid), TIDGET (pid),
-             addr, data, addr2);
+    debug_printf ("PTRACE (%s, pid=%d(pid=%d, tid=%d), addr=0x%x, "
+		  "data=0x%x, addr2=0x%x)",
+		  ptrace_request_to_str (request), pid, PIDGET (pid), TIDGET (pid),
+		  addr, data, addr2);
   result = ptrace (request, pid, addr, data, addr2);
   saved_errno = errno;
   if (debug_threads)
-    fprintf (stderr, " -> %d (=0x%x)\n", result, result);
+    debug_printf (" -> %d (=0x%x)\n", result, result);
 
   errno = saved_errno;
   return result;
