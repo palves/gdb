@@ -67,6 +67,12 @@
 
 #include <unistd.h>
 
+#ifdef HAVE_LIBEXPAT
+# include "xml-support.h"
+#endif
+
+namespace gdb {
+
 /* Maximum length of an agent aexpression.
    This accounts for the fact that packets are limited to 400 bytes
    (which includes everything -- including the checksum), and assumes
@@ -3834,8 +3840,6 @@ parse_traceframe_info (const char *tframe_info)
 
 #else /* HAVE_LIBEXPAT */
 
-#include "xml-support.h"
-
 /* Handle the start of a <memory> element.  */
 
 static void
@@ -4191,3 +4195,5 @@ Show the notes string to use for future tstop commands"), NULL,
 			  set_trace_stop_notes, NULL,
 			  &setlist, &showlist);
 }
+
+} /* namespace gdb */
