@@ -19,6 +19,8 @@
 #if !defined (TERMINAL_H)
 #define TERMINAL_H 1
 
+namespace gdb {
+
 struct inferior;
 
 extern void new_tty_prefork (const char *);
@@ -42,5 +44,7 @@ extern void gdb_save_tty_state (void);
 /* Take a snapshot of our initial tty state before readline/ncurses
    have had a chance to alter it.  */
 extern void set_initial_gdb_ttystate (void);
+
+} /* namespace gdb */
 
 #endif /* !defined (TERMINAL_H) */

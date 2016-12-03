@@ -31,6 +31,8 @@
 #define GDB_FPREGSET_T fpregset_t
 #endif
 
+namespace gdb {
+
 typedef GDB_GREGSET_T gdb_gregset_t;
 typedef GDB_FPREGSET_T gdb_fpregset_t;
 
@@ -59,5 +61,7 @@ extern void fill_gregset (const struct regcache *regcache,
 			  gdb_gregset_t *gregs, int regno);
 extern void fill_fpregset (const struct regcache *regcache,
 			   gdb_fpregset_t *fpregs, int regno);
+
+} /* namespace gdb */
 
 #endif

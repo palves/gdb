@@ -24,6 +24,8 @@
 #include <windows.h>
 #endif
 
+namespace gdb {
+
 struct ui_file;
 
 /* For most routines, if a failure is indicated, then errno should be
@@ -316,5 +318,7 @@ extern void serial_wait_handle (struct serial *, HANDLE *, HANDLE *);
 extern void serial_done_wait_handle (struct serial *);
 
 #endif /* USE_WIN32API */
+
+} /* namespace gdb */
 
 #endif /* SERIAL_H */

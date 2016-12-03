@@ -42,6 +42,11 @@
 #ifdef HAVE_LIBUNWIND_IA64_H
 #include "elf/ia64.h"           /* for PT_IA_64_UNWIND value */
 #include "ia64-libunwind-tdep.h"
+#endif
+
+namespace gdb {
+
+#ifdef HAVE_LIBUNWIND_IA64_H
 
 /* Note: KERNEL_START is supposed to be an address which is not going
          to ever contain any valid unwind info.  For ia64 linux, the choice
@@ -4018,3 +4023,5 @@ _initialize_ia64_tdep (void)
 {
   gdbarch_register (bfd_arch_ia64, ia64_gdbarch_init, NULL);
 }
+
+} /* namespace gdb */
