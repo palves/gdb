@@ -71,6 +71,8 @@
 
 #include "language.h"
 
+namespace gdb {
+
 struct symtab_and_line;
 struct frame_unwind;
 struct frame_base;
@@ -880,5 +882,7 @@ extern struct frame_info *skip_tailcall_frames (struct frame_info *frame);
    writable.  */
 
 extern struct frame_info *skip_unwritable_frames (struct frame_info *frame);
+
+} /* namespace gdb */
 
 #endif /* !defined (FRAME_H)  */

@@ -21,6 +21,8 @@
 
 #include "common/vec.h"
 
+namespace gdb {
+
 /* It's sometimes useful to be able to debug programs that you can't
    really stop for more than a fraction of a second.  To this end, the
    user can specify a tracepoint (like a breakpoint, but you don't
@@ -266,5 +268,7 @@ extern struct aop_map aop_map[];
 /* Given an agent expression AX, analyze and update its requirements.  */
 
 extern void ax_reqs (struct agent_expr *ax);
+
+} /* namespace gdb */
 
 #endif /* AX_H */

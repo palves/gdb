@@ -23,6 +23,7 @@
 
 #include "symtab.h"		/* Needed for "struct block" type.  */
 
+namespace gdb {
 
 /* Definitions for saved C expressions.  */
 
@@ -173,5 +174,7 @@ enum range_type
      bound is exclusive.  */
   LOW_BOUND_DEFAULT_EXCLUSIVE,
 };
+
+} /* namespace gdb */
 
 #endif /* !defined (EXPRESSION_H) */
