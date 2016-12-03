@@ -39,8 +39,15 @@
 #include "frame.h"
 #include "dis-asm.h"
 #include "gdb_obstack.h"
+#include "regcache.h"
 
 struct floatformat;
+struct disassemble_info;
+struct obstack;
+struct elf_internal_linux_prpsinfo;
+
+namespace gdb {
+
 struct ui_file;
 struct value;
 struct objfile;
@@ -49,9 +56,7 @@ struct minimal_symbol;
 struct regcache;
 struct reggroup;
 struct regset;
-struct disassemble_info;
 struct target_ops;
-struct obstack;
 struct bp_target_info;
 struct target_desc;
 struct symbol;
@@ -66,8 +71,6 @@ struct mem_range;
 struct syscalls_info;
 struct thread_info;
 struct ui_out;
-
-#include "regcache.h"
 
 /* The architecture associated with the inferior through the
    connection to the target.
@@ -1839,5 +1842,7 @@ gdbarch_num_cooked_regs (gdbarch *arch)
 {
   return gdbarch_num_regs (arch) + gdbarch_num_pseudo_regs (arch);
 }
+
+} /* namespace gdb */
 
 #endif
