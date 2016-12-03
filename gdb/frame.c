@@ -43,6 +43,8 @@
 #include "hashtab.h"
 #include "valprint.h"
 
+namespace gdb {
+
 /* The sentinel frame terminates the innermost end of the frame chain.
    If unwound, it returns the information needed to construct an
    innermost frame.
@@ -2968,3 +2970,5 @@ When non-zero, frame specific internal debugging is enabled."),
 			     show_frame_debug,
 			     &setdebuglist, &showdebuglist);
 }
+
+} /* namespace gdb */
