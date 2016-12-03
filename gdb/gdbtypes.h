@@ -52,6 +52,10 @@
 #include "common/print-utils.h"
 #include "gdbarch.h"
 
+struct floatformat;
+
+namespace gdb {
+
 /* Forward declarations for prototypes.  */
 struct field;
 struct block;
@@ -2085,5 +2089,7 @@ extern bool types_deeply_equal (struct type *, struct type *);
 extern int type_not_allocated (const struct type *type);
 
 extern int type_not_associated (const struct type *type);
+
+} /* namespace gdb */
 
 #endif /* GDBTYPES_H */
