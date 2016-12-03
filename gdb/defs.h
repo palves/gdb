@@ -55,6 +55,8 @@
 #include "host-defs.h"
 #include "common/enum-flags.h"
 
+namespace gdb {
+
 /* Scope types enumerator.  List the types of scopes the compiler will
    accept.  */
 
@@ -82,6 +84,8 @@ enum compile_i_scope_types
     COMPILE_I_PRINT_VALUE_SCOPE,
   };
 
+} /* namespace gdb */
+
 /* Just in case they're not defined in stdio.h.  */
 
 #ifndef SEEK_SET
@@ -102,6 +106,8 @@ enum compile_i_scope_types
 #endif
 
 #include "hashtab.h"
+
+namespace gdb {
 
 /* * Enable dbx commands if set.  */
 extern int dbx_commands;
@@ -504,6 +510,8 @@ enum val_prettyformat
     Val_prettyformat_default
   };
 
+} /* namespace gdb */
+
 /* * Optional native machine support.  Non-native (and possibly pure
    multi-arch) targets do not need a "nm.h" file.  This will be a
    symlink to one of the nm-*.h files, built by the `configure'
@@ -524,6 +532,8 @@ enum val_prettyformat
 #ifndef FOPEN_RB
 # include "fopen-bin.h"
 #endif
+
+namespace gdb {
 
 /* Defaults for system-wide constants (if not defined by xm.h, we fake it).
    FIXME: Assumes 2's complement arithmetic.  */
@@ -732,6 +742,8 @@ enum user_selected_what_flag
     USER_SELECTED_FRAME = 1 << 3
   };
 DEF_ENUM_FLAGS_TYPE (enum user_selected_what_flag, user_selected_what);
+
+} /* namespace gdb */
 
 #include "utils.h"
 
