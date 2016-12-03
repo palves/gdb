@@ -22,24 +22,6 @@
 #if !defined (TARGET_H)
 #define TARGET_H
 
-struct objfile;
-struct ui_file;
-struct mem_attrib;
-struct target_ops;
-struct bp_location;
-struct bp_target_info;
-struct regcache;
-struct target_section_table;
-struct trace_state_variable;
-struct trace_status;
-struct uploaded_tsv;
-struct uploaded_tp;
-struct static_tracepoint_marker;
-struct traceframe_info;
-struct expression;
-struct dcache_struct;
-struct inferior;
-
 #include "infrun.h" /* For enum exec_direction_kind.  */
 #include "breakpoint.h" /* For enum bptype.  */
 #include "common/scoped_restore.h"
@@ -83,6 +65,24 @@ struct inferior;
 #include "tracepoint.h"
 
 #include "common/break-common.h" /* For enum target_hw_bp_type.  */
+
+struct objfile;
+struct ui_file;
+struct mem_attrib;
+struct target_ops;
+struct bp_location;
+struct bp_target_info;
+struct regcache;
+struct target_section_table;
+struct trace_state_variable;
+struct trace_status;
+struct uploaded_tsv;
+struct uploaded_tp;
+struct static_tracepoint_marker;
+struct traceframe_info;
+struct expression;
+struct dcache_struct;
+struct inferior;
 
 enum strata
   {
