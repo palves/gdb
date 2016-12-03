@@ -61,6 +61,9 @@
 #include "record-full.h"
 #include <algorithm>
 
+#include "bfd-in2.h"
+#include "libcoff.h"
+
 #include "features/arm/arm-with-m.c"
 #include "features/arm/arm-with-m-fpa-layout.c"
 #include "features/arm/arm-with-m-vfp-d16.c"
@@ -7649,9 +7652,6 @@ arm_displaced_step_fixup (struct gdbarch *gdbarch,
 				    dsc->insn_addr + dsc->insn_size);
 
 }
-
-#include "bfd-in2.h"
-#include "libcoff.h"
 
 static int
 gdb_print_insn_arm (bfd_vma memaddr, disassemble_info *info)
