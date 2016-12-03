@@ -58,6 +58,8 @@ case $lang in
 #ifndef OBSERVER_H
 #define OBSERVER_H
 
+namespace gdb {
+
 struct observer;
 struct bpstats;
 struct so_list;
@@ -190,6 +192,8 @@ done
 
 case $lang in
     h) cat <<EOF >>${otmp}
+
+} /* namespace gdb */
 
 #endif /* OBSERVER_H */
 EOF
