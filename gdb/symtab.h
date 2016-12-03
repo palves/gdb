@@ -24,6 +24,7 @@
 #include "gdb_vecs.h"
 #include "gdbtypes.h"
 #include "common/enum-flags.h"
+#include "minsyms.h"
 
 /* Opaque declarations.  */
 struct ui_file;
@@ -424,8 +425,6 @@ struct minimal_symbol
   (strcmp_iw (MSYMBOL_SEARCH_NAME (symbol), (name)) == 0)
 #define MSYMBOL_SET_NAMES(symbol,linkage_name,len,copy_name,objfile)	\
   symbol_set_names (&(symbol)->mginfo, linkage_name, len, copy_name, objfile)
-
-#include "minsyms.h"
 
 
 
