@@ -47,6 +47,8 @@
 #include "event-top.h"
 #include <algorithm>
 
+namespace gdb {
+
 static void target_info (char *, int);
 
 static void generic_tls_error (void) ATTRIBUTE_NORETURN;
@@ -4242,3 +4244,5 @@ attempts \"run\" and other commands with the native target."),
 			   NULL, show_auto_connect_native_target,
 			   &setlist, &showlist);
 }
+
+} /* namespace gdb */
