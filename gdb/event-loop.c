@@ -37,6 +37,13 @@
 #include "observable.h"
 #include "top.h"
 
+#ifdef USE_WIN32API
+#include <windows.h>
+#include <io.h>
+#endif
+
+namespace gdb {
+
 /* Tell create_file_handler what events we are interested in.
    This is used by the select version of the event loop.  */
 
@@ -156,11 +163,6 @@ async_event_handler;
 #endif /* HAVE_POLL */
 
 static unsigned char use_poll = USE_POLL;
-
-#ifdef USE_WIN32API
-#include <windows.h>
-#include <io.h>
-#endif
 
 static struct
   {
@@ -1280,3 +1282,5 @@ poll_timers (void)
 
   return 0;
 }
+
+} /* namespace gdb */
