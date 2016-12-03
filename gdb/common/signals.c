@@ -25,6 +25,8 @@
 
 #include "gdb_signals.h"
 
+namespace gdb {
+
 struct gdbarch;
 
 /* Always use __SIGRTMIN if it's available.  SIGRTMIN is the lowest
@@ -651,3 +653,5 @@ gdb_signal_to_host (enum gdb_signal oursig)
   else
     return targ_signo;
 }
+
+} /* namespace gdb */
