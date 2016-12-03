@@ -46,6 +46,12 @@
 #include "gdb_bfd.h"
 #include "probe.h"
 
+#ifdef HAVE_LIBEXPAT
+# include "xml-support.h"
+#endif
+
+namespace gdb {
+
 static struct link_map_offsets *svr4_fetch_link_map_offsets (void);
 static int svr4_have_link_map_offsets (void);
 static void svr4_relocate_main_executable (void);
@@ -1155,8 +1161,6 @@ svr4_copy_library_list (struct so_list *src)
 }
 
 #ifdef HAVE_LIBEXPAT
-
-#include "xml-support.h"
 
 /* Handle the start of a <library> element.  Note: new elements are added
    at the tail of the list, keeping the list in order.  */
@@ -3333,3 +3337,5 @@ _initialize_svr4_solib (void)
   svr4_so_ops.update_breakpoints = svr4_update_solib_event_breakpoints;
   svr4_so_ops.handle_event = svr4_handle_solib_event;
 }
+
+} /* namespace gdb */

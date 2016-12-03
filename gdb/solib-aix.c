@@ -26,6 +26,11 @@
 #include "xcoffread.h"
 #include "observer.h"
 #include "gdbcmd.h"
+#ifdef HAVE_LIBEXPAT
+# include "xml-support.h"
+#endif
+
+namespace gdb {
 
 /* Variable controlling the output of the debugging traces for
    this module.  */
@@ -150,8 +155,6 @@ solib_aix_free_library_list (void *p)
 }
 
 #else /* HAVE_LIBEXPAT */
-
-#include "xml-support.h"
 
 /* Handle the start of a <library> element.  */
 
@@ -845,3 +848,5 @@ When on, solib-aix debugging traces are enabled."),
                             show_solib_aix_debug,
                             &setdebuglist, &showdebuglist);
 }
+
+} /* namespace gdb */
