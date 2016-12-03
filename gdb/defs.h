@@ -626,8 +626,12 @@ enum symbol_needs_kind
   SYMBOL_NEEDS_FRAME
 };
 
+} /* namespace gdb */
+
 /* Dynamic target-system-dependent parameters for GDB.  */
 #include "gdbarch.h"
+
+namespace gdb {
 
 /* * Maximum size of a register.  Something small, but large enough for
    all known ISAs.  If it turns out to be too small, make it bigger.  */

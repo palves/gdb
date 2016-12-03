@@ -59,7 +59,12 @@ typedef long long LONGEST;
 typedef unsigned long long ULONGEST;
 
 #endif /* No BFD64 */
+
+} /* namespace gdb */
+
 #endif /* GDBSERVER */
+
+namespace gdb {
 
 /* * The largest CORE_ADDR value.  */
 #define CORE_ADDR_MAX (~ (CORE_ADDR) 0)
