@@ -24,6 +24,7 @@
 #include "symtab.h"		/* Needed for "struct block" type.  */
 #include "doublest.h"		/* Needed for DOUBLEST.  */
 
+namespace gdb {
 
 /* Definitions for saved C expressions.  */
 
@@ -166,5 +167,7 @@ enum range_type
     HIGH_BOUND_DEFAULT,		/* "(low:)"  */
     NONE_BOUND_DEFAULT		/* "(low:high)"  */
   };
+
+} /* namespace gdb */
 
 #endif /* !defined (EXPRESSION_H) */
