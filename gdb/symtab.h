@@ -572,64 +572,6 @@ extern bool symbol_matches_search_name
 extern unsigned int search_name_hash (enum language language,
 				      const char *search_name);
 
-/* Classification types for a minimal symbol.  These should be taken as
-   "advisory only", since if gdb can't easily figure out a
-   classification it simply selects mst_unknown.  It may also have to
-   guess when it can't figure out which is a better match between two
-   types (mst_data versus mst_bss) for example.  Since the minimal
-   symbol info is sometimes derived from the BFD library's view of a
-   file, we need to live with what information bfd supplies.  */
-
-enum minimal_symbol_type
-{
-  mst_unknown = 0,		/* Unknown type, the default */
-  mst_text,			/* Generally executable instructions */
-
-  /* A GNU ifunc symbol, in the .text section.  GDB uses to know
-     whether the user is setting a breakpoint on a GNU ifunc function,
-     and thus GDB needs to actually set the breakpoint on the target
-     function.  It is also used to know whether the program stepped
-     into an ifunc resolver -- the resolver may get a separate
-     symbol/alias under a different name, but it'll have the same
-     address as the ifunc symbol.  */
-  mst_text_gnu_ifunc,           /* Executable code returning address
-				   of executable code */
-
-  /* A GNU ifunc function descriptor symbol, in a data section
-     (typically ".opd").  Seen on architectures that use function
-     descriptors, like PPC64/ELFv1.  In this case, this symbol's value
-     is the address of the descriptor.  There'll be a corresponding
-     mst_text_gnu_ifunc synthetic symbol for the text/entry
-     address.  */
-  mst_data_gnu_ifunc,		/* Executable code returning address
-				   of executable code */
-
-  mst_slot_got_plt,		/* GOT entries for .plt sections */
-  mst_data,			/* Generally initialized data */
-  mst_bss,			/* Generally uninitialized data */
-  mst_abs,			/* Generally absolute (nonrelocatable) */
-  /* GDB uses mst_solib_trampoline for the start address of a shared
-     library trampoline entry.  Breakpoints for shared library functions
-     are put there if the shared library is not yet loaded.
-     After the shared library is loaded, lookup_minimal_symbol will
-     prefer the minimal symbol from the shared library (usually
-     a mst_text symbol) over the mst_solib_trampoline symbol, and the
-     breakpoints will be moved to their true address in the shared
-     library via breakpoint_re_set.  */
-  mst_solib_trampoline,		/* Shared library trampoline code */
-  /* For the mst_file* types, the names are only guaranteed to be unique
-     within a given .o file.  */
-  mst_file_text,		/* Static version of mst_text */
-  mst_file_data,		/* Static version of mst_data */
-  mst_file_bss,			/* Static version of mst_bss */
-  nr_minsym_types
-};
-
-/* The number of enum minimal_symbol_type values, with some padding for
-   reasonable growth.  */
-#define MINSYM_TYPE_BITS 4
-gdb_static_assert (nr_minsym_types <= (1 << MINSYM_TYPE_BITS));
-
 /* Define a simple structure used to hold some very basic information about
    all defined global symbols (text, data, bss, abs, etc).  The only required
    information is the general_symbol_info.
