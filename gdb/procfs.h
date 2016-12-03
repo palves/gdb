@@ -17,6 +17,9 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
+#ifndef PROCFS_H
+#define PROCFS_H
+
 struct target_ops;
 
 /* Create a prototype generic procfs target.  The client can override
@@ -41,3 +44,4 @@ struct ssd;
 extern struct ssd *procfs_find_LDT_entry (ptid_t);
 #endif
 
+#endif

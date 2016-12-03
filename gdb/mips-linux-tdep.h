@@ -17,6 +17,9 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
+#ifndef MIPS_LINUX_TDEP_H
+#define MIPS_LINUX_TDEP_H
+
 /* Copied from <asm/elf.h>.  */
 #define ELF_NGREG       45
 #define ELF_NFPREG      33
@@ -105,3 +108,5 @@ enum {
 /* Return 1 if MIPS_RESTART_REGNUM is usable.  */
 
 int mips_linux_restart_reg_p (struct gdbarch *gdbarch);
+
+#endif

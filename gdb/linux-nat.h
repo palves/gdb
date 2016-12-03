@@ -17,6 +17,9 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
+#ifndef LINUX_NAT_H
+#define LINUX_NAT_H
+
 #include "nat/linux-nat.h"
 #include "target.h"
 #include <signal.h>
@@ -207,3 +210,5 @@ int linux_nat_get_siginfo (ptid_t ptid, siginfo_t *siginfo);
 /* Set alternative SIGTRAP-like events recognizer.  */
 void linux_nat_set_status_is_event (struct target_ops *t,
 				    int (*status_is_event) (int status));
+
+#endif

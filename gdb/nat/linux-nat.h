@@ -17,8 +17,8 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#ifndef LINUX_NAT_H
-#define LINUX_NAT_H
+#ifndef COMMON_LINUX_NAT_H
+#define COMMON_LINUX_NAT_H
 
 #include "target/waitstatus.h"
 

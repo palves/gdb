@@ -16,6 +16,9 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
+#ifndef PROC_UTILS_H
+#define PROC_UTILS_H
+
 /* From proc-why.c */
 
 /*
@@ -116,4 +119,6 @@ extern  void  procfs_note      (char *, char *, int);
 typedef PROC_CTL_WORD_TYPE procfs_ctl_t;
 #else
 typedef long procfs_ctl_t;
+#endif
+
 #endif
