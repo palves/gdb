@@ -24,6 +24,8 @@
 #include "glibc_thread_db.h"
 #endif
 
+namespace gdb {
+
 #ifndef LIBTHREAD_DB_SO
 #define LIBTHREAD_DB_SO "libthread_db.so.1"
 #endif
@@ -72,5 +74,7 @@ typedef td_err_e (td_thr_tlsbase_ftype) (const td_thrhandle_t *th,
 
 typedef const char ** (td_symbol_list_ftype) (void);
 typedef td_err_e (td_ta_delete_ftype) (td_thragent_t *);
+
+} /* namespace gdb */
 
 #endif /* NAT_GDB_THREAD_DB_H */
