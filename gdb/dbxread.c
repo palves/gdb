@@ -60,6 +60,8 @@
 				   native, now.  */
 
 
+namespace gdb {
+
 /* Key for dbx-associated data.  */
 
 const struct objfile_data *dbx_objfile_data_key;
@@ -3507,3 +3509,5 @@ _initialize_dbxread (void)
   dbx_objfile_data_key
     = register_objfile_data_with_cleanup (NULL, dbx_free_symfile_info);
 }
+
+} /* namespace gdb */
