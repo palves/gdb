@@ -26,11 +26,13 @@
 #include "common/enum-flags.h"
 #include "minsyms.h"
 
-/* Opaque declarations.  */
+struct obstack;
+
+namespace gdb {
+
 struct ui_file;
 struct frame_info;
 struct symbol;
-struct obstack;
 struct objfile;
 struct block;
 struct blockvector;
@@ -1639,5 +1641,7 @@ struct symbol *allocate_symbol (struct objfile *);
 void initialize_objfile_symbol (struct symbol *);
 
 struct template_symbol *allocate_template_symbol (struct objfile *);
+
+} /* namespace gdb */
 
 #endif /* !defined(SYMTAB_H) */

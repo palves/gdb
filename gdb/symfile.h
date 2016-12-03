@@ -26,11 +26,13 @@
 #include "symfile-add-flags.h"
 #include "objfile-flags.h"
 
-/* Opaque declarations.  */
+struct obstack;
+
+namespace gdb {
+
 struct target_section;
 struct objfile;
 struct obj_section;
-struct obstack;
 struct block;
 struct probe;
 struct value;
@@ -647,5 +649,7 @@ extern void elfmdebug_build_psymtabs (struct objfile *,
 /* From minidebug.c.  */
 
 extern bfd *find_separate_debug_file_in_section (struct objfile *);
+
+} /* namespace gdb */
 
 #endif /* !defined(SYMFILE_H) */

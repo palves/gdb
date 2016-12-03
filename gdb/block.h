@@ -22,13 +22,14 @@
 
 #include "dictionary.h"
 
-/* Opaque declarations.  */
+struct obstack;
+
+namespace gdb {
 
 struct symbol;
 struct compunit_symtab;
 struct block_namespace_info;
 struct using_direct;
-struct obstack;
 struct addrmap;
 
 /* All of the name-scope contours of the program
@@ -343,5 +344,7 @@ extern int block_find_non_opaque_type_preferred (struct symbol *sym,
   for ((sym) = block_iter_name_first ((block), (name), &(iter));	\
        (sym) != NULL;							\
        (sym) = block_iter_name_next ((name), &(iter)))
+
+} /* namespace gdb */
 
 #endif /* BLOCK_H */

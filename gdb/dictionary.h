@@ -25,6 +25,10 @@
 
 #include "symfile.h"
 
+struct obstack;
+
+namespace gdb {
+
 /* An opaque type for dictionaries; only dictionary.c should know
    about its innards.  */
 
@@ -33,7 +37,6 @@ struct dictionary;
 /* Other types needed for declarations.  */
 
 struct symbol;
-struct obstack;
 struct pending;
 
 
@@ -180,5 +183,7 @@ extern int dict_size (const struct dictionary *dict);
 	for ((sym) = dict_iterator_first ((dict), &(iter));	\
 	     (sym);						\
 	     (sym) = dict_iterator_next (&(iter)))
+
+} /* namespace gdb */
 
 #endif /* DICTIONARY_H */

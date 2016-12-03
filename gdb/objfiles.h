@@ -28,8 +28,11 @@
 #include "registry.h"
 #include "gdb_bfd.h"
 
-struct bcache;
 struct htab;
+
+namespace gdb {
+
+struct bcache;
 struct objfile_data;
 
 /* This structure maintains information on a per-objfile basis about the
@@ -715,5 +718,7 @@ extern void objfile_register_static_link
 
 extern const struct dynamic_prop *objfile_lookup_static_link
   (struct objfile *objfile, const struct block *block);
+
+} /* namespace gdb */
 
 #endif /* !defined (OBJFILES_H) */

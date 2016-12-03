@@ -19,10 +19,13 @@
 #ifndef UI_FILE_H
 #define UI_FILE_H
 
-struct obstack;
-struct ui_file;
-
 #include <string>
+
+struct obstack;
+
+namespace gdb {
+
+struct ui_file;
 
 /* Create a generic ui_file object with null methods.  */
 
@@ -155,4 +158,7 @@ extern struct ui_file *tee_file_new (struct ui_file *one,
 				     int close_one,
 				     struct ui_file *two,
 				     int close_two);
+
+} /* namespace gdb */
+
 #endif

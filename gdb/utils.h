@@ -25,6 +25,10 @@
 #include "common/scoped_restore.h"
 #include <chrono>
 
+struct obstack;
+
+namespace gdb {
+
 extern void initialize_utils (void);
 
 /* String utilities.  */
@@ -83,7 +87,6 @@ extern struct cleanup *make_cleanup_fclose (FILE *file);
 
 extern struct cleanup *make_cleanup_bfd_unref (bfd *abfd);
 
-struct obstack;
 extern struct cleanup *make_cleanup_obstack_free (struct obstack *obstack);
 
 extern struct cleanup *make_cleanup_restore_integer (int *variable);
@@ -381,5 +384,7 @@ extern void dump_core (void);
    Space for the result is malloc'd, caller must free.  */
 
 extern char *make_hex_string (const gdb_byte *data, size_t length);
+
+} /* namespace gdb */
 
 #endif /* UTILS_H */
