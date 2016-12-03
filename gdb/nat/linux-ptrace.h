@@ -18,9 +18,8 @@
 #ifndef COMMON_LINUX_PTRACE_H
 #define COMMON_LINUX_PTRACE_H
 
-struct buffer;
-
 #include "nat/gdb_ptrace.h"
+
 
 #ifdef __UCLIBC__
 #if !(defined(__UCLIBC_HAS_MMU__) || defined(__ARCH_HAS_MMU__))
@@ -29,6 +28,10 @@ struct buffer;
 #define HAS_NOMMU
 #endif
 #endif
+
+namespace gdb {
+
+struct buffer;
 
 #if !defined(PTRACE_TYPE_ARG3)
 #define PTRACE_TYPE_ARG3 void *
@@ -196,5 +199,7 @@ extern int linux_supports_tracesysgood (void);
 extern int linux_ptrace_get_extended_event (int wstat);
 extern int linux_is_extended_waitstatus (int wstat);
 extern int linux_wstatus_maybe_breakpoint (int wstat);
+
+} /* namespace gdb */
 
 #endif /* COMMON_LINUX_PTRACE_H */
