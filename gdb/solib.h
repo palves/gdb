@@ -20,13 +20,12 @@
 #ifndef SOLIB_H
 #define SOLIB_H
 
-/* Forward decl's for prototypes */
+#include "symfile-add-flags.h"
+
 struct so_list;
 struct target_ops;
 struct target_so_ops;
 struct program_space;
-
-#include "symfile-add-flags.h"
 
 /* Called when we free all symtabs, to free the shared library information
    as well.  */
