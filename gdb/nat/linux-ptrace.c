@@ -25,6 +25,18 @@
 #include "gdb_ptrace.h"
 #include <sys/procfs.h>
 
+#if defined __i386__ || defined __x86_64__
+# include <sys/reg.h>
+# include <sys/mman.h>
+# include <signal.h>
+
+/* Address of the 'ret' instruction in asm code block below.  */
+EXTERN_C void linux_ptrace_test_ret_to_nx_instr (void);
+
+#endif /* __i386__ || defined __x86_64__ */
+
+namespace gdb {
+
 /* Stores the ptrace options supported by the running kernel.
    A value of -1 means we did not check for features yet.  A value
    of 0 means there are no supported features.  */
@@ -76,17 +88,6 @@ linux_ptrace_attach_fail_reason_string (ptid_t ptid, int err)
   xfree (warnings);
   return reason_string;
 }
-
-#if defined __i386__ || defined __x86_64__
-
-/* Address of the 'ret' instruction in asm code block below.  */
-EXTERN_C void linux_ptrace_test_ret_to_nx_instr (void);
-
-#include <sys/reg.h>
-#include <sys/mman.h>
-#include <signal.h>
-
-#endif /* defined __i386__ || defined __x86_64__ */
 
 /* Test broken off-trunk Linux kernel patchset for NX support on i386.  It was
    removed in Fedora kernel 88fa1f0332d188795ed73d7ac2b1564e11a0b4cd.
@@ -620,3 +621,5 @@ linux_wstatus_maybe_breakpoint (int wstat)
 	      || WSTOPSIG (wstat) == SIGILL
 	      || WSTOPSIG (wstat) == SIGSEGV));
 }
+
+} /* namespace gdb */
