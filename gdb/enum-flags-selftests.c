@@ -64,12 +64,8 @@ using EF = enum_flags<RE>;
 using EF2 = enum_flags<RE2>;
 using UEF = enum_flags<URE>;
 
-}} /* namespace selftests::enum_flags */
-
-ENABLE_ENUM_FLAGS_OPERATORS (selftests::enum_flags_tests::RE);
-ENABLE_ENUM_FLAGS_OPERATORS (selftests::enum_flags_tests::RE2);
-
-namespace selftests { namespace enum_flags_tests {
+ENABLE_ENUM_FLAGS_OPERATORS (RE);
+ENABLE_ENUM_FLAGS_OPERATORS (RE2);
 
 /* A couple globals used as lvalues in the CHECK_VALID expressions
    below.  Their names (and types) match the uppercase type names
