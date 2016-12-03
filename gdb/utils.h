@@ -25,6 +25,8 @@
 #include "common/scoped_restore.h"
 #include <chrono>
 
+namespace gdb {
+
 extern void initialize_utils (void);
 
 /* String utilities.  */
@@ -547,5 +549,7 @@ extern char *make_hex_string (const gdb_byte *data, size_t length);
 extern void copy_bitwise (gdb_byte *dest, ULONGEST dest_offset,
 			  const gdb_byte *source, ULONGEST source_offset,
 			  ULONGEST nbits, int bits_big_endian);
+
+} /* namespace gdb */
 
 #endif /* UTILS_H */

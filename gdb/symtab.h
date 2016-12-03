@@ -33,11 +33,13 @@
 #include "completer.h"
 #include "minsyms.h"
 
-/* Opaque declarations.  */
+struct obstack;
+
+namespace gdb {
+
 struct ui_file;
 struct frame_info;
 struct symbol;
-struct obstack;
 struct objfile;
 struct block;
 struct blockvector;
@@ -2160,5 +2162,7 @@ private:
   /* Matching non-debug symbols.  */
   std::vector<bound_minimal_symbol> m_minimal_symbols;
 };
+
+} /* namespace gdb */
 
 #endif /* !defined(SYMTAB_H) */

@@ -32,8 +32,11 @@
 #include "common/next-iterator.h"
 #include "common/safe-iterator.h"
 
-struct bcache;
 struct htab;
+
+namespace gdb {
+
+struct bcache;
 struct objfile_data;
 struct partial_symbol;
 
@@ -720,5 +723,7 @@ extern void objfile_register_static_link
 
 extern const struct dynamic_prop *objfile_lookup_static_link
   (struct objfile *objfile, const struct block *block);
+
+} /* namespace gdb */
 
 #endif /* !defined (OBJFILES_H) */

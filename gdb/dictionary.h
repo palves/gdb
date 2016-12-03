@@ -25,6 +25,10 @@
 
 #include "symfile.h"
 
+struct obstack;
+
+namespace gdb {
+
 /* An opaque type for multi-language dictionaries; only dictionary.c should
    know about its innards.  */
 
@@ -33,7 +37,6 @@ struct multidictionary;
 /* Other types needed for declarations.  */
 
 struct symbol;
-struct obstack;
 struct pending;
 struct language_defn;
 
@@ -179,5 +182,7 @@ extern int mdict_size (const struct multidictionary *mdict);
 	for ((sym) = mdict_iterator_first ((dict), &(iter));	\
 	     (sym);						\
 	     (sym) = mdict_iterator_next (&(iter)))
+
+} /* namespace gdb */
 
 #endif /* DICTIONARY_H */

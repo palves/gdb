@@ -24,6 +24,8 @@
 
 /* The abstract ui_file base class.  */
 
+namespace gdb {
+
 class ui_file
 {
 public:
@@ -261,5 +263,7 @@ private:
   ui_file *m_one, *m_two;
   bool m_close_one, m_close_two;
 };
+
+} /* namespace gdb */
 
 #endif

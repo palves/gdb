@@ -23,6 +23,9 @@
 #include "common/function-view.h"
 
 struct obstack;
+
+namespace gdb {
+
 struct bcache;
 struct compunit_symtab;
 
@@ -357,5 +360,7 @@ void macro_for_each_in_scope (struct macro_source_file *file, int line,
    setting is "relative" which is backward compatible but the former behavior
    of macro filenames printing was "absolute".  */
 extern std::string macro_source_fullname (struct macro_source_file *file);
+
+} /* namespace gdb */
 
 #endif /* MACROTAB_H */
