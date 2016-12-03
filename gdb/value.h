@@ -22,6 +22,9 @@
 
 #include "doublest.h"
 #include "frame.h"		/* For struct frame_id.  */
+#include "symtab.h"
+#include "gdbtypes.h"
+#include "expression.h"
 
 struct block;
 struct expression;
@@ -32,6 +35,8 @@ struct ui_file;
 struct language_defn;
 struct value_print_options;
 struct xmethod_worker;
+struct frame_info;
+struct fn_field;
 
 /* Values can be partially 'optimized out' and/or 'unavailable'.
    These are distinct states and have different string representations
@@ -597,13 +602,6 @@ struct value *value_vector_widen (struct value *scalar_value,
 				  struct type *vector_type);
 
 
-
-#include "symtab.h"
-#include "gdbtypes.h"
-#include "expression.h"
-
-struct frame_info;
-struct fn_field;
 
 extern int print_address_demangle (const struct value_print_options *,
 				   struct gdbarch *, CORE_ADDR,
