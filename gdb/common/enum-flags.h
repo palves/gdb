@@ -53,19 +53,23 @@
 
 #ifdef __cplusplus
 
-/* Traits type used to prevent the global operator overloads from
-   instantiating for non-flag enums.  */
-template<typename T> struct enum_flags_type {};
+template<typename E>
+constexpr bool enum_flags_enable_operators (E)
+{ return false; }
 
 /* Use this to mark an enum as flags enum, enabling the global
    operator overloads for ENUM_TYPE.  This must be called in the
    global namespace.  */
-#define ENABLE_ENUM_FLAGS_OPERATORS(enum_type)		\
-  template<>						\
-  struct enum_flags_type<enum_type>			\
-  {							\
-    typedef enum_flags<enum_type> type;			\
-  }
+#define ENABLE_ENUM_FLAGS_OPERATORS(enum_type)			 \
+  constexpr bool enum_flags_enable_operators (enum_type *)	 \
+  { return true; }						 \
+  constexpr bool enum_flags_enable_operators (const enum_type *) \
+  { return true; }
+
+template <typename E, typename T>
+struct enable_if_enum_flags
+  : public std::enable_if<enum_flags_enable_operators ((typename std::remove_reference<E>::type *) 0), T>
+{};
 
 /* Use this to mark an enum as flags enum.  It defines FLAGS_TYPE as
    enum_flags wrapper class for ENUM, and enables the global operator
@@ -178,7 +182,7 @@ private:
 									\
   /* Raw enum on both LHS/RHS.  Returns raw enum type.  */		\
   template <typename enum_type>						\
-  constexpr typename enum_flags_type<enum_type>::type::enum_type	\
+  constexpr typename enable_if_enum_flags<enum_type, enum_type>::type	\
   OPERATOR_OP (enum_type e1, enum_type e2)				\
   {									\
     using underlying = typename enum_flags<enum_type>::underlying_type;	\
@@ -187,38 +191,45 @@ private:
 									\
   /* enum_flags on the LHS.  */						\
   template <typename enum_type>						\
-  constexpr typename enum_flags_type<enum_type>::type			\
+  constexpr								\
+  typename enable_if_enum_flags<enum_type, enum_flags<enum_type>>::type \
   OPERATOR_OP (enum_flags<enum_type> e1, enum_type e2)			\
   { return e1.raw () OP e2; }						\
 									\
   /* enum_flags on the RHS.  */						\
   template <typename enum_type>						\
-  constexpr typename enum_flags_type<enum_type>::type			\
+  constexpr								\
+  typename enable_if_enum_flags<enum_type, enum_flags<enum_type>>::type \
   OPERATOR_OP (enum_type e1, enum_flags<enum_type> e2)			\
   { return e1 OP e2.raw (); }						\
 									\
   /* enum_flags on both LHS/RHS.  */					\
   template <typename enum_type>						\
-  constexpr typename enum_flags_type<enum_type>::type			\
+  constexpr								\
+  typename enable_if_enum_flags<enum_type, enum_flags<enum_type>>::type \
   OPERATOR_OP (enum_flags<enum_type> e1, enum_flags<enum_type> e2)	\
   { return e1.raw () OP e2.raw (); }					\
 									\
   /* Delete cases involving unrelated types.  */			\
 									\
   template <typename enum_type, typename unrelated_type>		\
-  constexpr typename enum_flags_type<enum_type>::type			\
+  constexpr								\
+  typename enable_if_enum_flags<enum_type, void>::type			\
   OPERATOR_OP (enum_type e1, unrelated_type e2) = delete;		\
 									\
   template <typename enum_type, typename unrelated_type>		\
-  constexpr typename enum_flags_type<enum_type>::type			\
+  constexpr								\
+  typename enable_if_enum_flags<enum_type, void>::type			\
   OPERATOR_OP (unrelated_type e1, enum_type e2) = delete;		\
 									\
   template <typename enum_type, typename unrelated_type>		\
-  constexpr typename enum_flags_type<enum_type>::type			\
+  constexpr								\
+  typename enable_if_enum_flags<enum_type, void>::type			\
   OPERATOR_OP (enum_flags<enum_type> e1, unrelated_type e2) = delete;	\
 									\
   template <typename enum_type, typename unrelated_type>		\
-  constexpr typename enum_flags_type<enum_type>::type			\
+  constexpr								\
+  typename enable_if_enum_flags<enum_type, void>::type			\
   OPERATOR_OP (unrelated_type e1, enum_flags<enum_type> e2) = delete;
 
 /* Generate non-member compound assignment operators.  Only the raw
@@ -243,24 +254,24 @@ private:
 #define ENUM_FLAGS_GEN_COMPOUND_ASSIGN(OPERATOR_OP, OP)			\
   /* lval reference version.  */					\
   template <typename enum_type>						\
-  constexpr typename enum_flags_type<enum_type>::type::enum_type &	\
+  constexpr typename enable_if_enum_flags<enum_type, enum_type>::type &	\
   OPERATOR_OP (enum_type &e1, const enum_type &e2)			\
   { return e1 = e1 OP e2; }						\
 									\
   /* rval reference version.  */					\
   template <typename enum_type>						\
-  constexpr typename enum_flags_type<enum_type>::type::enum_type &	\
+  constexpr typename enable_if_enum_flags<enum_type, enum_type>::type &	\
   OPERATOR_OP (enum_type &&e1, const enum_type &e2)			\
   { return e1 = e1 OP e2; }						\
 									\
   /* Delete assignment from unrelated types.  */			\
 									\
   template <typename enum_type, typename other_enum_type>		\
-  constexpr typename enum_flags_type<enum_type>::type::enum_type &	\
+  constexpr typename enable_if_enum_flags<enum_type, enum_type>::type &	\
   OPERATOR_OP (enum_type &e1, const other_enum_type &e2) = delete;	\
 									\
   template <typename enum_type, typename other_enum_type>		\
-  constexpr typename enum_flags_type<enum_type>::type::enum_type &	\
+  constexpr typename enable_if_enum_flags<enum_type, enum_type>::type &	\
   OPERATOR_OP (enum_type &&e1, const other_enum_type &e2) = delete;
 
 ENUM_FLAGS_GEN_BINOP (operator|, |)
@@ -327,7 +338,7 @@ ENUM_FLAGS_GEN_COMP (operator!=, !=)
 /* Unary operators for the raw flags enum.  */
 
 template <typename enum_type>
-constexpr typename enum_flags_type<enum_type>::type::enum_type
+constexpr typename enable_if_enum_flags<enum_type, enum_type>::type
 operator~ (enum_type e)
 {
   using underlying = typename enum_flags<enum_type>::underlying_type;
@@ -337,19 +348,19 @@ operator~ (enum_type e)
 /* Delete operator<< and operator>>.  */
 
 template <typename enum_type, typename any_type>
-constexpr typename enum_flags_type<enum_type>::type
+constexpr typename enable_if_enum_flags<enum_type, void>::type
 operator<< (const enum_type &, const any_type &) = delete;
 
 template <typename enum_type, typename any_type>
-constexpr typename enum_flags_type<enum_type>::type
+constexpr typename enable_if_enum_flags<enum_type, void>::type
 operator<< (const enum_flags<enum_type> &, const any_type &) = delete;
 
 template <typename enum_type, typename any_type>
-constexpr typename enum_flags_type<enum_type>::type
+constexpr typename enable_if_enum_flags<enum_type, void>::type
 operator>> (const enum_type &, const any_type &) = delete;
 
 template <typename enum_type, typename any_type>
-constexpr typename enum_flags_type<enum_type>::type
+constexpr typename enable_if_enum_flags<enum_type, void>::type
 operator>> (const enum_flags<enum_type> &, const any_type &) = delete;
 
 #else /* __cplusplus */
