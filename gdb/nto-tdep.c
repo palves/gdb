@@ -39,6 +39,8 @@
 #include <sys/cygwin.h>
 #endif
 
+namespace gdb {
+
 #ifdef __CYGWIN__
 static char default_nto_target[] = "C:\\QNXsdk\\target\\qnx6";
 #elif defined(__sun__) || defined(linux)
@@ -572,3 +574,5 @@ _initialize_nto_tdep (void)
   nto_inferior_data_reg
     = register_inferior_data_with_cleanup (NULL, nto_inferior_data_cleanup);
 }
+
+} /* namespace gdb */
