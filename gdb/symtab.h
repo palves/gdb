@@ -31,6 +31,7 @@
 #include "common/gdb_optional.h"
 #include "common/next-iterator.h"
 #include "completer.h"
+#include "minsyms.h"
 
 /* Opaque declarations.  */
 struct ui_file;
@@ -745,8 +746,6 @@ struct minimal_symbol
 #define MSYMBOL_SET_NAMES(symbol,linkage_name,len,copy_name,objfile)	\
   symbol_set_names (&(symbol)->mginfo, linkage_name, len, copy_name, \
 		    (objfile)->per_bfd)
-
-#include "minsyms.h"
 
 
 
