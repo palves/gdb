@@ -25,9 +25,12 @@
 #include "memrange.h"
 #include "symfile-add-flags.h"
 
+struct bfd;
+
+namespace gdb {
+
 struct target_section;
 struct target_ops;
-struct bfd;
 struct objfile;
 
 #define exec_bfd current_program_space->ebfd
@@ -121,4 +124,7 @@ extern void exec_close (void);
 extern void try_open_exec_file (const char *exec_file_host,
 				struct inferior *inf,
 				symfile_add_flags add_flags);
+
+} /* namespace gdb */
+
 #endif

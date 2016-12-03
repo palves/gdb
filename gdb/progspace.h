@@ -26,8 +26,11 @@
 #include "gdb_vecs.h"
 #include "registry.h"
 
-struct target_ops;
 struct bfd;
+
+namespace gdb {
+
+struct target_ops;
 struct objfile;
 struct inferior;
 struct exec;
@@ -310,5 +313,7 @@ DECLARE_REGISTRY (program_space);
    modules.  */
 
 DECLARE_REGISTRY (address_space);
+
+} /* namespace gdb */
 
 #endif

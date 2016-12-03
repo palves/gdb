@@ -22,8 +22,11 @@
 #if !defined (COFF_PE_READ_H)
 #define COFF_PE_READ_H
 
-struct objfile;
 struct bfd;
+
+namespace gdb {
+
+struct objfile;
 
 /* Read the export table and convert it to minimal symbol table
    entries */
@@ -33,5 +36,7 @@ extern void read_pe_exported_syms (minimal_symbol_reader &reader,
 /* Extract from ABFD the offset of the .text section.
    Returns default value 0x1000 if information is not found.  */
 extern CORE_ADDR pe_text_section_offset (struct bfd *abfd);
+
+} /* namespace gdb */
 
 #endif /* !defined (COFF_PE_READ_H) */
