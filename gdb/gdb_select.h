@@ -30,6 +30,8 @@
 #include <winsock2.h>
 #endif
 
+namespace gdb {
+
 extern int gdb_select (int n, fd_set *readfds, fd_set *writefds,
 		       fd_set *exceptfds, struct timeval *timeout);
 
@@ -47,5 +49,7 @@ extern int interruptible_select (int n,
 				 fd_set *writefds,
 				 fd_set *exceptfds,
 				 struct timeval *timeout);
+
+} /* namespace gdb */
 
 #endif /* !defined(GDB_SELECT_H) */

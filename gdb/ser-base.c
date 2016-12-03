@@ -28,6 +28,7 @@
 #include <winsock2.h>
 #endif
 
+namespace gdb {
 
 static timer_handler_func push_event;
 static handler_func fd_event;
@@ -603,3 +604,5 @@ ser_base_async (struct serial *scb,
 	}
     }
 }
+
+} /* namespace gdb */

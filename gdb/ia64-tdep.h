@@ -25,6 +25,8 @@
 #include "ia64-libunwind-tdep.h"
 #endif
 
+namespace gdb {
+
 /* Register numbers of various important registers.  */
 
 /* General registers; there are 128 of these 64 bit wide registers.
@@ -260,5 +262,7 @@ extern unw_accessors_t ia64_unw_accessors;
 extern unw_accessors_t ia64_unw_rse_accessors;
 extern struct libunwind_descr ia64_libunwind_descr;
 #endif
+
+} /* namespace gdb */
 
 #endif /* ia64-tdep.h */

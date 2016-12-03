@@ -76,6 +76,8 @@
 #endif /* sgtty */
 #endif
 
+namespace gdb {
+
 struct inferior;
 
 extern void new_tty_prefork (const char *);
@@ -108,5 +110,7 @@ extern void set_initial_gdb_ttystate (void);
 /* Set the process group of the caller to its own pid, or do nothing
    if we lack job control.  */
 extern int gdb_setpgid (void);
+
+} /* namespace gdb */
 
 #endif /* !defined (TERMINAL_H) */
