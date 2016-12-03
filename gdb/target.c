@@ -50,6 +50,8 @@
 #include "terminal.h"
 #include <unordered_map>
 
+namespace gdb {
+
 static void generic_tls_error (void) ATTRIBUTE_NORETURN;
 
 static void default_terminal_info (struct target_ops *, const char *, int);
@@ -4098,3 +4100,5 @@ attempts \"run\" and other commands with the native target."),
 			   NULL, show_auto_connect_native_target,
 			   &setlist, &showlist);
 }
+
+} /* namespace gdb */
