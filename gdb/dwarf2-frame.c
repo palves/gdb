@@ -235,7 +235,7 @@ class dwarf_expr_executor : public dwarf_expr_context
 
   CORE_ADDR read_addr_from_reg (int reg) override
   {
-    return ::read_addr_from_reg (this_frame, reg);
+    return gdb::read_addr_from_reg (this_frame, reg);
   }
 
   struct value *get_reg_value (struct type *type, int reg) override
