@@ -42,6 +42,9 @@
 #include <algorithm>
 #include <vector>
 
+namespace gdb {
+
+
 extern int dwarf_always_disassemble;
 
 static struct value *dwarf2_evaluate_loc_desc_full (struct type *type,
@@ -4685,3 +4688,5 @@ _initialize_dwarf2loc (void)
   register_self_test (selftests::copy_bitwise_tests);
 #endif
 }
+
+} /* namespace gdb */

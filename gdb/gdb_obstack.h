@@ -22,6 +22,8 @@
 
 #include "obstack.h"
 
+namespace gdb {
+
 /* Utility macros - wrap obstack alloc into something more robust.  */
 
 #define OBSTACK_ZALLOC(OBSTACK,TYPE) \
@@ -62,5 +64,7 @@ extern char *obconcat (struct obstack *obstackp, ...) ATTRIBUTE_SENTINEL;
    obstack OBSTACKP.  */
 
 extern char *obstack_strdup (struct obstack *obstackp, const char *string);
+
+} /* namespace gdb */
 
 #endif

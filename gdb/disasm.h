@@ -21,6 +21,8 @@
 
 #include "dis-asm.h"
 
+namespace gdb {
+
 #define DISASSEMBLY_SOURCE_DEPRECATED (0x1 << 0)
 #define DISASSEMBLY_RAW_INSN	(0x1 << 1)
 #define DISASSEMBLY_OMIT_FNAME	(0x1 << 2)
@@ -82,5 +84,7 @@ extern int gdb_insn_length (struct gdbarch *gdbarch, CORE_ADDR memaddr);
 extern int gdb_buffered_insn_length (struct gdbarch *gdbarch,
 				     const gdb_byte *insn, int max_len,
 				     CORE_ADDR memaddr);
+
+} /* namespace gdb */
 
 #endif

@@ -23,6 +23,9 @@
 #include "solib-svr4.h"
 #include "nbsd-tdep.h"
 
+namespace gdb {
+
+
 /* FIXME: kettenis/20060115: We should really eliminate the next two
    functions completely.  */
 
@@ -47,3 +50,5 @@ nbsd_pc_in_sigtramp (CORE_ADDR pc, const char *func_name)
   return (func_name != NULL
 	  && startswith (func_name, "__sigtramp"));
 }
+
+} /* namespace gdb */

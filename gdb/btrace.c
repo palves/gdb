@@ -39,6 +39,9 @@
 #include <ctype.h>
 #include <algorithm>
 
+namespace gdb {
+
+
 /* Command lists for btrace maintenance commands.  */
 static struct cmd_list_element *maint_btrace_cmdlist;
 static struct cmd_list_element *maint_btrace_set_cmdlist;
@@ -3410,3 +3413,5 @@ The next 'record' command will fetch the branch tracing data anew.\n\
 	   &maint_btrace_cmdlist);
 
 }
+
+} /* namespace gdb */

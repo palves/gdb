@@ -22,6 +22,8 @@
 #ifndef XML_TDESC_H
 #define XML_TDESC_H
 
+namespace gdb {
+
 struct target_ops;
 struct target_desc;
 
@@ -40,5 +42,7 @@ const struct target_desc *target_read_description_xml (struct target_ops *);
    as a single XML file.  */
 
 char *target_fetch_description_xml (struct target_ops *ops);
+
+} /* namespace gdb */
 
 #endif

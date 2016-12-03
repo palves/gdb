@@ -67,6 +67,9 @@
 #include "complaints.h"
 #include "inf-child.h"
 
+namespace gdb {
+
+
 #define AdjustTokenPrivileges		dyn_AdjustTokenPrivileges
 #define DebugActiveProcessStop		dyn_DebugActiveProcessStop
 #define DebugBreakProcess		dyn_DebugBreakProcess
@@ -3297,3 +3300,5 @@ Use \"file\" or \"dll\" command to load executable/libraries directly."));
 
 #undef GPA
 }
+
+} /* namespace gdb */

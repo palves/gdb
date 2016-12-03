@@ -29,6 +29,9 @@
 #include <signal.h>
 #include <sched.h>
 
+namespace gdb {
+
+
 /* See nat/linux-namespaces.h.  */
 int debug_linux_namespaces;
 
@@ -1068,3 +1071,5 @@ linux_mntns_readlink (pid_t pid, const char *filename,
 
   return ret;
 }
+
+} /* namespace gdb */

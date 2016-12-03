@@ -20,6 +20,8 @@
 #ifndef XTENSA_H
 #define XTENSA_H
 
+namespace gdb {
+
 /* Xtensa ELF core file register set representation ('.reg' section).
    Copied from target-side ELF header <xtensa/elf.h>.  */
 
@@ -42,5 +44,7 @@ typedef struct
 
 #define XTENSA_ELF_NGREG (sizeof (xtensa_elf_gregset_t) \
 			  / sizeof (xtensa_elf_greg_t))
+
+} /* namespace gdb */
 
 #endif

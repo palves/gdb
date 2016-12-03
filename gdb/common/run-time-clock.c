@@ -20,6 +20,9 @@
 #include "run-time-clock.h"
 #if defined HAVE_SYS_RESOURCE_H
 #include <sys/resource.h>
+
+namespace gdb {
+
 #endif
 
 using namespace std::chrono;
@@ -56,3 +59,5 @@ run_time_clock::now (user_cpu_time_clock::time_point &user,
   system = system_cpu_time_clock::time_point (microseconds::zero ());
 #endif
 }
+
+} /* namespace gdb */

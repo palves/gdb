@@ -20,8 +20,12 @@
 #ifndef FBSD_NAT_H
 #define FBSD_NAT_H
 
+namespace gdb {
+
 /* Register the customized FreeBSD target.  This should be used
    instead of calling add_target directly.  */
 extern void fbsd_nat_add_target (struct target_ops *);
+
+} /* namespace gdb */
 
 #endif /* fbsd-nat.h */

@@ -22,6 +22,8 @@
 
 #include "frame.h"
 
+namespace gdb {
+
 struct infcall_suspend_state;
 struct frame_unwind;
 
@@ -70,5 +72,7 @@ extern void register_dummy_frame_dtor (struct frame_id dummy_id, ptid_t ptid,
    destructors equal to both DTOR and DTOR_DATA.  Return 0 otherwise.  */
 extern int find_dummy_frame_dtor (dummy_frame_dtor_ftype *dtor,
 				  void *dtor_data);
+
+} /* namespace gdb */
 
 #endif /* !defined (DUMMY_FRAME_H)  */

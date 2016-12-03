@@ -20,6 +20,8 @@
 #ifndef _LINUX_RECORD_H_
 #define _LINUX_RECORD_H_
 
+namespace gdb {
+
 struct linux_record_tdep
 {
   /* The size of the type that will be used in a system call.  */
@@ -546,4 +548,6 @@ enum gdb_syscall {
 extern int record_linux_system_call (enum gdb_syscall num, 
 				     struct regcache *regcache,
 				     struct linux_record_tdep *tdep);
+} /* namespace gdb */
+
 #endif /* _LINUX_RECORD_H_ */

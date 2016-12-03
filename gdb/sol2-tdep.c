@@ -25,6 +25,9 @@
 
 #include "sol2-tdep.h"
 
+namespace gdb {
+
+
 CORE_ADDR
 sol2_skip_solib_resolver (struct gdbarch *gdbarch, CORE_ADDR pc)
 {
@@ -70,3 +73,5 @@ sol2_core_pid_to_str (struct gdbarch *gdbarch, ptid_t ptid)
   /* Not fake; print as usual.  */
   return normal_pid_to_str (ptid);
 }
+
+} /* namespace gdb */

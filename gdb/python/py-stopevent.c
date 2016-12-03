@@ -20,6 +20,9 @@
 #include "defs.h"
 #include "py-stopevent.h"
 
+namespace gdb {
+
+
 PyObject *
 create_stop_event_object (PyTypeObject *py_type)
 {
@@ -116,3 +119,5 @@ GDBPY_NEW_EVENT_TYPE (stop,
                       "StopEvent",
                       "GDB stop event object",
                       thread_event_object_type);
+
+} /* namespace gdb */

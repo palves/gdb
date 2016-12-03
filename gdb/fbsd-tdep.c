@@ -29,6 +29,9 @@
 #include "elf-bfd.h"
 #include "fbsd-tdep.h"
 
+namespace gdb {
+
+
 
 /* This is how we want PTIDs from core files to be printed.  */
 
@@ -348,3 +351,5 @@ fbsd_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
   set_xml_syscall_file_name (gdbarch, "syscalls/freebsd.xml");
   set_gdbarch_get_syscall_number (gdbarch, fbsd_get_syscall_number);
 }
+
+} /* namespace gdb */

@@ -19,6 +19,9 @@
 #include "py-event.h"
 #include "infrun.h"
 
+namespace gdb {
+
+
 /* thread events can either be thread specific or process wide.  If gdb is
    running in non-stop mode then the event is thread specific, otherwise
    it is process wide.
@@ -78,3 +81,5 @@ GDBPY_NEW_EVENT_TYPE (thread,
                       "ThreadEvent",
                       "GDB thread event object",
                       event_object_type);
+
+} /* namespace gdb */

@@ -19,6 +19,8 @@
 #ifndef AARCH64_LINUX_HW_POINT_H
 #define AARCH64_LINUX_HW_POINT_H 1
 
+namespace gdb {
+
 /* Macro definitions, data structures, and code for the hardware
    breakpoint and hardware watchpoint support follow.  We use the
    following abbreviations throughout the code:
@@ -185,5 +187,7 @@ void aarch64_linux_get_debug_reg_capacity (int tid);
 struct aarch64_debug_reg_state *aarch64_get_debug_reg_state (pid_t pid);
 
 int aarch64_linux_region_ok_for_watchpoint (CORE_ADDR addr, int len);
+
+} /* namespace gdb */
 
 #endif /* AARCH64_LINUX_HW_POINT_H */

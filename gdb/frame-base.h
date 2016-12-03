@@ -20,6 +20,8 @@
 #if !defined (FRAME_BASE_H)
 #define FRAME_BASE_H 1
 
+namespace gdb {
+
 struct frame_info;
 struct frame_id;
 struct frame_unwind;
@@ -87,5 +89,7 @@ extern void frame_base_set_default (struct gdbarch *gdbarch,
    an implementation.  */
 
 extern const struct frame_base *frame_base_find_by_frame (struct frame_info *this_frame);
+
+} /* namespace gdb */
 
 #endif

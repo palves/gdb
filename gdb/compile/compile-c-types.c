@@ -21,6 +21,9 @@
 #include "defs.h"
 #include "gdbtypes.h"
 #include "compile-internal.h"
+
+namespace gdb {
+
 /* An object that maps a gdb type to a gcc type.  */
 
 struct type_map_instance
@@ -435,3 +438,5 @@ new_compile_instance (struct gcc_c_context *fe)
 
   return &result->base;
 }
+
+} /* namespace gdb */

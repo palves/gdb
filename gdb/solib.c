@@ -47,6 +47,9 @@
 #include "gdb_bfd.h"
 #include "filestuff.h"
 
+namespace gdb {
+
+
 /* Architecture-specific operations.  */
 
 /* Per-architecture data key.  */
@@ -1734,3 +1737,5 @@ PATH and LD_LIBRARY_PATH."),
 				     show_solib_search_path,
 				     &setlist, &showlist);
 }
+
+} /* namespace gdb */

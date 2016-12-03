@@ -25,6 +25,8 @@
 #include "python-internal.h"
 #include "inferior.h"
 
+namespace gdb {
+
 /* This macro creates the following functions:
 
      gdbpy_initialize_{NAME}_event
@@ -135,5 +137,7 @@ extern int evpy_add_attribute (PyObject *event,
   CPYCHECKER_NEGATIVE_RESULT_SETS_EXCEPTION;
 int gdbpy_initialize_event_generic (PyTypeObject *type, char *name)
   CPYCHECKER_NEGATIVE_RESULT_SETS_EXCEPTION;
+
+} /* namespace gdb */
 
 #endif /* GDB_PY_EVENT_H */

@@ -23,6 +23,9 @@
 #include "solib-svr4.h"
 #include "symtab.h"
 
+namespace gdb {
+
+
 /* This enum represents the signals' numbers on the Xtensa
    architecture.  It just contains the signal definitions which are
    different from the generic implementation.
@@ -121,3 +124,5 @@ _initialize_xtensa_linux_tdep (void)
   gdbarch_register_osabi (bfd_arch_xtensa, bfd_mach_xtensa, GDB_OSABI_LINUX,
 			  xtensa_linux_init_abi);
 }
+
+} /* namespace gdb */

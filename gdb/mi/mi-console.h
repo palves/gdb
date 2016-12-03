@@ -20,11 +20,15 @@
 #ifndef MI_CONSOLE_H
 #define MI_CONSOLE_H
 
+namespace gdb {
+
 extern struct ui_file *mi_console_file_new (struct ui_file *raw,
 					    const char *prefix,
 					    char quote);
 
 extern void mi_console_set_raw (struct ui_file *console,
 				struct ui_file *raw);
+
+} /* namespace gdb */
 
 #endif

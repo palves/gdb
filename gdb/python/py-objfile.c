@@ -25,6 +25,9 @@
 #include "build-id.h"
 #include "symtab.h"
 
+namespace gdb {
+
+
 typedef struct
 {
   PyObject_HEAD
@@ -749,3 +752,5 @@ PyTypeObject objfile_object_type =
   0,				  /* tp_alloc */
   objfpy_new,			  /* tp_new */
 };
+
+} /* namespace gdb */

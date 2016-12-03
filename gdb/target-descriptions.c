@@ -35,6 +35,9 @@
 #include "hashtab.h"
 #include "inferior.h"
 
+namespace gdb {
+
+
 /* Types.  */
 
 typedef struct property
@@ -2021,3 +2024,5 @@ GDB will read the description from the target."),
 Print the current target description as a C source file."),
 	   &maintenanceprintlist);
 }
+
+} /* namespace gdb */

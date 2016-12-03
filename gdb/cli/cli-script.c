@@ -35,6 +35,9 @@
 
 #include <vector>
 
+namespace gdb {
+
+
 /* Prototypes for local functions.  */
 
 static enum command_control_type
@@ -1722,3 +1725,5 @@ followed by a new line.  The nested commands must be entered one per line,\n\
 and should be terminated by the word 'else' or `end'.  If an else clause\n\
 is used, the same rules apply to its nested commands as to the first ones."));
 }
+
+} /* namespace gdb */

@@ -42,6 +42,9 @@
 #include "user-regs.h"
 #include <algorithm>
 
+namespace gdb {
+
+
 /* Prototypes for exported functions.  */
 
 void _initialize_values (void);
@@ -4178,3 +4181,5 @@ prevents future values, larger than this size, from being allocated."),
 			    show_max_value_size,
 			    &setlist, &showlist);
 }
+
+} /* namespace gdb */

@@ -19,6 +19,9 @@
 #include "defs.h"
 #include "thread-fsm.h"
 
+namespace gdb {
+
+
 /* See thread-fsm.h.  */
 
 void
@@ -107,3 +110,5 @@ thread_fsm_should_notify_stop (struct thread_fsm *self)
     return self->ops->should_notify_stop (self);
   return 1;
 }
+
+} /* namespace gdb */

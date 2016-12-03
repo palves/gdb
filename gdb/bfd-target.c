@@ -23,6 +23,9 @@
 #include "exec.h"
 #include "gdb_bfd.h"
 
+namespace gdb {
+
+
 /* The object that is stored in the target_ops->to_data field has this
    type.  */
 struct target_bfd_data
@@ -101,3 +104,5 @@ target_bfd_reopen (struct bfd *abfd)
 
   return t;
 }
+
+} /* namespace gdb */

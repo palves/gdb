@@ -32,6 +32,9 @@
 #include "gdb_bfd.h"
 #include "filestuff.h"
 
+namespace gdb {
+
+
 
 static const char *
 scan_expression_with_cleanup (const char **cmd, const char *def)
@@ -820,3 +823,5 @@ If START and END are given, only the file contents within that range\n\
   c->completer = filename_completer;
   /* FIXME: completers for other commands.  */
 }
+
+} /* namespace gdb */

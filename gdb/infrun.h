@@ -20,6 +20,8 @@
 
 #include "symtab.h"
 
+namespace gdb {
+
 struct target_waitstatus;
 struct frame_info;
 struct address_space;
@@ -242,5 +244,7 @@ extern void all_uis_check_sync_execution_done (void);
    yet, re-disable its prompt (a synchronous execution command was
    started or re-started).  */
 extern void all_uis_on_sync_execution_starting (void);
+
+} /* namespace gdb */
 
 #endif /* INFRUN_H */

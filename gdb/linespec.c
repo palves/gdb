@@ -45,6 +45,9 @@
 #include "stack.h"
 #include "location.h"
 
+namespace gdb {
+
+
 typedef struct symbol *symbolp;
 DEF_VEC_P (symbolp);
 
@@ -3956,3 +3959,5 @@ get_gdb_linespec_parser_quote_characters (void)
 {
   return linespec_quote_characters;
 }
+
+} /* namespace gdb */

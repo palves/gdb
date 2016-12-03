@@ -41,6 +41,9 @@
 #include "amd64-nat.h"
 #include "amd64-tdep.h"
 #include "amd64-darwin-tdep.h"
+
+namespace gdb {
+
 #endif
 
 /* Read register values from the inferior process.
@@ -655,3 +658,5 @@ darwin_complete_target (struct target_ops *target)
   target->to_fetch_registers = i386_darwin_fetch_inferior_registers;
   target->to_store_registers = i386_darwin_store_inferior_registers;
 }
+
+} /* namespace gdb */

@@ -22,6 +22,9 @@
 #include "ui-out.h"
 #include "interps.h"
 
+namespace gdb {
+
+
 /* These hold the pushed copies of the gdb output files.
    If NULL then nothing has yet been pushed.  */
 struct saved_output_files
@@ -363,3 +366,5 @@ The logfile is used when directing GDB's output."),
 
   logging_filename = xstrdup ("gdb.txt");
 }
+
+} /* namespace gdb */

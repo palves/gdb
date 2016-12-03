@@ -20,6 +20,8 @@
 #ifndef LINUX_FORK_H
 #define LINUX_FORK_H
 
+namespace gdb {
+
 struct fork_info;
 extern struct fork_info *add_fork (pid_t);
 extern struct fork_info *find_fork_pid (pid_t);
@@ -28,5 +30,7 @@ extern void linux_fork_mourn_inferior (void);
 extern void linux_fork_detach (const char *, int);
 extern int forks_exist_p (void);
 extern int linux_fork_checkpointing_p (int);
+
+} /* namespace gdb */
 
 #endif

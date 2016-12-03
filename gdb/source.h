@@ -19,6 +19,8 @@
 #ifndef SOURCE_H
 #define SOURCE_H
 
+namespace gdb {
+
 struct symtab;
 
 /* This function is capable of finding the absolute path to a
@@ -98,4 +100,6 @@ extern void clear_current_source_symtab_and_line (void);
 
 /* Add a source path substitution rule.  */
 extern void add_substitute_path_rule (char *, char *);
+} /* namespace gdb */
+
 #endif

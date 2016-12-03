@@ -23,6 +23,8 @@
 #ifndef CP_ABI_H_
 #define CP_ABI_H_ 1
 
+namespace gdb {
+
 struct fn_field;
 struct type;
 struct value;
@@ -252,6 +254,8 @@ struct cp_abi_ops
 
 extern int register_cp_abi (struct cp_abi_ops *abi);
 extern void set_cp_abi_as_auto_default (const char *short_name);
+
+} /* namespace gdb */
 
 #endif
 

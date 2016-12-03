@@ -34,6 +34,9 @@
 #include "language.h"
 #include "dwarf2loc.h"
 
+namespace gdb {
+
+
 /* Basic byte-swapping routines.  All 'extract' functions return a
    host-format integer from a target-format integer at ADDR which is
    LEN bytes long.  */
@@ -1007,3 +1010,5 @@ address_from_register (int regnum, struct frame_info *frame)
   return result;
 }
 
+
+} /* namespace gdb */

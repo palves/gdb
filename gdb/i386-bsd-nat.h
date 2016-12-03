@@ -20,9 +20,13 @@
 #ifndef I386_BSD_NAT_H
 #define I386_BSD_NAT_H
 
+namespace gdb {
+
 /* Create a prototype *BSD/i386 target.  The client can override it
    with local methods.  */
 
 extern struct target_ops *i386bsd_target (void);
+
+} /* namespace gdb */
 
 #endif /* i386-bsd-nat.h */

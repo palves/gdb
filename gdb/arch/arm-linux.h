@@ -20,6 +20,8 @@
 #ifndef ARM_LINUX_H
 #define ARM_LINUX_H
 
+namespace gdb {
+
 /* The index to access CSPR in user_regs defined in GLIBC.  */
 #define ARM_CPSR_GREGNUM 16
 
@@ -78,4 +80,6 @@ struct arm_get_next_pcs;
 
 CORE_ADDR arm_linux_get_next_pcs_fixup (struct arm_get_next_pcs *self,
 					CORE_ADDR pc);
+} /* namespace gdb */
+
 #endif /* ARM_LINUX_H */

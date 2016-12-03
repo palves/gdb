@@ -29,6 +29,9 @@
 #include <math.h>
 #include "infcall.h"
 
+namespace gdb {
+
+
 /* Define whether or not the C operator '/' truncates towards zero for
    differently signed operands (truncation direction is undefined in C).  */
 
@@ -1906,3 +1909,5 @@ void
 _initialize_valarith (void)
 {
 }
+
+} /* namespace gdb */

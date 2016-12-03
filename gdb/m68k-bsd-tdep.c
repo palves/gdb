@@ -30,6 +30,9 @@
 #include "m68k-tdep.h"
 #include "solib-svr4.h"
 
+namespace gdb {
+
+
 /* Core file support.  */
 
 /* Sizeof `struct reg' in <machine/reg.h>.  */
@@ -268,3 +271,5 @@ _initialize_m68kbsd_tdep (void)
   gdbarch_register_osabi (bfd_arch_m68k, 0, GDB_OSABI_NETBSD_ELF,
 			  m68kbsd_elf_init_abi);
 }
+
+} /* namespace gdb */

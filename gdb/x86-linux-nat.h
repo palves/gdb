@@ -20,6 +20,8 @@
 #ifndef X86_LINUX_NAT_H
 #define X86_LINUX_NAT_H 1
 
+namespace gdb {
+
 
 
 /* Helper for ps_get_thread_area.  Sets BASE_ADDR to a pointer to
@@ -37,5 +39,7 @@ extern struct target_ops *x86_linux_create_target (void);
 /* Add an x86 GNU/Linux target.  */
 
 extern void x86_linux_add_target (struct target_ops *t);
+
+} /* namespace gdb */
 
 #endif

@@ -26,6 +26,9 @@
 #include "macroscope.h"
 #include "regcache.h"
 
+namespace gdb {
+
+
 /* See compile-internal.h.  */
 
 const char *
@@ -439,3 +442,5 @@ c_compute_program (struct compile_instance *inst,
   do_cleanups (cleanup);
   return code;
 }
+
+} /* namespace gdb */

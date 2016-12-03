@@ -31,6 +31,9 @@
 #include "mi/mi-cmds.h"
 #include "python-internal.h"
 
+namespace gdb {
+
+
 enum mi_print_types
 {
   MI_PRINT_ARGS,
@@ -1608,3 +1611,5 @@ gdbpy_apply_frame_filter (const struct extension_language_defn *extlang,
   do_cleanups (cleanups);
   return EXT_LANG_BT_ERROR;
 }
+
+} /* namespace gdb */

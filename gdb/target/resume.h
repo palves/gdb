@@ -20,6 +20,8 @@
 #ifndef RESUME_H
 #define RESUME_H
 
+namespace gdb {
+
 /* Ways to "resume" a thread.  */
 
 enum resume_kind
@@ -33,5 +35,7 @@ enum resume_kind
   /* Thread should be stopped.  */
   resume_stop
 };
+
+} /* namespace gdb */
 
 #endif /* RESUME_H */

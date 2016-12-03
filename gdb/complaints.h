@@ -21,6 +21,8 @@
 #if !defined (COMPLAINTS_H)
 #define COMPLAINTS_H
 
+namespace gdb {
+
 /* Opaque object used to track the number of complaints of a
    particular category.  */
 struct complaints;
@@ -48,5 +50,7 @@ extern void internal_complaint (struct complaints **complaints,
 extern void clear_complaints (struct complaints **complaints,
 			      int less_verbose, int noisy);
 
+
+} /* namespace gdb */
 
 #endif /* !defined (COMPLAINTS_H) */

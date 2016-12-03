@@ -20,6 +20,8 @@
 #ifndef M32R_TDEP_H
 #define M32R_TDEP_H
 
+namespace gdb {
+
 struct gdbarch_tdep
 {
   /* gdbarch target dependent data here.  Currently unused for M32R.  */
@@ -46,5 +48,7 @@ enum m32r_regnum
 };
 
 #define M32R_NUM_REGS 25
+
+} /* namespace gdb */
 
 #endif /* m32r-tdep.h */

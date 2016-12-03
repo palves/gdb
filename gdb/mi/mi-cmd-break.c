@@ -34,6 +34,9 @@
 #include "gdb_obstack.h"
 #include <ctype.h>
 
+namespace gdb {
+
+
 enum
   {
     FROM_TTY = 0
@@ -531,3 +534,5 @@ mi_cmd_break_commands (char *command, char **argv, int argc)
   breakpoint_set_commands (b, break_command);
 }
 
+
+} /* namespace gdb */

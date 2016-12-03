@@ -26,6 +26,8 @@
 #if !defined (GDBSTABS_H)
 #define GDBSTABS_H
 
+namespace gdb {
+
 /* The tag used to find the DBX info attached to an objfile.  This is
    global because it is referenced by several modules.  */
 extern const struct objfile_data *dbx_objfile_data_key;
@@ -72,5 +74,7 @@ struct dbx_symfile_info
 #define DBX_DATA_SECTION(o)	(DBX_SYMFILE_INFO(o)->data_section)
 #define DBX_BSS_SECTION(o)	(DBX_SYMFILE_INFO(o)->bss_section)
 #define DBX_STAB_SECTION(o)	(DBX_SYMFILE_INFO(o)->stab_section)
+
+} /* namespace gdb */
 
 #endif /* GDBSTABS_H */

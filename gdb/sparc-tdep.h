@@ -20,6 +20,8 @@
 #ifndef SPARC_TDEP_H
 #define SPARC_TDEP_H 1
 
+namespace gdb {
+
 struct frame_info;
 struct gdbarch;
 struct regcache;
@@ -251,5 +253,7 @@ extern void sparc32nbsd_elf_init_abi (struct gdbarch_info info,
 
 extern struct trad_frame_saved_reg *
   sparc32nbsd_sigcontext_saved_regs (struct frame_info *next_frame);
+
+} /* namespace gdb */
 
 #endif /* sparc-tdep.h */

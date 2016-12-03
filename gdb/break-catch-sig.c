@@ -31,6 +31,9 @@
 
 #include <string>
 
+namespace gdb {
+
+
 #define INTERNAL_SIGNAL(x) ((x) == GDB_SIGNAL_TRAP || (x) == GDB_SIGNAL_INT)
 
 typedef enum gdb_signal gdb_signal_type;
@@ -506,3 +509,5 @@ Arguments, if given, should be one or more signal names\n\
 		     CATCH_PERMANENT,
 		     CATCH_TEMPORARY);
 }
+
+} /* namespace gdb */

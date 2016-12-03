@@ -22,6 +22,8 @@
 
 #include "dummy-frame.h"
 
+namespace gdb {
+
 struct value;
 struct type;
 
@@ -49,5 +51,7 @@ extern struct value *
 			       struct value **args,
 			       dummy_frame_dtor_ftype *dummy_dtor,
 			       void *dummy_dtor_data);
+
+} /* namespace gdb */
 
 #endif

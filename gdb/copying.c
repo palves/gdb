@@ -6,6 +6,9 @@
 #include "command.h"
 #include "gdbcmd.h"
 
+namespace gdb {
+
+
 static void show_copying_command (char *, int);
 
 static void show_warranty_command (char *, int);
@@ -658,3 +661,5 @@ _initialize_copying (void)
   add_info ("warranty", show_warranty_command,
 	    _("Various kinds of warranty you do not have."));
 }
+
+} /* namespace gdb */

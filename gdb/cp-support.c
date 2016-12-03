@@ -37,6 +37,9 @@
 #include "gdb_setjmp.h"
 #include "safe-ctype.h"
 
+namespace gdb {
+
+
 #define d_left(dc) (dc)->u.s_binary.left
 #define d_right(dc) (dc)->u.s_binary.right
 
@@ -1712,3 +1715,5 @@ display the offending symbol."),
 			   &maintenance_show_cmdlist);
 #endif
 }
+
+} /* namespace gdb */

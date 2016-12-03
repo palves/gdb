@@ -20,6 +20,8 @@
 #ifndef GDBARCH_UTILS_H
 #define GDBARCH_UTILS_H
 
+namespace gdb {
+
 struct gdbarch;
 struct frame_info;
 struct minimal_symbol;
@@ -266,5 +268,7 @@ extern int default_addressable_memory_unit_size (struct gdbarch *gdbarch);
 extern void default_guess_tracepoint_registers (struct gdbarch *gdbarch,
 						struct regcache *regcache,
 						CORE_ADDR addr);
+
+} /* namespace gdb */
 
 #endif

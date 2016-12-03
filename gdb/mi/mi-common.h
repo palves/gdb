@@ -19,6 +19,8 @@
 #ifndef MI_COMMON_H
 #define MI_COMMON_H
 
+namespace gdb {
+
 /* Represents the reason why GDB is sending an asynchronous command to
    the front end.  NOTE: When modifing this, don't forget to update
    gdb.texinfo!  */
@@ -75,5 +77,7 @@ struct mi_interp
   struct interp *mi1_interp;
   struct interp *mi_interp;
 };
+
+} /* namespace gdb */
 
 #endif

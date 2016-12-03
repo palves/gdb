@@ -43,6 +43,9 @@
 #include "nat/x86-linux-dregs.h"
 #include "nat/linux-ptrace.h"
 
+namespace gdb {
+
+
 /* Per-thread arch-specific data we want to keep.  */
 
 struct arch_lwp_info
@@ -403,3 +406,5 @@ x86_linux_add_target (struct target_ops *t)
   linux_nat_set_forget_process (t, x86_forget_process);
   linux_nat_set_prepare_to_resume (t, x86_linux_prepare_to_resume);
 }
+
+} /* namespace gdb */

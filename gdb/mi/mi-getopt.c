@@ -19,6 +19,9 @@
 
 #include "defs.h"
 #include "mi-getopt.h"
+
+namespace gdb {
+
 /* See comments about mi_getopt and mi_getopt_silent in mi-getopt.h.
    When there is an unknown option, if ERROR_ON_UNKNOWN is true,
    throw an error, otherwise return -1.  */
@@ -110,3 +113,5 @@ mi_valid_noargs (const char *prefix, int argc, char **argv)
   else
     return 0;
 }
+
+} /* namespace gdb */

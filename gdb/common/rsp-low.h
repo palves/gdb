@@ -20,6 +20,8 @@
 #ifndef COMMON_RSP_LOW_H
 #define COMMON_RSP_LOW_H
 
+namespace gdb {
+
 /* Convert hex digit A to a number, or throw an exception.  */
 
 extern int fromhex (int a);
@@ -79,5 +81,7 @@ extern int remote_escape_output (const gdb_byte *buffer, int len_units,
 
 extern int remote_unescape_input (const gdb_byte *buffer, int len,
 				  gdb_byte *out_buf, int out_maxlen);
+
+} /* namespace gdb */
 
 #endif /* COMMON_RSP_LOW_H */

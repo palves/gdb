@@ -22,6 +22,8 @@
 #ifndef TARGET_DESCRIPTIONS_H
 #define TARGET_DESCRIPTIONS_H 1
 
+namespace gdb {
+
 struct tdesc_feature;
 struct tdesc_arch_data;
 struct tdesc_type;
@@ -252,5 +254,7 @@ void tdesc_add_enum_value (struct tdesc_type *type, int value,
 void tdesc_create_reg (struct tdesc_feature *feature, const char *name,
 		       int regnum, int save_restore, const char *group,
 		       int bitsize, const char *type);
+
+} /* namespace gdb */
 
 #endif /* TARGET_DESCRIPTIONS_H */

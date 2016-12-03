@@ -20,6 +20,9 @@
 #include "common-defs.h"
 #include "common-debug.h"
 
+namespace gdb {
+
+
 /* See common/common-debug.h.  */
 
 int show_debug_regs;
@@ -35,3 +38,5 @@ debug_printf (const char *fmt, ...)
   debug_vprintf (fmt, ap);
   va_end (ap);
 }
+
+} /* namespace gdb */

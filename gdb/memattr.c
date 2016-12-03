@@ -29,6 +29,9 @@
 #include "breakpoint.h"
 #include "cli/cli-utils.h"
 
+namespace gdb {
+
+
 const struct mem_attrib default_mem_attrib =
 {
   MEM_RW,			/* mode */
@@ -747,3 +750,5 @@ memory addresses will be allowed."),
 				&mem_set_cmdlist,
 				&mem_show_cmdlist);
 }
+
+} /* namespace gdb */

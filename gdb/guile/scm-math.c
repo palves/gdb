@@ -33,6 +33,9 @@
 #include "value.h"
 #include "guile-internal.h"
 
+namespace gdb {
+
+
 /* Note: Use target types here to remain consistent with the values system in
    GDB (which uses target arithmetic).  */
 
@@ -1009,3 +1012,5 @@ gdbscm_initialize_math (void)
 {
   gdbscm_define_functions (math_functions, 1);
 }
+
+} /* namespace gdb */

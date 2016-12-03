@@ -34,6 +34,9 @@
 #if HAVE_PYTHON
 #include "python/python.h"
 #include "python/python-internal.h"
+
+namespace gdb {
+
 #else
 typedef int PyObject;
 #endif
@@ -2690,3 +2693,5 @@ _initialize_varobj (void)
 			     NULL, show_varobjdebug,
 			     &setdebuglist, &showdebuglist);
 }
+
+} /* namespace gdb */

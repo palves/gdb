@@ -5,6 +5,9 @@
 #include "osabi.h"
 #include "target-descriptions.h"
 
+namespace gdb {
+
+
 struct target_desc *tdesc_s390_linux64v1;
 static void
 initialize_tdesc_s390_linux64v1 (void)
@@ -93,3 +96,5 @@ initialize_tdesc_s390_linux64v1 (void)
 
   tdesc_s390_linux64v1 = result;
 }
+
+} /* namespace gdb */

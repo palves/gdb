@@ -19,10 +19,14 @@
 #ifndef __AMD64_DARWIN_TDEP_H__
 #define __AMD64_DARWIN_TDEP_H__
 
+namespace gdb {
+
 /* Mapping between the general-purpose registers in Darwin x86-64 thread
    state and GDB's register cache layout.
    Indexed by amd64_regnum.  */
 extern int amd64_darwin_thread_state_reg_offset[];
 extern const int amd64_darwin_thread_state_num_regs;
+
+} /* namespace gdb */
 
 #endif /* __AMD64_DARWIN_TDEP_H__ */

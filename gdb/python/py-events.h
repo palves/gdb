@@ -24,6 +24,8 @@
 #include "python-internal.h"
 #include "inferior.h"
 
+namespace gdb {
+
 extern PyTypeObject thread_event_object_type
     CPYCHECKER_TYPE_OBJECT_FOR_TYPEDEF ("event_object");
 
@@ -63,5 +65,7 @@ extern events_object gdb_py_events;
 
 extern eventregistry_object *create_eventregistry_object (void);
 extern int evregpy_no_listeners_p (eventregistry_object *registry);
+
+} /* namespace gdb */
 
 #endif /* GDB_PY_EVENTS_H */

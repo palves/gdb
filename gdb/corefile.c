@@ -33,6 +33,9 @@
 #include "observer.h"
 #include "cli/cli-utils.h"
 
+namespace gdb {
+
+
 /* Local function declarations.  */
 
 extern void _initialize_core (void);
@@ -546,3 +549,5 @@ Use `set gnutarget auto' to specify automatic detection."),
   else
     set_gnutarget ("auto");
 }
+
+} /* namespace gdb */

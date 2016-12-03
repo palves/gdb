@@ -32,6 +32,9 @@
 #include "gdbcmd.h"
 #include "filestuff.h"
 
+namespace gdb {
+
+
 #ifdef HAVE_TERMIOS
 
 struct hardwire_ttystate
@@ -936,3 +939,5 @@ ser_unix_write_prim (struct serial *scb, const void *buf, size_t len)
 {
   return write (scb->fd, buf, len);
 }
+
+} /* namespace gdb */

@@ -42,6 +42,9 @@
 #include "features/mips64-linux.c"
 #include "features/mips64-dsp-linux.c"
 
+namespace gdb {
+
+
 #ifndef PTRACE_GET_THREAD_AREA
 #define PTRACE_GET_THREAD_AREA 25
 #endif
@@ -814,3 +817,5 @@ triggers a breakpoint or watchpoint."),
   initialize_tdesc_mips64_linux ();
   initialize_tdesc_mips64_dsp_linux ();
 }
+
+} /* namespace gdb */

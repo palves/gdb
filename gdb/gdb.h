@@ -19,6 +19,8 @@
 #ifndef GDB_H
 #define GDB_H
 
+namespace gdb {
+
 struct ui_out;
 
 /* Return-code (RC) from a gdb library call.  (The abreviation RC is
@@ -54,5 +56,7 @@ enum gdb_rc gdb_thread_select (struct ui_out *uiout, char *tidstr,
 /* Print a list of known thread ids.  */
 enum gdb_rc gdb_list_thread_ids (struct ui_out *uiout,
 				 char **error_message);
+
+} /* namespace gdb */
 
 #endif

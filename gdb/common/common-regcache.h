@@ -20,6 +20,8 @@
 #ifndef COMMON_REGCACHE_H
 #define COMMON_REGCACHE_H
 
+namespace gdb {
+
 /* This header is a stopgap until we have an independent regcache.  */
 
 enum register_status
@@ -61,5 +63,7 @@ extern enum register_status regcache_raw_read_unsigned
   (struct regcache *regcache, int regnum, ULONGEST *val);
 
 ULONGEST regcache_raw_get_unsigned (struct regcache *regcache, int regnum);
+
+} /* namespace gdb */
 
 #endif /* COMMON_REGCACHE_H */

@@ -20,6 +20,8 @@
 #ifndef AUTO_LOAD_H
 #define AUTO_LOAD_H 1
 
+namespace gdb {
+
 struct objfile;
 struct program_space;
 struct auto_load_pspace_info;
@@ -50,5 +52,7 @@ extern int file_is_auto_load_safe (const char *filename,
 
 extern int auto_load_gdb_scripts_enabled
   (const struct extension_language_defn *extlang);
+
+} /* namespace gdb */
 
 #endif /* AUTO_LOAD_H */

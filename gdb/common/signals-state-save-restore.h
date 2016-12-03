@@ -18,6 +18,8 @@
 #ifndef COMMON_SIGNALS_STATE_SAVE_RESTORE_H
 #define COMMON_SIGNALS_STATE_SAVE_RESTORE_H
 
+namespace gdb {
+
 /* Save/restore the signal actions of all signals, and the signal
    mask.
 
@@ -35,5 +37,7 @@ extern void save_original_signals_state (void);
 /* Restore the signal state of all signals.  */
 
 extern void restore_original_signals_state (void);
+
+} /* namespace gdb */
 
 #endif /* COMMON_SIGNALS_STATE_SAVE_RESTORE_H */

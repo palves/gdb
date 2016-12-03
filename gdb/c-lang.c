@@ -35,6 +35,9 @@
 #include <ctype.h>
 #include "gdbcore.h"
 
+namespace gdb {
+
+
 extern void _initialize_c_language (void);
 
 /* Given a C string type, STR_TYPE, return the corresponding target
@@ -1119,3 +1122,5 @@ _initialize_c_language (void)
   add_language (&asm_language_defn);
   add_language (&minimal_language_defn);
 }
+
+} /* namespace gdb */

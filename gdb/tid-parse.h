@@ -22,6 +22,8 @@
 
 #include "cli/cli-utils.h"
 
+namespace gdb {
+
 struct thread_info;
 
 /* Issue an invalid thread ID error, pointing at STRING, the invalid
@@ -182,5 +184,7 @@ private:
    arguments.  */
 extern int tid_is_in_list (const char *list, int default_inferior,
 			   int inf_num, int thr_num);
+
+} /* namespace gdb */
 
 #endif /* TID_PARSE_H */

@@ -22,6 +22,9 @@
 #include "amd64-tdep.h"
 #include "dicos-tdep.h"
 
+namespace gdb {
+
+
 static void
 amd64_dicos_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
 {
@@ -57,3 +60,5 @@ _initialize_amd64_dicos_tdep (void)
 			  GDB_OSABI_DICOS,
 			  amd64_dicos_init_abi);
 }
+
+} /* namespace gdb */

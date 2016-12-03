@@ -32,6 +32,9 @@
 #include "fbsd-tdep.h"
 #include "solib-svr4.h"
 
+namespace gdb {
+
+
 /* Support for signal handlers.  */
 
 /* Return whether THIS_FRAME corresponds to a FreeBSD sigtramp
@@ -317,3 +320,5 @@ _initialize_amd64fbsd_tdep (void)
   gdbarch_register_osabi (bfd_arch_i386, bfd_mach_x86_64,
 			  GDB_OSABI_FREEBSD_ELF, amd64fbsd_init_abi);
 }
+
+} /* namespace gdb */

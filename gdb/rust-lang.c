@@ -35,6 +35,9 @@
 #include <string>
 #include <vector>
 
+namespace gdb {
+
+
 extern initialize_file_ftype _initialize_rust_language;
 
 /* Returns the last segment of a Rust path like foo::bar::baz.  Will
@@ -2190,3 +2193,5 @@ _initialize_rust_language (void)
 {
   add_language (&rust_language_defn);
 }
+
+} /* namespace gdb */

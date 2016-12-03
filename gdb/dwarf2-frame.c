@@ -39,6 +39,9 @@
 #include "dwarf2loc.h"
 #include "dwarf2-frame-tailcall.h"
 
+namespace gdb {
+
+
 struct comp_unit;
 
 /* Call Frame Information (CFI).  */
@@ -2504,3 +2507,5 @@ _initialize_dwarf2_frame (void)
   dwarf2_frame_data = gdbarch_data_register_pre_init (dwarf2_frame_init);
   dwarf2_frame_objfile_data = register_objfile_data ();
 }
+
+} /* namespace gdb */

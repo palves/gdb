@@ -31,6 +31,9 @@
 #include "i387-tdep.h"
 #include "x86-xstate.h"
 
+namespace gdb {
+
+
 /* Print the floating point number specified by RAW.  */
 
 static void
@@ -1772,3 +1775,5 @@ i387_return_value (struct gdbarch *gdbarch, struct regcache *regcache)
   regcache_raw_write_unsigned (regcache, I387_FTAG_REGNUM (tdep), 0x3fff);
 
 }
+
+} /* namespace gdb */

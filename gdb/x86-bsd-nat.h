@@ -20,6 +20,8 @@
 #ifndef X86_BSD_NAT_H
 #define X86_BSD_NAT_H
 
+namespace gdb {
+
 /* Low level x86 XSAVE info.  */
 extern size_t x86bsd_xsave_len;
 
@@ -27,5 +29,7 @@ extern size_t x86bsd_xsave_len;
    with local methods.  */
 
 extern struct target_ops *x86bsd_target (void);
+
+} /* namespace gdb */
 
 #endif /* x86-bsd-nat.h */

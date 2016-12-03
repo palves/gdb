@@ -33,6 +33,9 @@
 #include "solib-svr4.h"
 #include "target.h"
 
+namespace gdb {
+
+
 /* Core file support.  */
 
 /* Even though NetBSD/alpha used ELF since day one, it used the
@@ -302,3 +305,5 @@ _initialize_alphanbsd_tdep (void)
   gdbarch_register_osabi (bfd_arch_alpha, 0, GDB_OSABI_NETBSD_ELF,
                           alphanbsd_init_abi);
 }
+
+} /* namespace gdb */

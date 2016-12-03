@@ -22,6 +22,8 @@
 
 #include "gdb_vecs.h"
 
+namespace gdb {
+
 struct event_location;
 
 /* Definition of a vector of probes.  */
@@ -300,5 +302,7 @@ extern struct value *evaluate_probe_argument (struct probe *probe,
 
 extern struct value *probe_safe_evaluate_at_pc (struct frame_info *frame,
 						unsigned n);
+
+} /* namespace gdb */
 
 #endif /* !defined (PROBE_H) */

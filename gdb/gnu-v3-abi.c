@@ -28,6 +28,9 @@
 #include "c-lang.h"
 #include "typeprint.h"
 
+namespace gdb {
+
+
 static struct cp_abi_ops gnu_v3_abi_ops;
 
 /* A gdbarch key for std::type_info, in the event that it can't be
@@ -1388,3 +1391,5 @@ _initialize_gnu_v3_abi (void)
   register_cp_abi (&gnu_v3_abi_ops);
   set_cp_abi_as_auto_default (gnu_v3_abi_ops.shortname);
 }
+
+} /* namespace gdb */

@@ -20,6 +20,9 @@
 #include "common-defs.h"
 #include "waitstatus.h"
 
+namespace gdb {
+
+
 /* Return a pretty printed form of target_waitstatus.
    Space for the result is malloc'd, caller must free.  */
 
@@ -72,3 +75,5 @@ target_waitstatus_to_string (const struct target_waitstatus *ws)
       return xstrprintf ("%sunknown???", kind_str);
     }
 }
+
+} /* namespace gdb */

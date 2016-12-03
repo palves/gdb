@@ -20,6 +20,8 @@
 #ifndef PROCFS_H
 #define PROCFS_H
 
+namespace gdb {
+
 struct target_ops;
 
 /* Create a prototype generic procfs target.  The client can override
@@ -43,5 +45,7 @@ struct ssd;
 
 extern struct ssd *procfs_find_LDT_entry (ptid_t);
 #endif
+
+} /* namespace gdb */
 
 #endif

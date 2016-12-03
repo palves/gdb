@@ -36,6 +36,9 @@
 #include "bsd-kvm.h"
 #include "inf-ptrace.h"
 
+namespace gdb {
+
+
 /* Returns true if PT_GETREGS fetches this register.  */
 
 static int
@@ -195,3 +198,5 @@ _initialize_ppcnbsd_nat (void)
   t->to_store_registers = ppcnbsd_store_inferior_registers;
   add_target (t);
 }
+
+} /* namespace gdb */

@@ -25,6 +25,9 @@
 #include "solib.h"
 #include "gdbthread.h"
 
+namespace gdb {
+
+
 /* The last program space number assigned.  */
 int last_program_space_num = 0;
 
@@ -526,3 +529,5 @@ initialize_progspace (void)
      which in turn dereferences current_program_space.  */
   current_program_space = add_program_space (new_address_space ());
 }
+
+} /* namespace gdb */

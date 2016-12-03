@@ -20,6 +20,8 @@
 #ifndef X86_XSTATE_H
 #define X86_XSTATE_H 1
 
+namespace gdb {
+
 /* The extended state feature bits.  */
 #define X86_XSTATE_X87		(1ULL << 0)
 #define X86_XSTATE_SSE		(1ULL << 1)
@@ -64,5 +66,7 @@
     (HAS_AVX512 (XCR0) ? X86_XSTATE_AVX512_SIZE : \
      (HAS_MPX (XCR0) ? X86_XSTATE_BNDCFG_SIZE : \
       (HAS_AVX (XCR0) ? X86_XSTATE_AVX_SIZE : X86_XSTATE_SSE_SIZE)))
+
+} /* namespace gdb */
 
 #endif /* X86_XSTATE_H */

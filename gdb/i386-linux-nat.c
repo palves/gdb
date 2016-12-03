@@ -37,6 +37,9 @@
 #include "x86-linux-nat.h"
 #include "nat/linux-ptrace.h"
 
+namespace gdb {
+
+
 /* The register sets used in GNU/Linux ELF core-dumps are identical to
    the register sets in `struct user' that is used for a.out
    core-dumps, and is also used by `ptrace'.  The corresponding types
@@ -734,3 +737,5 @@ _initialize_i386_linux_nat (void)
   /* Add the target.  */
   x86_linux_add_target (t);
 }
+
+} /* namespace gdb */

@@ -26,6 +26,9 @@
 #include "gdb_sys_time.h"
 #include <algorithm>
 
+namespace gdb {
+
+
 static int
 compare_block_starting_address (const void *a, const void *b)
 {
@@ -438,3 +441,5 @@ target_write_memory_blocks (VEC(memory_write_request_s) *requests,
 
   return err;
 }
+
+} /* namespace gdb */

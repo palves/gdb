@@ -45,6 +45,9 @@
 /* Defines ps_err_e, struct ps_prochandle.  */
 #include "gdb_proc_service.h"
 
+namespace gdb {
+
+
 #ifndef TRAP_HWBKPT
 #define TRAP_HWBKPT 0x0004
 #endif
@@ -847,3 +850,5 @@ _initialize_aarch64_linux_nat (void)
   /* Add our siginfo layout converter.  */
   linux_nat_set_siginfo_fixup (t, aarch64_linux_siginfo_fixup);
 }
+
+} /* namespace gdb */

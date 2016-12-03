@@ -74,6 +74,9 @@ struct target_ops sol_thread_ops;
 /* Prototypes for supply_gregset etc.  */
 #include "gregset.h"
 
+namespace gdb {
+
+
 /* This struct is defined by us, but mainly used for the proc_service
    interface.  We don't have much use for it, except as a handy place
    to get a real PID for memory accesses.  */
@@ -1320,3 +1323,5 @@ _initialize_sol_thread (void)
 
   return;
 }
+
+} /* namespace gdb */

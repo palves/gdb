@@ -25,6 +25,8 @@
 
 #include "nat/x86-dregs.h"
 
+namespace gdb {
+
 /* Hardware-assisted breakpoints and watchpoints.  */
 
 /* Add watchpoint methods to the provided target_ops.  
@@ -48,5 +50,7 @@ extern void x86_cleanup_dregs (void);
    data structures that keep track of debug register state.  */
 
 extern void x86_forget_process (pid_t pid);
+
+} /* namespace gdb */
 
 #endif /* X86_NAT_H */

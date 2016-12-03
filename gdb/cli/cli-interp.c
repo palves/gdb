@@ -30,6 +30,9 @@
 #include "gdbthread.h"
 #include "thread-fsm.h"
 
+namespace gdb {
+
+
 /* The console interpreter.  */
 struct cli_interp
 {
@@ -419,3 +422,5 @@ _initialize_cli_interp (void)
   observer_attach_user_selected_context_changed
     (cli_on_user_selected_context_changed);
 }
+
+} /* namespace gdb */

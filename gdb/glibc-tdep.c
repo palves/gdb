@@ -25,6 +25,9 @@
 
 #include "glibc-tdep.h"
 
+namespace gdb {
+
+
 /* Calling functions in shared libraries.  */
 
 /* See the comments for SKIP_SOLIB_RESOLVER at the top of infrun.c.
@@ -72,3 +75,5 @@ glibc_skip_solib_resolver (struct gdbarch *gdbarch, CORE_ADDR pc)
 
   return 0;
 }      
+
+} /* namespace gdb */

@@ -18,6 +18,8 @@
 #ifndef COMMON_ENUM_FLAGS_H
 #define COMMON_ENUM_FLAGS_H
 
+namespace gdb {
+
 /* Type-safe wrapper for enum flags.  enum flags are enums where the
    values are bits that are meant to be ORed together.
 
@@ -371,5 +373,7 @@ operator>> (const enum_flags<enum_type> &, const any_type &) = delete;
   typedef enum_type flags_type
 
 #endif /* __cplusplus */
+
+} /* namespace gdb */
 
 #endif /* COMMON_ENUM_FLAGS_H */

@@ -39,6 +39,9 @@
 #include "frv-tdep.h"
 #include "objfiles.h"
 
+namespace gdb {
+
+
 extern void _initialize_frv_tdep (void);
 
 struct frv_unwind_cache		/* was struct frame_extra_info */
@@ -1607,3 +1610,5 @@ _initialize_frv_tdep (void)
 {
   register_gdbarch_init (bfd_arch_frv, frv_gdbarch_init);
 }
+
+} /* namespace gdb */

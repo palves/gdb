@@ -27,6 +27,9 @@
 #include "alpha-bsd-tdep.h"
 #include "solib-svr4.h"
 
+namespace gdb {
+
+
 /* Signal trampolines.  */
 
 /* The OpenBSD kernel maps the signal trampoline at some random
@@ -135,3 +138,5 @@ _initialize_alphaobsd_tdep (void)
   gdbarch_register_osabi (bfd_arch_alpha, 0, GDB_OSABI_OPENBSD_ELF,
                           alphaobsd_init_abi);
 }
+
+} /* namespace gdb */

@@ -20,6 +20,8 @@
 #ifndef COMMON_SYMBOL_H
 #define COMMON_SYMBOL_H
 
+namespace gdb {
+
 struct objfile;
 
 /* Find a symbol that matches NAME.  Limit the search to OBJFILE if
@@ -33,5 +35,7 @@ struct objfile;
 
 extern int find_minimal_symbol_address (const char *name, CORE_ADDR *addr,
 					struct objfile *objfile);
+
+} /* namespace gdb */
 
 #endif /* COMMON_SYMBOL_H */

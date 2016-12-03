@@ -19,6 +19,8 @@
 #if !defined (BUILDSYM_H)
 #define BUILDSYM_H 1
 
+namespace gdb {
+
 struct objfile;
 struct symbol;
 struct addrmap;
@@ -301,5 +303,7 @@ extern struct compunit_symtab *buildsym_compunit_symtab (void);
 extern struct macro_table *get_macro_table (void);
 
 #undef EXTERN
+
+} /* namespace gdb */
 
 #endif /* defined (BUILDSYM_H) */

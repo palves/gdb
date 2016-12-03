@@ -20,6 +20,8 @@
 #ifndef STACK_H
 #define STACK_H
 
+namespace gdb {
+
 void select_frame_command (char *level_exp, int from_tty);
 
 void find_frame_funname (struct frame_info *frame, char **funname,
@@ -46,5 +48,7 @@ CORE_ADDR get_last_displayed_addr (void);
 struct symtab* get_last_displayed_symtab (void);
 int get_last_displayed_line (void);
 void get_last_displayed_sal (struct symtab_and_line *sal);
+
+} /* namespace gdb */
 
 #endif /* #ifndef STACK_H */

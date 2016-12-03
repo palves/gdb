@@ -20,6 +20,10 @@
 #ifndef HPPA_BSD_TDEP_H
 #define HPPA_BSD_TDEP_H
 
+namespace gdb {
+
 extern void hppabsd_init_abi (struct gdbarch_info, struct gdbarch *);
+
+} /* namespace gdb */
 
 #endif /* hppa-bsd-tdep.h */

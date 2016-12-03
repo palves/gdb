@@ -23,6 +23,8 @@
 /* Nios II ISA specific encodings and macros.  */
 #include "opcode/nios2.h"
 
+namespace gdb {
+
 /* Registers.  */
 #define NIOS2_Z_REGNUM 0     /* Zero */
 #define NIOS2_R2_REGNUM 2    /* used for return value */
@@ -81,5 +83,7 @@ struct gdbarch_tdep
 
 extern struct target_desc *tdesc_nios2_linux;
 extern struct target_desc *tdesc_nios2;
+
+} /* namespace gdb */
 
 #endif /* NIOS2_TDEP_H */

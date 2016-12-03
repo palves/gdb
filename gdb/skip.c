@@ -35,6 +35,9 @@
 #include "fnmatch.h"
 #include "gdb_regex.h"
 
+namespace gdb {
+
+
 struct skiplist_entry
 {
   int number;
@@ -743,3 +746,5 @@ The \"Type\" column indicates one of:\n\
 \tfile        - ignored file\n\
 \tfunction    - ignored function"));
 }
+
+} /* namespace gdb */

@@ -52,6 +52,9 @@
 
 #include <signal.h>
 
+namespace gdb {
+
+
 /*******************************
 ** Static Local Decls
 ********************************/
@@ -1720,3 +1723,5 @@ The window name specified must be valid and visible.\n"));
       do_cleanups (old_chain);
     }
 }
+
+} /* namespace gdb */

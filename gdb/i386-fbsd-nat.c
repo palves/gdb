@@ -88,6 +88,9 @@ i386fbsd_resume (struct target_ops *ops,
 
 #include "bsd-kvm.h"
 
+namespace gdb {
+
+
 static int
 i386fbsd_supply_pcb (struct regcache *regcache, struct pcb *pcb)
 {
@@ -195,3 +198,5 @@ _initialize_i386fbsd_nat (void)
   }
 #endif
 }
+
+} /* namespace gdb */

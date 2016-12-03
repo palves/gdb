@@ -28,6 +28,9 @@
 #include "language.h"
 #include "arch-utils.h"
 
+namespace gdb {
+
+
 /* Parameter constants and their values.  */
 struct parm_constant
 {
@@ -813,3 +816,5 @@ PyTypeObject parmpy_object_type =
   parmpy_init,			  /* tp_init */
   0,				  /* tp_alloc */
 };
+
+} /* namespace gdb */

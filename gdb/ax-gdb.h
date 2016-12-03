@@ -19,6 +19,8 @@
 #ifndef AX_GDB_H
 #define AX_GDB_H
 
+namespace gdb {
+
 struct expression;
 union exp_element;
 
@@ -123,5 +125,7 @@ extern agent_expr_up gen_printf (CORE_ADDR, struct gdbarch *,
 				 CORE_ADDR, LONGEST, const char *, int,
 				 struct format_piece *,
 				 int, struct expression **);
+
+} /* namespace gdb */
 
 #endif /* AX_GDB_H */

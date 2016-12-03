@@ -48,6 +48,9 @@ namespace gdb {
 
 #ifdef HAVE_LIBUNWIND_IA64_H
 
+namespace gdb {
+
+
 /* Note: KERNEL_START is supposed to be an address which is not going
          to ever contain any valid unwind info.  For ia64 linux, the choice
          of 0xc000000000000000 is fairly safe since that's uncached space.

@@ -26,6 +26,9 @@
 
 #include "i386-tdep.h"
 
+namespace gdb {
+
+
 /* Support for signal handlers.  */
 
 /* Assuming THIS_FRAME is for a BSD sigtramp routine, return the
@@ -121,3 +124,5 @@ _initialize_i386bsd_tdep (void)
   gdbarch_register_osabi_sniffer (bfd_arch_i386, bfd_target_unknown_flavour,
 				  i386bsd_core_osabi_sniffer);
 }
+
+} /* namespace gdb */

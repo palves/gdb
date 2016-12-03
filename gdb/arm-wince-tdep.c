@@ -28,6 +28,9 @@
 #include "arm-tdep.h"
 #include "windows-tdep.h"
 
+namespace gdb {
+
+
 static const gdb_byte arm_wince_le_breakpoint[] = { 0x10, 0x00, 0x00, 0xe6 };
 static const gdb_byte arm_wince_thumb_le_breakpoint[] = { 0xfe, 0xdf };
 
@@ -166,3 +169,5 @@ _initialize_arm_wince_tdep (void)
   gdbarch_register_osabi (bfd_arch_arm, 0, GDB_OSABI_WINCE,
                           arm_wince_init_abi);
 }
+
+} /* namespace gdb */

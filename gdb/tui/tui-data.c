@@ -26,6 +26,9 @@
 #include "tui/tui-wingeneral.h"
 #include "gdb_curses.h"
 
+namespace gdb {
+
+
 /****************************
 ** GLOBAL DECLARATIONS
 ****************************/
@@ -901,3 +904,5 @@ free_content_elements (tui_win_content content,
 	xfree (content[0]);	/* Free the element block.  */
     }
 }
+
+} /* namespace gdb */

@@ -36,6 +36,9 @@
 #include "tui/tui-source.h"
 #include "gdb_curses.h"
 
+namespace gdb {
+
+
 /* Function to display source in the source window.  */
 enum tui_status
 tui_set_source_content (struct symtab *s, 
@@ -381,3 +384,5 @@ tui_vertical_source_scroll (enum tui_scroll_direction scroll_direction,
       print_source_lines (s, l.u.line_no, l.u.line_no + 1, 0);
     }
 }
+
+} /* namespace gdb */

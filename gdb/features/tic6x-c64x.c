@@ -5,6 +5,9 @@
 #include "osabi.h"
 #include "target-descriptions.h"
 
+namespace gdb {
+
+
 struct target_desc *tdesc_tic6x_c64x;
 static void
 initialize_tdesc_tic6x_c64x (void)
@@ -86,3 +89,5 @@ initialize_tdesc_tic6x_c64x (void)
 
   tdesc_tic6x_c64x = result;
 }
+
+} /* namespace gdb */

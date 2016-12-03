@@ -39,6 +39,9 @@
 #include "dwarf2loc.h"
 #include "gdbcore.h"
 
+namespace gdb {
+
+
 /* Initialize BADNESS constants.  */
 
 const struct rank LENGTH_MISMATCH_BADNESS = {100,0};
@@ -5316,3 +5319,5 @@ _initialize_gdbtypes (void)
 			   show_strict_type_checking,
 			   &setchecklist, &showchecklist);
 }
+
+} /* namespace gdb */

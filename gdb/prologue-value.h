@@ -19,6 +19,8 @@
 #ifndef PROLOGUE_VALUE_H
 #define PROLOGUE_VALUE_H
 
+namespace gdb {
+
 /* What sort of value is this?  This determines the interpretation
    of subsequent fields.  */
 enum prologue_value_kind
@@ -299,5 +301,7 @@ void pv_area_scan (struct pv_area *area,
                                  pv_t value),
                    void *closure);
 
+
+} /* namespace gdb */
 
 #endif /* PROLOGUE_VALUE_H */

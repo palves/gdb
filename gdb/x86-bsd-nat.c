@@ -31,6 +31,9 @@
 #include "x86-nat.h"
 #include "x86-bsd-nat.h"
 #include "inf-ptrace.h"
+
+namespace gdb {
+
 
 
 #ifdef PT_GETXSTATE_INFO
@@ -154,3 +157,5 @@ x86bsd_target (void)
 
   return t;
 }
+
+} /* namespace gdb */

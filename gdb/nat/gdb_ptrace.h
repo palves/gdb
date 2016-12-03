@@ -20,6 +20,8 @@
 #ifndef GDB_PTRACE_H
 #define GDB_PTRACE_H
 
+namespace gdb {
+
 /* The <sys/ptrace.h> header was introduced with 4.4BSD, and provided
    the PT_* symbolic constants for the ptrace(2) request numbers.  The
    ptrace(2) prototype was added later to the same header on BSD.
@@ -149,5 +151,7 @@ extern PTRACE_TYPE_RET ptrace();
 # define ptrace(request, pid, addr, data) \
          ptrace ((PTRACE_TYPE_ARG1) request, pid, addr, data)
 #endif
+
+} /* namespace gdb */
 
 #endif /* gdb_ptrace.h */

@@ -36,6 +36,9 @@
 #include "solib-svr4.h"
 #include "bsd-uthread.h"
 
+namespace gdb {
+
+
 /* Support for signal handlers.  */
 
 /* Since OpenBSD 3.2, the sigtramp routine is mapped at a random page
@@ -518,3 +521,5 @@ _initialize_i386obsd_tdep (void)
   gdbarch_register_osabi (bfd_arch_i386, 0, GDB_OSABI_OPENBSD_ELF,
 			  i386obsd_elf_init_abi);
 }
+
+} /* namespace gdb */

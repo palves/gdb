@@ -21,10 +21,14 @@
 #ifndef MI_CMD_BREAK_H
 #define MI_CMD_BREAK_H
 
+namespace gdb {
+
 
 /* Setup the reporting of the insertion of a new breakpoint or
    catchpoint.  */
 struct cleanup *setup_breakpoint_reporting (void);
+
+} /* namespace gdb */
 
 #endif
 

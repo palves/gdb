@@ -29,6 +29,9 @@
 #include "m88k-tdep.h"
 #include "inf-ptrace.h"
 
+namespace gdb {
+
+
 /* Supply the general-purpose registers stored in GREGS to REGCACHE.  */
 
 static void
@@ -109,3 +112,5 @@ _initialize_m88kbsd_nat (void)
   t->to_store_registers = m88kbsd_store_inferior_registers;
   add_target (t);
 }
+
+} /* namespace gdb */

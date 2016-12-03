@@ -20,6 +20,8 @@
 #include "gdb_vecs.h"
 #include "command.h"
 
+namespace gdb {
+
 /* Types of functions in struct match_list_displayer.  */
 
 struct match_list_displayer;
@@ -180,5 +182,7 @@ extern enum maybe_add_completion_enum
 /* Wrapper to throw MAX_COMPLETIONS_REACHED_ERROR.  */ 
 
 extern void throw_max_completions_reached_error (void);
+
+} /* namespace gdb */
 
 #endif /* defined (COMPLETER_H) */

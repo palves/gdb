@@ -20,6 +20,8 @@
 #ifndef MI_OUT_H
 #define MI_OUT_H 1
 
+namespace gdb {
+
 struct ui_out;
 struct ui_file;
 
@@ -29,5 +31,7 @@ extern void mi_out_rewind (struct ui_out *uiout);
 
 /* Return the version number of the current MI.  */
 extern int mi_version (struct ui_out *uiout);
+
+} /* namespace gdb */
 
 #endif /* MI_OUT_H */

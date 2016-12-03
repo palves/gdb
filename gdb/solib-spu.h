@@ -20,6 +20,10 @@
 #ifndef SOLIB_SPU_H
 #define SOLIB_SPU_H
 
+namespace gdb {
+
 extern void set_spu_solib_ops (struct gdbarch *gdbarch);
+
+} /* namespace gdb */
 
 #endif

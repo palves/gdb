@@ -32,6 +32,9 @@
 #include "cp-abi.h"
 #include "cp-support.h"
 
+namespace gdb {
+
+
 static void c_type_print_varspec_prefix (struct type *,
 					 struct ui_file *,
 					 int, int, int,
@@ -1489,3 +1492,5 @@ c_type_print_base (struct type *type, struct ui_file *stream,
       break;
     }
 }
+
+} /* namespace gdb */

@@ -35,6 +35,9 @@
 #include "obsd-nat.h"
 #include "bsd-kvm.h"
 
+namespace gdb {
+
+
 /* OpenBSD/powerpc didn't have PT_GETFPREGS/PT_SETFPREGS until release
    4.0.  On older releases the floating-point registers are handled by
    PT_GETREGS/PT_SETREGS, but fpscr wasn't available..  */
@@ -229,3 +232,5 @@ _initialize_ppcobsd_nat (void)
   /* Support debugging kernel virtual memory images.  */
   bsd_kvm_add_target (ppcobsd_supply_pcb);
 }
+
+} /* namespace gdb */

@@ -36,6 +36,9 @@
 #include "target-descriptions.h"
 #include "readline/tilde.h"
 
+namespace gdb {
+
+
 void _initialize_inferiors (void);
 
 /* Keep a registry of per-inferior data-pointers required by other GDB
@@ -1096,3 +1099,5 @@ Show printing of inferior events (e.g., inferior start and exit)."), NULL,
 
   create_internalvar_type_lazy ("_inferior", &inferior_funcs, NULL);
 }
+
+} /* namespace gdb */

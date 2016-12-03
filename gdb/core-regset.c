@@ -42,6 +42,9 @@
 /* Prototypes for supply_gregset etc.  */
 #include "gregset.h"
 
+namespace gdb {
+
+
 /* Provide registers to GDB from a core file.
 
    CORE_REG_SECT points to an array of bytes, which are the contents
@@ -119,3 +122,5 @@ _initialize_core_regset (void)
 {
   deprecated_add_core_fns (&regset_core_fns);
 }
+
+} /* namespace gdb */

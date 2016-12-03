@@ -20,6 +20,9 @@
 #include "defs.h"
 #include "gdb_obstack.h"
 
+namespace gdb {
+
+
 /* Concatenate NULL terminated variable argument list of `const char *'
    strings; return the new string.  Space is found in the OBSTACKP.
    Argument list must be terminated by a sentinel expression `(char *)
@@ -55,3 +58,5 @@ obstack_strdup (struct obstack *obstackp, const char *string)
   strcpy (obstring, string);
   return obstring;
 }
+
+} /* namespace gdb */

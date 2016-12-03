@@ -41,6 +41,9 @@
 #include "extension.h"
 #include "gdb/section-scripts.h"
 
+namespace gdb {
+
+
 /* The section to look in for auto-loaded scripts (in file formats that
    support sections).
    Each entry in this section is a record that begins with a leading byte
@@ -1754,3 +1757,5 @@ is displayed."),
 			    NULL, show_debug_auto_load,
 			    &setdebuglist, &showdebuglist);
 }
+
+} /* namespace gdb */

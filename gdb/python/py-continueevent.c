@@ -20,6 +20,9 @@
 #include "defs.h"
 #include "py-event.h"
 
+namespace gdb {
+
+
 extern PyTypeObject continue_event_object_type
     CPYCHECKER_TYPE_OBJECT_FOR_TYPEDEF ("event_object");
 
@@ -52,3 +55,5 @@ GDBPY_NEW_EVENT_TYPE (continue,
                       "ContinueEvent",
                       "GDB continue event object",
                       thread_event_object_type);
+
+} /* namespace gdb */

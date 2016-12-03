@@ -47,6 +47,9 @@
 #include "spu-tdep.h"
 #include "location.h"
 
+namespace gdb {
+
+
 /* The list of available "set spu " and "show spu " commands.  */
 static struct cmd_list_element *setspucmdlist = NULL;
 static struct cmd_list_element *showspucmdlist = NULL;
@@ -2862,3 +2865,5 @@ Use \"off\" to never automatically flush the software-managed cache."),
 	   _("Display MFC Proxy-DMA status.\n"),
 	   &infospucmdlist);
 }
+
+} /* namespace gdb */

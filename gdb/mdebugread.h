@@ -23,6 +23,8 @@
 #include "coff/sym.h"		/* Needed for PDR below.  */
 #include "coff/symconst.h"
 
+namespace gdb {
+
 /* Specific information about a procedure.  Architectures (ab)uses
    this to save memory.  */
 
@@ -36,5 +38,7 @@ struct mdebug_extra_func_info
    hang mdebug_extra_func_info's off of this.  */
 
 #define MDEBUG_EFI_SYMBOL_NAME "__GDB_EFI_INFO__"
+
+} /* namespace gdb */
 
 #endif /* MDEBUGREAD_H */

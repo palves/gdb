@@ -38,6 +38,9 @@
 #include <sys/stat.h>
 #include "filestuff.h"
 
+namespace gdb {
+
+
 #define NAMELEN(dirent) strlen ((dirent)->d_name)
 
 /* Define PID_T to be a fixed size that is at least as large as pid_t,
@@ -1726,3 +1729,5 @@ linux_common_xfer_osdata (const char *annex, gdb_byte *readbuf,
     }
 }
 
+
+} /* namespace gdb */

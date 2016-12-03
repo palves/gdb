@@ -34,6 +34,9 @@
 
 #include "m88k-tdep.h"
 
+namespace gdb {
+
+
 /* Fetch the instruction at PC.  */
 
 static unsigned long
@@ -872,3 +875,5 @@ _initialize_m88k_tdep (void)
 {
   gdbarch_register (bfd_arch_m88k, m88k_gdbarch_init, NULL);
 }
+
+} /* namespace gdb */

@@ -35,6 +35,9 @@
 #include "gdb_bfd.h"
 #include <string>
 
+namespace gdb {
+
+
 /* If non-zero displays debugging message.  */
 static unsigned int mach_o_debug_level = 0;
 
@@ -1029,3 +1032,5 @@ _initialize_machoread (void)
 			     NULL, NULL, NULL,
 			     &setdebuglist, &showdebuglist);
 }
+
+} /* namespace gdb */

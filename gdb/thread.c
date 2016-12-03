@@ -45,6 +45,9 @@
 #include "thread-fsm.h"
 #include "tid-parse.h"
 
+namespace gdb {
+
+
 /* Definition of struct thread_info exported to gdbthread.h.  */
 
 /* Prototypes for exported functions.  */
@@ -2279,3 +2282,5 @@ Show printing of thread events (such as thread start and exit)."), NULL,
 
   observer_attach_thread_ptid_changed (restore_current_thread_ptid_changed);
 }
+
+} /* namespace gdb */

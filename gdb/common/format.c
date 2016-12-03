@@ -20,6 +20,9 @@
 #include "common-defs.h"
 #include "format.h"
 
+namespace gdb {
+
+
 struct format_piece *
 parse_format_string (const char **arg)
 {
@@ -393,3 +396,5 @@ free_format_pieces_cleanup (void *ptr)
     }
 }
 
+
+} /* namespace gdb */

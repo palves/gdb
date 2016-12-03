@@ -41,6 +41,9 @@
 #include "features/arc-v2.c"
 #include "features/arc-arcompact.c"
 
+namespace gdb {
+
+
 /* The frame unwind cache for the ARC.  Current structure is a stub, because
    it should be filled in during the prologue analysis.  */
 
@@ -1315,3 +1318,5 @@ _initialize_arc_tdep (void)
 			    _("Non-zero enables ARC specific debugging."),
 			    NULL, NULL, &setdebuglist, &showdebuglist);
 }
+
+} /* namespace gdb */

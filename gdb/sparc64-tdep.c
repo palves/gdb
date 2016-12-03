@@ -36,6 +36,9 @@
 
 #include "sparc64-tdep.h"
 
+namespace gdb {
+
+
 /* This file implements the SPARC 64-bit ABI as defined by the
    section "Low-Level System Information" of the SPARC Compliance
    Definition (SCD) 2.4.1, which is the 64-bit System V psABI for
@@ -1545,3 +1548,5 @@ const struct sparc_fpregmap sparc64_bsd_fpregmap =
   0 * 8,			/* %f0 */
   32 * 8,			/* %fsr */
 };
+
+} /* namespace gdb */

@@ -40,6 +40,9 @@
 
 #include "psymtab.h"
 
+namespace gdb {
+
+
 #ifndef DEV_TTY
 #define DEV_TTY "/dev/tty"
 #endif
@@ -1085,3 +1088,5 @@ Check consistency of currently expanded symtabs."),
 With an argument REGEXP, only expand the symbol tables with matching names."),
 	   &maintenancelist);
 }
+
+} /* namespace gdb */

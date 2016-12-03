@@ -32,6 +32,9 @@
 
 /* Prototypes for supply_gregset etc.  */
 #include "gregset.h"
+
+namespace gdb {
+
 
 
 /* Fix-up some broken systems.  */
@@ -248,3 +251,5 @@ _initialize_proc_service (void)
   /* This function solely exists to make sure this module is linked
      into the final binary.  */
 }
+
+} /* namespace gdb */

@@ -179,6 +179,9 @@ m68kbsd_store_inferior_registers (struct target_ops *ops,
 
 #include "bsd-kvm.h"
 
+namespace gdb {
+
+
 /* OpenBSD doesn't have these.  */
 #ifndef PCB_REGS_FP
 #define PCB_REGS_FP 10
@@ -235,3 +238,5 @@ _initialize_m68kbsd_nat (void)
   /* Support debugging kernel virtual memory images.  */
   bsd_kvm_add_target (m68kbsd_supply_pcb);
 }
+
+} /* namespace gdb */

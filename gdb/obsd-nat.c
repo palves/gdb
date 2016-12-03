@@ -29,6 +29,9 @@
 #include "inf-child.h"
 #include "obsd-nat.h"
 
+namespace gdb {
+
+
 /* OpenBSD 5.2 and later include rthreads which uses a thread model
    that maps userland threads directly onto kernel threads in a 1:1
    fashion.  */
@@ -184,3 +187,5 @@ obsd_add_target (struct target_ops *t)
 }
 
 #endif /* PT_GET_THREAD_FIRST */
+
+} /* namespace gdb */

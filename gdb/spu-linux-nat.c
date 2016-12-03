@@ -36,6 +36,9 @@
 
 #include "spu-tdep.h"
 
+namespace gdb {
+
+
 /* PPU side system calls.  */
 #define INSTR_SC	0x44000002
 #define NR_spu_run	0x0116
@@ -653,3 +656,5 @@ _initialize_spu_nat (void)
   /* Register SPU target.  */
   add_target (t);
 }
+
+} /* namespace gdb */

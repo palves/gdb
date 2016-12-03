@@ -23,6 +23,8 @@
 #include "run-time-clock.h"
 #include <chrono>
 
+namespace gdb {
+
 /* MI parser */
 
 /* Timestamps for current command and last asynchronous command.  */
@@ -75,5 +77,7 @@ extern void mi_parse_free (struct mi_parse *cmd);
 /* Parse a string argument into a print_values value.  */
 
 enum print_values mi_parse_print_values (const char *name);
+
+} /* namespace gdb */
 
 #endif

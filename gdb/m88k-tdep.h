@@ -20,6 +20,8 @@
 #ifndef M88K_TDEP_H
 #define M88K_TDEP_H
 
+namespace gdb {
+
 /* Register numbers of various important registers.  */
 
 enum m88k_regnum
@@ -43,5 +45,7 @@ enum m88k_regnum
 
 /* Instruction size.  */
 #define M88K_INSN_SIZE 4
+
+} /* namespace gdb */
 
 #endif /* m88k-tdep.h */

@@ -23,6 +23,9 @@
 #include "observer.h"
 #include "objfiles.h"
 
+namespace gdb {
+
+
 /* Enum strings for "set|show agent".  */
 
 static const char can_use_agent_on[] = "on";
@@ -84,3 +87,5 @@ target."),
 			show_can_use_agent,
 			&setlist, &showlist);
 }
+
+} /* namespace gdb */

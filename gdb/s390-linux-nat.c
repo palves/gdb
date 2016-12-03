@@ -41,6 +41,9 @@
 #include <elf.h>
 #include <algorithm>
 
+namespace gdb {
+
+
 /* Per-thread arch-specific data.  */
 
 struct arch_lwp_info
@@ -1049,3 +1052,5 @@ and when the inferior triggers a breakpoint or watchpoint."),
 			   &maintenance_set_cmdlist,
 			   &maintenance_show_cmdlist);
 }
+
+} /* namespace gdb */

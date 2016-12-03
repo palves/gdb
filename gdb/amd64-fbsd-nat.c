@@ -99,6 +99,9 @@ static int amd64fbsd32_r_reg_offset[I386_NUM_GREGS] =
 
 #include "bsd-kvm.h"
 
+namespace gdb {
+
+
 static int
 amd64fbsd_supply_pcb (struct regcache *regcache, struct pcb *pcb)
 {
@@ -289,3 +292,5 @@ Please report this to <bug-gdb@gnu.org>."),
   }
 #endif
 }
+
+} /* namespace gdb */

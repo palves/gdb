@@ -20,10 +20,14 @@
 #ifndef MIPS_NBSD_TDEP_H
 #define MIPS_NBSD_TDEP_H
 
+namespace gdb {
+
 void mipsnbsd_supply_reg (struct regcache *, const char *, int);
 void mipsnbsd_fill_reg (const struct regcache *, char *, int);
 
 void mipsnbsd_supply_fpreg (struct regcache *, const char *, int);
 void mipsnbsd_fill_fpreg (const struct regcache *, char *, int);
+
+} /* namespace gdb */
 
 #endif /* MIPS_NBSD_TDEP_H */

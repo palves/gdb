@@ -24,6 +24,9 @@
 #include "cli/cli-cmds.h"
 #include "cli/cli-decode.h"
 
+namespace gdb {
+
+
 /* Prototypes for local functions.  */
 
 static void undef_cmd_error (const char *, const char *);
@@ -1924,3 +1927,5 @@ cli_user_command_p (struct cmd_list_element *cmd)
   return (cmd->theclass == class_user
 	  && (cmd->func == do_cfunc || cmd->func == do_sfunc));
 }
+
+} /* namespace gdb */

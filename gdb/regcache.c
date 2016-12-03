@@ -29,6 +29,9 @@
 #include "valprint.h"
 #include "regset.h"
 
+namespace gdb {
+
+
 /*
  * DATA STRUCTURE
  *
@@ -1579,3 +1582,5 @@ Takes an optional file parameter."),
 	   &maintenanceprintlist);
 
 }
+
+} /* namespace gdb */

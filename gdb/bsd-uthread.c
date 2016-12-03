@@ -33,6 +33,9 @@
 
 #include "bsd-uthread.h"
 
+namespace gdb {
+
+
 /* HACK: Save the bsd_uthreads ops returned by bsd_uthread_target.  */
 static struct target_ops *bsd_uthread_ops_hack;
 
@@ -549,3 +552,5 @@ _initialize_bsd_uthread (void)
   observer_attach_solib_loaded (bsd_uthread_solib_loaded);
   observer_attach_solib_unloaded (bsd_uthread_solib_unloaded);
 }
+
+} /* namespace gdb */

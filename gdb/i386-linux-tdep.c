@@ -52,6 +52,9 @@
 #include "features/i386/i386-avx-linux.c"
 #include "features/i386/i386-avx512-linux.c"
 
+namespace gdb {
+
+
 /* Return non-zero, when the register is in the corresponding register
    group.  Put the LINUX_ORIG_EAX register in the system group.  */
 static int
@@ -1093,3 +1096,5 @@ _initialize_i386_linux_tdep (void)
   initialize_tdesc_i386_avx_mpx_linux ();
   initialize_tdesc_i386_avx512_linux ();
 }
+
+} /* namespace gdb */

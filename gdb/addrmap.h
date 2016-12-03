@@ -20,6 +20,8 @@
 #ifndef ADDRMAP_H
 #define ADDRMAP_H
 
+namespace gdb {
+
 /* An address map is essentially a table mapping CORE_ADDRs onto GDB
    data structures, like blocks, symtabs, partial symtabs, and so on.
    An address map uses memory proportional to the number of
@@ -101,5 +103,7 @@ typedef int (*addrmap_foreach_fn) (void *data, CORE_ADDR start_addr,
    iteration ceases immediately, and the value is returned.
    Otherwise, this function returns 0.  */
 int addrmap_foreach (struct addrmap *map, addrmap_foreach_fn fn, void *data);
+
+} /* namespace gdb */
 
 #endif /* ADDRMAP_H */

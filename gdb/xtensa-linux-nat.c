@@ -45,6 +45,9 @@
    hardware-specific overlays.  */
 #include "xtensa-xtregs.c"
 
+namespace gdb {
+
+
 void
 fill_gregset (const struct regcache *regcache,
 	      gdb_gregset_t *gregsetp, int regnum)
@@ -330,3 +333,5 @@ _initialize_xtensa_linux_nat (void)
 
   linux_nat_add_target (t);
 }
+
+} /* namespace gdb */

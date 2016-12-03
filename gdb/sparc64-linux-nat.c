@@ -30,6 +30,9 @@
 #include "target.h"
 #include "linux-nat.h"
 
+namespace gdb {
+
+
 static const struct sparc_gregmap sparc64_linux_ptrace_gregmap =
 {
   16 * 8,			/* "tstate" */
@@ -91,3 +94,5 @@ _initialize_sparc64_linux_nat (void)
 
   sparc_gregmap = &sparc64_linux_ptrace_gregmap;
 }
+
+} /* namespace gdb */

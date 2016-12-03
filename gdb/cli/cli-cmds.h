@@ -17,6 +17,8 @@
 #if !defined (CLI_CMDS_H)
 #define CLI_CMDS_H 1
 
+namespace gdb {
+
 /* Chain containing all defined commands.  */
 
 extern struct cmd_list_element *cmdlist;
@@ -124,5 +126,7 @@ extern int find_and_open_script (const char *file, int search_path,
 
 extern int source_verbose;
 extern int trace_commands;
+
+} /* namespace gdb */
 
 #endif /* !defined (CLI_CMDS_H) */

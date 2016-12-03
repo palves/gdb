@@ -39,6 +39,9 @@
 #include "m32r-tdep.h"
 #include <algorithm>
 
+namespace gdb {
+
+
 /* Local functions */
 
 extern void _initialize_m32r_tdep (void);
@@ -960,3 +963,5 @@ _initialize_m32r_tdep (void)
 {
   register_gdbarch_init (bfd_arch_m32r, m32r_gdbarch_init);
 }
+
+} /* namespace gdb */

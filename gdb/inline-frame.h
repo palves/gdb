@@ -20,6 +20,8 @@
 #if !defined (INLINE_FRAME_H)
 #define INLINE_FRAME_H 1
 
+namespace gdb {
+
 struct frame_info;
 struct frame_unwind;
 
@@ -58,5 +60,7 @@ struct symbol *inline_skipped_symbol (ptid_t ptid);
    skip_inline_frames).  */
 
 int frame_inlined_callees (struct frame_info *this_frame);
+
+} /* namespace gdb */
 
 #endif /* !defined (INLINE_FRAME_H) */

@@ -40,6 +40,9 @@
 #include "nat/linux-ptrace.h"
 #include "nat/amd64-linux-siginfo.h"
 
+namespace gdb {
+
+
 /* Mapping between the general-purpose registers in GNU/Linux x86-64
    `struct user' format and GDB's register cache layout for GNU/Linux
    i386.
@@ -374,3 +377,5 @@ _initialize_amd64_linux_nat (void)
   /* Add our siginfo layout converter.  */
   linux_nat_set_siginfo_fixup (t, amd64_linux_siginfo_fixup);
 }
+
+} /* namespace gdb */

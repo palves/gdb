@@ -23,6 +23,8 @@
 #ifndef F_LANG_H
 #define F_LANG_H
 
+namespace gdb {
+
 struct type_print_options;
 struct parser_state;
 
@@ -83,5 +85,7 @@ struct builtin_f_type
 
 /* Return the Fortran type table for the specified architecture.  */
 extern const struct builtin_f_type *builtin_f_type (struct gdbarch *gdbarch);
+
+} /* namespace gdb */
 
 #endif

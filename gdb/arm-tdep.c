@@ -71,6 +71,9 @@
 #include "features/arm/arm-with-vfpv3.c"
 #include "features/arm/arm-with-neon.c"
 
+namespace gdb {
+
+
 static int arm_debug;
 
 /* Macros for setting and testing a bit in a minimal symbol that marks
@@ -13145,3 +13148,5 @@ arm_process_record (struct gdbarch *gdbarch, struct regcache *regcache,
 
   return ret;
 }
+
+} /* namespace gdb */

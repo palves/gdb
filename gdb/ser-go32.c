@@ -127,6 +127,9 @@
 #include <dos.h>
 #include <go32.h>
 #include <dpmi.h>
+
+namespace gdb {
+
 typedef unsigned long u_long;
 
 /* 16550 rx fifo trigger point */
@@ -1002,3 +1005,5 @@ Show COM4 interrupt request."), NULL,
   add_info ("serial", dos_info,
 	    _("Print DOS serial port status."));
 }
+
+} /* namespace gdb */

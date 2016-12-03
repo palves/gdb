@@ -23,6 +23,9 @@
 #include "arm-linux.h"
 #include "arch/arm-get-next-pcs.h"
 
+namespace gdb {
+
+
 /* Calculate the offset from stack pointer of the pc register on the stack
    in the case of a sigreturn or sigreturn_rt syscall.  */
 int
@@ -137,3 +140,5 @@ arm_linux_get_next_pcs_fixup (struct arm_get_next_pcs *self,
     }
   return nextpc;
 }
+
+} /* namespace gdb */

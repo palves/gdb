@@ -19,6 +19,8 @@
 #ifndef CLEANUPS_H
 #define CLEANUPS_H
 
+namespace gdb {
+
 /* Outside of cleanups.c, this is an opaque type.  */
 struct cleanup;
 
@@ -65,5 +67,7 @@ extern void restore_final_cleanups (struct cleanup *);
    This is useful when you want to establish a known reference point
    to pass to do_cleanups.  */
 extern void null_cleanup (void *);
+
+} /* namespace gdb */
 
 #endif /* CLEANUPS_H */

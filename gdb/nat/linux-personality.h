@@ -20,6 +20,8 @@
 #ifndef NAT_LINUX_PERSONALITY_H
 #define NAT_LINUX_PERSONALITY_H
 
+namespace gdb {
+
 /* Disable the inferior's address space randomization if
    DISABLE_RANDOMIZATION is not zero and if we have
    <sys/personality.h>.  Return a cleanup which, when called, will
@@ -27,5 +29,7 @@
 
 extern struct cleanup *maybe_disable_address_space_randomization
   (int disable_randomization);
+
+} /* namespace gdb */
 
 #endif /* ! NAT_LINUX_PERSONALITY_H */

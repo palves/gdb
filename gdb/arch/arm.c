@@ -21,6 +21,9 @@
 #include "common-regcache.h"
 #include "arm.h"
 
+namespace gdb {
+
+
 /* See arm.h.  */
 
 int
@@ -371,3 +374,5 @@ shifted_reg_val (struct regcache *regcache, unsigned long inst,
 
   return res & 0xffffffff;
 }
+
+} /* namespace gdb */

@@ -18,6 +18,8 @@
 #ifndef CLI_INTERP_H
 #define CLI_INTERP_H 1
 
+namespace gdb {
+
 struct interp;
 
 extern int cli_interpreter_supports_command_editing (struct interp *interp);
@@ -28,5 +30,7 @@ extern void cli_interpreter_pre_command_loop (struct interp *self);
    CONSOLE_INTERP.  */
 extern int should_print_stop_to_console (struct interp *interp,
 					 struct thread_info *tp);
+
+} /* namespace gdb */
 
 #endif

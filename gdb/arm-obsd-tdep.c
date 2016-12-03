@@ -26,6 +26,9 @@
 #include "arm-tdep.h"
 #include "solib-svr4.h"
 
+namespace gdb {
+
+
 /* Signal trampolines.  */
 
 static void
@@ -138,3 +141,5 @@ _initialize_armobsd_tdep (void)
   gdbarch_register_osabi (bfd_arch_arm, 0, GDB_OSABI_OPENBSD_ELF,
 			  armobsd_init_abi);
 }
+
+} /* namespace gdb */

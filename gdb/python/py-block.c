@@ -25,6 +25,9 @@
 #include "objfiles.h"
 #include "symtab.h"
 
+namespace gdb {
+
+
 typedef struct blpy_block_object {
   PyObject_HEAD
   /* The GDB block structure that represents a frame's code block.  */
@@ -549,3 +552,5 @@ PyTypeObject block_syms_iterator_object_type = {
   blpy_block_syms_iternext,	  /*tp_iternext */
   block_iterator_object_methods   /*tp_methods */
 };
+
+} /* namespace gdb */

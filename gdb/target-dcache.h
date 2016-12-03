@@ -20,6 +20,8 @@
 
 #include "dcache.h"
 
+namespace gdb {
+
 extern void target_dcache_invalidate (void);
 
 extern DCACHE *target_dcache_get (void);
@@ -31,5 +33,7 @@ extern int target_dcache_init_p (void);
 extern int stack_cache_enabled_p (void);
 
 extern int code_cache_enabled_p (void);
+
+} /* namespace gdb */
 
 #endif /* TARGET_DCACHE_H */

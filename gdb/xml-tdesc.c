@@ -27,6 +27,9 @@
 #include "osabi.h"
 #include "filenames.h"
 
+namespace gdb {
+
+
 /* Maximum sizes.
    This is just to catch obviously wrong values.  */
 #define MAX_FIELD_SIZE 65536
@@ -800,3 +803,5 @@ target_fetch_description_xml (struct target_ops *ops)
   return expanded_text;
 #endif
 }
+
+} /* namespace gdb */

@@ -22,6 +22,8 @@
 
 #include "symfile.h"
 
+namespace gdb {
+
 /* A bcache for partial symbols.  */
 
 struct psymbol_bcache;
@@ -41,5 +43,7 @@ extern const struct quick_symbol_functions dwarf2_gdb_index_functions;
 
 extern struct objfile *require_partial_symbols (struct objfile *objfile,
 						int verbose);
+
+} /* namespace gdb */
 
 #endif /* PSYMTAB_H */

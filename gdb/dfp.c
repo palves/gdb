@@ -30,6 +30,9 @@
 #include "dpd/decimal64.h"
 #include "dpd/decimal32.h"
 
+namespace gdb {
+
+
 /* In GDB, we are using an array of gdb_byte to represent decimal values.
    They are stored in host byte order.  This routine does the conversion if
    the target byte order is different.  */
@@ -382,3 +385,5 @@ decimal_convert (const gdb_byte *from, int len_from,
 
   match_endianness (dec, len_to, byte_order_to, to);
 }
+
+} /* namespace gdb */

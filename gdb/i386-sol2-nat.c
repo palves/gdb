@@ -46,6 +46,9 @@
 #include "amd64-nat.h"
 #include "amd64-tdep.h"
 
+namespace gdb {
+
+
 /* Mapping between the general-purpose registers in gregset_t format
    and GDB's register cache layout.  */
 
@@ -156,3 +159,5 @@ _initialize_amd64_sol2_nat (void)
 
   add_target (t);
 }
+
+} /* namespace gdb */

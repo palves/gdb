@@ -21,6 +21,9 @@
 
 #include "nbsd-nat.h"
 
+namespace gdb {
+
+
 /* Return the name of a file that can be opened to get the symbols for
    the child process identified by PID.  */
 
@@ -41,3 +44,5 @@ nbsd_pid_to_exec_file (struct target_ops *self, int pid)
 
   return NULL;
 }
+
+} /* namespace gdb */

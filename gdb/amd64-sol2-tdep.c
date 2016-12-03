@@ -30,6 +30,9 @@
 #include "amd64-tdep.h"
 #include "solib-svr4.h"
 
+namespace gdb {
+
+
 /* Mapping between the general-purpose registers in gregset_t format
    and GDB's register cache layout.  */
 
@@ -125,3 +128,5 @@ _initialize_amd64_sol2_tdep (void)
   gdbarch_register_osabi (bfd_arch_i386, bfd_mach_x86_64,
 			  GDB_OSABI_SOLARIS, amd64_sol2_init_abi);
 }
+
+} /* namespace gdb */

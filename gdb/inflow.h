@@ -22,6 +22,8 @@
 
 #include "terminal.h"		/* For HAVE_TERMIOS et.al.  */
 
+namespace gdb {
+
 #ifdef HAVE_TERMIOS
 # define PROCESS_GROUP_TYPE pid_t
 #elif defined (HAVE_TERMIO) || defined (HAVE_SGTTY)
@@ -32,5 +34,7 @@
 /* Process group of the current inferior.  */
 extern PROCESS_GROUP_TYPE inferior_process_group (void);
 #endif
+
+} /* namespace gdb */
 
 #endif /* inflow.h */

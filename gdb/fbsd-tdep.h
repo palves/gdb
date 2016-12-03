@@ -20,6 +20,10 @@
 #ifndef FBSD_TDEP_H
 #define FBSD_TDEP_H
 
+namespace gdb {
+
 extern void fbsd_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch);
+
+} /* namespace gdb */
 
 #endif /* fbsd-tdep.h */

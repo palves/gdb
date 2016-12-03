@@ -26,6 +26,9 @@
 #include "arch-utils.h"
 #include "guile-internal.h"
 
+namespace gdb {
+
+
 /* The <gdb:arch> smob.
    The typedef for this struct is in guile-internal.h.  */
 
@@ -655,3 +658,5 @@ gdbscm_initialize_arches (void)
   arch_object_data
     = gdbarch_data_register_post_init (arscm_object_data_init);
 }
+
+} /* namespace gdb */

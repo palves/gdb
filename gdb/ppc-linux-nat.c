@@ -46,6 +46,9 @@
 
 #include "nat/ppc-linux.h"
 
+namespace gdb {
+
+
 /* Similarly for the hardware watchpoint support.  These requests are used
    when the PowerPC HWDEBUG ptrace interface is not available.  */
 #ifndef PTRACE_GET_DEBUGREG
@@ -2522,3 +2525,5 @@ _initialize_ppc_linux_nat (void)
   linux_nat_add_target (t);
   linux_nat_set_new_thread (t, ppc_linux_new_thread);
 }
+
+} /* namespace gdb */

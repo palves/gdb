@@ -48,6 +48,9 @@
 #include "location.h"
 #include "auxv.h"
 
+namespace gdb {
+
+
 extern void _initialize_elfread (void);
 
 /* Forward declarations.  */
@@ -1458,3 +1461,5 @@ _initialize_elfread (void)
   elf_objfile_gnu_ifunc_cache_data = register_objfile_data ();
   gnu_ifunc_fns_p = &elf_gnu_ifunc_fns;
 }
+
+} /* namespace gdb */

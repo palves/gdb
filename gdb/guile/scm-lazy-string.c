@@ -27,6 +27,9 @@
 #include "language.h"
 #include "guile-internal.h"
 
+namespace gdb {
+
+
 /* The <gdb:lazy-string> smob.  */
 
 typedef struct
@@ -363,3 +366,5 @@ gdbscm_initialize_lazy_strings (void)
 
   gdbscm_define_functions (lazy_string_functions, 1);
 }
+
+} /* namespace gdb */

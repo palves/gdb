@@ -34,6 +34,9 @@
 
 #ifdef HAVE_SYS_IOCTL_H
 #include <sys/ioctl.h>
+
+namespace gdb {
+
 #endif
 
 #ifndef O_NOCTTY
@@ -890,3 +893,5 @@ _initialize_inflow (void)
   inflow_inferior_data
     = register_inferior_data_with_cleanup (NULL, inflow_inferior_data_cleanup);
 }
+
+} /* namespace gdb */

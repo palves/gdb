@@ -22,6 +22,8 @@
 
 #include "cp-support.h"		/* For VEC (const_char_ptr) */
 
+namespace gdb {
+
 struct stoken;
 
 struct value;
@@ -50,5 +52,7 @@ extern int end_msglist (struct parser_state *);
 
 struct symbol *lookup_struct_typedef (char *name, const struct block *block,
 				      int noerr);
+
+} /* namespace gdb */
 
 #endif

@@ -24,6 +24,9 @@
 #include "mi-out.h"
 #include <vector>
 
+namespace gdb {
+
+
 struct mi_ui_out_data
   {
     int suppress_field_separator;
@@ -400,3 +403,5 @@ mi_out_new (int mi_version)
   mi_out_data_ctor (data, mi_version, stream);
   return ui_out_new (&mi_ui_out_impl, data, flags);
 }
+
+} /* namespace gdb */

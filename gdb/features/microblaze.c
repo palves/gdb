@@ -5,6 +5,9 @@
 #include "osabi.h"
 #include "target-descriptions.h"
 
+namespace gdb {
+
+
 struct target_desc *tdesc_microblaze;
 static void
 initialize_tdesc_microblaze (void)
@@ -73,3 +76,5 @@ initialize_tdesc_microblaze (void)
 
   tdesc_microblaze = result;
 }
+
+} /* namespace gdb */

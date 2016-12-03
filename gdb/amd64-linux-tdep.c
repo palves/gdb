@@ -56,6 +56,9 @@
 #include "record-full.h"
 #include "linux-record.h"
 
+namespace gdb {
+
+
 /* Mapping between the general-purpose registers in `struct user'
    format and GDB's register cache layout.  */
 
@@ -2297,3 +2300,5 @@ _initialize_amd64_linux_tdep (void)
   initialize_tdesc_x32_avx_linux ();
   initialize_tdesc_x32_avx512_linux ();
 }
+
+} /* namespace gdb */

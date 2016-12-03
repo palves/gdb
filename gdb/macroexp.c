@@ -24,6 +24,9 @@
 #include "macroexp.h"
 #include "c-lang.h"
 
+namespace gdb {
+
+
 
 
 /* A resizeable, substringable string type.  */
@@ -1480,3 +1483,5 @@ macro_expand_next (const char **lexptr,
       return 0;
     }
 }
+
+} /* namespace gdb */

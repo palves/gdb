@@ -19,6 +19,8 @@
 #ifndef LOCATIONS_H
 #define LOCATIONS_H 1
 
+namespace gdb {
+
 struct language_defn;
 struct event_location;
 
@@ -250,4 +252,6 @@ extern int event_location_empty_p (const struct event_location *location);
 extern void
   set_event_location_string (struct event_location *location,
 			     const char *string);
+} /* namespace gdb */
+
 #endif /* LOCATIONS_H */

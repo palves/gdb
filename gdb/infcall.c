@@ -40,6 +40,9 @@
 #include "interps.h"
 #include "thread-fsm.h"
 
+namespace gdb {
+
+
 /* If we can't find a function's name from its address,
    we print this instead.  */
 #define RAW_FUNCTION_ADDRESS_FORMAT "at 0x%s"
@@ -1422,3 +1425,5 @@ The default is to unwind the frame."),
 			   &setlist, &showlist);
 
 }
+
+} /* namespace gdb */

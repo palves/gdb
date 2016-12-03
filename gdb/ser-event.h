@@ -19,6 +19,8 @@
 #ifndef SER_EVENT_H
 #define SER_EVENT_H
 
+namespace gdb {
+
 /* This is used to be able to signal the event loop (or any other
    select/poll) of events, in a race-free manner.
 
@@ -47,5 +49,7 @@ extern void serial_event_set (struct serial_event *event);
    is not longer readable after this, until a new serial_event_set
    call is made.  */
 extern void serial_event_clear (struct serial_event *event);
+
+} /* namespace gdb */
 
 #endif

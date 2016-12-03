@@ -20,6 +20,9 @@
 #include "defs.h"
 #include "py-stopevent.h"
 
+namespace gdb {
+
+
 extern PyTypeObject signal_event_object_type
     CPYCHECKER_TYPE_OBJECT_FOR_TYPEDEF ("event_object");
 
@@ -58,3 +61,5 @@ GDBPY_NEW_EVENT_TYPE (signal,
                       "SignalEvent",
                       "GDB signal event object",
                       stop_event_object_type);
+
+} /* namespace gdb */

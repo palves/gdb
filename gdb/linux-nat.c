@@ -67,6 +67,9 @@
 #include "nat/linux-namespaces.h"
 #include "fileio.h"
 
+namespace gdb {
+
+
 #ifndef SPUFS_MAGIC
 #define SPUFS_MAGIC 0x23c9b64e
 #endif
@@ -5033,3 +5036,5 @@ lin_thread_get_thread_signals (sigset_t *set)
   sigaddset (set, __SIGRTMIN);
   sigaddset (set, __SIGRTMIN + 1);
 }
+
+} /* namespace gdb */

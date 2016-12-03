@@ -20,6 +20,8 @@
 #ifndef DWARF2_FRAME_TAILCALL_H
 #define DWARF2_FRAME_TAILCALL_H 1
 
+namespace gdb {
+
 struct frame_info;
 struct frame_unwind;
 
@@ -35,5 +37,7 @@ extern struct value *
 				       void **tailcall_cachep, int regnum);
 
 extern const struct frame_unwind dwarf2_tailcall_frame_unwind;
+
+} /* namespace gdb */
 
 #endif /* !DWARF2_FRAME_TAILCALL_H */

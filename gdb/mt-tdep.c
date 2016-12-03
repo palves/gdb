@@ -37,6 +37,9 @@
 #include "language.h"
 #include "valprint.h"
 
+namespace gdb {
+
+
 enum mt_arch_constants
 {
   MT_MAX_STRUCT_SIZE = 16
@@ -1223,3 +1226,5 @@ _initialize_mt_tdep (void)
 {
   register_gdbarch_init (bfd_arch_mt, mt_gdbarch_init);
 }
+
+} /* namespace gdb */

@@ -19,6 +19,8 @@
 #ifndef GDB_DEMANGLE_H
 #define GDB_DEMANGLE_H
 
+namespace gdb {
+
 /* Nonzero means that encoded C++/ObjC names should be printed out in their
    C++/ObjC form rather than raw.  */
 extern int demangle;
@@ -30,5 +32,7 @@ extern int asm_demangle;
 
 /* Check if a character is one of the commonly used C++ marker characters.  */
 extern int is_cplus_marker (int);
+
+} /* namespace gdb */
 
 #endif /* GDB_DEMANGLE_H */

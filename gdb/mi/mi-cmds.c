@@ -23,6 +23,9 @@
 #include "mi-cmds.h"
 #include "mi-main.h"
 
+namespace gdb {
+
+
 extern void _initialize_mi_cmds (void);
 
 struct mi_cmd;
@@ -281,3 +284,5 @@ _initialize_mi_cmds (void)
   build_table (mi_cmds);
   memset (&stats, 0, sizeof (stats));
 }
+
+} /* namespace gdb */

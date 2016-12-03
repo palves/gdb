@@ -44,6 +44,9 @@
 #include "inf-child.h"
 #include "common/filestuff.h"
 
+namespace gdb {
+
+
 #define NULL_PID		0
 #define _DEBUG_FLAG_TRACE	(_DEBUG_FLAG_TRACE_EXEC|_DEBUG_FLAG_TRACE_RD|\
 		_DEBUG_FLAG_TRACE_WR|_DEBUG_FLAG_TRACE_MODIFY)
@@ -1637,3 +1640,5 @@ procfs_stopped_by_watchpoint (struct target_ops *ops)
 	    | _DEBUG_FLAG_TRACE_WR
 	    | _DEBUG_FLAG_TRACE_MODIFY);
 }
+
+} /* namespace gdb */

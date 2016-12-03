@@ -18,6 +18,8 @@
 #if !defined(GDB_USLEEP_H)
 #define GDB_USLEEP_H
 
+namespace gdb {
+
 /* Suspend execution for USEC microseconds.
 
    Limitation: If a signal is raised during the delay, gdb_usleep
@@ -25,6 +27,8 @@
 
    It returns 0 on success or -1 on error.  */
 extern int gdb_usleep (int usect);
+
+} /* namespace gdb */
 
 #endif /* !defined(GDB_USLEEP_H) */
 

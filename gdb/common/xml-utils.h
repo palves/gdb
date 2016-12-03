@@ -20,9 +20,13 @@
 #ifndef XML_UTILS_H
 #define XML_UTILS_H
 
+namespace gdb {
+
 /* Return a malloc allocated string with special characters from TEXT
    replaced by entity references.  */
 
 extern char *xml_escape_text (const char *text);
+
+} /* namespace gdb */
 
 #endif

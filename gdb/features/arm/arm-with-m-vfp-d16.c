@@ -5,6 +5,9 @@
 #include "osabi.h"
 #include "target-descriptions.h"
 
+namespace gdb {
+
+
 struct target_desc *tdesc_arm_with_m_vfp_d16;
 static void
 initialize_tdesc_arm_with_m_vfp_d16 (void)
@@ -54,3 +57,5 @@ initialize_tdesc_arm_with_m_vfp_d16 (void)
 
   tdesc_arm_with_m_vfp_d16 = result;
 }
+
+} /* namespace gdb */

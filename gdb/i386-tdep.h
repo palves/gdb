@@ -20,6 +20,8 @@
 #ifndef I386_TDEP_H
 #define I386_TDEP_H
 
+namespace gdb {
+
 struct frame_info;
 struct gdbarch;
 struct reggroup;
@@ -448,5 +450,7 @@ extern int i386_stap_is_single_operand (struct gdbarch *gdbarch,
 
 extern int i386_stap_parse_special_token (struct gdbarch *gdbarch,
 					  struct stap_parse_info *p);
+
+} /* namespace gdb */
 
 #endif /* i386-tdep.h */

@@ -22,6 +22,8 @@
 
 #include "psymtab.h"
 
+namespace gdb {
+
 struct psymbol_allocation_list;
 
 /* A partial_symbol records the name, domain, and address class of
@@ -231,5 +233,7 @@ extern struct cleanup *make_cleanup_discard_psymtabs (struct objfile *);
 
 #define	ALL_OBJFILE_PSYMTABS(objfile, p) \
     for ((p) = (objfile) -> psymtabs; (p) != NULL; (p) = (p) -> next)
+
+} /* namespace gdb */
 
 #endif /* PSYMPRIV_H */

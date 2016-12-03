@@ -52,6 +52,8 @@
 #include <wchar.h>
 #include <wctype.h>
 
+namespace gdb {
+
 /* We use "btowc" as a sentinel to detect functioning wchar_t support.
    We check for either __STDC_ISO_10646__ or a new-enough libiconv in
    order to ensure we can convert to and from wchar_t.  We choose
@@ -120,5 +122,7 @@ typedef int gdb_wint_t;
 #endif
 
 #endif
+
+} /* namespace gdb */
 
 #endif /* GDB_WCHAR_H */

@@ -22,6 +22,8 @@
 #ifndef TUI_H
 #define TUI_H
 
+namespace gdb {
+
 struct ui_file;
 
 extern void strcat_to_buf (char *, int, const char *);
@@ -97,5 +99,7 @@ extern struct ui_out *tui_out_new (struct ui_file *stream);
 
 /* tui-layout.c */
 extern enum tui_status tui_set_layout_by_name (const char *);
+
+} /* namespace gdb */
 
 #endif

@@ -20,6 +20,9 @@
 #include "defs.h"
 #include "py-event.h"
 
+namespace gdb {
+
+
 extern PyTypeObject inferior_call_pre_event_object_type
     CPYCHECKER_TYPE_OBJECT_FOR_TYPEDEF ("event_object");
 extern PyTypeObject inferior_call_post_event_object_type
@@ -255,3 +258,5 @@ GDBPY_NEW_EVENT_TYPE (memory_changed,
 		      "MemoryChangedEvent",
 		      "GDB memory change event object",
 		      event_object_type);
+
+} /* namespace gdb */

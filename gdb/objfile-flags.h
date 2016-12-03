@@ -22,6 +22,8 @@
 
 #include "common/enum-flags.h"
 
+namespace gdb {
+
 /* Defines for the objfile flags field.  Defined in a separate file to
    break circular header dependencies.  */
 
@@ -67,5 +69,7 @@ enum objfile_flag
   };
 
 DEF_ENUM_FLAGS_TYPE (enum objfile_flag, objfile_flags);
+
+} /* namespace gdb */
 
 #endif /* !defined (OBJFILE_FLAGS_H) */

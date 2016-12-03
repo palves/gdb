@@ -24,6 +24,8 @@
 /* Need disassemble_info.  */
 #include "dis-asm.h"
 
+namespace gdb {
+
 enum arc_regnum
   {
     /* Core registers.  */
@@ -106,5 +108,7 @@ arc_mach_is_arcv2 (struct gdbarch *gdbarch)
 {
   return gdbarch_bfd_arch_info (gdbarch)->mach == bfd_mach_arc_arcv2;
 }
+
+} /* namespace gdb */
 
 #endif /* ARC_TDEP_H */

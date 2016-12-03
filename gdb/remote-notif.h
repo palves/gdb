@@ -22,6 +22,8 @@
 
 #include "queue.h"
 
+namespace gdb {
+
 /* An event of a type of async remote notification.  */
 
 struct notif_event
@@ -115,5 +117,7 @@ void remote_notif_state_xfree (struct remote_notif_state *state);
 extern struct notif_client notif_client_stop;
 
 extern int notif_debug;
+
+} /* namespace gdb */
 
 #endif /* REMOTE_NOTIF_H */

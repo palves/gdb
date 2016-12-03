@@ -37,6 +37,9 @@
 #include <ctype.h>
 #include <algorithm>
 
+namespace gdb {
+
+
 typedef struct bound_probe bound_probe_s;
 DEF_VEC_O (bound_probe_s);
 
@@ -1105,3 +1108,5 @@ all defined probes."),
 	   &disablelist);
 
 }
+
+} /* namespace gdb */

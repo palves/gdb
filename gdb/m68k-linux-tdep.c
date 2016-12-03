@@ -38,6 +38,9 @@
 #include "elf/common.h"
 #include "linux-tdep.h"
 #include "regset.h"
+
+namespace gdb {
+
 
 /* Offsets (in target ints) into jmp_buf.  */
 
@@ -433,3 +436,5 @@ _initialize_m68k_linux_tdep (void)
 			  m68k_linux_init_abi);
   observer_attach_inferior_created (m68k_linux_inferior_created);
 }
+
+} /* namespace gdb */

@@ -47,6 +47,9 @@
 #include "signals-state-save-restore.h"
 #include <vector>
 
+namespace gdb {
+
+
 /* The selected interpreter.  This will be used as a set command
    variable, so it should always be malloc'ed - since
    do_setshow_command will free it.  */
@@ -1276,3 +1279,5 @@ GDB manual (available as on-line info or a printed manual).\n\
 Report bugs to \"%s\".\n\
 "), REPORT_BUGS_TO);
 }
+
+} /* namespace gdb */

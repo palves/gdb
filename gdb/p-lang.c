@@ -31,6 +31,9 @@
 #include "value.h"
 #include <ctype.h>
 
+namespace gdb {
+
+
 extern void _initialize_pascal_language (void);
 
 
@@ -468,3 +471,5 @@ _initialize_pascal_language (void)
 {
   add_language (&pascal_language_defn);
 }
+
+} /* namespace gdb */

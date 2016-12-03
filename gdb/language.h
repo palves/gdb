@@ -25,6 +25,8 @@
 
 #include "symtab.h"
 
+namespace gdb {
+
 /* Forward decls for prototypes.  */
 struct value;
 struct objfile;
@@ -611,5 +613,7 @@ void default_get_string (struct value *value, gdb_byte **buffer, int *length,
 
 void c_get_string (struct value *value, gdb_byte **buffer, int *length,
 		   struct type **char_type, const char **charset);
+
+} /* namespace gdb */
 
 #endif /* defined (LANGUAGE_H) */

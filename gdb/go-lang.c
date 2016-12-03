@@ -43,6 +43,9 @@
 
 #include <ctype.h>
 
+namespace gdb {
+
+
 /* The main function in the main package.  */
 static const char GO_MAIN_MAIN[] = "main.main";
 
@@ -678,3 +681,5 @@ _initialize_go_language (void)
 
   add_language (&go_language_defn);
 }
+
+} /* namespace gdb */

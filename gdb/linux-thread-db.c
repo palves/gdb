@@ -47,6 +47,9 @@
 #include "nat/linux-namespaces.h"
 #include <algorithm>
 
+namespace gdb {
+
+
 /* GNU/Linux libthread_db support.
 
    libthread_db is a library, provided along with libpthread.so, which
@@ -1757,3 +1760,5 @@ Usage: info auto-load libthread-db"),
      the new_objfile observer won't get called for libpthread.  */
   observer_attach_inferior_created (thread_db_inferior_created);
 }
+
+} /* namespace gdb */

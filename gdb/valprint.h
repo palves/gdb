@@ -20,6 +20,8 @@
 #ifndef VALPRINT_H
 #define VALPRINT_H
 
+namespace gdb {
+
 /* This is used to pass formatting options to various value-printing
    functions.  */
 struct value_print_options
@@ -231,5 +233,7 @@ struct format_data
 extern void print_command_parse_format (const char **expp, const char *cmdname,
 					struct format_data *fmtp);
 extern void print_value (struct value *val, const struct format_data *fmtp);
+
+} /* namespace gdb */
 
 #endif

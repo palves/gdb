@@ -20,6 +20,8 @@
 #ifndef PPC_LINUX_TDEP_H
 #define PPC_LINUX_TDEP_H
 
+namespace gdb {
+
 struct regset;
 
 /* From ppc-linux-tdep.c ...  */
@@ -54,5 +56,7 @@ extern struct target_desc *tdesc_powerpc_vsx64l;
 extern struct target_desc *tdesc_powerpc_isa205_64l;
 extern struct target_desc *tdesc_powerpc_isa205_altivec64l;
 extern struct target_desc *tdesc_powerpc_isa205_vsx64l;
+
+} /* namespace gdb */
 
 #endif /* PPC_LINUX_TDEP_H */

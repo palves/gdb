@@ -31,6 +31,9 @@
 #include "solib.h"
 #include "solib-svr4.h"
 
+namespace gdb {
+
+
 #ifndef X86_CPU_FXSR
 #define X86_CPU_FXSR (1L << 12)
 #endif
@@ -376,3 +379,5 @@ _initialize_i386nto_tdep (void)
   gdbarch_register_osabi_sniffer (bfd_arch_i386, bfd_target_elf_flavour,
 				  nto_elf_osabi_sniffer);
 }
+
+} /* namespace gdb */

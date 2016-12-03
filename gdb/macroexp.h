@@ -21,6 +21,8 @@
 #ifndef MACROEXP_H
 #define MACROEXP_H
 
+namespace gdb {
+
 /* A function for looking up preprocessor macro definitions.  Return
    the preprocessor definition of NAME in scope according to BATON, or
    zero if NAME is not defined as a preprocessor macro.
@@ -95,5 +97,7 @@ int macro_is_digit (int c);
    to the result.  */
 
 char *macro_stringify (const char *str);
+
+} /* namespace gdb */
 
 #endif /* MACROEXP_H */

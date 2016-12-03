@@ -20,6 +20,9 @@
 #include "common-defs.h"
 #include "xml-utils.h"
 
+namespace gdb {
+
+
 /* Return a malloc allocated string with special characters from TEXT
    replaced by entity references.  */
 
@@ -81,3 +84,5 @@ xml_escape_text (const char *text)
 
   return result;
 }
+
+} /* namespace gdb */

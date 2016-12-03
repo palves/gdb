@@ -2474,6 +2474,9 @@ proc_set_watchpoint (procinfo *pi, CORE_ADDR addr, int len, int wflags)
 
 #include <sys/sysi86.h>
 
+namespace gdb {
+
+
 /* The KEY is actually the value of the lower 16 bits of the GS
    register for the LWP that we're interested in.  Returns the
    matching ssh struct (LDT entry).  */
@@ -5485,3 +5488,5 @@ procfs_make_note_section (struct target_ops *self, bfd *obfd, int *note_size)
 }
 #endif /* Solaris */
 /* ===================  END GCORE .NOTE "MODULE" =================== */
+
+} /* namespace gdb */

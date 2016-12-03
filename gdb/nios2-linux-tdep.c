@@ -32,6 +32,9 @@
 
 #include "features/nios2-linux.c"
 
+namespace gdb {
+
+
 /* Core file and register set support.  */
 
 /* Map from the normal register enumeration order to the order that
@@ -256,3 +259,5 @@ _initialize_nios2_linux_tdep (void)
 
   initialize_tdesc_nios2_linux ();
 }
+
+} /* namespace gdb */

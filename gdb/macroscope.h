@@ -23,6 +23,8 @@
 #include "macrotab.h"
 #include "symtab.h"
 
+namespace gdb {
+
 
 /* The table of macros defined by the user.  */
 extern struct macro_table *macro_user_macros;
@@ -66,5 +68,7 @@ struct macro_scope *default_macro_scope (void);
    a macro_lookup_ftype function.  */
 struct macro_definition *standard_macro_lookup (const char *name, void *baton);
 
+
+} /* namespace gdb */
 
 #endif /* MACROSCOPE_H */

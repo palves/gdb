@@ -22,6 +22,8 @@
 
 #include "symfile-add-flags.h"
 
+namespace gdb {
+
 struct so_list;
 struct target_ops;
 struct target_so_ops;
@@ -100,5 +102,7 @@ extern void update_solib_breakpoints (void);
 /* Handle an solib event by calling solib_add.  */
 
 extern void handle_solib_event (void);
+
+} /* namespace gdb */
 
 #endif /* SOLIB_H */

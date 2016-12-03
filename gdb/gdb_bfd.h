@@ -22,6 +22,8 @@
 
 #include "registry.h"
 
+namespace gdb {
+
 DECLARE_REGISTRY (bfd);
 
 /* If supplied a path starting with this sequence, gdb_bfd_open will
@@ -168,5 +170,7 @@ int gdb_bfd_count_sections (bfd *abfd);
    otherwise.  */
 
 int gdb_bfd_requires_relocations (bfd *abfd);
+
+} /* namespace gdb */
 
 #endif /* GDB_BFD_H */

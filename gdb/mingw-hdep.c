@@ -27,6 +27,9 @@
 
 #include <windows.h>
 
+namespace gdb {
+
+
 /* Return an absolute file name of the running GDB, if possible, or
    ARGV0 if not.  The return value is in malloc'ed storage.  */
 
@@ -177,3 +180,5 @@ gdb_select (int n, fd_set *readfds, fd_set *writefds, fd_set *exceptfds,
 
   return num_ready;
 }
+
+} /* namespace gdb */

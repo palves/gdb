@@ -22,6 +22,8 @@
 
 #include "vec.h"
 
+namespace gdb {
+
 enum mem_access_mode
 {
   MEM_NONE,                     /* Memory that is not physically present.  */
@@ -105,5 +107,7 @@ void invalidate_target_mem_regions (void);
 void mem_region_init (struct mem_region *);
 
 int mem_region_cmp (const void *, const void *);
+
+} /* namespace gdb */
 
 #endif	/* MEMATTR_H */

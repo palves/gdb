@@ -23,6 +23,8 @@
 /* For domain_enum domain.  */
 #include "symtab.h"
 
+namespace gdb {
+
 /* Forward declaration for target specific link map information.  This
    struct is opaque to all but the target specific file.  */
 struct lm_info;
@@ -190,5 +192,7 @@ extern struct target_so_ops *current_target_so_ops;
 struct block_symbol solib_global_lookup (struct objfile *objfile,
 					    const char *name,
 					    const domain_enum domain);
+
+} /* namespace gdb */
 
 #endif

@@ -24,6 +24,9 @@
 #include "alpha-tdep.h"
 #include "solib-svr4.h"
 
+namespace gdb {
+
+
 static int
 alphafbsd_return_in_memory (struct type *type)
 {
@@ -130,3 +133,5 @@ _initialize_alphafbsd_tdep (void)
   gdbarch_register_osabi (bfd_arch_alpha, 0, GDB_OSABI_FREEBSD_ELF,
                           alphafbsd_init_abi);
 }
+
+} /* namespace gdb */

@@ -52,6 +52,9 @@
 #include "opcodes/mep-desc.h"
 #include "opcodes/mep-opc.h"
 
+namespace gdb {
+
+
 
 /* The gdbarch_tdep structure.  */
 
@@ -2521,3 +2524,5 @@ _initialize_mep_tdep (void)
 
   mep_init_pseudoregister_maps ();
 }
+
+} /* namespace gdb */

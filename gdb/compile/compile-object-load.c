@@ -33,6 +33,9 @@
 #include "arch-utils.h"
 #include <algorithm>
 
+namespace gdb {
+
+
 /* Track inferior memory reserved by inferior mmap.  */
 
 struct munmap_list
@@ -838,3 +841,5 @@ compile_object_load (const compile_file_names &file_names,
 
   return retval;
 }
+
+} /* namespace gdb */

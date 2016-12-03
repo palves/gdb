@@ -21,6 +21,9 @@
 #include "memrange.h"
 #include <algorithm>
 
+namespace gdb {
+
+
 int
 mem_ranges_overlap (CORE_ADDR start1, int len1,
 		    CORE_ADDR start2, int len2)
@@ -96,3 +99,5 @@ normalize_mem_ranges (VEC(mem_range_s) *ranges)
       VEC_truncate (mem_range_s, ranges, a + 1);
     }
 }
+
+} /* namespace gdb */

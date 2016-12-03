@@ -27,6 +27,8 @@
 #include <vector>
 #include <string>
 
+namespace gdb {
+
 /* An object describing the contents of a traceframe.  */
 
 struct traceframe_info
@@ -393,5 +395,7 @@ extern int traceframe_available_memory (VEC(mem_range_s) **result,
 extern struct traceframe_info *get_traceframe_info (void);
 
 extern struct bp_location *get_traceframe_location (int *stepping_frame_p);
+
+} /* namespace gdb */
 
 #endif	/* TRACEPOINT_H */

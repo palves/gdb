@@ -41,6 +41,9 @@
 
 #include <ctype.h>
 
+namespace gdb {
+
+
 /* This enum represents the values that the user can choose when
    informing the Linux kernel about which memory mappings will be
    dumped in a corefile.  They are described in the file
@@ -2560,3 +2563,5 @@ about this file, refer to the manpage of core(5)."),
 			   NULL, show_use_coredump_filter,
 			   &setlist, &showlist);
 }
+
+} /* namespace gdb */

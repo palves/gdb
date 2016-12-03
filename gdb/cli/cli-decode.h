@@ -24,6 +24,8 @@
 /* Include the public interfaces.  */
 #include "command.h"
 
+namespace gdb {
+
 struct re_pattern_buffer;
 
 #if 0
@@ -252,5 +254,7 @@ extern const char * const auto_boolean_enums[];
    Return 1 if it is user-defined.  Return 0 otherwise.  */
 
 extern int cli_user_command_p (struct cmd_list_element *);
+
+} /* namespace gdb */
 
 #endif /* !defined (CLI_DECODE_H) */

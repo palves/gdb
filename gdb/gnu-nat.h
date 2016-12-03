@@ -22,6 +22,8 @@
 #include <unistd.h>
 #include <mach.h>
 
+namespace gdb {
+
 struct inf;
 
 extern struct inf *gnu_current_inf;
@@ -106,5 +108,7 @@ extern int gnu_debug_flag;
 /* Create a prototype generic GNU/Hurd target.  The client can
    override it with local methods.  */
 struct target_ops *gnu_target (void);
+
+} /* namespace gdb */
 
 #endif /* __GNU_NAT_H__ */

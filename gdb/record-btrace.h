@@ -22,7 +22,11 @@
 #ifndef RECORD_BTRACE_H
 #define RECORD_BTRACE_H
 
+namespace gdb {
+
 /* Push the record_btrace target.  */
 extern void record_btrace_push_target (void);
+
+} /* namespace gdb */
 
 #endif /* RECORD_BTRACE_H */

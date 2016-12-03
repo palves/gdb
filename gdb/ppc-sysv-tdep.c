@@ -30,6 +30,9 @@
 #include "dwarf2.h"
 #include <algorithm>
 
+namespace gdb {
+
+
 
 /* Check whether FTPYE is a (pointer to) function type that should use
    the OpenCL vector ABI.  */
@@ -2111,3 +2114,5 @@ ppc64_sysv_abi_return_value (struct gdbarch *gdbarch, struct value *function,
   return RETURN_VALUE_STRUCT_CONVENTION;
 }
 
+
+} /* namespace gdb */

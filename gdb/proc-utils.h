@@ -19,6 +19,8 @@
 #ifndef PROC_UTILS_H
 #define PROC_UTILS_H
 
+namespace gdb {
+
 /* From proc-why.c */
 
 /*
@@ -120,5 +122,7 @@ typedef PROC_CTL_WORD_TYPE procfs_ctl_t;
 #else
 typedef long procfs_ctl_t;
 #endif
+
+} /* namespace gdb */
 
 #endif

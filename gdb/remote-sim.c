@@ -41,6 +41,9 @@
 #include "readline/readline.h"
 #include "gdbthread.h"
 
+namespace gdb {
+
+
 /* Prototypes */
 
 extern void _initialize_remote_sim (void);
@@ -1353,3 +1356,5 @@ _initialize_remote_sim (void)
   sim_inferior_data_key
     = register_inferior_data_with_cleanup (NULL, sim_inferior_data_cleanup);
 }
+
+} /* namespace gdb */

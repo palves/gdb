@@ -54,6 +54,9 @@
 #include "features/tic6x-c64x.c"
 #include "features/tic6x-c62x.c"
 
+namespace gdb {
+
+
 #define TIC6X_OPCODE_SIZE 4
 #define TIC6X_FETCH_PACKET_SIZE 32
 
@@ -1361,3 +1364,5 @@ _initialize_tic6x_tdep (void)
   initialize_tdesc_tic6x_c64x ();
   initialize_tdesc_tic6x_c62x ();
 }
+
+} /* namespace gdb */

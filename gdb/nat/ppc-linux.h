@@ -21,6 +21,8 @@
 #include <asm/ptrace.h>
 #include <asm/cputable.h>
 
+namespace gdb {
+
 /* This sometimes isn't defined.  */
 #ifndef PT_ORIG_R3
 #define PT_ORIG_R3 34
@@ -87,5 +89,7 @@
    in MSR.  */
 int ppc64_64bit_inferior_p (long msr);
 #endif
+
+} /* namespace gdb */
 
 #endif

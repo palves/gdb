@@ -39,6 +39,9 @@
 #include <fcntl.h>
 #include <unistd.h>
 
+namespace gdb {
+
+
 /* A pointer to what is returned by inf_child_target.  Used by
    inf_child_open to push the most-derived target in reaction to
    "target native".  */
@@ -442,3 +445,5 @@ inf_child_target (void)
 
   return t;
 }
+
+} /* namespace gdb */

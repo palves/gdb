@@ -22,6 +22,9 @@
 #include "value.h"
 #include "python-internal.h"
 
+namespace gdb {
+
+
 
 /* This is a cleanup function which decrements the refcount on a
    Python object.  */
@@ -445,3 +448,5 @@ gdb_pymodule_addobject (PyObject *module, const char *name, PyObject *object)
     Py_DECREF (object);
   return result;
 }
+
+} /* namespace gdb */

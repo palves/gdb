@@ -18,6 +18,8 @@
 #ifndef GDB_COMPILE_H
 #define GDB_COMPILE_H
 
+namespace gdb {
+
 struct ui_file;
 struct gdbarch;
 struct dwarf2_per_cu_data;
@@ -102,5 +104,7 @@ extern void compile_dwarf_bounds_to_c (struct ui_file *stream,
 				       struct dwarf2_per_cu_data *per_cu);
 
 extern void compile_print_value (struct value *val, void *data_voidp);
+
+} /* namespace gdb */
 
 #endif /* GDB_COMPILE_H */

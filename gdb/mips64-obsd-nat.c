@@ -30,6 +30,9 @@
 #include "inf-ptrace.h"
 #include "obsd-nat.h"
 
+namespace gdb {
+
+
 /* Shorthand for some register numbers used below.  */
 #define MIPS_PC_REGNUM	MIPS_EMBED_PC_REGNUM
 #define MIPS_FP0_REGNUM	MIPS_EMBED_FP0_REGNUM
@@ -124,3 +127,5 @@ _initialize_mips64obsd_nat (void)
   t->to_store_registers = mips64obsd_store_inferior_registers;
   obsd_add_target (t);
 }
+
+} /* namespace gdb */

@@ -34,6 +34,9 @@
 #include "target-descriptions.h"
 
 #include "m68k-tdep.h"
+
+namespace gdb {
+
 
 
 #define P_LINKL_FP	0x480e
@@ -1296,3 +1299,5 @@ _initialize_m68k_tdep (void)
 {
   gdbarch_register (bfd_arch_m68k, m68k_gdbarch_init, m68k_dump_tdep);
 }
+
+} /* namespace gdb */

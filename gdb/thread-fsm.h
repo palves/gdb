@@ -21,6 +21,8 @@
 
 #include "mi/mi-common.h" /* For enum async_reply_reason.  */
 
+namespace gdb {
+
 struct return_value_info;
 struct thread_fsm_ops;
 
@@ -111,5 +113,7 @@ extern enum async_reply_reason
 
 /* Calls the FSM's should_notify_stop method.  */
 extern int thread_fsm_should_notify_stop (struct thread_fsm *self);
+
+} /* namespace gdb */
 
 #endif /* THREAD_FSM_H */

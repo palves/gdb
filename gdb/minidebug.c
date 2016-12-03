@@ -28,6 +28,9 @@
 
 #include <lzma.h>
 
+namespace gdb {
+
+
 /* Allocator function for LZMA.  */
 
 static void *
@@ -289,3 +292,5 @@ find_separate_debug_file_in_section (struct objfile *objfile)
 
   return abfd;
 }
+
+} /* namespace gdb */

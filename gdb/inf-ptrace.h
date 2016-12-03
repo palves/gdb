@@ -20,6 +20,8 @@
 #ifndef INF_PTRACE_H
 #define INF_PTRACE_H
 
+namespace gdb {
+
 /* Create a prototype ptrace target.  The client can override it with
    local methods.  */
 
@@ -41,5 +43,7 @@ extern pid_t get_ptrace_pid (ptid_t);
 
 /* Cleanup the inferior after a successful ptrace detach.  */
 extern void inf_ptrace_detach_success (struct target_ops *ops);
+
+} /* namespace gdb */
 
 #endif

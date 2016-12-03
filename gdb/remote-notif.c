@@ -41,6 +41,9 @@
 #include "infrun.h"
 #include "gdbcmd.h"
 
+namespace gdb {
+
+
 int notif_debug = 0;
 
 /* Supported clients of notifications.  */
@@ -286,3 +289,5 @@ When non-zero, debugging output about async remote notifications"
 			   NULL,
 			   &setdebuglist, &showdebuglist);
 }
+
+} /* namespace gdb */

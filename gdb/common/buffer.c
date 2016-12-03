@@ -21,6 +21,9 @@
 #include "xml-utils.h"
 #include "buffer.h"
 #include "inttypes.h"
+
+namespace gdb {
+
 void
 buffer_grow (struct buffer *buffer, const char *data, size_t size)
 {
@@ -178,3 +181,5 @@ buffer_xml_printf (struct buffer *buffer, const char *format, ...)
   va_end (ap);
 }
 
+
+} /* namespace gdb */

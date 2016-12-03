@@ -21,6 +21,8 @@
 #include "gdbtypes.h"
 #include "vec.h"
 
+namespace gdb {
+
 /* Enumeration for the format types */
 enum varobj_display_formats
   {
@@ -344,5 +346,7 @@ extern void varobj_restrict_range (VEC (varobj_p) *children, int *from,
 				   int *to);
 
 extern int varobj_default_is_path_expr_parent (const struct varobj *var);
+
+} /* namespace gdb */
 
 #endif /* VAROBJ_H */

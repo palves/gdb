@@ -21,6 +21,8 @@
 #define ARM_GET_NEXT_PCS_H 1
 #include "gdb_vecs.h"
 
+namespace gdb {
+
 /* Forward declaration.  */
 struct arm_get_next_pcs;
 
@@ -62,5 +64,7 @@ void arm_get_next_pcs_ctor (struct arm_get_next_pcs *self,
 
 /* Find the next possible PCs after the current instruction executes.  */
 VEC (CORE_ADDR) *arm_get_next_pcs (struct arm_get_next_pcs *self);
+
+} /* namespace gdb */
 
 #endif /* ARM_GET_NEXT_PCS_H */

@@ -38,6 +38,9 @@
 
 #include "gregset.h"
 
+namespace gdb {
+
+
 /* The `/proc' interface divides the target machine's register set up
    into two different sets, the general purpose register set (gregset)
    and the floating-point register set (fpregset).  For each set,
@@ -161,3 +164,5 @@ fill_fpregset (const struct regcache *regcache,
 #endif /* not 64-bit.  */
 
 #endif /* HAVE_SYS_PROCFS_H */
+
+} /* namespace gdb */

@@ -20,6 +20,10 @@
 #ifndef CTF_H
 #define CTF_H
 
+namespace gdb {
+
 extern struct trace_file_writer *ctf_trace_file_writer_new (void);
+
+} /* namespace gdb */
 
 #endif

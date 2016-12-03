@@ -20,7 +20,11 @@
 #ifndef SOLIB_TARGET_H
 #define SOLIB_TARGET_H
 
+namespace gdb {
+
 struct target_so_ops;
 extern struct target_so_ops solib_target_so_ops;
+
+} /* namespace gdb */
 
 #endif /* solib-target.h */

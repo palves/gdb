@@ -22,6 +22,8 @@
 
 #include "py-event.h"
 
+namespace gdb {
+
 extern PyObject *create_stop_event_object (PyTypeObject *py_type);
 extern void stop_evpy_dealloc (PyObject *self);
 
@@ -32,5 +34,7 @@ extern PyObject *create_breakpoint_event_object (PyObject *breakpoint_list,
                                                  PyObject *first_bp);
 
 extern PyObject *create_signal_event_object (enum gdb_signal stop_signal);
+
+} /* namespace gdb */
 
 #endif /* GDB_PY_STOPEVENT_H */

@@ -20,6 +20,9 @@
 #include "selftest.h"
 #include <vector>
 
+namespace gdb {
+
+
 /* All the tests that have been registered.  */
 
 static std::vector<self_test_function *> tests;
@@ -58,3 +61,5 @@ run_self_tests (void)
   printf_filtered (_("Ran %lu unit tests, %d failed\n"),
 		   (long) tests.size (), failed);
 }
+
+} /* namespace gdb */

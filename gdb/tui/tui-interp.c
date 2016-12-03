@@ -34,6 +34,9 @@
 #include "observer.h"
 #include "gdbthread.h"
 
+namespace gdb {
+
+
 static struct ui_out *tui_ui_out (struct interp *self);
 
 /* Set to 1 when the TUI mode must be activated when we first start
@@ -344,3 +347,5 @@ _initialize_tui_interp (void)
   observer_attach_user_selected_context_changed
     (tui_on_user_selected_context_changed);
 }
+
+} /* namespace gdb */

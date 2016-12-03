@@ -20,6 +20,8 @@
 #ifndef BUILD_ID_H
 #define BUILD_ID_H
 
+namespace gdb {
+
 /* Locate NT_GNU_BUILD_ID from ABFD and return its content.  */
 
 extern const struct bfd_build_id *build_id_bfd_get (bfd *abfd);
@@ -44,5 +46,7 @@ extern bfd *build_id_to_debug_bfd (size_t build_id_len,
    Otherwise, returns NULL.  */
 
 extern char *find_separate_debug_file_by_buildid (struct objfile *objfile);
+
+} /* namespace gdb */
 
 #endif /* BUILD_ID_H */

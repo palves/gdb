@@ -30,6 +30,9 @@
 #include <math.h>		/* ldexp */
 #include <algorithm>
 
+namespace gdb {
+
+
 /* The odds that CHAR_BIT will be anything but 8 are low enough that I'm not
    going to bother with trying to muck around with whether it is defined in
    a system header, what we do if not, etc.  */
@@ -878,3 +881,5 @@ convert_typed_floating (const void *from, const struct type *from_type,
       floatformat_from_doublest (to_fmt, &d, to);
     }
 }
+
+} /* namespace gdb */

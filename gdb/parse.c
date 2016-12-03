@@ -51,6 +51,9 @@
 #include "user-regs.h"
 #include <algorithm>
 
+namespace gdb {
+
+
 /* Standard set of definitions for printing, dumping, prefixifying,
  * and evaluating expressions.  */
 
@@ -1950,3 +1953,5 @@ _initialize_parse (void)
 			    show_parserdebug,
 			    &setdebuglist, &showdebuglist);
 }
+
+} /* namespace gdb */

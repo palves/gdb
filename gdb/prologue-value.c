@@ -20,6 +20,9 @@
 #include "prologue-value.h"
 #include "regcache.h"
 
+namespace gdb {
+
+
 
 /* Constructors.  */
 
@@ -586,3 +589,5 @@ pv_area_scan (struct pv_area *area,
       }
     while (e != area->entry);
 }
+
+} /* namespace gdb */

@@ -30,6 +30,9 @@
 #include "gdbtypes.h"
 #include "dwarf2loc.h"
 
+namespace gdb {
+
+
 
 
 /* Object of this type are stored in the compiler's symbol_err_map.  */
@@ -770,3 +773,5 @@ generate_c_for_variable_locations (struct compile_c_instance *compiler,
   discard_cleanups (outer);
   return registers_used;
 }
+
+} /* namespace gdb */

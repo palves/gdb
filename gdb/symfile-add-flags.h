@@ -22,6 +22,8 @@
 
 #include "common/enum-flags.h"
 
+namespace gdb {
+
 /* This enum encodes bit-flags passed as ADD_FLAGS parameter to
    symbol_file_add, etc.  Defined in a separate file to break circular
    header dependencies.  */
@@ -44,5 +46,7 @@ enum symfile_add_flag
   };
 
 DEF_ENUM_FLAGS_TYPE (enum symfile_add_flag, symfile_add_flags);
+
+} /* namespace gdb */
 
 #endif /* !defined(SYMFILE_ADD_FLAGS_H) */

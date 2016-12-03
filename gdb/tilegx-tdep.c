@@ -43,6 +43,9 @@
 #include "opcode/tilegx.h"
 #include <algorithm>
 
+namespace gdb {
+
+
 struct tilegx_frame_cache
 {
   /* Base address.  */
@@ -1073,3 +1076,5 @@ _initialize_tilegx_tdep (void)
 {
   register_gdbarch_init (bfd_arch_tilegx, tilegx_gdbarch_init);
 }
+
+} /* namespace gdb */

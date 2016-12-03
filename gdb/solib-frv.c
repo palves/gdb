@@ -31,6 +31,9 @@
 #include "elf/frv.h"
 #include "gdb_bfd.h"
 
+namespace gdb {
+
+
 /* Flag which indicates whether internal debug messages should be printed.  */
 static unsigned int solib_frv_debug;
 
@@ -1182,3 +1185,5 @@ When non-zero, FR-V solib specific internal debugging is enabled."),
 			     NULL, /* FIXME: i18n: */
 			     &setdebuglist, &showdebuglist);
 }
+
+} /* namespace gdb */

@@ -37,6 +37,9 @@
 #include "inf-ptrace.h"
 #include "bsd-kvm.h"
 
+namespace gdb {
+
+
 /* Fill GDB's register array with the general-purpose register values
    in *GREGSETP.  */
 
@@ -217,3 +220,5 @@ _initialize_ppcfbsd_nat (void)
   /* Support debugging kernel virtual memory images.  */
   bsd_kvm_add_target (ppcfbsd_supply_pcb);
 }
+
+} /* namespace gdb */

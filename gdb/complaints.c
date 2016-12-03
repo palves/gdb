@@ -22,6 +22,9 @@
 #include "command.h"
 #include "gdbcmd.h"
 
+namespace gdb {
+
+
 extern void _initialize_complaints (void);
 
 /* Should each complaint message be self explanatory, or should we
@@ -329,3 +332,5 @@ Show max number of complaints about incorrect symbols."), NULL,
 			    NULL, complaints_show_value,
 			    &setlist, &showlist);
 }
+
+} /* namespace gdb */

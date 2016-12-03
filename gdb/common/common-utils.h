@@ -22,6 +22,8 @@
 
 #include <string>
 
+namespace gdb {
+
 /* If possible, define FUNCTION_NAME, a macro containing the name of
    the function being defined.  Since this macro may not always be
    defined, all uses must be protected by appropriate macro definition
@@ -102,5 +104,7 @@ extern const char *skip_spaces_const (const char *inp);
 /* A const-correct version of the above.  */
 
 extern const char *skip_to_space_const (const char *inp);
+
+} /* namespace gdb */
 
 #endif

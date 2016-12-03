@@ -23,6 +23,9 @@
 #include "alpha-tdep.h"
 #include "alpha-bsd-tdep.h"
 
+namespace gdb {
+
+
 /* Conviently, GDB uses the same register numbering as the
    ptrace register structure used by BSD on Alpha.  */
 
@@ -54,3 +57,5 @@ alphabsd_fill_fpreg (const struct regcache *regcache, char *fpregs, int regno)
   /* FPCR is at slot 33; slot 32 unused.  */
   alpha_fill_fp_regs (regcache, regno, fpregs, fpregs + 32 * 8);
 }
+
+} /* namespace gdb */

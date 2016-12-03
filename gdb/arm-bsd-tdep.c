@@ -24,6 +24,9 @@
 
 #include "arm-tdep.h"
 
+namespace gdb {
+
+
 /* Core file support.  */
 
 /* Sizeof `struct reg' in <machine/reg.h>.  */
@@ -120,3 +123,5 @@ armbsd_iterate_over_regset_sections (struct gdbarch *gdbarch,
   cb (".reg", ARMBSD_SIZEOF_GREGS, &armbsd_gregset, NULL, cb_data);
   cb (".reg2", ARMBSD_SIZEOF_FPREGS, &armbsd_fpregset, NULL, cb_data);
 }
+
+} /* namespace gdb */

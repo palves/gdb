@@ -51,6 +51,9 @@
 /* Defines ps_err_e, struct ps_prochandle.  */
 #include "gdb_proc_service.h"
 
+namespace gdb {
+
+
 #ifndef PTRACE_GET_THREAD_AREA
 #define PTRACE_GET_THREAD_AREA 25
 #endif
@@ -540,3 +543,5 @@ _initialize_m68k_linux_nat (void)
   /* Register the target.  */
   linux_nat_add_target (t);
 }
+
+} /* namespace gdb */

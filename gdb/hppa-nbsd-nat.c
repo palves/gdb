@@ -30,6 +30,9 @@
 
 #include "nbsd-nat.h"
 
+namespace gdb {
+
+
 static int
 hppanbsd_gregset_supplies_p (int regnum)
 {
@@ -243,3 +246,5 @@ _initialize_hppanbsd_nat (void)
 
   add_target (t);
 }
+
+} /* namespace gdb */

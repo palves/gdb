@@ -31,6 +31,9 @@
 #include "features/tic6x-c64x-linux.c"
 #include "features/tic6x-c62x-linux.c"
 
+namespace gdb {
+
+
 /* The offset from rt_sigframe pointer to SP register.  */
 #define TIC6X_SP_RT_SIGFRAME 8
 /* Size of struct siginfo info.  */
@@ -220,3 +223,5 @@ _initialize_tic6x_linux_tdep (void)
   initialize_tdesc_tic6x_c64x_linux ();
   initialize_tdesc_tic6x_c62x_linux ();
 }
+
+} /* namespace gdb */

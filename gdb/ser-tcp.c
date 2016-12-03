@@ -56,6 +56,9 @@
 #include "gdb_select.h"
 #include <algorithm>
 
+namespace gdb {
+
+
 #ifndef HAVE_SOCKLEN_T
 typedef int socklen_t;
 #endif
@@ -447,3 +450,5 @@ The default is 15 seconds."),
 			    NULL, NULL,
 			    &tcp_set_cmdlist, &tcp_show_cmdlist);
 }
+
+} /* namespace gdb */

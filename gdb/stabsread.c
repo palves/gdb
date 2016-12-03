@@ -49,6 +49,9 @@
 #define	EXTERN
 /**/
 #include "stabsread.h"		/* Our own declarations */
+
+namespace gdb {
+
 #undef	EXTERN
 
 extern void _initialize_stabsread (void);
@@ -4857,3 +4860,5 @@ _initialize_stabsread (void)
   stab_regparm_index = register_symbol_register_impl (LOC_REGPARM_ADDR,
 						      &stab_register_funcs);
 }
+
+} /* namespace gdb */

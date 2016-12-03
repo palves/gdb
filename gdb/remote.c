@@ -73,6 +73,9 @@
 #include "record-btrace.h"
 #include <algorithm>
 
+namespace gdb {
+
+
 /* Temp hacks for tracepoint encoding migration.  */
 static char *target_buf;
 static long target_buf_size;
@@ -14407,3 +14410,5 @@ stepping is supported by the target.  The default is on."),
   target_buf = (char *) xmalloc (target_buf_size);
 }
 
+
+} /* namespace gdb */

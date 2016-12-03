@@ -35,6 +35,8 @@
 
 #include "symfile-add-flags.h"
 
+namespace gdb {
+
 struct target_waitstatus;
 struct frame_info;
 struct ui_file;
@@ -532,5 +534,7 @@ extern struct inferior *add_inferior_with_spaces (void);
 
 /* Print the current selected inferior.  */
 extern void print_selected_inferior (struct ui_out *uiout);
+
+} /* namespace gdb */
 
 #endif /* !defined (INFERIOR_H) */

@@ -43,6 +43,9 @@
 
 #include "gdb_curses.h"
 
+namespace gdb {
+
+
 
 /*****************************************
 ** STATIC LOCAL FUNCTIONS FORWARD DECLS    **
@@ -780,3 +783,5 @@ tui_get_register (struct frame_info *frame,
     }
   return ret;
 }
+
+} /* namespace gdb */

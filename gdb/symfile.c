@@ -65,6 +65,9 @@
 
 #include "psymtab.h"
 
+namespace gdb {
+
+
 int (*deprecated_ui_load_progress_hook) (const char *section,
 					 unsigned long num);
 void (*deprecated_show_load_progress) (const char *section,
@@ -4018,3 +4021,5 @@ full  == print messages for the executable,\n\
 			NULL,
 			&setprintlist, &showprintlist);
 }
+
+} /* namespace gdb */

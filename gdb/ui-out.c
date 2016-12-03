@@ -29,6 +29,9 @@
 #include <memory>
 #include <string>
 
+namespace gdb {
+
+
 /* A header of a ui_out_table.  */
 
 class ui_out_hdr
@@ -936,3 +939,5 @@ ui_out_new (const struct ui_out_impl *impl, void *data,
 
   return uiout;
 }
+
+} /* namespace gdb */

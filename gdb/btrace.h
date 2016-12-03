@@ -30,6 +30,8 @@
 #include "target/waitstatus.h" /* For enum target_stop_reason.  */
 #include "common/enum-flags.h"
 
+namespace gdb {
+
 #if defined (HAVE_LIBIPT)
 #  include <intel-pt.h>
 #endif
@@ -503,5 +505,7 @@ extern int btrace_is_empty (struct thread_info *tp);
 
 /* Create a cleanup for DATA.  */
 extern struct cleanup *make_cleanup_btrace_data (struct btrace_data *data);
+
+} /* namespace gdb */
 
 #endif /* BTRACE_H */

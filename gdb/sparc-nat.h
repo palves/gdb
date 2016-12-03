@@ -20,6 +20,8 @@
 #ifndef SPARC_NAT_H
 #define SPARC_NAT_H 1
 
+namespace gdb {
+
 struct sparc_gregmap;
 struct sparc_fpregmap;
 
@@ -48,5 +50,7 @@ extern void sparc_fetch_inferior_registers (struct target_ops *,
 					    struct regcache *, int);
 extern void sparc_store_inferior_registers (struct target_ops *,
 					    struct regcache *, int);
+
+} /* namespace gdb */
 
 #endif /* sparc-nat.h */

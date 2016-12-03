@@ -78,6 +78,9 @@
 #include "features/rs6000/powerpc-isa205-vsx64l.c"
 #include "features/rs6000/powerpc-e500l.c"
 
+namespace gdb {
+
+
 /* Shared library operations for PowerPC-Linux.  */
 static struct target_so_ops powerpc_so_ops;
 
@@ -1871,3 +1874,5 @@ _initialize_ppc_linux_tdep (void)
   initialize_tdesc_powerpc_isa205_vsx64l ();
   initialize_tdesc_powerpc_e500l ();
 }
+
+} /* namespace gdb */

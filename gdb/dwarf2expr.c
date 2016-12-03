@@ -28,6 +28,9 @@
 #include "dwarf2expr.h"
 #include "dwarf2loc.h"
 
+namespace gdb {
+
+
 /* Cookie for gdbarch data.  */
 
 static struct gdbarch_data *dwarf_arch_cookie;
@@ -1452,3 +1455,5 @@ _initialize_dwarf2expr (void)
   dwarf_arch_cookie
     = gdbarch_data_register_post_init (dwarf_gdbarch_types_init);
 }
+
+} /* namespace gdb */

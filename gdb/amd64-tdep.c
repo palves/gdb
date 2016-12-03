@@ -55,6 +55,9 @@
 #include "ax.h"
 #include "ax-gdb.h"
 
+namespace gdb {
+
+
 /* Note that the AMD64 architecture was previously known as x86-64.
    The latter is (forever) engraved into the canonical system name as
    returned by config.guess, and used as the name for the AMD64 port
@@ -3325,3 +3328,5 @@ amd64_collect_xsave (const struct regcache *regcache, int regnum,
 			      regs + 20);
     }
 }
+
+} /* namespace gdb */

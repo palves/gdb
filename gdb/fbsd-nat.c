@@ -37,6 +37,9 @@
 #include "elf-bfd.h"
 #include "fbsd-nat.h"
 
+namespace gdb {
+
+
 /* Return the name of a file that can be opened to get the symbols for
    the child process identified by PID.  */
 
@@ -1113,3 +1116,5 @@ Enables printf debugging output."),
 			   &setdebuglist, &showdebuglist);
 #endif
 }
+
+} /* namespace gdb */

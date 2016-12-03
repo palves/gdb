@@ -20,10 +20,14 @@
 #ifndef PPC_FBSD_TDEP_H
 #define PPC_FBSD_TDEP_H
 
+namespace gdb {
+
 struct regset;
 
 /* From ppc-fbsd-tdep.c ...  */
 const struct regset *ppc_fbsd_gregset (int);
 const struct regset *ppc_fbsd_fpregset (void);
+
+} /* namespace gdb */
 
 #endif /* PPC_FBSD_TDEP_H  */

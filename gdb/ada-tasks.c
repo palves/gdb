@@ -26,6 +26,9 @@
 #include "progspace.h"
 #include "objfiles.h"
 
+namespace gdb {
+
+
 /* The name of the array in the GNAT runtime where the Ada Task Control
    Block of each task is stored.  */
 #define KNOWN_TASKS_NAME "system__tasking__debug__known_tasks"
@@ -1452,3 +1455,5 @@ _initialize_tasks (void)
 Without argument, this command simply prints the current task ID"),
            &cmdlist);
 }
+
+} /* namespace gdb */

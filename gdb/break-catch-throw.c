@@ -37,6 +37,9 @@
 #include "cp-support.h"
 #include "location.h"
 
+namespace gdb {
+
+
 /* Enums for exception-handling support.  */
 enum exception_event_kind
 {
@@ -600,3 +603,5 @@ Catch an exception, when rethrown."),
 
   create_internalvar_type_lazy ("_exception", &exception_funcs, NULL);
 }
+
+} /* namespace gdb */

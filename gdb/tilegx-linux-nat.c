@@ -33,6 +33,9 @@
 /* Prototypes for supply_gregset etc.  */
 #include "gregset.h"
 
+namespace gdb {
+
+
 /* The register sets used in GNU/Linux ELF core-dumps are identical to
    the register sets in `struct user' that is used for a.out
    core-dumps, and is also used by `ptrace'.  The corresponding types
@@ -179,3 +182,5 @@ _initialize_tile_linux_nat (void)
   /* Register the target.  */
   linux_nat_add_target (t);
 }
+
+} /* namespace gdb */

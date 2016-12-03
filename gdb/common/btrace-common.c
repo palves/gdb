@@ -20,6 +20,9 @@
 #include "common-defs.h"
 #include "btrace-common.h"
 
+namespace gdb {
+
+
 
 /* See btrace-common.h.  */
 
@@ -198,3 +201,5 @@ btrace_data_append (struct btrace_data *dst,
 
   internal_error (__FILE__, __LINE__, _("Unkown branch trace format."));
 }
+
+} /* namespace gdb */

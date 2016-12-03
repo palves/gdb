@@ -20,6 +20,9 @@
 #include "defs.h"
 #include "py-event.h"
 
+namespace gdb {
+
+
 extern PyTypeObject new_objfile_event_object_type
     CPYCHECKER_TYPE_OBJECT_FOR_TYPEDEF ("event_object");
 extern PyTypeObject clear_objfiles_event_object_type
@@ -125,3 +128,5 @@ GDBPY_NEW_EVENT_TYPE (clear_objfiles,
 		      "ClearObjFilesEvent",
 		      "GDB clear object files event object",
 		      event_object_type);
+
+} /* namespace gdb */

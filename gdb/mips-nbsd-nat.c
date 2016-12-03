@@ -30,6 +30,9 @@
 #include "mips-nbsd-tdep.h"
 #include "inf-ptrace.h"
 
+namespace gdb {
+
+
 /* Determine if PT_GETREGS fetches this register.  */
 static int
 getregs_supplies (struct gdbarch *gdbarch, int regno)
@@ -123,3 +126,5 @@ _initialize_mipsnbsd_nat (void)
   t->to_store_registers = mipsnbsd_store_inferior_registers;
   add_target (t);
 }
+
+} /* namespace gdb */

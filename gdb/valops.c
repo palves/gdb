@@ -40,6 +40,9 @@
 #include "objfiles.h"
 #include "extension.h"
 
+namespace gdb {
+
+
 extern unsigned int overload_debug;
 /* Local functions.  */
 
@@ -3900,3 +3903,5 @@ Show overload resolution in evaluating C++ functions."),
 			   &setlist, &showlist);
   overload_resolution = 1;
 }
+
+} /* namespace gdb */

@@ -30,6 +30,9 @@
 
 #include "python-internal.h"
 
+namespace gdb {
+
+
 /* Even though Python scalar types directly map to host types, we use
    target types here to remain consistent with the values system in
    GDB (which uses target arithmetic).  */
@@ -1892,3 +1895,5 @@ PyTypeObject value_object_type = {
   0,				  /* tp_alloc */
   valpy_new			  /* tp_new */
 };
+
+} /* namespace gdb */

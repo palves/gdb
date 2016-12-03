@@ -41,6 +41,9 @@
 /* Prototypes for supply_gregset etc.  */
 #include "gregset.h"
 
+namespace gdb {
+
+
 /* These must match the order of the register names.
 
    Some sort of lookup table is needed because the offsets associated
@@ -936,3 +939,5 @@ _initialize_ia64_linux_nat (void)
   linux_nat_set_new_thread (t, ia64_linux_new_thread);
   linux_nat_set_status_is_event (t, ia64_linux_status_is_event);
 }
+
+} /* namespace gdb */

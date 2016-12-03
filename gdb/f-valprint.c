@@ -34,6 +34,9 @@
 #include "block.h"
 #include "dictionary.h"
 
+namespace gdb {
+
+
 extern void _initialize_f_valprint (void);
 static void info_common_command (char *, int);
 static void f77_get_dynamic_length_of_aggregate (struct type *);
@@ -495,3 +498,5 @@ _initialize_f_valprint (void)
   add_info ("common", info_common_command,
 	    _("Print out the values contained in a Fortran COMMON block."));
 }
+
+} /* namespace gdb */

@@ -20,6 +20,8 @@
 
 #include "arch/xtensa.h"
 
+namespace gdb {
+
 /* XTENSA_TDEP_VERSION can/should be changed along with XTENSA_CONFIG_VERSION
    whenever the "tdep" structure changes in an incompatible way.  */
 
@@ -282,6 +284,8 @@ struct gdbarch_tdep
 #endif
 #ifndef XCHAL_HAVE_EXCEPTIONS
 #define XCHAL_HAVE_EXCEPTIONS	1
+} /* namespace gdb */
+
 #endif
 #define WB_SHIFT	  2
 

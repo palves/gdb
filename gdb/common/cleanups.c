@@ -20,6 +20,9 @@
 #include "common-defs.h"
 #include "cleanups.h"
 
+namespace gdb {
+
+
 /* The cleanup list records things that have to be undone
    if an error happens (descriptors to be closed, memory to be freed, etc.)
    Each link in the chain records a function to call and an
@@ -294,3 +297,5 @@ void
 null_cleanup (void *arg)
 {
 }
+
+} /* namespace gdb */

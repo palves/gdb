@@ -65,6 +65,9 @@
 #include "thread-fsm.h"
 #include "common/enum-flags.h"
 
+namespace gdb {
+
+
 /* Prototypes for local functions */
 
 static void signals_info (char *, int);
@@ -9545,3 +9548,5 @@ or signalled."),
 			   &setlist,
 			   &showlist);
 }
+
+} /* namespace gdb */

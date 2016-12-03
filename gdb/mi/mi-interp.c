@@ -40,6 +40,9 @@
 #include "thread-fsm.h"
 #include "cli/cli-interp.h"
 
+namespace gdb {
+
+
 /* These are the interpreter setup, etc. functions for the MI
    interpreter.  */
 
@@ -1478,3 +1481,5 @@ _initialize_mi_interp (void)
   observer_attach_user_selected_context_changed
     (mi_user_selected_context_changed);
 }
+
+} /* namespace gdb */

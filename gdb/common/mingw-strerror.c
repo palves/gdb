@@ -21,6 +21,9 @@
 
 #include <windows.h>
 
+namespace gdb {
+
+
 /* Implementation of safe_strerror as defined in common-utils.h.
 
    The Windows runtime implementation of strerror never returns NULL,
@@ -62,3 +65,5 @@ safe_strerror (int errnum)
 
   return buffer;
 }
+
+} /* namespace gdb */

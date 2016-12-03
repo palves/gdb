@@ -19,6 +19,8 @@
 
 #include <mach/mach.h>
 
+namespace gdb {
+
 /* Describe the mach exception handling state for a task.  This state is saved
    before being changed and restored when a process is detached.
    For more information on these fields see task_get_exception_ports manual
@@ -155,5 +157,7 @@ void darwin_set_sstep (thread_t thread, int enable);
 extern void darwin_complete_target (struct target_ops *target);
 
 void darwin_check_osabi (darwin_inferior *inf, thread_t thread);
+
+} /* namespace gdb */
 
 #endif /* __DARWIN_NAT_H__ */

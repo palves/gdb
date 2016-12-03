@@ -20,6 +20,8 @@
 #ifndef CLI_UTILS_H
 #define CLI_UTILS_H
 
+namespace gdb {
+
 /* *PP is a string denoting a number.  Get the number.  Advance *PP
    after the string and any trailing whitespace.
 
@@ -157,5 +159,7 @@ extern char *extract_arg_const (const char **arg);
    or be followed by whitespace.  Returns 1 if it finds the argument,
    0 otherwise.  If the argument is found, it updates *STR.  */
 extern int check_for_argument (char **str, char *arg, int arg_len);
+
+} /* namespace gdb */
 
 #endif /* CLI_UTILS_H */

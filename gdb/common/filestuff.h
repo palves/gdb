@@ -19,6 +19,8 @@
 #ifndef FILESTUFF_H
 #define FILESTUFF_H
 
+namespace gdb {
+
 /* Note all the file descriptors which are open when this is called.
    These file descriptors will not be closed by close_most_fds.  */
 
@@ -70,5 +72,7 @@ extern int gdb_pipe_cloexec (int filedes[2]);
 /* Return a new cleanup that closes FD.  */
 
 extern struct cleanup *make_cleanup_close (int fd);
+
+} /* namespace gdb */
 
 #endif /* FILESTUFF_H */

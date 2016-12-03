@@ -51,6 +51,9 @@
 
 #ifdef TUI
 #include "tui/tui.h"		/* For tui_active et al.   */
+
+namespace gdb {
+
 #endif
 
 /* Last specified output format.  */
@@ -2902,3 +2905,5 @@ Show printing of source filename and line number with <symbol>."), NULL,
 Convert \"printf format string\", arg1, arg2, arg3, ..., argn to\n\
 a command line, and call it."));
 }
+
+} /* namespace gdb */

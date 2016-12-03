@@ -59,6 +59,9 @@
 #include "top.h"
 #include "interps.h"
 
+namespace gdb {
+
+
 /* Local functions: */
 
 static void nofp_registers_info (char *, int);
@@ -3493,3 +3496,5 @@ List absolute filename for executable of the process."),
 List all available /proc info."),
 	   &info_proc_cmdlist);
 }
+
+} /* namespace gdb */

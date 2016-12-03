@@ -23,6 +23,8 @@
 #include "target/waitstatus.h" /* For enum target_stop_reason.  */
 #include "common/enum-flags.h"
 
+namespace gdb {
+
 struct cmd_list_element;
 
 extern unsigned int record_debug;
@@ -90,5 +92,7 @@ extern struct target_ops *find_record_target (void);
 /* This is to be called by record_stratum targets' open routine before
    it does anything.  */
 extern void record_preopen (void);
+
+} /* namespace gdb */
 
 #endif /* _RECORD_H_ */

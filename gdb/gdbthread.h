@@ -32,6 +32,8 @@ struct symtab;
 #include "target/waitstatus.h"
 #include "cli/cli-utils.h"
 
+namespace gdb {
+
 /* Frontend view of the thread state.  Possible extensions: stepping,
    finishing, until(ling),...  */
 enum thread_state
@@ -635,5 +637,7 @@ extern void print_selected_thread_frame (struct ui_out *uiout,
 					 user_selected_what selection);
 
 extern struct thread_info *thread_list;
+
+} /* namespace gdb */
 
 #endif /* GDBTHREAD_H */

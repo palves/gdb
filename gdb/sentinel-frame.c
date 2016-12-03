@@ -24,6 +24,9 @@
 #include "inferior.h"
 #include "frame-unwind.h"
 
+namespace gdb {
+
+
 struct frame_unwind_cache
 {
   struct regcache *regcache;
@@ -88,3 +91,5 @@ const struct frame_unwind sentinel_frame_unwind =
   NULL,
   sentinel_frame_prev_arch,
 };
+
+} /* namespace gdb */

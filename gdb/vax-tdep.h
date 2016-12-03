@@ -20,6 +20,8 @@
 #ifndef VAX_TDEP_H
 #define VAX_TDEP_H
 
+namespace gdb {
+
 /* Register numbers of various important registers.  */
 
 enum vax_regnum
@@ -35,5 +37,7 @@ enum vax_regnum
 
 /* Number of machine registers.  */
 #define VAX_NUM_REGS 17
+
+} /* namespace gdb */
 
 #endif /* vax-tdep.h */

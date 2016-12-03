@@ -20,7 +20,11 @@
 #ifndef INF_LOOP_H
 #define INF_LOOP_H
 
+namespace gdb {
+
 extern void inferior_event_handler (enum inferior_event_type event_type, 
 				    void* client_data);
+
+} /* namespace gdb */
 
 #endif /* #ifndef INF_LOOP_H */

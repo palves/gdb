@@ -20,6 +20,8 @@
 #ifndef MINSYMS_H
 #define MINSYMS_H
 
+namespace gdb {
+
 /* Classification types for a minimal symbol.  These should be taken as
    "advisory only", since if gdb can't easily figure out a
    classification it simply selects mst_unknown.  It may also have to
@@ -310,5 +312,7 @@ void iterate_over_minimal_symbols (struct objfile *objf,
    of the function.  */
 
 CORE_ADDR minimal_symbol_upper_bound (struct bound_minimal_symbol minsym);
+
+} /* namespace gdb */
 
 #endif /* MINSYMS_H */

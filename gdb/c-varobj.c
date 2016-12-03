@@ -21,6 +21,9 @@
 #include "gdbthread.h"
 #include "valprint.h"
 
+namespace gdb {
+
+
 static void cplus_class_num_children (struct type *type, int children[3]);
 
 /* The names of varobjs representing anonymous structs or unions.  */
@@ -965,3 +968,5 @@ const struct lang_varobj_ops cplus_varobj_ops =
 };
 
 
+
+} /* namespace gdb */

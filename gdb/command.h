@@ -20,6 +20,8 @@
 
 #include "gdb_vecs.h"
 
+namespace gdb {
+
 /* This file defines the public interface for any code wanting to
    create commands.  */
 
@@ -422,5 +424,7 @@ extern int cmd_func_p (struct cmd_list_element *cmd);
 /* Call the command function.  */
 extern void cmd_func (struct cmd_list_element *cmd,
 		      char *args, int from_tty);
+
+} /* namespace gdb */
 
 #endif /* !defined (COMMAND_H) */

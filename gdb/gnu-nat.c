@@ -70,6 +70,9 @@
 #include "exc_request_U.h"
 #include "msg_U.h"
 
+namespace gdb {
+
+
 static process_t proc_server = MACH_PORT_NULL;
 
 /* If we've sent a proc_wait_request to the proc server, the pid of the
@@ -3492,3 +3495,5 @@ flush_inferior_icache (CORE_ADDR pc, int amount)
     warning (_("Error flushing inferior's cache : %s"), safe_strerror (ret));
 }
 #endif /* FLUSH_INFERIOR_CACHE */
+
+} /* namespace gdb */

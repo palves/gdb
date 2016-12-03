@@ -37,6 +37,9 @@
 #include "extension.h"
 #include "completer.h"
 
+namespace gdb {
+
+
 extern void _initialize_typeprint (void);
 
 static void ptype_command (char *, int);
@@ -737,3 +740,5 @@ val_print_not_associated (struct ui_file *stream)
   fprintf_filtered (stream, _("<not associated>"));
 }
 
+
+} /* namespace gdb */

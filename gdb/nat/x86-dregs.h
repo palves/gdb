@@ -34,6 +34,8 @@
 
 #include "break-common.h" /* target_hw_bp_type */
 
+namespace gdb {
+
 /* Low-level function vector.  */
 
 struct x86_dr_low_type
@@ -127,5 +129,7 @@ extern int x86_dr_stopped_data_address (struct x86_debug_reg_state *state,
 /* Return true if the inferior has some watchpoint that triggered.
    Otherwise return false.  */
 extern int x86_dr_stopped_by_watchpoint (struct x86_debug_reg_state *state);
+
+} /* namespace gdb */
 
 #endif /* X86_DREGS_H */

@@ -23,6 +23,9 @@
 #include "tui/tui-command.h"
 #include "tui.h"
 
+namespace gdb {
+
+
 /* A ``struct ui_file'' that is compatible with all the legacy
    code.  */
 
@@ -252,3 +255,5 @@ tui_file_flush (struct ui_file *file)
       break;
     }
 }
+
+} /* namespace gdb */

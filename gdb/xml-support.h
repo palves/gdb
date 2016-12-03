@@ -25,6 +25,8 @@
 #include "vec.h"
 #include "xml-utils.h"
 
+namespace gdb {
+
 struct gdb_xml_parser;
 struct gdb_xml_element;
 struct gdb_xml_attribute;
@@ -252,5 +254,7 @@ extern void obstack_xml_printf (struct obstack *obstack,
 
 extern char *xml_fetch_content_from_file (const char *filename,
                                           void *baton);
+
+} /* namespace gdb */
 
 #endif

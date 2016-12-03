@@ -44,6 +44,9 @@
 #include "cp-support.h"
 #include "frame.h"
 
+namespace gdb {
+
+
 extern void _initialize_language (void);
 
 static void unk_lang_error (char *);
@@ -1222,3 +1225,5 @@ For Fortran the default is off; for other languages the default is on."),
   /* Have the above take effect.  */
   set_language (language_auto);
 }
+
+} /* namespace gdb */

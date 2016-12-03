@@ -31,6 +31,9 @@
 
 #include "obsd-nat.h"
 
+namespace gdb {
+
+
 static int
 hppaobsd_gregset_supplies_p (int regnum)
 {
@@ -263,3 +266,5 @@ _initialize_hppaobsd_nat (void)
   t->to_store_registers = hppaobsd_store_registers;
   obsd_add_target (t);
 }
+
+} /* namespace gdb */

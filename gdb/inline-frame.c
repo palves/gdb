@@ -28,6 +28,9 @@
 #include "vec.h"
 #include "frame.h"
 
+namespace gdb {
+
+
 /* We need to save a few variables for every thread stopped at the
    virtual call site of an inlined function.  If there was always a
    "struct thread_info", we could hang it off that; in the mean time,
@@ -413,3 +416,5 @@ frame_inlined_callees (struct frame_info *this_frame)
 
   return inline_count;
 }
+
+} /* namespace gdb */

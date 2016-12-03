@@ -23,6 +23,8 @@
 #include "ui-out.h"
 #include <vector>
 
+namespace gdb {
+
 /* These are exported so that they can be extended by other `ui_out'
    implementations, like TUI's.  */
 
@@ -44,5 +46,7 @@ extern struct ui_file *cli_out_set_stream (struct ui_out *uiout,
 					   struct ui_file *stream);
 
 extern void cli_display_match_list (char **matches, int len, int max);
+
+} /* namespace gdb */
 
 #endif

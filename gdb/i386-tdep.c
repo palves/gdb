@@ -68,6 +68,9 @@
 #include <ctype.h>
 #include <algorithm>
 
+namespace gdb {
+
+
 /* Register names.  */
 
 static const char *i386_register_names[] =
@@ -9039,3 +9042,5 @@ Show Intel Memory Protection Extensions specific variables."),
   /* Tell remote stub that we support XML target description.  */
   register_remote_support_xml ("i386");
 }
+
+} /* namespace gdb */

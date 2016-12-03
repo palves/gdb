@@ -20,6 +20,8 @@
 #ifndef INF_CHILD_H
 #define INF_CHILD_H
 
+namespace gdb {
+
 /* Create a prototype child target.  The client can override it with
    local methods.  */
 
@@ -48,5 +50,7 @@ extern void inf_child_mourn_inferior (struct target_ops *ops);
    detach_inferior.  */
 
 extern void inf_child_maybe_unpush_target (struct target_ops *ops);
+
+} /* namespace gdb */
 
 #endif

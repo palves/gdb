@@ -5,6 +5,9 @@
 #include "osabi.h"
 #include "target-descriptions.h"
 
+namespace gdb {
+
+
 struct target_desc *tdesc_aarch64;
 static void
 initialize_tdesc_aarch64 (void)
@@ -189,3 +192,5 @@ initialize_tdesc_aarch64 (void)
 
   tdesc_aarch64 = result;
 }
+
+} /* namespace gdb */

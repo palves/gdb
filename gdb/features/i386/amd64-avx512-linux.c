@@ -5,6 +5,9 @@
 #include "osabi.h"
 #include "target-descriptions.h"
 
+namespace gdb {
+
+
 struct target_desc *tdesc_amd64_avx512_linux;
 static void
 initialize_tdesc_amd64_avx512_linux (void)
@@ -320,3 +323,5 @@ initialize_tdesc_amd64_avx512_linux (void)
 
   tdesc_amd64_avx512_linux = result;
 }
+
+} /* namespace gdb */

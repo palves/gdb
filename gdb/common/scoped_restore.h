@@ -20,6 +20,8 @@
 #ifndef SCOPED_RESTORE_H
 #define SCOPED_RESTORE_H
 
+namespace gdb {
+
 /* Base class for scoped_restore_tmpl.  */
 struct scoped_restore_base
 {
@@ -95,5 +97,7 @@ scoped_restore_tmpl<T> make_scoped_restore (T *var, T value)
 {
   return scoped_restore_tmpl<T> (var, value);
 }
+
+} /* namespace gdb */
 
 #endif /* SCOPED_RESTORE_H */

@@ -21,6 +21,8 @@ struct symtab;
 
 #include "vec.h"
 
+namespace gdb {
+
 /* Flags to pass to decode_line_1 and decode_line_full.  */
 
 enum decode_line_flags
@@ -191,4 +193,6 @@ extern void linespec_lex_to_end (char **stringp);
    advancing EXP_PTR past any parsed text.  */
 
 extern CORE_ADDR linespec_expression_to_pc (const char **exp_ptr);
+} /* namespace gdb */
+
 #endif /* defined (LINESPEC_H) */

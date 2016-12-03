@@ -20,6 +20,8 @@
 #if !defined (GDB_VEC_H)
 #define GDB_VEC_H
 
+namespace gdb {
+
 /* The macros here implement a set of templated vector types and
    associated interfaces.  These templates are implemented with
    macros, as we're not in C++ land.  The interface functions are
@@ -1121,5 +1123,7 @@ static inline T *VEC_OP (T,safe_insert)					  \
 									  \
   return VEC_OP (T,quick_insert) (*vec_, ix_, obj_ VEC_ASSERT_PASS);	  \
 }
+
+} /* namespace gdb */
 
 #endif /* GDB_VEC_H */

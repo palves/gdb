@@ -54,6 +54,9 @@
 #include "gdb/sim-sh.h"
 #include <algorithm>
 
+namespace gdb {
+
+
 /* List of "set sh ..." and "show sh ..." commands.  */
 static struct cmd_list_element *setshcmdlist = NULL;
 static struct cmd_list_element *showshcmdlist = NULL;
@@ -2462,3 +2465,5 @@ _initialize_sh_tdep (void)
 			NULL, NULL,
 			&setshcmdlist, &showshcmdlist);
 }
+
+} /* namespace gdb */

@@ -32,6 +32,9 @@
 #include "top.h"
 #include <sys/stat.h>
 
+namespace gdb {
+
+
 static void env_mod_path (char *dirname, char **which_path);
 
 extern void _initialize_mi_cmd_env (void);
@@ -289,3 +292,5 @@ _initialize_mi_cmd_env (void)
   orig_path = xstrdup (env);
   free_environ (environment);
 }
+
+} /* namespace gdb */

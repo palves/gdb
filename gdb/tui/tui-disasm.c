@@ -40,6 +40,9 @@
 
 #include "gdb_curses.h"
 
+namespace gdb {
+
+
 struct tui_asm_line 
 {
   CORE_ADDR addr;
@@ -401,3 +404,5 @@ tui_vertical_disassem_scroll (enum tui_scroll_direction scroll_direction,
 				      NULL, val, FALSE);
     }
 }
+
+} /* namespace gdb */

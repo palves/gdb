@@ -34,6 +34,9 @@
 #include "inf-child.h"
 #include "i387-tdep.h"
 
+namespace gdb {
+
+
 /* Offset to the thread_state_t location where REG is stored.  */
 #define REG_OFFSET(reg) offsetof (struct i386_thread_state, reg)
 
@@ -434,3 +437,5 @@ _initialize_i386gnu_nat (void)
   /* Register the target.  */
   add_target (t);
 }
+
+} /* namespace gdb */

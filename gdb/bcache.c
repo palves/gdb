@@ -23,6 +23,9 @@
 #include "gdb_obstack.h"
 #include "bcache.h"
 
+namespace gdb {
+
+
 /* The type used to hold a single bcache string.  The user data is
    stored in d.data.  Since it can be any type, it needs to have the
    same alignment as the most strict alignment of any type on the host
@@ -489,3 +492,5 @@ bcache_memory_used (struct bcache *bcache)
     return 0;
   return obstack_memory_used (&bcache->cache);
 }
+
+} /* namespace gdb */

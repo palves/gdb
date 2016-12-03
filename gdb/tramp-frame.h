@@ -22,6 +22,8 @@
 
 #include "frame.h"		/* For "enum frame_type".  */
 
+namespace gdb {
+
 struct trad_frame;
 struct frame_info;
 struct trad_frame_cache;
@@ -80,5 +82,7 @@ struct tramp_frame
 
 void tramp_frame_prepend_unwinder (struct gdbarch *gdbarch,
 				   const struct tramp_frame *tramp);
+
+} /* namespace gdb */
 
 #endif

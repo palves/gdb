@@ -24,6 +24,9 @@
 #include "charset.h"
 #include "guile-internal.h"
 
+namespace gdb {
+
+
 /* Convert STRING to an int.
    STRING must be a valid integer.  */
 
@@ -281,3 +284,5 @@ gdbscm_initialize_strings (void)
 {
   gdbscm_define_functions (string_functions, 1);
 }
+
+} /* namespace gdb */

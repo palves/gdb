@@ -26,6 +26,9 @@
 #include "objfiles.h"
 #include "psymtab.h"
 
+namespace gdb {
+
+
 /* Return to the client the absolute path and line number of the 
    current file being executed.  */
 
@@ -108,3 +111,5 @@ mi_cmd_file_list_exec_source_files (char *command, char **argv, int argc)
 
   ui_out_end (uiout, ui_out_type_list);
 }
+
+} /* namespace gdb */

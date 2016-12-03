@@ -30,6 +30,9 @@
 #include "inf-ptrace.h"
 #include "regcache.h"
 
+namespace gdb {
+
+
 
 /* Determine if PT_GETREGS fetches this register.  */
 #define GETREGS_SUPPLIES(gdbarch, regno) \
@@ -100,3 +103,5 @@ _initialize_shnbsd_nat (void)
   t->to_store_registers = shnbsd_store_inferior_registers;
   add_target (t);
 }
+
+} /* namespace gdb */

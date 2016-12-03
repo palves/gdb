@@ -20,6 +20,10 @@
 #ifndef OBSD_NAT_H
 #define OBSD_NAT_H
 
+namespace gdb {
+
 extern void obsd_add_target (struct target_ops *);
+
+} /* namespace gdb */
 
 #endif /* obsd-nat.h */

@@ -53,6 +53,9 @@
 
 #include <dirent.h>
 
+namespace gdb {
+
+
 /* Replacement for fdwalk, if the system doesn't define it.  Walks all
    open file descriptors (though this implementation may walk closed
    ones as well, depending on the host platform's capabilities) and
@@ -425,3 +428,5 @@ make_cleanup_close (int fd)
   *saved_fd = fd;
   return make_cleanup_dtor (do_close_cleanup, saved_fd, xfree);
 }
+
+} /* namespace gdb */

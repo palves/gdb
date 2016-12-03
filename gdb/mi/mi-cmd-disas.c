@@ -26,6 +26,9 @@
 #include "ui-out.h"
 #include "disasm.h"
 
+namespace gdb {
+
+
 /* The arguments to be passed on the command line and parsed here are
    either:
 
@@ -193,3 +196,5 @@ mi_cmd_disassemble (char *command, char **argv, int argc)
 
   do_cleanups (cleanups);
 }
+
+} /* namespace gdb */

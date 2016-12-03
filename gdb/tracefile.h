@@ -3,6 +3,8 @@
 
 #include "tracepoint.h"
 
+namespace gdb {
+
 struct trace_file_writer;
 
 /* Operations to write trace frames to a specific trace format.  */
@@ -116,5 +118,7 @@ extern struct trace_file_writer *tfile_trace_file_writer_new (void);
 extern void init_tracefile_ops (struct target_ops *ops);
 
 extern void tracefile_fetch_registers (struct regcache *regcache, int regno);
+
+} /* namespace gdb */
 
 #endif /* TRACEFILE_H */

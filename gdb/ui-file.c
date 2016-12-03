@@ -25,6 +25,9 @@
 #include "gdb_select.h"
 #include "filestuff.h"
 
+namespace gdb {
+
+
 static ui_file_isatty_ftype null_file_isatty;
 static ui_file_write_ftype null_file_write;
 static ui_file_write_ftype null_file_write_async_safe;
@@ -852,3 +855,5 @@ tee_file_isatty (struct ui_file *file)
 
   return ui_file_isatty (tee->one);
 }
+
+} /* namespace gdb */

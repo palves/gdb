@@ -62,6 +62,9 @@
 #include "parser-defs.h"
 #include "completer.h"
 
+namespace gdb {
+
+
 /* Forward declarations for local functions.  */
 
 static void rbreak_command (char *, int);
@@ -6249,3 +6252,5 @@ If zero then the symbol cache is disabled."),
   observer_attach_new_objfile (symtab_new_objfile_observer);
   observer_attach_free_objfile (symtab_free_objfile_observer);
 }
+
+} /* namespace gdb */

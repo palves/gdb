@@ -20,6 +20,8 @@
 #ifndef LINUX_NAMESPACES_H
 #define LINUX_NAMESPACES_H
 
+namespace gdb {
+
 /* Set to nonzero to enable debugging of Linux namespaces code.  */
 
 extern int debug_linux_namespaces;
@@ -72,5 +74,7 @@ extern int linux_mntns_unlink (pid_t pid, const char *filename);
 
 extern ssize_t linux_mntns_readlink (pid_t pid, const char *filename,
 				     char *buf, size_t bufsiz);
+
+} /* namespace gdb */
 
 #endif /* LINUX_NAMESPACES_H */

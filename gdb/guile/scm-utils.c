@@ -23,6 +23,9 @@
 #include "defs.h"
 #include "guile-internal.h"
 
+namespace gdb {
+
+
 /* Define VARIABLES in the gdb module.  */
 
 void
@@ -642,3 +645,5 @@ gdbscm_guile_version_is_at_least (int major, int minor, int micro)
     return 0;
   return 1;
 }
+
+} /* namespace gdb */

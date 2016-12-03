@@ -19,6 +19,9 @@
 #include "nat/gdb_ptrace.h"
 #include "mips-linux-watch.h"
 
+namespace gdb {
+
+
 /* Assuming usable watch registers REGS, return the irw_mask of
    register N.  */
 
@@ -347,3 +350,5 @@ mips_linux_watch_populate_regs (struct mips_watchpoint *current_watches,
       w = w->next;
     }
 }
+
+} /* namespace gdb */

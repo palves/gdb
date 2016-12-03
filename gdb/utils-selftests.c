@@ -20,6 +20,9 @@
 #include "defs.h"
 #include "selftest.h"
 
+namespace gdb {
+
+
 #if GDB_SELF_TEST
 
 namespace selftests {
@@ -58,3 +61,5 @@ _initialize_utils_selftests (void)
   register_self_test (selftests::common_utils_tests);
 #endif
 }
+
+} /* namespace gdb */

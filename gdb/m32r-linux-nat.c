@@ -31,6 +31,9 @@
 #include "gregset.h"
 
 #include "m32r-tdep.h"
+
+namespace gdb {
+
 
 
 
@@ -256,3 +259,5 @@ _initialize_m32r_linux_nat (void)
   /* Register the target.  */
   linux_nat_add_target (t);
 }
+
+} /* namespace gdb */

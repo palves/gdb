@@ -34,6 +34,9 @@
 #include "buffer.h"
 #include <algorithm>
 
+namespace gdb {
+
+
 #ifndef O_LARGEFILE
 #define O_LARGEFILE 0
 #endif
@@ -1149,3 +1152,5 @@ _initialize_tracefile_tfile (void)
 
   add_target_with_completer (&tfile_ops, filename_completer);
 }
+
+} /* namespace gdb */

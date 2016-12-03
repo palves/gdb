@@ -19,6 +19,8 @@
 #ifndef BREAK_COMMON_H
 #define BREAK_COMMON_H 1
 
+namespace gdb {
+
 enum target_hw_bp_type
   {
     hw_write   = 0, 		/* Common  HW watchpoint */
@@ -26,5 +28,7 @@ enum target_hw_bp_type
     hw_access  = 2, 		/* Access  HW watchpoint */
     hw_execute = 3		/* Execute HW breakpoint */
   };
+
+} /* namespace gdb */
 
 #endif

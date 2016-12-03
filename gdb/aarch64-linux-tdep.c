@@ -46,6 +46,9 @@
 #include "record-full.h"
 #include "linux-record.h"
 
+namespace gdb {
+
+
 /* Signal frame handling.
 
       +------------+  ^
@@ -1220,3 +1223,5 @@ _initialize_aarch64_linux_tdep (void)
   gdbarch_register_osabi (bfd_arch_aarch64, 0, GDB_OSABI_LINUX,
 			  aarch64_linux_init_abi);
 }
+
+} /* namespace gdb */

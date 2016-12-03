@@ -19,6 +19,8 @@
 #ifndef GDB_REGEX_H
 #define GDB_REGEX_H 1
 
+namespace gdb {
+
 #ifdef USE_INCLUDED_REGEX
 # include "xregex.h"
 #else
@@ -32,5 +34,7 @@ struct cleanup *make_regfree_cleanup (regex_t *);
 char *get_regcomp_error (int, regex_t *);
 struct cleanup *compile_rx_or_error (regex_t *pattern, const char *rx,
 				     const char *message);
+
+} /* namespace gdb */
 
 #endif /* not GDB_REGEX_H */

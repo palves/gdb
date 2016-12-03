@@ -20,6 +20,8 @@
 #ifndef ALPHA_BSD_TDEP_H
 #define ALPHA_BSD_TDEP_H
 
+namespace gdb {
+
 struct regcache;
 
 void alphabsd_supply_reg (struct regcache *, const char *, int);
@@ -36,5 +38,7 @@ void alphanbsd_iterate_over_regset_sections (struct gdbarch *gdbarch,
 					     iterate_over_regset_sections_cb *cb,
 					     void *cb_data,
 					     const struct regcache *regcache);
+
+} /* namespace gdb */
 
 #endif /* alpha-bsd-tdep.h */

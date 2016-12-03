@@ -66,6 +66,9 @@
 #include "interps.h"
 #include "gdb_regex.h"
 
+namespace gdb {
+
+
 #if !HAVE_DECL_MALLOC
 extern PTR malloc ();		/* ARI: PTR */
 #endif
@@ -3448,3 +3451,5 @@ _initialize_utils (void)
   add_internal_problem_command (&internal_warning_problem);
   add_internal_problem_command (&demangler_warning_problem);
 }
+
+} /* namespace gdb */

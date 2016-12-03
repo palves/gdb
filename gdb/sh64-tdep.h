@@ -19,6 +19,10 @@
 #ifndef SH64_TDEP_H
 #define SH64_TDEP_H
 
+namespace gdb {
+
 extern gdbarch_init_ftype sh64_gdbarch_init;
+
+} /* namespace gdb */
 
 #endif /* SH64_TDEP_H */

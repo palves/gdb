@@ -27,6 +27,9 @@
 #include "source.h"
 #include <algorithm>
 
+namespace gdb {
+
+
 /* Disassemble functions.
    FIXME: We should get rid of all the duplicate code in gdb that does
    the same thing: disassemble_command() and the gdbtk variation.  */
@@ -917,3 +920,5 @@ gdb_buffered_insn_length (struct gdbarch *gdbarch,
 
   return gdbarch_print_insn (gdbarch, addr, &di);
 }
+
+} /* namespace gdb */

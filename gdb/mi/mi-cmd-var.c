@@ -31,6 +31,9 @@
 #include "gdbthread.h"
 #include "mi-parse.h"
 
+namespace gdb {
+
+
 extern unsigned int varobjdebug;		/* defined in varobj.c.  */
 
 static void varobj_update_one (struct varobj *var,
@@ -821,3 +824,5 @@ mi_cmd_var_set_update_range (char *command, char **argv, int argc)
 
   varobj_set_child_range (var, from, to);
 }
+
+} /* namespace gdb */

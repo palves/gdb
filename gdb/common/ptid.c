@@ -20,6 +20,9 @@
 #include "common-defs.h"
 #include "ptid.h"
 
+namespace gdb {
+
+
 /* See ptid.h for these.  */
 
 ptid_t null_ptid = { 0, 0, 0 };
@@ -129,3 +132,5 @@ ptid_match (ptid_t ptid, ptid_t filter)
 
   return 0;
 }
+
+} /* namespace gdb */

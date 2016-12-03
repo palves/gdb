@@ -51,6 +51,9 @@
 
 #include "features/nios2.c"
 
+namespace gdb {
+
+
 /* Control debugging information emitted in this file.  */
 
 static int nios2_debug = 0;
@@ -2388,3 +2391,5 @@ _initialize_nios2_tdep (void)
 			   NULL,
 			   &setdebuglist, &showdebuglist);
 }
+
+} /* namespace gdb */

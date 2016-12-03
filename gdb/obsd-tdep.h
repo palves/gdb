@@ -20,9 +20,13 @@
 #ifndef OBSD_TDEP_H
 #define OBSD_TDEP_H 1
 
+namespace gdb {
+
 struct gdbarch;
 
 CORE_ADDR obsd_skip_solib_resolver (struct gdbarch *, CORE_ADDR);
 void obsd_init_abi (struct gdbarch_info, struct gdbarch *);
+
+} /* namespace gdb */
 
 #endif /* obsd-tdep.h */

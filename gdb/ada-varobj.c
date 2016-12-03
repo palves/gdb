@@ -23,6 +23,9 @@
 #include "language.h"
 #include "valprint.h"
 
+namespace gdb {
+
+
 /* Implementation principle used in this unit:
 
    For our purposes, the meat of the varobj object is made of two
@@ -1018,3 +1021,5 @@ const struct lang_varobj_ops ada_varobj_ops =
   ada_value_has_mutated,
   varobj_default_is_path_expr_parent
 };
+
+} /* namespace gdb */

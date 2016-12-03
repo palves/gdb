@@ -47,6 +47,9 @@
 
 #include "proc-utils.h"
 
+namespace gdb {
+
+
 /*  Much of the information used in the /proc interface, particularly for
     printing status information, is kept as tables of structures of the
     following form.  These tables can be used to map numeric values to
@@ -792,3 +795,5 @@ Show filename for /proc tracefile."), NULL,
 			    NULL, /* FIXME: i18n: */
 			    &setlist, &showlist);
 }
+
+} /* namespace gdb */

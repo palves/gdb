@@ -34,6 +34,9 @@
 #include "ppc-linux-tdep.h"
 #include "spu-tdep.h"
 
+namespace gdb {
+
+
 /* This module's target vector.  */
 static struct target_ops spu_ops;
 
@@ -407,3 +410,5 @@ _initialize_spu_multiarch (void)
   observer_attach_solib_unloaded (spu_multiarch_solib_unloaded);
 }
 
+
+} /* namespace gdb */

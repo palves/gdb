@@ -20,6 +20,8 @@
 #ifndef GDB_DLFCN_H
 #define GDB_DLFCN_H
 
+namespace gdb {
+
 /* Load the dynamic library file named FILENAME, and return a handle
    for that dynamic library.  Return NULL if the loading fails for any
    reason.  */
@@ -45,5 +47,7 @@ int gdb_dlclose (void *handle);
    this platform.  */
 
 int is_dl_available(void);
+
+} /* namespace gdb */
 
 #endif /* GDB_DLFCN_H */

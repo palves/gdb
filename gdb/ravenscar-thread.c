@@ -31,6 +31,9 @@
 #include "regcache.h"
 #include "objfiles.h"
 
+namespace gdb {
+
+
 /* If non-null, ravenscar task support is enabled.  */
 static int ravenscar_task_support = 1;
 
@@ -454,3 +457,5 @@ Ravenscar run-time library for bareboard configuration."),
 			   NULL, show_ravenscar_task_switching_command,
 			   &set_ravenscar_list, &show_ravenscar_list);
 }
+
+} /* namespace gdb */

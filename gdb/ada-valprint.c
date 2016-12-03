@@ -32,6 +32,9 @@
 #include "infcall.h"
 #include "objfiles.h"
 
+namespace gdb {
+
+
 static int print_field_values (struct type *, const gdb_byte *,
 			       int,
 			       struct ui_file *, int,
@@ -1224,3 +1227,5 @@ ada_value_print (struct value *val0, struct ui_file *stream,
 	     value_embedded_offset (val), address,
 	     stream, 0, val, &opts, current_language);
 }
+
+} /* namespace gdb */

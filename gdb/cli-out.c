@@ -26,6 +26,9 @@
 #include "completer.h"
 #include "readline/readline.h"
 
+namespace gdb {
+
+
 typedef struct cli_ui_out_data cli_out_data;
 
 /* Prototypes for local functions */
@@ -487,3 +490,5 @@ cli_display_match_list (char **matches, int len, int max)
   gdb_display_match_list (matches, len, max, &displayer);
   rl_forced_update_display ();
 }
+
+} /* namespace gdb */

@@ -20,6 +20,8 @@
 #ifndef JIT_H
 #define JIT_H
 
+namespace gdb {
+
 /* When the JIT breakpoint fires, the inferior wants us to take one of
    these actions.  These values are used by the inferior, so the
    values of these enums cannot be changed.  */
@@ -79,5 +81,7 @@ extern void jit_breakpoint_re_set (void);
    that the JIT event breakpoint has fired.  */
 
 extern void jit_event_handler (struct gdbarch *gdbarch);
+
+} /* namespace gdb */
 
 #endif /* JIT_H */

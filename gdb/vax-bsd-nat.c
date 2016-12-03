@@ -102,6 +102,9 @@ vaxbsd_store_inferior_registers (struct target_ops *ops,
 
 #include "bsd-kvm.h"
 
+namespace gdb {
+
+
 static int
 vaxbsd_supply_pcb (struct regcache *regcache, struct pcb *pcb)
 {
@@ -144,3 +147,5 @@ _initialize_vaxbsd_nat (void)
   /* Support debugging kernel virtual memory images.  */
   bsd_kvm_add_target (vaxbsd_supply_pcb);
 }
+
+} /* namespace gdb */

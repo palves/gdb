@@ -29,6 +29,9 @@
 #include "vec.h"
 #include "typeprint.h"
 
+namespace gdb {
+
+
 typedef struct pyty_type_object
 {
   PyObject_HEAD
@@ -1722,3 +1725,5 @@ PyTypeObject type_iterator_object_type = {
   typy_iterator_iternext,	  /*tp_iternext */
   0				  /*tp_methods */
 };
+
+} /* namespace gdb */

@@ -43,6 +43,9 @@
 #include "gdb/sim-ft32.h"
 #include <algorithm>
 
+namespace gdb {
+
+
 #define RAM_BIAS  0x800000  /* Bias added to RAM addresses.  */
 
 /* Local functions.  */
@@ -664,3 +667,5 @@ _initialize_ft32_tdep (void)
 {
   register_gdbarch_init (bfd_arch_ft32, ft32_gdbarch_init);
 }
+
+} /* namespace gdb */

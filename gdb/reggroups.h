@@ -22,6 +22,8 @@
 #ifndef REGGROUPS_H
 #define REGGROUPS_H
 
+namespace gdb {
+
 struct gdbarch;
 struct reggroup;
 
@@ -61,5 +63,7 @@ extern struct reggroup *reggroup_prev (struct gdbarch *gdbarch,
 /* Is REGNUM a member of REGGROUP?  */
 extern int default_register_reggroup_p (struct gdbarch *gdbarch, int regnum,
 					struct reggroup *reggroup);
+
+} /* namespace gdb */
 
 #endif

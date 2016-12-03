@@ -21,6 +21,9 @@
 
 #ifdef HAVE_GETAUXVAL
 #include <sys/auxv.h>
+
+namespace gdb {
+
 #endif
 
 #ifdef __powerpc64__
@@ -73,3 +76,5 @@ ppc64_64bit_inferior_p (long msr)
 }
 
 #endif
+
+} /* namespace gdb */

@@ -28,6 +28,9 @@
 #include "cp-abi.h"
 #include "target.h"
 #include "objfiles.h"
+
+namespace gdb {
+
 
 
 /* A helper for c_textual_element_type.  This checks the name of the
@@ -697,3 +700,5 @@ c_value_print (struct value *val, struct ui_file *stream,
 	     stream, 0,
 	     val, &opts, current_language);
 }
+
+} /* namespace gdb */

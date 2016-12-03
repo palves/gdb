@@ -22,6 +22,8 @@
 #ifndef TUI_IO_H
 #define TUI_IO_H
 
+namespace gdb {
+
 struct ui_out;
 
 /* Print the string in the curses command window.  */
@@ -51,5 +53,7 @@ extern int key_is_start_sequence (int ch);
 extern int key_is_end_sequence (int ch);
 extern int key_is_backspace (int ch);
 extern int key_is_command_char (int ch);
+
+} /* namespace gdb */
 
 #endif

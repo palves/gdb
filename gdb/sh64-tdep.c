@@ -47,6 +47,9 @@
 #include "sh64-tdep.h"
 #include <algorithm>
 
+namespace gdb {
+
+
 /* Information that is dependent on the processor variant.  */
 enum sh_abi
   {
@@ -2448,3 +2451,5 @@ sh64_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 
   return gdbarch;
 }
+
+} /* namespace gdb */

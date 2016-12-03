@@ -34,6 +34,9 @@
 #include "charset.h"
 #include "c-lang.h"
 
+namespace gdb {
+
+
 
 /* Local functions */
 
@@ -368,3 +371,5 @@ _initialize_f_language (void)
 
   add_language (&f_language_defn);
 }
+
+} /* namespace gdb */

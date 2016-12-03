@@ -64,6 +64,9 @@
 #include "darwin-nat.h"
 #include "common/filestuff.h"
 
+namespace gdb {
+
+
 /* Quick overview.
    Darwin kernel is Mach + BSD derived kernel.  Note that they share the
    same memory space and are linked together (ie there is no micro-kernel).
@@ -2395,3 +2398,5 @@ reported by the kernel."),
 			   &set_enable_mach_exceptions, NULL,
 			   &setlist, &showlist);
 }
+
+} /* namespace gdb */

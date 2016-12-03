@@ -19,6 +19,8 @@
 #ifndef SELFTEST_H
 #define SELFTEST_H
 
+namespace gdb {
+
 /* A test is just a function that does some checks and throws an
    exception if something has gone wrong.  */
 
@@ -51,5 +53,7 @@ extern void run_self_tests (void);
 
 #define STATIC_SELF_CHECK(VALUE)			\
   static_assert (VALUE, STATIC_SELF_CHECK_FAIL_MSG)
+
+} /* namespace gdb */
 
 #endif /* SELFTEST_H */

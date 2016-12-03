@@ -33,6 +33,9 @@
 #include "amd64-nat.h"
 #include "x86-bsd-nat.h"
 #include "inf-ptrace.h"
+
+namespace gdb {
+
 
 
 /* Fetch register REGNUM from the inferior.  If REGNUM is -1, do this
@@ -157,3 +160,5 @@ amd64bsd_target (void)
   t->to_store_registers = amd64bsd_store_inferior_registers;
   return t;
 }
+
+} /* namespace gdb */

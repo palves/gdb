@@ -27,6 +27,9 @@
 #include "buildsym.h"
 #include "dictionary.h"
 
+namespace gdb {
+
+
 /* This file implements dictionaries, which are tables that associate
    symbols to names.  They are represented by an opaque type 'struct
    dictionary'.  That type has various internal implementations, which
@@ -943,3 +946,5 @@ add_symbol_linear_expandable (struct dictionary *dict,
 
   DICT_LINEAR_SYM (dict, nsyms - 1) = sym;
 }
+
+} /* namespace gdb */

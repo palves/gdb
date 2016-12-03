@@ -22,6 +22,8 @@
 
 #include "vec.h"
 
+namespace gdb {
+
 typedef char *char_ptr;
 typedef const char *const_char_ptr;
 
@@ -45,5 +47,7 @@ extern void dirnames_to_char_ptr_vec_append (VEC (char_ptr) **vecp,
 					     const char *dirnames);
 
 extern VEC (char_ptr) *dirnames_to_char_ptr_vec (const char *dirnames);
+
+} /* namespace gdb */
 
 #endif /* GDB_VECS_H */

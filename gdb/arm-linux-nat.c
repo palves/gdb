@@ -45,6 +45,9 @@
 /* Defines ps_err_e, struct ps_prochandle.  */
 #include "gdb_proc_service.h"
 
+namespace gdb {
+
+
 #ifndef PTRACE_GET_THREAD_AREA
 #define PTRACE_GET_THREAD_AREA 22
 #endif
@@ -1317,3 +1320,5 @@ _initialize_arm_linux_nat (void)
   linux_nat_set_new_fork (t, arm_linux_new_fork);
   linux_nat_set_forget_process (t, arm_linux_forget_process);
 }
+
+} /* namespace gdb */

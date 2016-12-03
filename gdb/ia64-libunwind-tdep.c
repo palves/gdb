@@ -37,6 +37,9 @@
 
 #include "complaints.h"
 
+namespace gdb {
+
+
 /* IA-64 is the only target that currently uses ia64-libunwind-tdep.
    Note how UNW_TARGET, UNW_OBJ, etc. are compile time constants below.
    Those come from libunwind's headers, and are target dependent.
@@ -604,3 +607,5 @@ _initialize_libunwind_frame (void)
 
   libunwind_initialized = libunwind_load ();
 }
+
+} /* namespace gdb */

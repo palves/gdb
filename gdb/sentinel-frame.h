@@ -20,6 +20,8 @@
 #if !defined (SENTINEL_FRAME_H)
 #define SENTINEL_FRAME_H 1
 
+namespace gdb {
+
 struct frame_unwind;
 struct regcache;
 
@@ -35,5 +37,7 @@ extern void *sentinel_frame_cache (struct regcache *regcache);
 /* At present there is only one type of sentinel frame.  */
 
 extern const struct frame_unwind sentinel_frame_unwind;
+
+} /* namespace gdb */
 
 #endif /* !defined (SENTINEL_FRAME_H)  */

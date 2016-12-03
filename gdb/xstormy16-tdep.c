@@ -36,6 +36,9 @@
 #include "osabi.h"
 #include "objfiles.h"
 
+namespace gdb {
+
+
 enum gdb_regnum
 {
   /* Xstormy16 has 16 general purpose registers (R0-R15) plus PC.
@@ -868,3 +871,5 @@ _initialize_xstormy16_tdep (void)
 {
   register_gdbarch_init (bfd_arch_xstormy16, xstormy16_gdbarch_init);
 }
+
+} /* namespace gdb */

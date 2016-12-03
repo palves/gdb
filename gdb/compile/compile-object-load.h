@@ -19,6 +19,8 @@
 
 #include "compile-internal.h"
 
+namespace gdb {
+
 struct munmap_list;
 
 struct compile_module
@@ -58,5 +60,7 @@ extern struct compile_module *compile_object_load
   (const compile_file_names &fnames,
    enum compile_i_scope_types scope, void *scope_data);
 extern void munmap_list_free (struct munmap_list *head);
+
+} /* namespace gdb */
 
 #endif /* GDB_COMPILE_OBJECT_LOAD_H */

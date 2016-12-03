@@ -25,6 +25,8 @@
 
 #include "common/enum-flags.h"
 
+namespace gdb {
+
 /* The ui_out structure */
 
 struct ui_out;
@@ -230,5 +232,7 @@ extern struct ui_out *ui_out_new (const struct ui_out_impl *impl, void *data,
 /* Redirect the ouptut of a ui_out object temporarily.  */
 
 extern int ui_out_redirect (struct ui_out *uiout, struct ui_file *outstream);
+
+} /* namespace gdb */
 
 #endif /* UI_OUT_H */

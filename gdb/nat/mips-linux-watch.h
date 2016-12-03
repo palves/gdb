@@ -21,6 +21,8 @@
 #include <asm/ptrace.h>
 #include "break-common.h"
 
+namespace gdb {
+
 #define MAX_DEBUG_REGISTER 8
 
 /* If macro PTRACE_GET_WATCH_REGS is not defined, kernel header doesn't
@@ -115,4 +117,6 @@ uint32_t mips_linux_watch_type_to_irw (enum target_hw_bp_type type);
 int mips_linux_read_watch_registers (long lwpid,
 				     struct pt_watch_regs *watch_readback,
 				     int *watch_readback_valid, int force);
+} /* namespace gdb */
+
 #endif

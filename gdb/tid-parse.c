@@ -23,6 +23,9 @@
 #include "gdbthread.h"
 #include <ctype.h>
 
+namespace gdb {
+
+
 /* See tid-parse.h.  */
 
 void ATTRIBUTE_NORETURN
@@ -323,3 +326,5 @@ tid_is_in_list (const char *list, int default_inferior,
     }
   return 0;
 }
+
+} /* namespace gdb */

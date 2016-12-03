@@ -28,6 +28,9 @@
 #include "target.h"
 #include "linux-nat.h"
 
+namespace gdb {
+
+
 void
 supply_gregset (struct regcache *regcache, const prgregset_t *gregs)
 {
@@ -72,3 +75,5 @@ _initialize_sparc_linux_nat (void)
   /* Register the target.  */
   linux_nat_add_target (t);
 }
+
+} /* namespace gdb */

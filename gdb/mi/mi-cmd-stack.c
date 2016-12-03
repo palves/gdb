@@ -35,6 +35,9 @@
 #include <ctype.h>
 #include "mi-parse.h"
 
+namespace gdb {
+
+
 enum what_to_list { locals, arguments, all };
 
 static void list_args_or_locals (enum what_to_list what,
@@ -708,3 +711,5 @@ mi_cmd_stack_info_frame (char *command, char **argv, int argc)
 
   print_frame_info (get_selected_frame (NULL), 1, LOC_AND_ADDRESS, 0, 1);
 }
+
+} /* namespace gdb */

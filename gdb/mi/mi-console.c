@@ -26,6 +26,9 @@
 
 #include "defs.h"
 #include "mi-console.h"
+
+namespace gdb {
+
 static ui_file_fputs_ftype mi_console_file_fputs;
 static ui_file_flush_ftype mi_console_file_flush;
 static ui_file_delete_ftype mi_console_file_delete;
@@ -156,3 +159,5 @@ mi_console_set_raw (struct ui_file *file, struct ui_file *raw)
 
   mi_console->raw = raw;
 }
+
+} /* namespace gdb */

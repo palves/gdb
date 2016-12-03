@@ -21,6 +21,8 @@
 
 #include "remote-notif.h"
 
+namespace gdb {
+
 struct target_desc;
 
 /* Read a packet from the remote machine, with error checking, and
@@ -54,4 +56,6 @@ extern int remote_register_number_and_offset (struct gdbarch *gdbarch,
 					      int *poffset);
 
 extern void remote_notif_get_pending_events (struct notif_client *np);
+} /* namespace gdb */
+
 #endif

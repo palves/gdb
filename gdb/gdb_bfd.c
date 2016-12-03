@@ -34,6 +34,9 @@
 #include "gdb/fileio.h"
 #include "inferior.h"
 
+namespace gdb {
+
+
 typedef bfd *bfdp;
 DEF_VEC_P (bfdp);
 
@@ -1026,3 +1029,5 @@ When non-zero, bfd cache specific debugging is enabled."),
 			     &show_bfd_cache_debug,
 			     &setdebuglist, &showdebuglist);
 }
+
+} /* namespace gdb */

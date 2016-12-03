@@ -40,6 +40,9 @@
 #include "xml-syscall.h"
 #include "gdb_signals.h"
 
+namespace gdb {
+
+
 static struct target_so_ops mips_svr4_so_ops;
 
 /* This enum represents the signals' numbers on the MIPS
@@ -1775,3 +1778,5 @@ _initialize_mips_linux_tdep (void)
 			      mips_linux_init_abi);
     }
 }
+
+} /* namespace gdb */

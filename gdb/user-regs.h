@@ -22,6 +22,8 @@
 #ifndef USER_REGS_H
 #define USER_REGS_H
 
+namespace gdb {
+
 /* Implement both builtin, and architecture specific, per-frame user
    visible registers.
 
@@ -68,5 +70,7 @@ extern void user_reg_add_builtin (const char *name,
 /* Add a per-architecture frame register.  */
 extern void user_reg_add (struct gdbarch *gdbarch, const char *name, 
 			  user_reg_read_ftype *read, const void *baton);
+
+} /* namespace gdb */
 
 #endif

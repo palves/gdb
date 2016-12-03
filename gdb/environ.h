@@ -17,6 +17,8 @@
 #if !defined (ENVIRON_H)
 #define ENVIRON_H 1
 
+namespace gdb {
+
 /* We manipulate environments represented as these structures.  */
 
 struct gdb_environ
@@ -45,5 +47,7 @@ extern void set_in_environ (struct gdb_environ *, const char *, const char *);
 extern void unset_in_environ (struct gdb_environ *, const char *);
 
 extern char **environ_vector (struct gdb_environ *);
+
+} /* namespace gdb */
 
 #endif /* defined (ENVIRON_H) */

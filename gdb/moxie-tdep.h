@@ -20,6 +20,8 @@
 #ifndef MOXIE_TDEP_H
 #define MOXIE_TDEP_H
 
+namespace gdb {
+
 struct gdbarch_tdep
 {
   /* gdbarch target dependent data here.  Currently unused for MOXIE.  */
@@ -39,5 +41,7 @@ enum moxie_regnum
 };
 
 #define MOXIE_NUM_REGS 18
+
+} /* namespace gdb */
 
 #endif /* moxie-tdep.h */

@@ -38,6 +38,9 @@
 
 #include <signal.h>
 
+namespace gdb {
+
+
 /* This module implements "target record-full", also known as "process
    record and replay".  This target sits on top of a "normal" target
    (a target that "has execution"), and provides a record and replay
@@ -2927,3 +2930,5 @@ When ON, query if PREC cannot record memory change of next instruction."),
 		     &show_record_cmdlist);
   deprecate_cmd (c, "show record full memory-query");
 }
+
+} /* namespace gdb */

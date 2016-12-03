@@ -29,6 +29,8 @@ struct regcache;
 #include "exec.h"
 #include "target.h"
 
+namespace gdb {
+
 /* Return the name of the executable file as a string.
    ERR nonzero means get error if there is none specified;
    otherwise return 0 in that case.  */
@@ -237,5 +239,7 @@ struct core_fns
 extern void deprecated_add_core_fns (struct core_fns *cf);
 extern int default_core_sniffer (struct core_fns *cf, bfd * abfd);
 extern int default_check_format (bfd * abfd);
+
+} /* namespace gdb */
 
 #endif /* !defined (GDBCORE_H) */

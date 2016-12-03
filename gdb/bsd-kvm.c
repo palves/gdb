@@ -40,6 +40,9 @@
 
 #include "bsd-kvm.h"
 
+namespace gdb {
+
+
 /* Kernel memory device file.  */
 static const char *bsd_kvm_corefile;
 
@@ -400,3 +403,5 @@ Generic command for manipulating the kernel memory interface."),
 
   bsd_kvm_ptid = ptid_build (1, 1, 0);
 }
+
+} /* namespace gdb */

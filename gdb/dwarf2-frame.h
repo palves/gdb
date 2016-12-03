@@ -22,6 +22,8 @@
 #ifndef DWARF2_FRAME_H
 #define DWARF2_FRAME_H 1
 
+namespace gdb {
+
 struct gdbarch;
 struct objfile;
 struct frame_info;
@@ -141,5 +143,7 @@ extern int dwarf2_fetch_cfa_info (struct gdbarch *gdbarch, CORE_ADDR pc,
 				  CORE_ADDR *text_offset_out,
 				  const gdb_byte **cfa_start_out,
 				  const gdb_byte **cfa_end_out);
+
+} /* namespace gdb */
 
 #endif /* dwarf2-frame.h */

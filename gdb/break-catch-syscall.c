@@ -30,6 +30,9 @@
 #include "observer.h"
 #include "xml-syscall.h"
 
+namespace gdb {
+
+
 /* An instance of this type is used to represent a syscall catchpoint.
    It includes a "struct breakpoint" as a kind of base class; users
    downcast to "struct breakpoint *" when needed.  A breakpoint is
@@ -734,3 +737,5 @@ groups or system call numbers."),
 		     CATCH_PERMANENT,
 		     CATCH_TEMPORARY);
 }
+
+} /* namespace gdb */

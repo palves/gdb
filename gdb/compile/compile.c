@@ -40,6 +40,9 @@
 #include "gdb_wait.h"
 #include "valprint.h"
 
+namespace gdb {
+
+
 
 
 /* Initial filename for temporary files.  */
@@ -745,3 +748,5 @@ String quoting is parsed like in shell, for example:\n\
   );
   set_compile_args (compile_args, 0, NULL);
 }
+
+} /* namespace gdb */

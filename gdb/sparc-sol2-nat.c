@@ -53,6 +53,9 @@
 
 #include "sparc64-tdep.h"
 
+namespace gdb {
+
+
 #define sparc_supply_gregset sparc64_supply_gregset
 #define sparc_supply_fpregset sparc64_supply_fpregset
 #define sparc_collect_gregset sparc64_collect_gregset
@@ -112,3 +115,5 @@ _initialize_sparc_sol2_nat (void)
 #endif
   add_target (t);
 }
+
+} /* namespace gdb */

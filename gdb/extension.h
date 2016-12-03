@@ -23,6 +23,8 @@
 #include "mi/mi-cmds.h" /* For PRINT_NO_VALUES, etc.  */
 #include "common/vec.h"
 
+namespace gdb {
+
 struct breakpoint;
 struct command_line;
 struct frame_info;
@@ -263,5 +265,7 @@ extern struct type **get_xmethod_arg_types (struct xmethod_worker *, int *);
 extern struct type *get_xmethod_result_type (struct xmethod_worker *,
 					     struct value *object,
 					     struct value **args, int nargs);
+
+} /* namespace gdb */
 
 #endif /* EXTENSION_H */

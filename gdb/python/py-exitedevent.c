@@ -20,6 +20,9 @@
 #include "defs.h"
 #include "py-event.h"
 
+namespace gdb {
+
+
 extern PyTypeObject exited_event_object_type
     CPYCHECKER_TYPE_OBJECT_FOR_TYPEDEF ("event_object");
 
@@ -89,3 +92,5 @@ GDBPY_NEW_EVENT_TYPE (exited,
                       "ExitedEvent",
                       "GDB exited event object",
                       event_object_type);
+
+} /* namespace gdb */

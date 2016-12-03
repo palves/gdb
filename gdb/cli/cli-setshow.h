@@ -17,6 +17,8 @@
 #if !defined (CLI_SETSHOW_H)
 #define CLI_SETSHOW_H 1
 
+namespace gdb {
+
 struct cmd_list_element;
 
 /* Parse ARG, an option to a boolean variable.
@@ -30,5 +32,7 @@ extern void do_show_command (const char *arg, int from_tty,
 
 extern void cmd_show_list (struct cmd_list_element *list, int from_tty,
 			   const char *prefix);
+
+} /* namespace gdb */
 
 #endif /* !defined (CLI_SETSHOW_H) */

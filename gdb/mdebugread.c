@@ -68,6 +68,9 @@
 
 #include "expression.h"
 
+namespace gdb {
+
+
 extern void _initialize_mdebugread (void);
 
 /* Provide a way to test if we have both ECOFF and ELF symbol tables.
@@ -4900,3 +4903,5 @@ _initialize_mdebugread (void)
   mdebug_regparm_index
     = register_symbol_register_impl (LOC_REGPARM_ADDR, &mdebug_register_funcs);
 }
+
+} /* namespace gdb */

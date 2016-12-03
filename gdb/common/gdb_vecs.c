@@ -21,6 +21,9 @@
 #include "gdb_vecs.h"
 #include "host-defs.h"
 
+namespace gdb {
+
+
 /* Call xfree for each element of CHAR_PTR_VEC and final VEC_free for
    CHAR_PTR_VEC itself.
 
@@ -112,3 +115,5 @@ dirnames_to_char_ptr_vec (const char *dirnames)
 
   return retval;
 }
+
+} /* namespace gdb */

@@ -36,6 +36,9 @@
 #include "cp-support.h"
 #include "gdbcmd.h"
 
+namespace gdb {
+
+
 #ifndef DEV_TTY
 #define DEV_TTY "/dev/tty"
 #endif
@@ -2237,3 +2240,5 @@ just the symbol table structures themselves."),
 Check consistency of currently expanded psymtabs versus symtabs."),
 	   &maintenancelist);
 }
+
+} /* namespace gdb */

@@ -25,6 +25,8 @@
 #ifndef DFP_H
 #define DFP_H
 
+namespace gdb {
+
 /* When using decimal128, this is the maximum string length + 1
  * (value comes from libdecnumber's DECIMAL128_String constant).  */
 #define MAX_DECIMAL_STRING  43
@@ -47,5 +49,7 @@ extern int decimal_compare (const gdb_byte *, int, enum bfd_endian,
 			    const gdb_byte *, int, enum bfd_endian);
 extern void decimal_convert (const gdb_byte *, int, enum bfd_endian,
 			     gdb_byte *, int, enum bfd_endian);
+
+} /* namespace gdb */
 
 #endif

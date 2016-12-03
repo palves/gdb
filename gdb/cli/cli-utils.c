@@ -23,6 +23,9 @@
 
 #include <ctype.h>
 
+namespace gdb {
+
+
 /* See documentation in cli-utils.h.  */
 
 int
@@ -298,3 +301,5 @@ check_for_argument (char **str, char *arg, int arg_len)
     }
   return 0;
 }
+
+} /* namespace gdb */

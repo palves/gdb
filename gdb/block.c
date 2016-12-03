@@ -27,6 +27,9 @@
 #include "gdbtypes.h"
 #include "objfiles.h"
 
+namespace gdb {
+
+
 /* This is used by struct block to store namespace-related info for
    C++ files, namely using declarations and the current namespace in
    scope.  */
@@ -877,3 +880,5 @@ block_find_non_opaque_type_preferred (struct symbol *sym, void *data)
   *best = sym;
   return 0;
 }
+
+} /* namespace gdb */

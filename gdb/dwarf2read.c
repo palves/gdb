@@ -74,6 +74,9 @@
 #include <sys/types.h>
 #include <algorithm>
 
+namespace gdb {
+
+
 typedef struct symbol *symbolp;
 DEF_VEC_P (symbolp);
 
@@ -23635,3 +23638,5 @@ Usage: save gdb-index DIRECTORY"),
   dwarf2_loclist_block_index = register_symbol_block_impl (LOC_BLOCK,
 					&dwarf2_block_frame_base_loclist_funcs);
 }
+
+} /* namespace gdb */

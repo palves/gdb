@@ -32,6 +32,9 @@
 #include "inf-child.h"
 #include "gdbthread.h"
 
+namespace gdb {
+
+
 
 
 #ifdef PT_GET_PROCESS_STATE
@@ -838,3 +841,5 @@ inf_ptrace_trad_target (CORE_ADDR (*register_u_offset)
 
   return t;
 }
+
+} /* namespace gdb */

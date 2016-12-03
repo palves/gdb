@@ -61,6 +61,9 @@
 #include "arch-utils.h"
 #include "cli/cli-utils.h"
 
+namespace gdb {
+
+
 /* Define whether or not the C operator '/' truncates towards zero for
    differently signed operands (truncation direction is undefined in C).
    Copied from valarith.c.  */
@@ -14281,3 +14284,5 @@ DWARF attribute."),
   ada_pspace_data_handle
     = register_program_space_data_with_cleanup (NULL, ada_pspace_data_cleanup);
 }
+
+} /* namespace gdb */

@@ -19,6 +19,8 @@
 #ifndef STABSREAD_H
 #define STABSREAD_H
 
+namespace gdb {
+
 struct objfile;
 
 /* Definitions, prototypes, etc for stabs debugging format support
@@ -199,5 +201,7 @@ extern void free_header_files (void);
 extern void init_header_files (void);
 
 #undef EXTERN
+
+} /* namespace gdb */
 
 #endif

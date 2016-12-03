@@ -90,4 +90,8 @@
 /* Pull in unique_xmalloc_ptr.  */
 #include "common/gdb_unique_ptr.h"
 
+namespace gdb {
+
+} /* namespace gdb */
+
 #endif /* COMMON_DEFS_H */

@@ -23,6 +23,8 @@
 #include "buffer.h"
 #include "event-loop.h"
 
+namespace gdb {
+
 struct tl_interp_info;
 
 /* Prompt state.  */
@@ -296,5 +298,7 @@ extern void do_restore_instream_cleanup (void *stream);
 extern char *handle_line_of_input (struct buffer *cmd_line_buffer,
 				   char *rl, int repeat,
 				   char *annotation_suffix);
+
+} /* namespace gdb */
 
 #endif

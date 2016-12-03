@@ -21,6 +21,8 @@
 #include "gcc-c-interface.h"
 #include "common/enum-flags.h"
 
+namespace gdb {
+
 /* enum-flags wrapper.  */
 DEF_ENUM_FLAGS_TYPE (enum gcc_qualifiers, gcc_qualifiers_flags);
 
@@ -176,5 +178,7 @@ private:
   std::string m_source_file;
   std::string m_object_file;
 };
+
+} /* namespace gdb */
 
 #endif /* GDB_COMPILE_INTERNAL_H */

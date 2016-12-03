@@ -35,6 +35,9 @@
 #include <dirent.h>
 #include <ctype.h>
 
+namespace gdb {
+
+
 struct fork_info *fork_list;
 static int highest_fork_num;
 
@@ -815,3 +818,5 @@ Detach from a checkpoint (experimental)."),
   add_info ("checkpoints", info_checkpoints_command,
 	    _("IDs of currently known checkpoints."));
 }
+
+} /* namespace gdb */

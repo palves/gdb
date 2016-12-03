@@ -21,6 +21,8 @@
 #define TARGET_COMMON_H
 
 #include "target/waitstatus.h"
+
+namespace gdb {
 /* This header is a stopgap until more code is shared.  */
 
 /* Read LEN bytes of target memory at address MEMADDR, placing the
@@ -94,5 +96,7 @@ extern void target_mourn_inferior (ptid_t ptid);
    simultaneously, zero otherwise.  */
 
 extern int target_supports_multi_process (void);
+
+} /* namespace gdb */
 
 #endif /* TARGET_COMMON_H */

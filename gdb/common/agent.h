@@ -20,6 +20,8 @@
 #ifndef COMMON_AGENT_H
 #define COMMON_AGENT_H
 
+namespace gdb {
+
 int agent_run_command (int pid, const char *cmd, int len);
 
 int agent_look_up_symbols (void *);
@@ -59,5 +61,7 @@ enum agent_capa
 int agent_capability_check (enum agent_capa);
 
 void agent_capability_invalidate (void);
+
+} /* namespace gdb */
 
 #endif

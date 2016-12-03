@@ -58,6 +58,9 @@
 #include <algorithm>
 #include <string>
 
+namespace gdb {
+
+
 /* Prototypes for local command functions */
 
 static void complete_command (char *, int);
@@ -2013,3 +2016,5 @@ when GDB is started."), gdbinit);
 	       source_help_text, &cmdlist);
   set_cmd_completer (c, filename_completer);
 }
+
+} /* namespace gdb */

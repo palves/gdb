@@ -27,6 +27,9 @@
 
 #include "vax-tdep.h"
 
+namespace gdb {
+
+
 /* Signal trampolines.  */
 
 /* Since OpenBSD 3.2, the sigtramp routine is mapped at a random page
@@ -176,3 +179,5 @@ _initialize_vaxobsd_tdep (void)
   gdbarch_register_osabi (bfd_arch_vax, 0, GDB_OSABI_OPENBSD_AOUT,
 			  vaxobsd_init_abi);
 }
+
+} /* namespace gdb */

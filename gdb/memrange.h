@@ -22,6 +22,8 @@
 
 #include "vec.h"
 
+namespace gdb {
+
 /* Defines a [START, START + LENGTH) memory range.  */
 
 struct mem_range
@@ -52,5 +54,7 @@ extern int address_in_mem_range (CORE_ADDR addr,
    overlapping ranges.  */
 
 extern void normalize_mem_ranges (VEC(mem_range_s) *memory);
+
+} /* namespace gdb */
 
 #endif

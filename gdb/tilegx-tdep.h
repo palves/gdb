@@ -20,6 +20,8 @@
 #ifndef TILEGX_TDEP_H
 #define TILEGX_TDEP_H
 
+namespace gdb {
+
 /* TILE-Gx has 56 general purpose registers (R0 - R52, TP, SP, LR),
    plus 8 special general purpose registers (network and ZERO),
    plus 1 magic register (PC).
@@ -106,5 +108,7 @@ enum tilegx_regnum
   };
 
 enum { tilegx_reg_size = 8 };
+
+} /* namespace gdb */
 
 #endif /* tilegx-tdep.h */

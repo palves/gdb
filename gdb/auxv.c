@@ -34,6 +34,9 @@
 #include <unistd.h>
 #include <fcntl.h>
 
+namespace gdb {
+
+
 
 /* Implement the to_xfer_partial target_ops method.  This function
    handles access via /proc/PID/auxv, which is a common method for
@@ -586,3 +589,5 @@ This is information provided by the operating system at program startup."));
   observer_attach_inferior_appeared (invalidate_auxv_cache_inf);
   observer_attach_executable_changed (invalidate_auxv_cache);
 }
+
+} /* namespace gdb */

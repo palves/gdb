@@ -24,6 +24,8 @@
 
 #include "fileio.h"
 
+namespace gdb {
+
 struct cmd_list_element;
 
 /* Unified interface to remote fileio, called in remote.c from
@@ -41,5 +43,7 @@ extern void initialize_remote_fileio (
 /* Unpack a struct fio_stat.  */
 extern void remote_fileio_to_host_stat (struct fio_stat *fst,
 					struct stat *st);
+
+} /* namespace gdb */
 
 #endif

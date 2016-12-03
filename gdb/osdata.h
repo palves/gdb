@@ -22,6 +22,8 @@
 
 #include "vec.h"
 
+namespace gdb {
+
 typedef struct osdata_column
 {
   char *name;
@@ -50,5 +52,7 @@ struct cleanup *make_cleanup_osdata_free (struct osdata *data);
 struct osdata *get_osdata (const char *type);
 const char *get_osdata_column (struct osdata_item *item, const char *name);
 void info_osdata_command (char *type, int from_tty);
+
+} /* namespace gdb */
 
 #endif /* OSDATA_H */

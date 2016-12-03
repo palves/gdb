@@ -46,6 +46,9 @@
 #include "completer.h"
 #include "filestuff.h"
 
+namespace gdb {
+
+
 #ifndef O_LARGEFILE
 #define O_LARGEFILE 0
 #endif
@@ -1079,3 +1082,5 @@ _initialize_corelow (void)
 
   add_target_with_completer (&core_ops, filename_completer);
 }
+
+} /* namespace gdb */

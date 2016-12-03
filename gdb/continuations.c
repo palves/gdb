@@ -22,6 +22,9 @@
 #include "inferior.h"
 #include "continuations.h"
 
+namespace gdb {
+
+
 struct continuation
 {
   struct continuation *next;
@@ -132,3 +135,5 @@ discard_all_inferior_continuations (struct inferior *inf)
 {
   discard_my_continuations (&inf->continuations);
 }
+
+} /* namespace gdb */

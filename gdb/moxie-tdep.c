@@ -41,6 +41,9 @@
 #include "moxie-tdep.h"
 #include <algorithm>
 
+namespace gdb {
+
+
 /* Local functions.  */
 
 extern void _initialize_moxie_tdep (void);
@@ -1168,3 +1171,5 @@ _initialize_moxie_tdep (void)
 {
   register_gdbarch_init (bfd_arch_moxie, moxie_gdbarch_init);
 }
+
+} /* namespace gdb */

@@ -20,6 +20,8 @@
 #ifndef AMD64_NAT_H
 #define AMD64_NAT_H 1
 
+namespace gdb {
+
 struct regcache;
 
 /* General-purpose register set description for native 32-bit code.  */
@@ -53,5 +55,7 @@ extern void amd64_collect_native_gregset (const struct regcache *regcache,
    with local methods.  */
 
 extern struct target_ops *amd64bsd_target (void);
+
+} /* namespace gdb */
 
 #endif /* amd64-nat.h */

@@ -24,6 +24,8 @@
 #include "target.h"
 #include <signal.h>
 
+namespace gdb {
+
 struct arch_lwp_info;
 
 /* Structure describing an LWP.  This is public only for the purposes
@@ -210,5 +212,7 @@ int linux_nat_get_siginfo (ptid_t ptid, siginfo_t *siginfo);
 /* Set alternative SIGTRAP-like events recognizer.  */
 void linux_nat_set_status_is_event (struct target_ops *t,
 				    int (*status_is_event) (int status));
+
+} /* namespace gdb */
 
 #endif

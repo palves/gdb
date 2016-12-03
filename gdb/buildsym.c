@@ -98,6 +98,9 @@
 
 #include "stabsread.h"
 
+namespace gdb {
+
+
 /* Buildsym's counterpart to struct compunit_symtab.
    TODO(dje): Move all related global state into here.  */
 
@@ -1789,3 +1792,5 @@ buildsym_new_init (void)
 {
   buildsym_init ();
 }
+
+} /* namespace gdb */

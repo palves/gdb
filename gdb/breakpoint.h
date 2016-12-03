@@ -28,6 +28,8 @@
 #include "probe.h"
 #include <vector>
 
+namespace gdb {
+
 struct value;
 struct block;
 struct gdbpy_breakpoint_object;
@@ -1646,5 +1648,7 @@ extern char *ep_parse_optional_if_clause (char **arg);
 /* Print the "Thread ID hit" part of "Thread ID hit Breakpoint N" to
    UIOUT iff debugging multiple threads.  */
 extern void maybe_print_thread_hit_breakpoint (struct ui_out *uiout);
+
+} /* namespace gdb */
 
 #endif /* !defined (BREAKPOINT_H) */

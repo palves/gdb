@@ -20,6 +20,9 @@
 #include "defs.h"
 #include "py-events.h"
 
+namespace gdb {
+
+
 #ifdef IS_PY3K
 static struct PyModuleDef EventModuleDef =
 {
@@ -107,3 +110,5 @@ gdbpy_initialize_py_events (void)
 
   return 0;
 }
+
+} /* namespace gdb */

@@ -23,6 +23,9 @@
 #include "gdbcmd.h"
 #include "cli/cli-utils.h"
 
+namespace gdb {
+
+
 extern void _initialize_serial (void);
 
 /* Is serial being debugged?  */
@@ -748,3 +751,5 @@ When non-zero, serial port debugging is enabled."),
 			     NULL, /* FIXME: i18n: */
 			     &setdebuglist, &showdebuglist);
 }
+
+} /* namespace gdb */

@@ -22,6 +22,8 @@
 #ifndef INTERPS_H
 #define INTERPS_H
 
+namespace gdb {
+
 struct ui_out;
 struct interp;
 struct ui;
@@ -150,5 +152,7 @@ extern VEC (char_ptr) *interpreter_completer (struct cmd_list_element *ignore,
 #define INTERP_MI		"mi"
 #define INTERP_TUI		"tui"
 #define INTERP_INSIGHT		"insight"
+
+} /* namespace gdb */
 
 #endif

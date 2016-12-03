@@ -34,6 +34,9 @@
 
 #include "vax-tdep.h"
 
+namespace gdb {
+
+
 /* Return the name of register REGNUM.  */
 
 static const char *
@@ -524,3 +527,5 @@ _initialize_vax_tdep (void)
 {
   gdbarch_register (bfd_arch_vax, vax_gdbarch_init, NULL);
 }
+
+} /* namespace gdb */

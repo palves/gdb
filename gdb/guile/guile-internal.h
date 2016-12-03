@@ -28,6 +28,8 @@
 #include "symtab.h"
 #include "libguile.h"
 
+namespace gdb {
+
 struct block;
 struct frame_info;
 struct objfile;
@@ -658,5 +660,7 @@ extern void gdbscm_initialize_values (void);
         /*NOTREACHED */							\
       }									\
   } while (0)
+
+} /* namespace gdb */
 
 #endif /* GDB_GUILE_INTERNAL_H */

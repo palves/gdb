@@ -19,6 +19,8 @@
 #ifndef S390_TDEP_H
 #define S390_TDEP_H
 
+namespace gdb {
+
 /* Hardware capabilities. */
 
 #ifndef HWCAP_S390_HIGH_GPRS
@@ -215,5 +217,7 @@ extern struct target_desc *tdesc_s390x_linux64v2;
 extern struct target_desc *tdesc_s390x_te_linux64;
 extern struct target_desc *tdesc_s390x_vx_linux64;
 extern struct target_desc *tdesc_s390x_tevx_linux64;
+
+} /* namespace gdb */
 
 #endif

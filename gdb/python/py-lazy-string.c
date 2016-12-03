@@ -24,6 +24,9 @@
 #include "valprint.h"
 #include "language.h"
 
+namespace gdb {
+
+
 typedef struct {
   PyObject_HEAD
   /*  Holds the address of the lazy string.  */
@@ -250,3 +253,5 @@ PyTypeObject lazy_string_object_type = {
   0,				  /* tp_members */
   lazy_string_object_getset	  /* tp_getset */
 };
+
+} /* namespace gdb */

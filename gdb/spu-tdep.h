@@ -19,6 +19,8 @@
 #ifndef SPU_TDEP_H
 #define SPU_TDEP_H
 
+namespace gdb {
+
 /* Number of registers.  */
 #define SPU_NUM_REGS         130
 #define SPU_NUM_PSEUDO_REGS  6
@@ -113,5 +115,7 @@ enum spu_regnum
   (((addr) & (ULONGEST)1 << 63)? (ULONGEST)(addr) & 0xffffffff : (addr))
 
 #define SPU_OVERLAY_LMA ((ULONGEST)1 << 62)
+
+} /* namespace gdb */
 
 #endif

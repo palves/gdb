@@ -38,6 +38,9 @@
 #include <ctype.h>
 #include <algorithm>
 
+namespace gdb {
+
+
 /* Maximum number of wchars returned from wchar_iterate.  */
 #define MAX_WCHARS 4
 
@@ -3247,3 +3250,5 @@ Set printing of array indexes."), _("\
 Show printing of array indexes"), NULL, NULL, show_print_array_indexes,
                            &setprintlist, &showprintlist);
 }
+
+} /* namespace gdb */

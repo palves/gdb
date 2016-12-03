@@ -22,7 +22,11 @@
 
 #include "extension.h"
 
+namespace gdb {
+
 /* This is all that guile exports to gdb.  */
 extern const struct extension_language_defn extension_language_guile;
+
+} /* namespace gdb */
 
 #endif /* GDB_GUILE_H */

@@ -45,6 +45,9 @@
 #include "solist.h"
 #include <algorithm>
 
+namespace gdb {
+
+
 void (*deprecated_file_changed_hook) (char *);
 
 /* Prototypes for local functions */
@@ -1154,3 +1157,5 @@ Show writing into executable and core files."), NULL,
 
   add_target_with_completer (&exec_ops, filename_completer);
 }
+
+} /* namespace gdb */

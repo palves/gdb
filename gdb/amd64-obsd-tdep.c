@@ -35,6 +35,9 @@
 #include "solib-svr4.h"
 #include "bsd-uthread.h"
 
+namespace gdb {
+
+
 /* Support for core dumps.  */
 
 static void
@@ -512,3 +515,5 @@ _initialize_amd64obsd_tdep (void)
   gdbarch_register_osabi (bfd_arch_i386, bfd_mach_x86_64,
 			  GDB_OSABI_NETBSD_AOUT, amd64obsd_core_init_abi);
 }
+
+} /* namespace gdb */

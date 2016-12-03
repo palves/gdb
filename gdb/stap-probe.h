@@ -23,6 +23,8 @@
 /* For `struct parser_state'.  */
 #include "parser-defs.h"
 
+namespace gdb {
+
 /* Structure which holds information about the parsing process of one probe's
    argument.  */
 
@@ -52,5 +54,7 @@ struct stap_parse_info
      for knowing when to skip spaces or not.  */
   int inside_paren_p;
 };
+
+} /* namespace gdb */
 
 #endif /* !defined (STAP_PROBE_H) */

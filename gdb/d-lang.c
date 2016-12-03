@@ -26,6 +26,9 @@
 #include "demangle.h"
 #include "cp-support.h"
 
+namespace gdb {
+
+
 /* The name of the symbol to use to get the name of the main subprogram.  */
 static const char D_MAIN[] = "D main";
 
@@ -351,3 +354,5 @@ _initialize_d_language (void)
 
   add_language (&d_language_defn);
 }
+
+} /* namespace gdb */

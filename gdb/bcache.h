@@ -22,6 +22,8 @@
 #ifndef BCACHE_H
 #define BCACHE_H 1
 
+namespace gdb {
+
 /* A bcache is a data structure for factoring out duplication in
    read-only structures.  You give the bcache some string of bytes S.
    If the bcache already contains a copy of S, it hands you back a
@@ -172,5 +174,7 @@ extern int bcache_memory_used (struct bcache *bcache);
 extern unsigned long hash(const void *addr, int length);
 extern unsigned long hash_continue (const void *addr, int length,
                                     unsigned long h);
+
+} /* namespace gdb */
 
 #endif /* BCACHE_H */

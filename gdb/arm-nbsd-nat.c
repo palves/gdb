@@ -30,6 +30,9 @@
 #include "arm-tdep.h"
 #include "inf-ptrace.h"
 
+namespace gdb {
+
+
 extern int arm_apcs_32;
 
 static void
@@ -499,3 +502,5 @@ _initialize_arm_netbsd_nat (void)
   deprecated_add_core_fns (&arm_netbsd_core_fns);
   deprecated_add_core_fns (&arm_netbsd_elfcore_fns);
 }
+
+} /* namespace gdb */

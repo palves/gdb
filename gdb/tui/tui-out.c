@@ -24,6 +24,9 @@
 #include "ui-out.h"
 #include "cli-out.h"
 #include "tui.h"
+
+namespace gdb {
+
 struct tui_ui_out_data
   {
     struct cli_ui_out_data base;
@@ -175,3 +178,5 @@ _initialize_tui_out (void)
   tui_ui_out_impl.field_fmt = tui_field_fmt;
   tui_ui_out_impl.text = tui_text;
 }
+
+} /* namespace gdb */

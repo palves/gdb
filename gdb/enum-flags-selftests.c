@@ -21,6 +21,9 @@
 #include "common/enum-flags.h"
 #include "selftest.h"
 
+namespace gdb {
+
+
 #if GDB_SELF_TEST
 
 namespace selftests { namespace enum_flags_tests {
@@ -630,3 +633,5 @@ _initialize_enum_flags_selftests (void)
   register_self_test (selftests::enum_flags_tests::self_test);
 #endif
 }
+
+} /* namespace gdb */

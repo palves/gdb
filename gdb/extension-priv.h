@@ -24,6 +24,8 @@
 #include "extension.h"
 #include <signal.h>
 
+namespace gdb {
+
 /* The return code for some API calls.  */
 
 enum ext_lang_rc
@@ -348,5 +350,7 @@ extern struct active_ext_lang_state *set_active_ext_lang
   (const struct extension_language_defn *);
 
 extern void restore_active_ext_lang (struct active_ext_lang_state *previous);
+
+} /* namespace gdb */
 
 #endif /* EXTENSION_PRIV_H */

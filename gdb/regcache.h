@@ -22,6 +22,8 @@
 
 #include "common-regcache.h"
 
+namespace gdb {
+
 struct regcache;
 struct regset;
 struct gdbarch;
@@ -227,5 +229,7 @@ extern void regcache_cpy (struct regcache *dest, struct regcache *src);
 
 extern void registers_changed (void);
 extern void registers_changed_ptid (ptid_t);
+
+} /* namespace gdb */
 
 #endif /* REGCACHE_H */

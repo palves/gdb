@@ -22,6 +22,9 @@
 #include <dirent.h>
 #include <sys/stat.h>
 
+namespace gdb {
+
+
 /* Return the TGID of LWPID from /proc/pid/status.  Returns -1 if not
    found.  */
 
@@ -363,3 +366,5 @@ linux_proc_pid_to_exec_file (int pid)
 
   return buf;
 }
+
+} /* namespace gdb */

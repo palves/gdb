@@ -29,6 +29,9 @@
 #include "value.h"
 #include "dwarf2-frame.h"
 
+namespace gdb {
+
+
 /* Contains struct tailcall_cache indexed by next_bottom_frame.  */
 static htab_t cache_htab;
 
@@ -473,3 +476,5 @@ _initialize_tailcall_frame (void)
   cache_htab = htab_create_alloc (50, cache_hash, cache_eq, NULL, xcalloc,
 				  xfree);
 }
+
+} /* namespace gdb */

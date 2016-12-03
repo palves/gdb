@@ -20,6 +20,8 @@
 #ifndef PTID_H
 #define PTID_H
 
+namespace gdb {
+
 /* The ptid struct is a collection of the various "ids" necessary for
    identifying the inferior process/thread being debugged.  This
    consists of the process id (pid), lightweight process id (lwp) and
@@ -92,5 +94,7 @@ int ptid_tid_p (ptid_t ptid);
    specific LWP or THREAD, it can never be a wild card.  */
 
 extern int ptid_match (ptid_t ptid, ptid_t filter);
+
+} /* namespace gdb */
 
 #endif

@@ -31,6 +31,9 @@
 #include "ppc-nbsd-tdep.h"
 #include "solib-svr4.h"
 
+namespace gdb {
+
+
 /* Register offsets from <machine/reg.h>.  */
 struct ppc_reg_offsets ppcnbsd_reg_offsets;
 
@@ -225,3 +228,5 @@ _initialize_ppcnbsd_tdep (void)
       ppcnbsd_reg_offsets.vscr_offset = 524;
     }
 }
+
+} /* namespace gdb */

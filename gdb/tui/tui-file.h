@@ -19,9 +19,13 @@
 #ifndef TUI_FILE_H
 #define TUI_FILE_H
 
+namespace gdb {
+
 extern struct ui_file *tui_fileopen (FILE *);
 extern struct ui_file *tui_sfileopen (int);
 extern char *tui_file_get_strbuf (struct ui_file *);
 extern void tui_file_adjust_strbuf (int, struct ui_file *);
+
+} /* namespace gdb */
 
 #endif

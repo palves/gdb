@@ -20,6 +20,9 @@
 #include "common-defs.h"
 #include "errors.h"
 
+namespace gdb {
+
+
 /* See common/errors.h.  */
 
 void
@@ -67,3 +70,5 @@ internal_warning (const char *file, int line, const char *fmt, ...)
   internal_vwarning (file, line, fmt, ap);
   va_end (ap);
 }
+
+} /* namespace gdb */

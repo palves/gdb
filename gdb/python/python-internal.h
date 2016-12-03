@@ -222,6 +222,8 @@ gdb_PyObject_HasAttrString (PyObject *obj,
 #include "command.h"
 #include "breakpoint.h"
 
+namespace gdb {
+
 enum gdbpy_iter_kind { iter_keys, iter_values, iter_items };
 
 struct block;
@@ -594,5 +596,7 @@ struct varobj_iter;
 struct varobj;
 struct varobj_iter *py_varobj_get_iterator (struct varobj *var,
 					    PyObject *printer);
+
+} /* namespace gdb */
 
 #endif /* GDB_PYTHON_INTERNAL_H */
