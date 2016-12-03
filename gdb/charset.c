@@ -32,7 +32,11 @@
 #ifdef USE_WIN32API
 #include <windows.h>
 #endif
+
+namespace gdb {
+
 
+
 /* How GDB's character set support works
 
    GDB has three global settings:
@@ -1072,3 +1076,5 @@ To see a list of the character sets GDB supports, type\n\
 			show_target_wide_charset_name,
 			&setlist, &showlist);
 }
+
+} /* namespace gdb */
