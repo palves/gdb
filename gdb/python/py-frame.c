@@ -514,7 +514,7 @@ frapy_read_var (PyObject *self, PyObject *args)
     var = symbol_object_to_symbol (sym_obj);
   else if (gdbpy_is_string (sym_obj))
     {
-      gdb::unique_xmalloc_ptr<char>
+      unique_xmalloc_ptr<char>
 	var_name (python_string_to_target_string (sym_obj));
 
       if (!var_name)

@@ -24,7 +24,7 @@
 
 namespace gdb
 {
-/* Define gdb::unique_xmalloc_ptr, a std::unique_ptr that manages
+/* Define unique_xmalloc_ptr, a std::unique_ptr that manages
    xmalloc'ed memory.  */
 
 /* The deleter for std::unique_xmalloc_ptr.  Uses xfree.  */

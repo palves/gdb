@@ -52,7 +52,7 @@ enum mi_print_types
    appropriate Python exception set, and EXT_LANG_BT_OK on success.  */
 
 static enum ext_lang_bt_status
-extract_sym (PyObject *obj, gdb::unique_xmalloc_ptr<char> *name,
+extract_sym (PyObject *obj, unique_xmalloc_ptr<char> *name,
 	     struct symbol **sym, struct block **sym_block,
 	     const struct language_defn **language)
 {
@@ -539,7 +539,7 @@ enumerate_args (PyObject *iter,
   while (item)
     {
       const struct language_defn *language;
-      gdb::unique_xmalloc_ptr<char> sym_name;
+      unique_xmalloc_ptr<char> sym_name;
       struct symbol *sym;
       struct block *sym_block;
       struct value *val;
@@ -723,7 +723,7 @@ enumerate_locals (PyObject *iter,
   while ((item = PyIter_Next (iter)))
     {
       const struct language_defn *language;
-      gdb::unique_xmalloc_ptr<char> sym_name;
+      unique_xmalloc_ptr<char> sym_name;
       struct value *val;
       enum ext_lang_bt_status success = EXT_LANG_BT_ERROR;
       struct symbol *sym;
@@ -1018,7 +1018,7 @@ py_print_frame (PyObject *filter, int flags,
   struct value_print_options opts;
   PyObject *py_inf_frame;
   int print_level, print_frame_info, print_args, print_locals;
-  gdb::unique_xmalloc_ptr<char> function_to_free;
+  unique_xmalloc_ptr<char> function_to_free;
 
   /* Extract print settings from FLAGS.  */
   print_level = (flags & PRINT_LEVEL) ? 1 : 0;
@@ -1286,7 +1286,7 @@ py_print_frame (PyObject *filter, int flags,
 
 	  if (py_fn != Py_None)
 	    {
-	      gdb::unique_xmalloc_ptr<char>
+	      unique_xmalloc_ptr<char>
 		filename (python_string_to_host_string (py_fn));
 
 	      if (filename == NULL)

@@ -101,7 +101,7 @@ fnpy_call (struct gdbarch *gdbarch, const struct language_defn *language,
 	 When fetching the error message we need to make our own copy,
 	 we no longer own ptype, pvalue after the call to PyErr_Restore.  */
 
-      gdb::unique_xmalloc_ptr<char>
+      unique_xmalloc_ptr<char>
 	msg (gdbpy_exception_to_string (ptype, pvalue));
 
       if (msg == NULL)
@@ -164,7 +164,7 @@ static int
 fnpy_init (PyObject *self, PyObject *args, PyObject *kwds)
 {
   const char *name;
-  gdb::unique_xmalloc_ptr<char> docstring;
+  unique_xmalloc_ptr<char> docstring;
 
   if (! PyArg_ParseTuple (args, "s", &name))
     return -1;

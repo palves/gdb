@@ -440,7 +440,7 @@ bppy_get_condition (PyObject *self, void *closure)
 static int
 bppy_set_condition (PyObject *self, PyObject *newvalue, void *closure)
 {
-  gdb::unique_xmalloc_ptr<char> exp_holder;
+  unique_xmalloc_ptr<char> exp_holder;
   const char *exp = NULL;
   gdbpy_breakpoint_object *self_bp = (gdbpy_breakpoint_object *) self;
   struct gdb_exception except = exception_none;
@@ -679,7 +679,7 @@ bppy_init (PyObject *self, PyObject *args, PyObject *kwargs)
 
   TRY
     {
-      gdb::unique_xmalloc_ptr<char>
+      unique_xmalloc_ptr<char>
 	copy_holder (xstrdup (skip_spaces_const (spec)));
       char *copy = copy_holder.get ();
 
@@ -1044,7 +1044,7 @@ static int
 local_setattro (PyObject *self, PyObject *name, PyObject *v)
 {
   gdbpy_breakpoint_object *obj = (gdbpy_breakpoint_object *) self;
-  gdb::unique_xmalloc_ptr<char> attr (python_string_to_host_string (name));
+  unique_xmalloc_ptr<char> attr (python_string_to_host_string (name));
 
   if (attr == NULL)
     return -1;

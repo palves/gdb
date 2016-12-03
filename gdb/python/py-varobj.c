@@ -78,7 +78,7 @@ py_varobj_iter_next (struct varobj_iter *self)
 	  char *name_str;
 
 	  PyErr_Fetch (&type, &value, &trace);
-	  gdb::unique_xmalloc_ptr<char>
+	  unique_xmalloc_ptr<char>
 	    value_str (gdbpy_exception_to_string (type, value));
 	  Py_XDECREF (type);
 	  Py_XDECREF (value);

@@ -107,10 +107,10 @@ python_string_to_unicode (PyObject *obj)
    conversion, NULL will be returned and a python exception will be set.
 
    The caller is responsible for xfree'ing the string.  */
-static gdb::unique_xmalloc_ptr<char>
+static unique_xmalloc_ptr<char>
 unicode_to_encoded_string (PyObject *unicode_str, const char *charset)
 {
-  gdb::unique_xmalloc_ptr<char> result;
+  unique_xmalloc_ptr<char> result;
   PyObject *string;
 
   /* Translate string to named charset.  */
@@ -144,7 +144,7 @@ unicode_to_encoded_python_string (PyObject *unicode_str, const char *charset)
    unicode string object converted to the target's charset.  If an
    error occurs during the conversion, NULL will be returned and a
    python exception will be set.  */
-gdb::unique_xmalloc_ptr<char>
+unique_xmalloc_ptr<char>
 unicode_to_target_string (PyObject *unicode_str)
 {
   return unicode_to_encoded_string (unicode_str,
@@ -165,7 +165,7 @@ unicode_to_target_python_string (PyObject *unicode_str)
 /* Converts a python string (8-bit or unicode) to a target string in
    the target's charset.  Returns NULL on error, with a python
    exception set.  */
-gdb::unique_xmalloc_ptr<char>
+unique_xmalloc_ptr<char>
 python_string_to_target_string (PyObject *obj)
 {
   PyObject *str;
@@ -174,7 +174,7 @@ python_string_to_target_string (PyObject *obj)
   if (str == NULL)
     return NULL;
 
-  gdb::unique_xmalloc_ptr<char> result (unicode_to_target_string (str));
+  unique_xmalloc_ptr<char> result (unicode_to_target_string (str));
   Py_DECREF (str);
   return result;
 }
@@ -202,7 +202,7 @@ python_string_to_target_python_string (PyObject *obj)
 /* Converts a python string (8-bit or unicode) to a target string in
    the host's charset.  Returns NULL on error, with a python exception
    set.  */
-gdb::unique_xmalloc_ptr<char>
+unique_xmalloc_ptr<char>
 python_string_to_host_string (PyObject *obj)
 {
   PyObject *str;
@@ -211,7 +211,7 @@ python_string_to_host_string (PyObject *obj)
   if (str == NULL)
     return NULL;
 
-  gdb::unique_xmalloc_ptr<char>
+  unique_xmalloc_ptr<char>
     result (unicode_to_encoded_string (str, host_charset ()));
   Py_DECREF (str);
   return result;
@@ -241,14 +241,14 @@ gdbpy_is_string (PyObject *obj)
 /* Return the string representation of OBJ, i.e., str (obj).
    If the result is NULL a python error occurred, the caller must clear it.  */
 
-gdb::unique_xmalloc_ptr<char>
+unique_xmalloc_ptr<char>
 gdbpy_obj_to_string (PyObject *obj)
 {
   PyObject *str_obj = PyObject_Str (obj);
 
   if (str_obj != NULL)
     {
-      gdb::unique_xmalloc_ptr<char> msg;
+      unique_xmalloc_ptr<char> msg;
 
 #ifdef IS_PY3K
       msg = python_string_to_host_string (str_obj);
@@ -268,7 +268,7 @@ gdbpy_obj_to_string (PyObject *obj)
    i.e., the error indicator is currently clear.
    If the result is NULL a python error occurred, the caller must clear it.  */
 
-gdb::unique_xmalloc_ptr<char>
+unique_xmalloc_ptr<char>
 gdbpy_exception_to_string (PyObject *ptype, PyObject *pvalue)
 {
   /* There are a few cases to consider.

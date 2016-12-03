@@ -85,7 +85,7 @@ struct expression
     union exp_element elts[1];
   };
 
-typedef gdb::unique_xmalloc_ptr<expression> expression_up;
+typedef unique_xmalloc_ptr<expression> expression_up;
 
 /* Macros for converting between number of expression elements and bytes
    to store that many expression elements.  */

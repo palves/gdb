@@ -557,10 +557,10 @@ varobj_get_display_format (const struct varobj *var)
   return var->format;
 }
 
-gdb::unique_xmalloc_ptr<char>
+unique_xmalloc_ptr<char>
 varobj_get_display_hint (const struct varobj *var)
 {
-  gdb::unique_xmalloc_ptr<char> result;
+  unique_xmalloc_ptr<char> result;
 
 #if HAVE_PYTHON
   struct cleanup *back_to;
@@ -2484,14 +2484,14 @@ varobj_value_get_print_value (struct value *value,
 			 string_print.  Otherwise just return the extracted
 			 string as a value.  */
 
-		      gdb::unique_xmalloc_ptr<char> s
+		      unique_xmalloc_ptr<char> s
 			= python_string_to_target_string (output);
 
 		      if (s)
 			{
 			  struct gdbarch *gdbarch;
 
-			  gdb::unique_xmalloc_ptr<char> hint
+			  unique_xmalloc_ptr<char> hint
 			    = gdbpy_get_display_hint (value_formatter);
 			  if (hint)
 			    {

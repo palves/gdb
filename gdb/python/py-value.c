@@ -667,7 +667,7 @@ valpy_getitem (PyObject *self, PyObject *key)
 {
   struct gdb_exception except = exception_none;
   value_object *self_value = (value_object *) self;
-  gdb::unique_xmalloc_ptr<char> field;
+  unique_xmalloc_ptr<char> field;
   struct type *base_class_type = NULL, *field_type = NULL;
   long bitpos = -1;
   PyObject *result = NULL;
@@ -1662,7 +1662,7 @@ convert_value_from_python (PyObject *obj)
 	}
       else if (gdbpy_is_string (obj))
 	{
-	  gdb::unique_xmalloc_ptr<char> s
+	  unique_xmalloc_ptr<char> s
 	    = python_string_to_target_string (obj);
 	  if (s != NULL)
 	    value = value_cstring (s.get (), strlen (s.get ()),

@@ -80,7 +80,7 @@ static int
 thpy_set_name (PyObject *self, PyObject *newvalue, void *ignore)
 {
   thread_object *thread_obj = (thread_object *) self;
-  gdb::unique_xmalloc_ptr<char> name;
+  unique_xmalloc_ptr<char> name;
 
   if (! thread_obj->thread)
     {

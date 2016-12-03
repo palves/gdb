@@ -1668,7 +1668,7 @@ private:
 
   /* The storage.  */
   std::string m_string;
-  gdb::unique_xmalloc_ptr<char> m_malloc;
+  unique_xmalloc_ptr<char> m_malloc;
 };
 
 const char *

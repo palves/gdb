@@ -1020,7 +1020,7 @@ gdbpy_before_prompt_hook (const struct extension_language_defn *extlang,
 			  const char *current_gdb_prompt)
 {
   struct cleanup *cleanup;
-  gdb::unique_xmalloc_ptr<char> prompt;
+  unique_xmalloc_ptr<char> prompt;
 
   if (!gdb_python_initialized)
     return EXT_LANG_RC_NOP;
@@ -1215,9 +1215,9 @@ gdbpy_print_stack (void)
       PyErr_Fetch (&ptype, &pvalue, &ptraceback);
 
       /* Fetch the error message contained within ptype, pvalue.  */
-      gdb::unique_xmalloc_ptr<char>
+      unique_xmalloc_ptr<char>
 	msg (gdbpy_exception_to_string (ptype, pvalue));
-      gdb::unique_xmalloc_ptr<char> type (gdbpy_obj_to_string (ptype));
+      unique_xmalloc_ptr<char> type (gdbpy_obj_to_string (ptype));
 
       TRY
 	{
@@ -1445,7 +1445,7 @@ gdbpy_apply_type_printers (const struct extension_language_defn *extlang,
   PyObject *type_obj, *type_module = NULL, *func = NULL;
   PyObject *result_obj = NULL;
   PyObject *printers_obj = (PyObject *) ext_printers->py_type_printers;
-  gdb::unique_xmalloc_ptr<char> result;
+  unique_xmalloc_ptr<char> result;
 
   if (printers_obj == NULL)
     return EXT_LANG_RC_NOP;

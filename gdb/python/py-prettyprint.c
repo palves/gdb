@@ -244,11 +244,11 @@ pretty_print_one_value (PyObject *printer, struct value **out_value)
    NULL if there is no display_hint method, or if the method did not
    return a string.  On error, print stack trace and return NULL.  On
    success, return an xmalloc()d string.  */
-gdb::unique_xmalloc_ptr<char>
+unique_xmalloc_ptr<char>
 gdbpy_get_display_hint (PyObject *printer)
 {
   PyObject *hint;
-  gdb::unique_xmalloc_ptr<char> result;
+  unique_xmalloc_ptr<char> result;
 
   if (! PyObject_HasAttr (printer, gdbpy_display_hint_cst))
     return NULL;
@@ -285,7 +285,7 @@ print_stack_unless_memory_error (struct ui_file *stream)
       make_cleanup_py_decref (value);
       make_cleanup_py_decref (trace);
 
-      gdb::unique_xmalloc_ptr<char>
+      unique_xmalloc_ptr<char>
 	msg (gdbpy_exception_to_string (type, value));
 
       if (msg == NULL || *msg == '\0')
@@ -647,7 +647,7 @@ print_children (PyObject *printer, const char *hint,
 	}
       else if (gdbpy_is_string (py_v))
 	{
-	  gdb::unique_xmalloc_ptr<char> output;
+	  unique_xmalloc_ptr<char> output;
 
 	  output = python_string_to_host_string (py_v);
 	  if (!output)
@@ -710,7 +710,7 @@ gdbpy_apply_val_pretty_printer (const struct extension_language_defn *extlang,
   PyObject *printer = NULL;
   PyObject *val_obj = NULL;
   struct value *value;
-  gdb::unique_xmalloc_ptr<char> hint;
+  unique_xmalloc_ptr<char> hint;
   struct cleanup *cleanups;
   enum ext_lang_rc result = EXT_LANG_RC_NOP;
   enum string_repr_result print_result;

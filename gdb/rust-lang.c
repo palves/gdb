@@ -158,7 +158,7 @@ rust_get_disr_info (struct type *type, const gdb_byte *valaddr,
       /* Optimized enums have only one field.  */
       member_type = TYPE_FIELD_TYPE (type, 0);
 
-      gdb::unique_xmalloc_ptr<char> name (xstrdup (TYPE_FIELD_NAME (type, 0)));
+      unique_xmalloc_ptr<char> name (xstrdup (TYPE_FIELD_NAME (type, 0)));
       tail = name.get () + strlen (RUST_ENUM_PREFIX);
 
       /* The location of the value that doubles as a discriminant is

@@ -116,7 +116,7 @@ pyuw_parse_register_id (struct gdbarch *gdbarch, PyObject *pyo_reg_id,
     return 0;
   if (gdbpy_is_string (pyo_reg_id))
     {
-      gdb::unique_xmalloc_ptr<char> reg_name (gdbpy_obj_to_string (pyo_reg_id));
+      unique_xmalloc_ptr<char> reg_name (gdbpy_obj_to_string (pyo_reg_id));
 
       if (reg_name == NULL)
         return 0;

@@ -1199,7 +1199,7 @@ typy_getitem (PyObject *self, PyObject *key)
   struct type *type = ((type_object *) self)->type;
   int i;
 
-  gdb::unique_xmalloc_ptr<char> field = python_string_to_host_string (key);
+  unique_xmalloc_ptr<char> field = python_string_to_host_string (key);
   if (field == NULL)
     return NULL;
 

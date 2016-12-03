@@ -87,7 +87,7 @@
 #define EXTERN_C_PUSH extern "C" {
 #define EXTERN_C_POP }
 
-/* Pull in gdb::unique_xmalloc_ptr.  */
+/* Pull in unique_xmalloc_ptr.  */
 #include "common/gdb_unique_ptr.h"
 
 #endif /* COMMON_DEFS_H */

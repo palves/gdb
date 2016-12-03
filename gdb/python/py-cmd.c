@@ -163,7 +163,7 @@ cmdpy_function (struct cmd_list_element *command, char *args, int from_tty)
 	 When fetching the error message we need to make our own copy,
 	 we no longer own ptype, pvalue after the call to PyErr_Restore.  */
 
-      gdb::unique_xmalloc_ptr<char>
+      unique_xmalloc_ptr<char>
 	msg (gdbpy_exception_to_string (ptype, pvalue));
 
       if (msg == NULL)
@@ -380,7 +380,7 @@ cmdpy_completer (struct cmd_list_element *command,
 	      Py_DECREF (elt);
 	      continue;
 	    }
-	  gdb::unique_xmalloc_ptr<char>
+	  unique_xmalloc_ptr<char>
 	    item (python_string_to_host_string (elt));
 	  Py_DECREF (elt);
 	  if (item == NULL)

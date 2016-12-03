@@ -148,7 +148,7 @@ set_parameter_value (parmpy_object *self, PyObject *value)
 	}
       else
 	{
-	  gdb::unique_xmalloc_ptr<char>
+	  unique_xmalloc_ptr<char>
 	    string (python_string_to_host_string (value));
 	  if (string == NULL)
 	    return -1;
@@ -169,7 +169,7 @@ set_parameter_value (parmpy_object *self, PyObject *value)
 	    return -1;
 	  }
 
-	gdb::unique_xmalloc_ptr<char>
+	unique_xmalloc_ptr<char>
 	  str (python_string_to_host_string (value));
 	if (str == NULL)
 	  return -1;
@@ -299,10 +299,10 @@ set_attr (PyObject *obj, PyObject *attr_name, PyObject *val)
 /* A helper function which returns a documentation string for an
    object. */
 
-static gdb::unique_xmalloc_ptr<char>
+static unique_xmalloc_ptr<char>
 get_doc_string (PyObject *object, PyObject *attr)
 {
-  gdb::unique_xmalloc_ptr<char> result;
+  unique_xmalloc_ptr<char> result;
 
   if (PyObject_HasAttr (object, attr))
     {
@@ -325,10 +325,10 @@ get_doc_string (PyObject *object, PyObject *attr)
    argument ARG.  ARG can be NULL.  METHOD should return a Python
    string.  If this function returns NULL, there has been an error and
    the appropriate exception set.  */
-static gdb::unique_xmalloc_ptr<char>
+static unique_xmalloc_ptr<char>
 call_doc_function (PyObject *obj, PyObject *method, PyObject *arg)
 {
-  gdb::unique_xmalloc_ptr<char> data;
+  unique_xmalloc_ptr<char> data;
   PyObject *result = PyObject_CallMethodObjArgs (obj, method, arg, NULL);
 
   if (! result)
@@ -363,7 +363,7 @@ get_set_value (char *args, int from_tty,
 	       struct cmd_list_element *c)
 {
   PyObject *obj = (PyObject *) get_cmd_context (c);
-  gdb::unique_xmalloc_ptr<char> set_doc_string;
+  unique_xmalloc_ptr<char> set_doc_string;
   struct cleanup *cleanup = ensure_python_env (get_current_arch (),
 					       current_language);
   PyObject *set_doc_func = PyString_FromString ("get_set_string");
@@ -410,7 +410,7 @@ get_show_value (struct ui_file *file, int from_tty,
 		const char *value)
 {
   PyObject *obj = (PyObject *) get_cmd_context (c);
-  gdb::unique_xmalloc_ptr<char> show_doc_string;
+  unique_xmalloc_ptr<char> show_doc_string;
   struct cleanup *cleanup = ensure_python_env (get_current_arch (),
 					       current_language);
   PyObject *show_doc_func = PyString_FromString ("get_show_string");
