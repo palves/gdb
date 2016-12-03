@@ -1650,6 +1650,7 @@ COMMON_OBS = $(DEPFILES) $(CONFIG_OBS) $(YYOBJ) \
 	dwarf2expr.o \
 	dwarf2loc.o \
 	dwarf2read.o \
+	enum-flags-selftests.o \
 	environ.o \
 	errors.o \
 	eval.o \

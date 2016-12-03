@@ -41,4 +41,15 @@ extern void run_self_tests (void);
       error (_("self-test failed at %s:%d"), __FILE__, __LINE__);	\
   } while (0)
 
+/* Check that VALUE is true, and, if not, fail at compile time.  */
+
+#define SC_STRINGIZE_1(STR) #STR
+#define SC_STRINGIZE(STR) SC_STRINGIZE_1 (STR)
+
+#define STATIC_SELF_CHECK_FAIL_MSG					\
+  "static self-test failed at " __FILE__ ":" SC_STRINGIZE (__LINE__)
+
+#define STATIC_SELF_CHECK(VALUE)			\
+  static_assert (VALUE, STATIC_SELF_CHECK_FAIL_MSG)
+
 #endif /* SELFTEST_H */
