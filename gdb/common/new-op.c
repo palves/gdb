@@ -27,6 +27,8 @@
 #include "host-defs.h"
 #include <new>
 
+using namespace gdb;
+
 /* Override operator new / operator new[], in order to internal_error
    on allocation failure and thus query the user for abort/core
    dump/continue, just like xmalloc does.  We don't do this from a

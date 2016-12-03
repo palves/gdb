@@ -9,6 +9,10 @@ function insert_namespace_c  {
 	    continue
 	fi
 
+	if [ $line == "common/new-op.c" ]; then
+	    continue
+	fi
+
 	if ! grep -q "namespace gdb" $line; then
 	    if $(grep -q "^#include" $line); then
 		tac $line | sed '0,/^#include/{s/\(^#include .*\)/\nnamespace gdb {\n\n\1/}' | tac > tmp && mv tmp $line
