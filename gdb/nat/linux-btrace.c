@@ -39,6 +39,11 @@
 #include "nat/gdb_ptrace.h"
 #include <sys/types.h>
 #include <signal.h>
+#endif
+
+namespace gdb {
+
+#if HAVE_LINUX_PERF_EVENT_H && defined(SYS_perf_event_open)
 
 /* A branch trace record in perf_event.  */
 struct perf_event_bts
@@ -968,3 +973,5 @@ linux_btrace_conf (const struct btrace_target_info *tinfo)
 }
 
 #endif /* !HAVE_LINUX_PERF_EVENT_H */
+
+} /* namespace gdb */
