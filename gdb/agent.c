@@ -20,6 +20,8 @@
 #include "gdbcmd.h"
 #include "target.h"
 #include "common/agent.h"
+#include "observable.h"
+#include "objfiles.h"
 
 /* Enum strings for "set|show agent".  */
 
@@ -50,9 +52,6 @@ set_can_use_agent (const char *args, int from_tty, struct cmd_list_element *c)
     /* Something wrong during setting, set flag to default value.  */
     can_use_agent = can_use_agent_off;
 }
-
-#include "observable.h"
-#include "objfiles.h"
 
 static void
 agent_new_objfile (struct objfile *objfile)
