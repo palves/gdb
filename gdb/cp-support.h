@@ -29,13 +29,14 @@
 #include "gdb_vecs.h"
 #include "gdb_obstack.h"
 
-/* Opaque declarations.  */
+struct demangle_component;
+
+namespace gdb {
 
 struct symbol;
 struct block;
 struct objfile;
 struct type;
-struct demangle_component;
 struct using_direct;
 
 /* A string representing the name of the anonymous namespace used in GDB.  */
@@ -161,5 +162,7 @@ char *gdb_demangle (const char *name, int options);
 /* Like gdb_demangle, but suitable for use as la_sniff_from_mangled_name.  */
 
 int gdb_sniff_from_mangled_name (const char *mangled, char **demangled);
+
+} /* namespace gdb */
 
 #endif /* CP_SUPPORT_H */
