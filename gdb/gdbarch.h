@@ -36,8 +36,15 @@
 #define GDBARCH_H
 
 #include "frame.h"
+#include "regcache.h"
 
 struct floatformat;
+struct disassemble_info;
+struct obstack;
+struct elf_internal_linux_prpsinfo;
+
+namespace gdb {
+
 struct ui_file;
 struct value;
 struct objfile;
@@ -46,9 +53,7 @@ struct minimal_symbol;
 struct regcache;
 struct reggroup;
 struct regset;
-struct disassemble_info;
 struct target_ops;
-struct obstack;
 struct bp_target_info;
 struct target_desc;
 struct objfile;
@@ -60,13 +65,10 @@ struct axs_value;
 struct stap_parse_info;
 struct parser_state;
 struct ravenscar_arch_ops;
-struct elf_internal_linux_prpsinfo;
 struct mem_range;
 struct syscalls_info;
 struct thread_info;
 struct ui_out;
-
-#include "regcache.h"
 
 /* The architecture associated with the inferior through the
    connection to the target.
@@ -1764,5 +1766,7 @@ extern void initialize_current_architecture (void);
 extern unsigned int gdbarch_debug;
 
 extern void gdbarch_dump (struct gdbarch *gdbarch, struct ui_file *file);
+
+} /* namespace gdb */
 
 #endif

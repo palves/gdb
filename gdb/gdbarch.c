@@ -49,6 +49,8 @@
 #include "objfiles.h"
 #include "auxv.h"
 
+namespace gdb {
+
 /* Static function declarations */
 
 static void alloc_gdbarch_data (struct gdbarch *);
@@ -5367,3 +5369,5 @@ When non-zero, architecture debugging is enabled."),
                             show_gdbarch_debug,
                             &setdebuglist, &showdebuglist);
 }
+
+} /* namespace gdb */
