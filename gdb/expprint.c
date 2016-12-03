@@ -32,6 +32,8 @@
 
 #include <ctype.h>
 
+namespace gdb {
+
 void
 print_expression (struct expression *exp, struct ui_file *stream)
 {
@@ -1170,3 +1172,5 @@ dump_prefix_expression (struct expression *exp, struct ui_file *stream)
     elt = dump_subexp (exp, stream, elt);
   fputs_filtered ("\n", stream);
 }
+
+} /* namespace gdb */
