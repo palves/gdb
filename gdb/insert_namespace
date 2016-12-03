@@ -34,8 +34,28 @@ insert_namespace_h "nat/*.h"
 insert_namespace_c "nat/*.c"
 insert_namespace_h "arch/*.h"
 insert_namespace_c "arch/*.c"
+
 insert_namespace_h "target/*.h"
 insert_namespace_c "target/*.c"
+
+insert_namespace_h "mi/*.h"
+insert_namespace_c "mi/*.c"
+
+insert_namespace_h "cli/*.h"
+insert_namespace_c "cli/*.c"
+
+insert_namespace_h "python/*.h"
+insert_namespace_c "python/*.c"
+
+insert_namespace_h "guile/*.h"
+insert_namespace_c "guile/*.c"
+
+insert_namespace_h "tui/*.h"
+insert_namespace_c "tui/*.c"
+
+insert_namespace_h "compile/*.h"
+insert_namespace_c "compile/*.c"
+
 insert_namespace_c "features/*.c"
 insert_namespace_c "features/arm/*.c"
 insert_namespace_c "features/i386/*.c"
