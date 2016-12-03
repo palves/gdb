@@ -20,13 +20,13 @@
 #ifndef SOLIB_H
 #define SOLIB_H
 
+#include "symfile-add-flags.h"
+
 /* Forward decl's for prototypes */
 struct so_list;
 struct target_ops;
 struct target_so_ops;
 struct program_space;
-
-#include "symfile-add-flags.h"
 
 /* List of known shared objects */
 #define so_list_head current_program_space->so_list
