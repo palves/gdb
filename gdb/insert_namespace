@@ -1,5 +1,10 @@
 function insert_namespace_c  {
     ls $1 | while read line; do
+
+	if [ $line == "target-delegates.c" ]; then
+	    continue
+	fi
+
 	if ! grep -q "namespace gdb" $line; then
 	    if $(grep -q "^#include" $line); then
 		tac $line | sed '0,/^#include/{s/\(^#include .*\)/\nnamespace gdb {\n\n\1/}' | tac > tmp && mv tmp $line
@@ -14,6 +19,11 @@ function insert_namespace_c  {
 
 function insert_namespace_h  {
     ls $1 | while read line; do
+
+	if [ $line == "common/gdb_wait.h" ]; then
+	    continue
+	fi
+
 	if ! grep -q "namespace gdb" $line; then
 	    if $(grep -q "^#include" $line); then
 		tac $line | sed '0,/^#include/{s/\(^#include .*\)/namespace gdb {\n\n\1/}' | tac > tmp && mv tmp $line
