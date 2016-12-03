@@ -179,7 +179,7 @@ typedef prfpregset_t gdb_prfpregset_t;
 struct ps_prochandle
 {
   /* The LWP we use for memory reads.  */
-  ptid_t ptid;
+  gdb::ptid_t ptid;
 };
 
 #endif /* gdb_proc_service.h */
