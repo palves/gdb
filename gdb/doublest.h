@@ -20,8 +20,11 @@
 #ifndef DOUBLEST_H
 #define DOUBLEST_H
 
+#include "floatformat.h"	/* For struct floatformat */
+
+namespace gdb {
+
 struct type;
-struct floatformat;
 
 /* Setup definitions for host and target floating point formats.  We need to
    consider the format for `float', `double', and `long double' for both target
@@ -32,8 +35,6 @@ struct floatformat;
 /* This is used to indicate that we don't know the format of the floating point
    number.  Typically, this is useful for native ports, where the actual format
    is irrelevant, since no conversions will be taking place.  */
-
-#include "floatformat.h"	/* For struct floatformat */
 
 /* Use `long double' if the host compiler supports it.  (Note that this is not
    necessarily any longer than `double'.  On SunOS/gcc, it's the same as
@@ -100,5 +101,7 @@ extern void store_typed_floating (void *addr, const struct type *type,
 extern void convert_typed_floating (const void *from,
 				    const struct type *from_type,
                                     void *to, const struct type *to_type);
+
+} /* namespace gdb */
 
 #endif
