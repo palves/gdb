@@ -27,6 +27,8 @@
 #include "value.h"
 #include "user-regs.h"
 
+namespace gdb {
+
 static void grow_expr (struct agent_expr *x, int n);
 
 static void append_const (struct agent_expr *x, LONGEST val, int n);
@@ -599,3 +601,5 @@ ax_reqs (struct agent_expr *ax)
 
   ax->final_height = height;
 }
+
+} /* namespace gdb */
