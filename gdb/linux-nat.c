@@ -1834,7 +1834,7 @@ kill_lwp (int lwpid, int signo)
   int ret;
 
   errno = 0;
-  ret = syscall (__NR_tkill, lwpid, signo);
+  ret = ::syscall (__NR_tkill, lwpid, signo);
   if (errno == ENOSYS)
     {
       /* If tkill fails, then we are not using nptl threads, a
