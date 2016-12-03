@@ -29,6 +29,8 @@
 #include "objfiles.h"
 #include "user-regs.h"
 
+namespace gdb {
+
 typedef struct {
   PyObject_HEAD
   struct frame_id frame_id;
@@ -813,3 +815,5 @@ PyTypeObject frame_object_type = {
   0,				  /* tp_init */
   0,				  /* tp_alloc */
 };
+
+} /* namespace gdb */
