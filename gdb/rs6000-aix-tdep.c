@@ -41,6 +41,8 @@
 #include "trad-frame.h"
 #include "frame-unwind.h"
 
+namespace gdb {
+
 /* If the kernel has to deliver a signal, it pushes a sigcontext
    structure on the stack and then calls the signal handler, passing
    the address of the sigcontext in an argument register.  Usually
@@ -1194,3 +1196,4 @@ _initialize_rs6000_aix_tdep (void)
                           rs6000_aix_init_osabi);
 }
 
+} /* namespace gdb */
