@@ -20,9 +20,9 @@
 #if !defined (PROBE_H)
 #define PROBE_H 1
 
-struct event_location;
-
 #include "gdb_vecs.h"
+
+struct event_location;
 
 /* Definition of a vector of probes.  */
 
