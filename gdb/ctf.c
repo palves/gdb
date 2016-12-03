@@ -63,6 +63,18 @@ public:
   traceframe_info_up traceframe_info () override;
 };
 
+#if HAVE_LIBBABELTRACE
+/* Use libbabeltrace to read CTF data.  The libbabeltrace provides
+   iterator to iterate over each event in CTF data and APIs to get
+   details of event and packet, so it is very convenient to use
+   libbabeltrace to access events in CTF.  */
+#include <babeltrace/babeltrace.h>
+#include <babeltrace/ctf/events.h>
+#include <babeltrace/ctf/iterator.h>
+#endif
+
+namespace gdb {
+
 /* GDB saves trace buffers and other information (such as trace
    status) got from the remote target into Common Trace Format (CTF).
    The following types of information are expected to save in CTF:
@@ -844,15 +856,6 @@ ctf_trace_file_writer_new (void)
 }
 
 #if HAVE_LIBBABELTRACE
-/* Use libbabeltrace to read CTF data.  The libbabeltrace provides
-   iterator to iterate over each event in CTF data and APIs to get
-   details of event and packet, so it is very convenient to use
-   libbabeltrace to access events in CTF.  */
-
-#include <babeltrace/babeltrace.h>
-#include <babeltrace/ctf/events.h>
-#include <babeltrace/ctf/iterator.h>
-
 /* The struct pointer for current CTF directory.  */
 static int handle_id = -1;
 static struct bt_context *ctx = NULL;
@@ -1727,3 +1730,5 @@ _initialize_ctf (void)
   add_target (ctf_target_info, ctf_target_open, filename_completer);
 #endif
 }
+
+} /* namespace gdb */
