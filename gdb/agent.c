@@ -20,6 +20,8 @@
 #include "gdbcmd.h"
 #include "target.h"
 #include "agent.h"
+#include "observer.h"
+#include "objfiles.h"
 
 /* Enum strings for "set|show agent".  */
 
@@ -53,9 +55,6 @@ set_can_use_agent (char *args, int from_tty, struct cmd_list_element *c)
 
 /* -Wmissing-prototypes */
 extern initialize_file_ftype _initialize_agent;
-
-#include "observer.h"
-#include "objfiles.h"
 
 static void
 agent_new_objfile (struct objfile *objfile)
