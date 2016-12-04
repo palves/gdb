@@ -53,6 +53,9 @@
 #include "xtensa-config.h"
 #include <algorithm>
 
+extern xtensa_isa xtensa_default_isa;
+
+namespace gdb {
 
 static unsigned int xtensa_debug_level = 0;
 
@@ -938,8 +941,6 @@ typedef struct xtensa_windowed_frame_cache
 #define C0_CONST   -1	/* fr_reg value if register contains a constant.  */
 #define C0_INEXP   -2	/* fr_reg value if inexpressible as reg + offset.  */
 #define C0_NOSTK   -1	/* to_stk value if register has not been stored.  */
-
-extern xtensa_isa xtensa_default_isa;
 
 typedef struct xtensa_c0reg
 {
@@ -3270,3 +3271,5 @@ Can be 1, 2, 3, or 4 indicating the level of debugging."),
 			     NULL,
 			     &setdebuglist, &showdebuglist);
 }
+
+} /* namespace gdb */
