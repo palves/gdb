@@ -24,6 +24,8 @@
 
 #include <signal.h>
 
+namespace gdb {
+
 struct cmd_list_element;
 
 /* Exported functions from event-top.c.
@@ -69,5 +71,7 @@ extern void gdb_rl_callback_handler_install (const char *prompt);
 /* Reinstall the readline callback handler (with no prompt), if not
    currently installed.  */
 extern void gdb_rl_callback_handler_reinstall (void);
+
+} /* namespace gdb */
 
 #endif
