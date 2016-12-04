@@ -37,6 +37,8 @@
 #define GDB_YY_REMAP_PREFIX rust
 #include "yy-remap.h"
 
+namespace gdb {
+
 #define RUSTSTYPE YYSTYPE
 
 extern initialize_file_ftype _initialize_rust_exp;
@@ -191,6 +193,10 @@ static struct obstack work_obstack;
 
 static const struct rust_op *rust_ast;
 
+} /* namespace gdb */
+
+using namespace gdb;
+
 %}
 
 %union
@@ -227,6 +233,8 @@ static const struct rust_op *rust_ast;
 
 %{
 
+namespace gdb {
+
   /* Rust AST operations.  We build a tree of these; then lower them
      to gdb expressions when parsing has completed.  */
 
@@ -252,6 +260,9 @@ struct rust_op
   RUSTSTYPE left;
   RUSTSTYPE right;
 };
+
+} /* namespace gdb */
+
 
 %}
 
@@ -850,6 +861,8 @@ type_list:
 ;
 
 %%
+
+namespace gdb {
 
 /* A struct of this type is used to describe a token.  */
 
@@ -2741,3 +2754,5 @@ _initialize_rust_exp (void)
   register_self_test (rust_lex_tests);
 #endif
 }
+
+} /* namespace gdb */

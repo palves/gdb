@@ -36,6 +36,8 @@
 #include "demangle.h"
 #include "cp-support.h"
 
+namespace gdb {
+
 /* Bison does not make it easy to create a parser without global
    state, unfortunately.  Here are all the global variables used
    in this parser.  */
@@ -171,7 +173,6 @@ static struct demangle_component *d_binary (const char *,
 #define yyvs	cpname_yyvs
 #define yyvsp	cpname_yyvsp
 
-int yyparse (void);
 static int yylex (void);
 static void yyerror (char *);
 
@@ -254,6 +255,12 @@ make_name (const char *name, int len)
 
 #define d_left(dc) (dc)->u.s_binary.left
 #define d_right(dc) (dc)->u.s_binary.right
+
+} /* namespace gdb */
+
+int yyparse (void);
+
+using namespace gdb;
 
 %}
 
@@ -1222,6 +1229,8 @@ exp     :       FALSEKEYWORD
 /* end of C++.  */
 
 %%
+
+namespace gdb {
 
 /* Apply QUALIFIERS to LHS and return a qualified component.  IS_METHOD
    is set if LHS is a method, in which case the qualifiers are logically
@@ -2241,3 +2250,5 @@ main (int argc, char **argv)
 }
 
 #endif
+
+} /* namespace gdb */

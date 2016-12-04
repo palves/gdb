@@ -60,18 +60,24 @@
 #define GDB_YY_REMAP_PREFIX d_
 #include "yy-remap.h"
 
+namespace gdb {
+
 /* The state of the parser, used internally when we are parsing the
    expression.  */
 
 static struct parser_state *pstate = NULL;
-
-int yyparse (void);
 
 static int yylex (void);
 
 void yyerror (char *);
 
 static int type_aggregate_p (struct type *);
+
+} /* namespace gdb */
+
+int yyparse (void);
+
+using namespace gdb;
 
 %}
 
@@ -103,9 +109,14 @@ static int type_aggregate_p (struct type *);
   }
 
 %{
+
+namespace gdb {
+
 /* YYSTYPE gets defined by %union */
 static int parse_number (struct parser_state *, const char *,
 			 int, int, YYSTYPE *);
+} /* namespace gdb */
+
 %}
 
 %token <sval> IDENTIFIER UNKNOWN_NAME
@@ -643,6 +654,8 @@ BasicType:
 ;
 
 %%
+
+namespace gdb {
 
 /* Return true if the type is aggregate-like.  */
 
@@ -1658,3 +1671,4 @@ yyerror (char *msg)
   error (_("A %s in expression, near `%s'."), (msg ? msg : "error"), lexptr);
 }
 
+} /* namespace gdb */

@@ -41,6 +41,8 @@ POSEXP  (e"+"?{NUM10})
 
 %{
 
+namespace gdb {
+
 #define NUMERAL_WIDTH 256
 #define LONGEST_SIGN ((ULONGEST) 1 << (sizeof(LONGEST) * HOST_CHAR_BIT - 1))
 
@@ -55,6 +57,11 @@ static struct stoken processId (const char *, int);
 static int processAttribute (const char *);
 static int find_dot_all (const char *);
 static void rewind_to_char (int);
+
+static int find_dot_all (const char *);
+}
+
+using namespace gdb;
 
 #undef YY_DECL
 #define YY_DECL static int yylex ( void )
@@ -74,11 +81,9 @@ static void rewind_to_char (int);
 	lexptr += 1; \
       }
 
-static int find_dot_all (const char *);
-
 %}
 
-%option case-insensitive interactive nodefault
+%option case-insensitive interactive nodefault noyywrap
 
 %s BEFORE_QUAL_QUOTE
 
@@ -293,6 +298,8 @@ false		{ return FALSEKEYWORD; }
 #include <ctype.h>
 /* Initialize the lexer for processing new expression. */
 
+namespace gdb {
+
 static void
 lexer_init (FILE *inp)
 {
@@ -436,7 +443,7 @@ processId (const char *name0, int len)
   while (len > 0 && isspace (name0[len-1]))
     len -= 1;
 
-  if (strstr (name0, "___") != NULL)
+  if (gdb::strstr (name0, "___") != NULL)
     {
       strncpy (name, name0, len);
       name[len] = '\000';
@@ -636,15 +643,11 @@ rewind_to_char (int ch)
   yyrestart (NULL);
 }
 
-int
-yywrap(void)
-{
-  return 1;
-}
-
 /* Dummy definition to suppress warnings about unused static definitions. */
 typedef void (*dummy_function) ();
 dummy_function ada_flex_use[] = 
 { 
   (dummy_function) yyunput
 };
+
+} /* namespace gdb */
