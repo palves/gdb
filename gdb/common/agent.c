@@ -22,9 +22,15 @@
 #include "common/symbol.h"
 #include <unistd.h>
 #include "filestuff.h"
+#ifdef HAVE_SYS_UN_H
+# include <sys/socket.h>
+# include <sys/un.h>
+#endif
 
 #define IPA_SYM_STRUCT_NAME ipa_sym_addresses_common
 #include "agent.h"
+
+namespace gdb {
 
 int debug_agent = 0;
 
@@ -123,8 +129,7 @@ agent_get_helper_thread_id (void)
 }
 
 #ifdef HAVE_SYS_UN_H
-#include <sys/socket.h>
-#include <sys/un.h>
+
 #define SOCK_DIR P_tmpdir
 
 #ifndef UNIX_PATH_MAX
@@ -280,3 +285,5 @@ agent_capability_invalidate (void)
 {
   agent_capability = 0;
 }
+
+} /* namespace gdb */
