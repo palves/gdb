@@ -21,6 +21,8 @@
 #include "common/enum-flags.h"
 #include "selftest.h"
 
+#undef GDB_SELF_TEST
+
 namespace gdb {
 
 
