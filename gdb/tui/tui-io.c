@@ -45,6 +45,10 @@
    "gdb_curses.h".  */
 #include "readline/readline.h"
 
+extern int _rl_echoing_p;
+
+namespace gdb {
+
 int
 key_is_start_sequence (int ch)
 {
@@ -434,8 +438,6 @@ tui_rl_display_match_list (char **matches, int len, int max)
 void
 tui_setup_io (int mode)
 {
-  extern int _rl_echoing_p;
-
   if (mode)
     {
       /* Redirect readline to TUI.  */
@@ -698,3 +700,5 @@ tui_expand_tabs (const char *string, int col)
 
   return ret;
 }
+
+} /* namespace gdb */
