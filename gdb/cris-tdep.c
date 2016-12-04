@@ -46,6 +46,10 @@
 
 #include "cris-tdep.h"
 
+extern const struct cris_spec_reg cris_spec_regs[];
+
+namespace gdb {
+
 enum cris_num_regs
 {
   /* There are no floating point registers.  Used in gdbserver low-linux.c.  */
@@ -140,8 +144,6 @@ enum cris_regnums
   S14_REGNUM = 47,
   S15_REGNUM = 48,
 };
-
-extern const struct cris_spec_reg cris_spec_regs[];
 
 /* CRIS version, set via the user command 'set cris-version'.  Affects
    register names and sizes.  */
@@ -4080,3 +4082,5 @@ cris_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 
   return gdbarch;
 }
+
+} /* namespace gdb */
