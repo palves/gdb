@@ -20,6 +20,8 @@
 #ifndef COMMON_COMMON_DEFS_H
 #define COMMON_COMMON_DEFS_H
 
+#define GNULIB_NAMESPACE gdb
+
 #include "config.h"
 
 #undef PACKAGE_NAME

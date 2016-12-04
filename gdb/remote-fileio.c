@@ -295,7 +295,7 @@ remote_fileio_to_fio_long (LONGEST num, fio_long_t fnum)
 }
 
 static void
-remote_fileio_to_fio_timeval (struct timeval *tv, struct fio_timeval *ftv)
+remote_fileio_to_fio_timeval (timeval *tv, struct fio_timeval *ftv)
 {
   host_to_fileio_time (tv->tv_sec, ftv->ftv_sec);
   remote_fileio_to_fio_long (tv->tv_usec, ftv->ftv_usec);
@@ -918,7 +918,7 @@ remote_fileio_func_fstat (remote_target *remote, char *buf)
   LONGEST lnum;
   struct stat st;
   struct fio_stat fst;
-  struct timeval tv;
+  timeval tv;
 
   /* 1. Parameter: file descriptor */
   if (remote_fileio_extract_int (&buf, &target_fd))
@@ -992,7 +992,7 @@ remote_fileio_func_gettimeofday (remote_target *remote, char *buf)
   LONGEST lnum;
   CORE_ADDR ptrval;
   int ret;
-  struct timeval tv;
+  timeval tv;
   struct fio_timeval ftv;
 
   /* 1. Parameter: struct timeval pointer */

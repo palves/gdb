@@ -198,7 +198,7 @@ ioscm_input_waiting (SCM port)
 #endif
 
   {
-    struct timeval timeout;
+    timeval timeout;
     fd_set input_fds;
     int num_fds = fdes + 1;
     int num_found;

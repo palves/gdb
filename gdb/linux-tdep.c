@@ -44,7 +44,6 @@
 
 namespace gdb {
 
-
 /* This enum represents the values that the user can choose when
    informing the Linux kernel about which memory mappings will be
    dumped in a corefile.  They are described in the file

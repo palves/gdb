@@ -41,7 +41,7 @@ xmalloc (size_t size)
   if (size == 0)
     size = 1;
 
-  val = malloc (size);         /* ARI: malloc */
+  val = gdb::malloc (size);         /* ARI: malloc */
   if (val == NULL)
     gdb::malloc_failure (size);
 
@@ -59,9 +59,9 @@ xrealloc (PTR ptr, size_t size)          /* ARI: PTR */
     size = 1;
 
   if (ptr != NULL)
-    val = realloc (ptr, size);	/* ARI: realloc */
+    val = gdb::realloc (ptr, size);	/* ARI: realloc */
   else
-    val = malloc (size);	        /* ARI: malloc */
+    val = gdb::malloc (size);	        /* ARI: malloc */
   if (val == NULL)
     gdb::malloc_failure (size);
 
