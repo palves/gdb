@@ -46,6 +46,27 @@
 
 static void maintenance_do_deprecate (const char *, int);
 
+#ifdef HAVE__ETEXT
+extern char _etext;
+# define TEXTEND &_etext
+#elif defined (HAVE_ETEXT)
+extern char etext;
+# define TEXTEND &etext
+#endif
+
+#if defined (HAVE_MONSTARTUP) && defined (HAVE__MCLEANUP) && defined (TEXTEND)
+
+EXTERN_C void _mcleanup (void);
+EXTERN_C void monstartup (unsigned long, unsigned long);
+extern int main ();
+
+# define GDB_PROFILING_SUPPORTED 1
+#else
+# define GDB_PROFILING_SUPPORTED 0
+#endif
+
+namespace gdb {
+
 /* Set this to the maximum number of seconds to wait instead of waiting forever
    in target_wait().  If this timer times out, then it generates an error and
    the command is aborted.  This replaces most of the need for timeouts in the
@@ -658,19 +679,9 @@ show_maintenance_profile_p (struct ui_file *file, int from_tty,
   fprintf_filtered (file, _("Internal profiling is %s.\n"), value);
 }
 
-#ifdef HAVE__ETEXT
-extern char _etext;
-#define TEXTEND &_etext
-#elif defined (HAVE_ETEXT)
-extern char etext;
-#define TEXTEND &etext
-#endif
-
-#if defined (HAVE_MONSTARTUP) && defined (HAVE__MCLEANUP) && defined (TEXTEND)
+#if GDB_PROFILING_SUPPORTED
 
 static int profiling_state;
-
-EXTERN_C void _mcleanup (void);
 
 static void
 mcleanup_wrapper (void)
@@ -678,9 +689,6 @@ mcleanup_wrapper (void)
   if (profiling_state)
     _mcleanup ();
 }
-
-EXTERN_C void monstartup (unsigned long, unsigned long);
-extern int main ();
 
 static void
 maintenance_set_profile_cmd (const char *args, int from_tty,
@@ -706,11 +714,7 @@ maintenance_set_profile_cmd (const char *args, int from_tty,
       monstartup ((unsigned long) &main, (unsigned long) TEXTEND);
     }
   else
-    {
-      extern void _mcleanup (void);
-
-      _mcleanup ();
-    }
+    _mcleanup ();
 }
 #else
 static void
@@ -1168,3 +1172,5 @@ When enabled GDB is profiled."),
 			   &maintenance_set_cmdlist,
 			   &maintenance_show_cmdlist);
 }
+
+} /* namespace gdb */
