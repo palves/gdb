@@ -54,6 +54,8 @@
 #include "command.h"
 #include "gdbcmd.h"
 
+namespace gdb {
+
 static unsigned int observer_debug;
 static void
 show_observer_debug (struct ui_file *file, int from_tty,
@@ -220,3 +222,5 @@ When non-zero, observer debugging is enabled."),
 }
 
 #include "observer.inc"
+
+} /* namespace gdb */
