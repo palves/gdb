@@ -87,6 +87,14 @@ xcalloc (size_t number, size_t size)
   return mem;
 }
 
+void
+xmalloc_failed (size_t size)
+{
+  gdb::malloc_failure (size);
+}
+
+namespace gdb {
+
 void *
 xzalloc (size_t size)
 {
@@ -99,14 +107,6 @@ xfree (void *ptr)
   if (ptr != NULL)
     free (ptr);		/* ARI: free */
 }
-
-void
-xmalloc_failed (size_t size)
-{
-  gdb::malloc_failure (size);
-}
-
-namespace gdb {
 
 /* Like asprintf/vasprintf but get an internal_error if the call
    fails. */
