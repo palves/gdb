@@ -21,16 +21,6 @@
 #if !defined (INFERIOR_H)
 #define INFERIOR_H 1
 
-struct target_waitstatus;
-struct frame_info;
-struct ui_file;
-struct type;
-struct gdbarch;
-struct regcache;
-struct ui_out;
-struct terminal_info;
-struct target_desc_info;
-
 /* For bpstat.  */
 #include "breakpoint.h"
 
@@ -44,6 +34,16 @@ struct target_desc_info;
 #include "registry.h"
 
 #include "symfile-add-flags.h"
+
+struct target_waitstatus;
+struct frame_info;
+struct ui_file;
+struct type;
+struct gdbarch;
+struct regcache;
+struct ui_out;
+struct terminal_info;
+struct target_desc_info;
 
 struct infcall_suspend_state;
 struct infcall_control_state;
