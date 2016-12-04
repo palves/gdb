@@ -74,6 +74,8 @@
 # include "tui/tui.h"
 #endif
 
+namespace gdb {
+
 #ifndef O_NOCTTY
 # define O_NOCTTY 0
 #endif
@@ -2222,3 +2224,5 @@ gdb_init (char *argv0)
      script initialization here.  */
   finish_ext_lang_initialization ();
 }
+
+} /* namespace gdb */
