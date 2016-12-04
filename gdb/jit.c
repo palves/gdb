@@ -42,6 +42,58 @@
 #include "readline/tilde.h"
 #include "completer.h"
 
+using namespace gdb;
+
+/* Proxy object for building a block.  */
+
+struct gdb_block
+{
+  /* gdb_blocks are linked into a tree structure.  Next points to the
+     next node at the same depth as this block and parent to the
+     parent gdb_block.  */
+  struct gdb_block *next, *parent;
+
+  /* Points to the "real" block that is being built out of this
+     instance.  This block will be added to a blockvector, which will
+     then be added to a symtab.  */
+  struct block *real_block;
+
+  /* The first and last code address corresponding to this block.  */
+  CORE_ADDR begin, end;
+
+  /* The name of this block (if any).  If this is non-NULL, the
+     FUNCTION symbol symbol is set to this value.  */
+  const char *name;
+};
+
+/* Proxy object for building a symtab.  */
+
+struct gdb_symtab
+{
+  /* The list of blocks in this symtab.  These will eventually be
+     converted to real blocks.  */
+  struct gdb_block *blocks;
+
+  /* The number of blocks inserted.  */
+  int nblocks;
+
+  /* A mapping between line numbers to PC.  */
+  struct linetable *linetable;
+
+  /* The source file for this symtab.  */
+  const char *file_name;
+  struct gdb_symtab *next;
+};
+
+/* Proxy object for building an object.  */
+
+struct gdb_object
+{
+  struct gdb_symtab *symtabs;
+};
+
+namespace gdb {
+
 static const char *jit_reader_dir = NULL;
 
 static const struct objfile_data *jit_objfile_data;
@@ -436,54 +488,6 @@ jit_read_code_entry (struct gdbarch *gdbarch,
   code_entry->symfile_size =
       extract_unsigned_integer (&entry_buf[off], 8, byte_order);
 }
-
-/* Proxy object for building a block.  */
-
-struct gdb_block
-{
-  /* gdb_blocks are linked into a tree structure.  Next points to the
-     next node at the same depth as this block and parent to the
-     parent gdb_block.  */
-  struct gdb_block *next, *parent;
-
-  /* Points to the "real" block that is being built out of this
-     instance.  This block will be added to a blockvector, which will
-     then be added to a symtab.  */
-  struct block *real_block;
-
-  /* The first and last code address corresponding to this block.  */
-  CORE_ADDR begin, end;
-
-  /* The name of this block (if any).  If this is non-NULL, the
-     FUNCTION symbol symbol is set to this value.  */
-  const char *name;
-};
-
-/* Proxy object for building a symtab.  */
-
-struct gdb_symtab
-{
-  /* The list of blocks in this symtab.  These will eventually be
-     converted to real blocks.  */
-  struct gdb_block *blocks;
-
-  /* The number of blocks inserted.  */
-  int nblocks;
-
-  /* A mapping between line numbers to PC.  */
-  struct linetable *linetable;
-
-  /* The source file for this symtab.  */
-  const char *file_name;
-  struct gdb_symtab *next;
-};
-
-/* Proxy object for building an object.  */
-
-struct gdb_object
-{
-  struct gdb_symtab *symtabs;
-};
 
 /* The type of the `private' data passed around by the callback
    functions.  */
@@ -1523,3 +1527,5 @@ Do \"help jit-reader-load\" for info on loading debug info readers."));
       set_cmd_completer (c, noop_completer);
     }
 }
+
+} /* namespace gdb */
