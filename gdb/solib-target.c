@@ -25,6 +25,11 @@
 #include "target.h"
 #include "vec.h"
 #include "solib-target.h"
+#ifdef HAVE_LIBEXPAT
+# include "xml-support.h"
+#endif
+
+namespace gdb {
 
 /* Private data for each loaded library.  */
 struct lm_info
@@ -70,8 +75,6 @@ solib_target_parse_libraries (const char *library)
 }
 
 #else /* HAVE_LIBEXPAT */
-
-#include "xml-support.h"
 
 /* Handle the start of a <segment> element.  */
 
@@ -509,3 +512,5 @@ _initialize_solib_target (void)
   if (current_target_so_ops == 0)
     current_target_so_ops = &solib_target_so_ops;
 }
+
+} /* namespace gdb */
