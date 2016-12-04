@@ -1862,6 +1862,7 @@ stamp-init: $(INIT_FILES)
 	@echo '/* Do not modify this file.  */' >>init.c-tmp
 	@echo '/* It is created automatically by the Makefile.  */'>>init.c-tmp
 	@echo '#include "defs.h"      /* For initialize_file_ftype.  */' >>init.c-tmp
+	@echo 'namespace gdb {' >>init.c-tmp
 	@echo 'extern void initialize_all_files(void);' >>init.c-tmp
 	@sed -e 's/\(.*\)/extern initialize_file_ftype _initialize_\1;/' <init.l-tmp >>init.c-tmp
 	@echo 'void' >>init.c-tmp
@@ -1869,6 +1870,7 @@ stamp-init: $(INIT_FILES)
 	@echo '{' >>init.c-tmp
 	@sed -e 's/\(.*\)/  _initialize_\1 ();/' <init.l-tmp >>init.c-tmp
 	@echo '}' >>init.c-tmp
+	@echo '} /* namespace gdb */' >>init.c-tmp
 	@$(SHELL) $(srcdir)/../move-if-change init.c-tmp init.c
 	@echo stamp > stamp-init
 
