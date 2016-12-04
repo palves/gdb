@@ -310,7 +310,7 @@ int ui_out_table::entry_level () const
 
 struct ui_out
   {
-    int flags;
+    ui_out_flags flags;
     /* Specific implementation of ui-out.  */
     const struct ui_out_impl *impl;
     void *data;
