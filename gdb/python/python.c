@@ -36,6 +36,23 @@
 #include <ctype.h>
 #include "location.h"
 #include "ser-event.h"
+#include "cli/cli-decode.h"
+#include "charset.h"
+#include "top.h"
+#include "linespec.h"
+#include "source.h"
+#include "common/version.h"
+#include "target.h"
+#include "gdbthread.h"
+#include "interps.h"
+#include "event-top.h"
+#include "py-event.h"
+
+#ifdef HAVE_PYTHON
+#include "python-internal.h"
+#endif
+
+namespace gdb {
 
 /* Declared constants and enum for python stack printing.  */
 static const char python_excp_none[] = "none";
@@ -86,19 +103,6 @@ const struct extension_language_defn extension_language_python =
 };
 
 #ifdef HAVE_PYTHON
-
-#include "cli/cli-decode.h"
-#include "charset.h"
-#include "top.h"
-#include "python-internal.h"
-#include "linespec.h"
-#include "source.h"
-#include "common/version.h"
-#include "target.h"
-#include "gdbthread.h"
-#include "interps.h"
-#include "event-top.h"
-#include "py-event.h"
 
 /* True if Python has been successfully initialized, false
    otherwise.  */
@@ -2115,3 +2119,5 @@ struct PyModuleDef python_GdbModuleDef =
 #undef GDB_PY_DEFINE_EVENT_TYPE
 
 #endif /* HAVE_PYTHON */
+
+} /* namespace gdb */
