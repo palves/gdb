@@ -32,6 +32,8 @@
 #include "value.h"
 #include "guile-internal.h"
 
+namespace gdb {
+
 /* The <gdb:frame> smob.
    The typedef for this struct is in guile-internal.h.  */
 
@@ -1169,3 +1171,5 @@ gdbscm_initialize_frames (void)
   frscm_inferior_data_key
     = register_inferior_data_with_cleanup (NULL, frscm_del_inferior_frames);
 }
+
+} /* namespace gdb */
