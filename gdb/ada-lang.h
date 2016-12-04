@@ -20,15 +20,15 @@
 #if !defined (ADA_LANG_H)
 #define ADA_LANG_H 1
 
-struct frame_info;
-struct inferior;
-struct type_print_options;
-struct parser_state;
-
 #include "value.h"
 #include "gdbtypes.h"
 #include "breakpoint.h"
 #include "common/vec.h"
+
+struct frame_info;
+struct inferior;
+struct type_print_options;
+struct parser_state;
 
 /* Names of specific files known to be part of the runtime
    system and that might consider (confusing) debugging information.
