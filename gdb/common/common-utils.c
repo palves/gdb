@@ -42,7 +42,7 @@ xmalloc (size_t size)
 
   val = malloc (size);         /* ARI: malloc */
   if (val == NULL)
-    malloc_failure (size);
+    gdb::malloc_failure (size);
 
   return val;
 }
@@ -62,7 +62,7 @@ xrealloc (PTR ptr, size_t size)          /* ARI: PTR */
   else
     val = malloc (size);	        /* ARI: malloc */
   if (val == NULL)
-    malloc_failure (size);
+    gdb::malloc_failure (size);
 
   return val;
 }
@@ -82,7 +82,7 @@ xcalloc (size_t number, size_t size)
 
   mem = calloc (number, size);      /* ARI: xcalloc */
   if (mem == NULL)
-    malloc_failure (number * size);
+    gdb::malloc_failure (number * size);
 
   return mem;
 }
@@ -103,8 +103,10 @@ xfree (void *ptr)
 void
 xmalloc_failed (size_t size)
 {
-  malloc_failure (size);
+  gdb::malloc_failure (size);
 }
+
+namespace gdb {
 
 /* Like asprintf/vasprintf but get an internal_error if the call
    fails. */
@@ -317,3 +319,5 @@ skip_to_space_const (const char *chp)
     chp++;
   return chp;
 }
+
+} /* namespace gdb */
