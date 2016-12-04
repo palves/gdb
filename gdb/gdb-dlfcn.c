@@ -29,6 +29,8 @@
 #define NO_SHARED_LIB
 #endif
 
+namespace gdb {
+
 #ifdef NO_SHARED_LIB
 
 gdb_dlhandle_up
@@ -116,3 +118,5 @@ is_dl_available (void)
 }
 
 #endif /* NO_SHARED_LIB */
+
+} /* namespace gdb */
