@@ -2480,6 +2480,7 @@ po/$(PACKAGE).pot: force
 	     -e 's/\([^x]\)realloc/\1xrealloc/g' \
 	     -e 's/\([ \t;,(]\)free\([ \t]*[&(),]\)/\1xfree\2/g' \
 	     -e 's/\([ \t;,(]\)free$$/\1xfree/g' \
+	     -e 's/\([ \t;,(]\)fprintf/\1parser_fprintf/g' \
 	     -e '/^#line.*y.tab.c/d' \
 	     -e 's/YY_NULL/YY_NULLPTR/g' \
 	  < $@.tmp > $@.new && \
