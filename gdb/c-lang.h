@@ -21,16 +21,15 @@
 #if !defined (C_LANG_H)
 #define C_LANG_H 1
 
-struct ui_file;
-struct language_arch_info;
-struct type_print_options;
-struct parser_state;
-
 #include "value.h"
 #include "macroexp.h"
 #include "parser-defs.h"
 #include "common/enum-flags.h"
 
+struct ui_file;
+struct language_arch_info;
+struct type_print_options;
+struct parser_state;
 
 /* The various kinds of C string and character.  Note that these
    values are chosen so that they may be or'd together in certain
