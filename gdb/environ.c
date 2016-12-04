@@ -20,6 +20,10 @@
 #include <algorithm>
 
 
+extern char **environ;
+
+namespace gdb {
+
 /* Return a new environment object.  */
 
 struct gdb_environ *
@@ -56,7 +60,6 @@ free_environ (struct gdb_environ *e)
 void
 init_environ (struct gdb_environ *e)
 {
-  extern char **environ;
   int i;
 
   if (environ == NULL)
@@ -180,3 +183,5 @@ unset_in_environ (struct gdb_environ *e, const char *var)
 	}
     }
 }
+
+} /* namespace gdb */

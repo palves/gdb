@@ -40,6 +40,8 @@
 
 extern char **environ;
 
+namespace gdb {
+
 static char *exec_wrapper;
 
 /* Break up SCRATCH into an argument vector suitable for passing to
@@ -592,3 +594,5 @@ Show use of shell to start subprocesses."), NULL,
 			   show_startup_with_shell,
 			   &setlist, &showlist);
 }
+
+} /* namespace gdb */

@@ -120,6 +120,10 @@
 
 #include <langinfo.h>
 
+extern char **environ;
+
+namespace gdb {
+
 #if __DJGPP_MINOR__ < 3
 /* This code will be provided from DJGPP 2.03 on.  Until then I code it
    here.  */
@@ -634,7 +638,6 @@ static void
 go32_create_inferior (struct target_ops *ops, char *exec_file,
 		      char *args, char **env, int from_tty)
 {
-  extern char **environ;
   jmp_buf start_state;
   char *cmdline;
   char **env_save = environ;
@@ -2144,3 +2147,5 @@ tcsetpgrp (int fd, pid_t pgid)
   errno = pgid == SOME_PID ? ENOTTY : ENOSYS;
   return -1;
 }
+
+} /* namespace gdb */
