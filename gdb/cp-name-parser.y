@@ -49,6 +49,8 @@
 #define GDB_YY_REMAP_PREFIX cpname
 #include "yy-remap.h"
 
+namespace gdb {
+
 /* The components built by the parser are allocated ahead of time,
    and cached in this structure.  */
 
@@ -248,6 +250,13 @@ cpname_state::make_name (const char *name, int len)
 
 static int yylex (YYSTYPE *, cpname_state *);
 static void yyerror (cpname_state *, const char *);
+
+} /* namespace gdb */
+
+int yyparse (void);
+
+using namespace gdb;
+
 %}
 
 %type <comp> exp exp1 type start start_opt oper colon_name
@@ -1180,6 +1189,8 @@ exp     :       FALSEKEYWORD
 /* end of C++.  */
 
 %%
+
+namespace gdb {
 
 /* Apply QUALIFIERS to LHS and return a qualified component.  IS_METHOD
    is set if LHS is a method, in which case the qualifiers are logically
@@ -2182,3 +2193,5 @@ main (int argc, char **argv)
 }
 
 #endif
+
+} /* namespace gdb */

@@ -72,16 +72,22 @@
 #define GDB_YY_REMAP_PREFIX go_
 #include "yy-remap.h"
 
+namespace gdb {
+
 /* The state of the parser, used internally when we are parsing the
    expression.  */
 
 static struct parser_state *pstate = NULL;
 
-int yyparse (void);
-
 static int yylex (void);
 
 static void yyerror (const char *);
+
+} /* namespace gdb */
+
+int yyparse (void);
+
+using namespace gdb;
 
 %}
 
@@ -112,9 +118,15 @@ static void yyerror (const char *);
   }
 
 %{
+
+namespace gdb {
+
 /* YYSTYPE gets defined by %union.  */
 static int parse_number (struct parser_state *,
 			 const char *, int, int, YYSTYPE *);
+
+} /* namespace gdb */
+
 %}
 
 %type <voidval> exp exp1 type_exp start variable lcurly
@@ -626,6 +638,8 @@ name_not_typename
 	;
 
 %%
+
+namespace gdb {
 
 /* Take care of parsing a number (anything that starts with a digit).
    Set yylval and return the token type; update lexptr.
@@ -1582,3 +1596,5 @@ yyerror (const char *msg)
 
   error (_("A %s in expression, near `%s'."), msg, lexptr);
 }
+
+} /* namespace gdb */

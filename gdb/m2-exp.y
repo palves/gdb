@@ -56,12 +56,12 @@
 #define GDB_YY_REMAP_PREFIX m2_
 #include "yy-remap.h"
 
+namespace gdb {
+
 /* The state of the parser, used internally when we are parsing the
    expression.  */
 
 static struct parser_state *pstate = NULL;
-
-int yyparse (void);
 
 static int yylex (void);
 
@@ -71,6 +71,12 @@ static int parse_number (int);
 
 /* The sign of the number being parsed.  */
 static int number_sign = 1;
+
+} /* namespace gdb */
+
+int yyparse (void);
+
+using namespace gdb;
 
 %}
 
@@ -605,6 +611,8 @@ type
 
 %%
 
+namespace gdb {
+
 /* Take care of parsing a number (anything that starts with a digit).
    Set yylval and return the token type; update lexptr.
    LEN is the number of characters in it.  */
@@ -1046,3 +1054,5 @@ yyerror (const char *msg)
 
   error (_("A %s in expression, near `%s'."), msg, lexptr);
 }
+
+} /* namespace gdb */

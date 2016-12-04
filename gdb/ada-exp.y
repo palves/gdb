@@ -55,6 +55,8 @@
 #define GDB_YY_REMAP_PREFIX ada_
 #include "yy-remap.h"
 
+namespace gdb {
+
 struct name_info {
   struct symbol *sym;
   struct minimal_symbol *msym;
@@ -72,10 +74,6 @@ static struct stoken empty_stoken = { "", 0 };
 /* If expression is in the context of TYPE'(...), then TYPE, else
  * NULL.  */
 static struct type *type_qualifier;
-
-int yyparse (void);
-
-static int yylex (void);
 
 static void yyerror (const char *);
 
@@ -113,6 +111,14 @@ static struct type *type_char (struct parser_state *);
 static struct type *type_boolean (struct parser_state *);
 
 static struct type *type_system_address (struct parser_state *);
+
+} /* namespace gdb */
+
+static int yylex (void);
+
+int yyparse (void);
+
+using namespace gdb;
 
 %}
 
@@ -717,14 +723,21 @@ primary	:	'*' primary		%prec '.'
 #define yy_switch_to_buffer ada_yy_switch_to_buffer
 #define yyrestart ada_yyrestart
 #define yytext ada_yytext
-#define yywrap ada_yywrap
+
+namespace gdb {
 
 static struct obstack temp_parse_space;
+
+} /* namespace gdb */
+
+using namespace gdb;
 
 /* The following kludge was found necessary to prevent conflicts between */
 /* defs.h and non-standard stdlib.h files.  */
 #define qsort __qsort__dummy
 #include "ada-lex.c"
+
+namespace gdb {
 
 int
 ada_parse (struct parser_state *par_state)
@@ -1467,3 +1480,5 @@ _initialize_ada_exp (void)
 {
   obstack_init (&temp_parse_space);
 }
+
+} /* namespace gdb */

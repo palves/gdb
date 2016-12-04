@@ -43,6 +43,8 @@ POSEXP  (e"+"?{NUM10})
 
 #include "diagnostics.h"
 
+namespace gdb {
+
 /* Some old versions of flex generate code that uses the "register" keyword,
    which clang warns about.  This was observed for example with flex 2.5.35,
    as shipped with macOS 10.12.  */
@@ -64,6 +66,11 @@ static int processAttribute (const char *);
 static int find_dot_all (const char *);
 static void rewind_to_char (int);
 
+static int find_dot_all (const char *);
+}
+
+using namespace gdb;
+
 #undef YY_DECL
 #define YY_DECL static int yylex ( void )
 
@@ -82,11 +89,9 @@ static void rewind_to_char (int);
 	lexptr += 1; \
       }
 
-static int find_dot_all (const char *);
-
 %}
 
-%option case-insensitive interactive nodefault
+%option case-insensitive interactive nodefault noyywrap
 
 %s BEFORE_QUAL_QUOTE
 
@@ -301,6 +306,8 @@ false		{ return FALSEKEYWORD; }
 #include <ctype.h>
 /* Initialize the lexer for processing new expression. */
 
+namespace gdb {
+
 static void
 lexer_init (FILE *inp)
 {
@@ -431,6 +438,8 @@ processReal (struct parser_state *par_state, const char *num0)
 static struct stoken
 processId (const char *name0, int len)
 {
+  using namespace gdb;
+
   char *name = (char *) obstack_alloc (&temp_parse_space, len + 11);
   int i0, i;
   struct stoken result;
@@ -630,12 +639,6 @@ rewind_to_char (int ch)
   yyrestart (NULL);
 }
 
-int
-yywrap(void)
-{
-  return 1;
-}
-
 /* Dummy definition to suppress warnings about unused static definitions. */
 typedef void (*dummy_function) ();
 dummy_function ada_flex_use[] = 
@@ -644,3 +647,5 @@ dummy_function ada_flex_use[] =
 };
 
 DIAGNOSTIC_POP
+
+} /* namespace gdb */

@@ -45,6 +45,8 @@
 #define GDB_YY_REMAP_PREFIX rust
 #include "yy-remap.h"
 
+namespace gdb {
+
 #define RUSTSTYPE YYSTYPE
 
 struct rust_op;
@@ -330,6 +332,10 @@ struct rust_op
   RUSTSTYPE left;
   RUSTSTYPE right;
 };
+
+} /* namespace gdb */
+
+using namespace gdb;
 
 %}
 
@@ -941,6 +947,8 @@ type_list:
 ;
 
 %%
+
+namespace gdb {
 
 /* A struct of this type is used to describe a token.  */
 
@@ -2817,3 +2825,5 @@ _initialize_rust_exp (void)
   selftests::register_test ("rust-lex", rust_lex_tests);
 #endif
 }
+
+} /* namespace gdb */

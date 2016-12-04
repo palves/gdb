@@ -63,18 +63,25 @@
 #define GDB_YY_REMAP_PREFIX pascal_
 #include "yy-remap.h"
 
+namespace gdb {
+
 /* The state of the parser, used internally when we are parsing the
    expression.  */
 
 static struct parser_state *pstate = NULL;
-
-int yyparse (void);
 
 static int yylex (void);
 
 static void yyerror (const char *);
 
 static char *uptok (const char *, int);
+
+} /* namespace gdb */
+
+int yyparse (void);
+
+using namespace gdb;
+
 %}
 
 /* Although the yacc "value" of an expression is not used,
@@ -107,6 +114,9 @@ static char *uptok (const char *, int);
   }
 
 %{
+
+namespace gdb {
+
 /* YYSTYPE gets defined by %union */
 static int parse_number (struct parser_state *,
 			 const char *, int, int, YYSTYPE *);
@@ -117,6 +127,9 @@ static int leftdiv_is_integer;
 static void push_current_type (void);
 static void pop_current_type (void);
 static int search_field;
+
+} /* namespace gdb */
+
 %}
 
 %type <voidval> exp exp1 type_exp start normal_start variable qualified_name
@@ -812,6 +825,8 @@ name_not_typename :	NAME
 	;
 
 %%
+
+namespace gdb {
 
 /* Take care of parsing a number (anything that starts with a digit).
    Set yylval and return the token type; update lexptr.
@@ -1729,3 +1744,5 @@ yyerror (const char *msg)
 
   error (_("A %s in expression, near `%s'."), msg, lexptr);
 }
+
+} /* namespace gdb */

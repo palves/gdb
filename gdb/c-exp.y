@@ -61,6 +61,8 @@
 #define GDB_YY_REMAP_PREFIX c_
 #include "yy-remap.h"
 
+namespace gdb {
+
 /* The state of the parser, used internally when we are parsing the
    expression.  */
 
@@ -110,13 +112,17 @@ struct c_parse_state
 
 static struct c_parse_state *cpstate;
 
-int yyparse (void);
-
 static int yylex (void);
 
 static void yyerror (const char *);
 
 static int type_aggregate_p (struct type *);
+
+} /* namespace gdb */
+
+int yyparse (void);
+
+using namespace gdb;
 
 %}
 
@@ -153,6 +159,9 @@ static int type_aggregate_p (struct type *);
   }
 
 %{
+
+namespace gdb {
+
 /* YYSTYPE gets defined by %union */
 static int parse_number (struct parser_state *par_state,
 			 const char *, int, int, YYSTYPE *);
@@ -166,6 +175,9 @@ static void write_destructor_name (struct parser_state *par_state,
 static void c_print_token (FILE *file, int type, YYSTYPE value);
 #define YYPRINT(FILE, TYPE, VALUE) c_print_token (FILE, TYPE, VALUE)
 #endif
+
+} /* namespace gdb */
+
 %}
 
 %type <voidval> exp exp1 type_exp start variable qualified_name lcurly function_method
@@ -1744,6 +1756,8 @@ name_not_typename :	NAME
 	;
 
 %%
+
+namespace gdb {
 
 /* Like write_exp_string, but prepends a '~'.  */
 
@@ -3378,3 +3392,5 @@ yyerror (const char *msg)
 
   error (_("A %s in expression, near `%s'."), msg, lexptr);
 }
+
+} /* namespace gdb */
