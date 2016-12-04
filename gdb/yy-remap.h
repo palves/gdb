@@ -96,6 +96,8 @@ namespace gdb {
 
 #define YYFPRINTF parser_fprintf
 
+#define YY_FATAL_ERROR(msg) internal_error (__FILE__, __LINE__, msg)
+
 } /* namespace gdb */
 
 #endif /* YY_REMAP_H */

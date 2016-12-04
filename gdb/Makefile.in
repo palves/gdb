@@ -2459,10 +2459,15 @@ po/$(PACKAGE).pot: force
 # LANG-exp.c is generated in objdir from LANG-exp.y if it doesn't
 # exist in srcdir, then compiled in objdir to LANG-exp.o.  If we
 # said LANG-exp.c rather than ./c-exp.c some makes would
-# sometimes re-write it into $(srcdir)/c-exp.c.  Remove bogus
-# decls for malloc/realloc/free which conflict with everything else.
-# Strictly speaking c-exp.c should therefore depend on
-# Makefile.in, but that was a pretty big annoyance.
+# sometimes re-write it into $(srcdir)/c-exp.c.
+#
+# Remove bogus decls for malloc/realloc/free which conflict with
+# everything else.
+#
+# Replace calls to fprintf in order to redirect stderr -> gdb_stderr.
+#
+# Strictly speaking c-exp.c should therefore depend on Makefile.in,
+# but that was a pretty big annoyance.
 
 %.c: %.y
 	$(ECHO_YACC) $(SHELL) $(YLWRAP) $< y.tab.c $@.tmp -- \
@@ -2490,6 +2495,7 @@ po/$(PACKAGE).pot: force
 	        -e 's/\([^x]\)realloc/\1xrealloc/g' \
 	        -e 's/\([ \t;,(]\)free\([ \t]*[&(),]\)/\1xfree\2/g' \
 	        -e 's/\([ \t;,(]\)free$$/\1xfree/g' \
+	        -e 's/\([ \t;,(]\)fprintf/\1parser_fprintf/g' \
 		-e 's/yy_flex_xrealloc/yyxrealloc/g' \
 	      > $@.new && \
 	    mv $@.new $@
