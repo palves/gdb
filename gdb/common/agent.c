@@ -23,6 +23,12 @@
 #include <unistd.h>
 #include "agent.h"
 #include "filestuff.h"
+#ifdef HAVE_SYS_UN_H
+# include <sys/socket.h>
+# include <sys/un.h>
+#endif
+
+namespace gdb {
 
 int debug_agent = 0;
 
@@ -121,8 +127,7 @@ agent_get_helper_thread_id (void)
 }
 
 #ifdef HAVE_SYS_UN_H
-#include <sys/socket.h>
-#include <sys/un.h>
+
 #define SOCK_DIR P_tmpdir
 
 #ifndef UNIX_PATH_MAX
@@ -279,3 +284,5 @@ agent_capability_invalidate (void)
 {
   agent_capability = 0;
 }
+
+} /* namespace gdb */
