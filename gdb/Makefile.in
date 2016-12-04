@@ -2466,6 +2466,14 @@ po/$(PACKAGE).pot: force
 #
 # Replace calls to fprintf in order to redirect stderr -> gdb_stderr.
 #
+# We define YY_FATAL_ERROR to hook in our replacement, however, flex
+# still defines the default version anyway, as a static function,
+# leading to -Wunused-function warnings, like:
+#
+#  ada-lex.c:2329:13: error: ‘void yy_fatal_error(const char*)’ defined but not used [-Werror=unused-function]
+#
+# Observed with flex 2.5.35.  Fix that by removing the "static".
+#
 # Strictly speaking c-exp.c should therefore depend on Makefile.in,
 # but that was a pretty big annoyance.
 
@@ -2498,6 +2506,7 @@ po/$(PACKAGE).pot: force
 	        -e 's/\([ \t;,(]\)free$$/\1xfree/g' \
 	        -e 's/\([ \t;,(]\)fprintf/\1parser_fprintf/g' \
 		-e 's/yy_flex_xrealloc/yyxrealloc/g' \
+		-e 's/static \(void yy_fatal_error\)/\1/g' \
 	      > $@.new && \
 	    mv $@.new $@
 
