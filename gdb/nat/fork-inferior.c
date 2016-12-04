@@ -31,6 +31,8 @@
 
 extern char **environ;
 
+namespace gdb {
+
 /* Build the argument vector for execv(3).  */
 
 class execv_argv
@@ -595,3 +597,5 @@ trace_start_error_with_name (const char *string)
 {
   trace_start_error ("%s: %s", string, safe_strerror (errno));
 }
+
+} /* namespace gdb */

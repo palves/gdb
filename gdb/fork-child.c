@@ -33,6 +33,8 @@
 /* The exec-wrapper, if any, that will be used when starting the
    inferior.  */
 
+namespace gdb {
+
 static char *exec_wrapper = NULL;
 
 /* See common/common-inferior.h.  */
@@ -177,3 +179,5 @@ Show use of shell to start subprocesses."), NULL,
 			   show_startup_with_shell,
 			   &setlist, &showlist);
 }
+
+} /* namespace gdb */

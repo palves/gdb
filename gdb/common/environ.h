@@ -20,6 +20,8 @@
 #include <vector>
 #include <set>
 
+namespace gdb {
+
 /* Class that represents the environment variables as seen by the
    inferior.  */
 
@@ -99,5 +101,7 @@ private:
   /* The environment variables explicitly unset by the user.  */
   std::set<std::string> m_user_unset_env;
 };
+
+} /* namespace gdb */
 
 #endif /* COMMON_ENVIRON_H */

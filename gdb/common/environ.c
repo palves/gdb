@@ -20,6 +20,8 @@
 #include <algorithm>
 #include <utility>
 
+namespace gdb {
+
 /* See common/environ.h.  */
 
 gdb_environ &
@@ -181,3 +183,5 @@ gdb_environ::user_unset_env () const
 {
   return m_user_unset_env;
 }
+
+} /* namespace gdb */
