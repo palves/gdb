@@ -45,6 +45,15 @@
 
 #include "completer.h"
 
+extern int _rl_completion_prefix_display_length;
+extern int _rl_print_completions_horizontally;
+extern int _rl_complete_mark_directories;
+
+EXTERN_C int _rl_qsort_string_compare (const void *, const void *);
+typedef int QSFUNC (const void *, const void *);
+
+namespace gdb {
+
 /* Misc state that needs to be tracked across several different
    readline completer entry point calls, all related to a single
    completion invocation.  */
@@ -2582,7 +2591,6 @@ gdb_print_filename (char *to_print, char *full_pathname, int prefix_bytes,
   int printed_len, extension_char, slen, tlen;
   char *s, c, *new_full_pathname;
   const char *dn;
-  extern int _rl_complete_mark_directories;
 
   extension_char = 0;
   printed_len = gdb_fnprint (to_print, prefix_bytes, displayer);
@@ -2674,12 +2682,6 @@ gdb_complete_get_screenwidth (const struct match_list_displayer *displayer)
   /* Readline has other stuff here which it's not clear we need.  */
   return displayer->width;
 }
-
-extern int _rl_completion_prefix_display_length;
-extern int _rl_print_completions_horizontally;
-
-EXTERN_C int _rl_qsort_string_compare (const void *, const void *);
-typedef int QSFUNC (const void *, const void *);
 
 /* GDB version of readline/complete.c:rl_display_match_list.
    See gdb_display_match_list for a description of MATCHES, LEN, MAX.
@@ -2870,3 +2872,5 @@ disables limiting.  Note that setting either no limit or\n\
 a very large limit can make completion slow."),
 				       NULL, NULL, &setlist, &showlist);
 }
+
+} /* namespace gdb */
