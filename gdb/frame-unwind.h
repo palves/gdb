@@ -20,6 +20,8 @@
 #if !defined (FRAME_UNWIND_H)
 #define FRAME_UNWIND_H 1
 
+#include "frame.h"		/* For enum frame_type.  */
+
 struct frame_data;
 struct frame_info;
 struct frame_id;
@@ -27,8 +29,6 @@ struct frame_unwind;
 struct gdbarch;
 struct regcache;
 struct value;
-
-#include "frame.h"		/* For enum frame_type.  */
 
 /* The following unwind functions assume a chain of frames forming the
    sequence: (outer) prev <-> this <-> next (inner).  All the
