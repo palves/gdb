@@ -35,6 +35,8 @@
 #endif
 #endif
 
+namespace gdb {
+
 /* A ui-file for sending output to Guile.  */
 
 typedef struct
@@ -1426,3 +1428,5 @@ gdbscm_initialize_ports (void)
 				      min_memory_port_buf_size,
 				      max_memory_port_buf_size);
 }
+
+} /* namespace gdb */
