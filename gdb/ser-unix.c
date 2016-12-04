@@ -468,7 +468,7 @@ wait_for (struct serial *scb, int timeout)
 {
   while (1)
     {
-      struct timeval tv;
+      timeval tv;
       fd_set readfds;
       int numfds;
 

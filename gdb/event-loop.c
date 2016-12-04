@@ -203,7 +203,7 @@ static struct
     int num_fds;
 
     /* Time structure for calls to select().  */
-    struct timeval select_timeout;
+    timeval select_timeout;
 
     /* Flag to tell whether the timeout should be used.  */
     int timeout_valid;
@@ -784,8 +784,8 @@ gdb_wait_for_event (int block)
     }
   else
     {
-      struct timeval select_timeout;
-      struct timeval *timeout_p;
+      timeval select_timeout;
+      timeval *timeout_p;
 
       if (block)
 	timeout_p = gdb_notifier.timeout_valid
@@ -1189,14 +1189,14 @@ delete_timer (int id)
 /* Convert a std::chrono duration to a struct timeval.  */
 
 template<typename Duration>
-static struct timeval
+static timeval
 duration_cast_timeval (const Duration &d)
 {
   using namespace std::chrono;
   seconds sec = duration_cast<seconds> (d);
   microseconds msec = duration_cast<microseconds> (d - sec);
 
-  struct timeval tv;
+  timeval tv;
   tv.tv_sec = sec.count ();
   tv.tv_usec = msec.count ();
   return tv;
@@ -1212,7 +1212,7 @@ update_wait_timeout (void)
     {
       using namespace std::chrono;
       steady_clock::time_point time_now = steady_clock::now ();
-      struct timeval timeout;
+      timeval timeout;
 
       if (timer_list.first_timer->when < time_now)
 	{

@@ -26,7 +26,7 @@ namespace gdb {
 int
 gdb_usleep (int usec)
 {
-  struct timeval delay;
+  timeval delay;
   int retval;
 
   delay.tv_sec = usec / 1000000;

@@ -20,6 +20,8 @@
 #ifndef COMMON_DEFS_H
 #define COMMON_DEFS_H
 
+#define GNULIB_NAMESPACE gdb
+
 #include "config.h"
 #ifdef GDBSERVER
 #include "build-gnulib-gdbserver/config.h"
@@ -89,9 +91,5 @@
 
 /* Pull in unique_xmalloc_ptr.  */
 #include "common/gdb_unique_ptr.h"
-
-namespace gdb {
-
-} /* namespace gdb */
 
 #endif /* COMMON_DEFS_H */

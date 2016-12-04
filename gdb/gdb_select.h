@@ -33,7 +33,7 @@
 namespace gdb {
 
 extern int gdb_select (int n, fd_set *readfds, fd_set *writefds,
-		       fd_set *exceptfds, struct timeval *timeout);
+		       fd_set *exceptfds, timeval *timeout);
 
 /* Convenience wrapper around gdb_select that returns -1/EINTR if
    set_quit_flag is set, either on entry or from a signal handler or
@@ -48,7 +48,7 @@ extern int interruptible_select (int n,
 				 fd_set *readfds,
 				 fd_set *writefds,
 				 fd_set *exceptfds,
-				 struct timeval *timeout);
+				 timeval *timeout);
 
 } /* namespace gdb */
 

@@ -89,7 +89,7 @@ static unsigned int tcp_retry_limit = 15;
 static int
 wait_for_connect (struct serial *scb, unsigned int *polls)
 {
-  struct timeval t;
+  timeval t;
   int n;
 
   /* While we wait for the connect to complete, 
