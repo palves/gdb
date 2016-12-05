@@ -64,6 +64,7 @@ done
 
 echo >> $output
 
+echo "namespace gdb {" >> $output
 echo "extern const char *const xml_builtin[][2] = {" >> $output
 
 for input; do
@@ -74,3 +75,4 @@ done
 
 echo "  { 0, 0 }" >> $output
 echo "};" >> $output
+echo "} /* namespace gdb */" >> $output
