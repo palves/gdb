@@ -38,6 +38,15 @@
 
 #include "dis-asm.h"
 
+#ifdef DEFAULT_BFD_ARCH
+extern const bfd_arch_info_type DEFAULT_BFD_ARCH;
+#endif
+#ifdef DEFAULT_BFD_VEC
+extern const bfd_target DEFAULT_BFD_VEC;
+#endif
+
+namespace gdb {
+
 int
 default_displaced_step_hw_singlestep (struct gdbarch *gdbarch,
 				      struct displaced_step_closure *closure)
@@ -606,14 +615,12 @@ set_gdbarch_from_file (bfd *abfd)
    architectures.  */
 
 #ifdef DEFAULT_BFD_ARCH
-extern const bfd_arch_info_type DEFAULT_BFD_ARCH;
 static const bfd_arch_info_type *default_bfd_arch = &DEFAULT_BFD_ARCH;
 #else
 static const bfd_arch_info_type *default_bfd_arch;
 #endif
 
 #ifdef DEFAULT_BFD_VEC
-extern const bfd_target DEFAULT_BFD_VEC;
 static const bfd_target *default_bfd_vec = &DEFAULT_BFD_VEC;
 #else
 static const bfd_target *default_bfd_vec;
@@ -1006,3 +1013,5 @@ _initialize_gdbarch_utils (void)
 			NULL, set_endian, show_endian,
 			&setlist, &showlist);
 }
+
+} /* namespace gdb */
