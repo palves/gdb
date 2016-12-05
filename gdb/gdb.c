@@ -20,6 +20,8 @@
 #include "main.h"
 #include "interps.h"
 
+using namespace gdb;
+
 int
 main (int argc, char **argv)
 {
