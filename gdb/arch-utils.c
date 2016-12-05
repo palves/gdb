@@ -37,6 +37,7 @@
 
 #include "floatformat.h"
 
+namespace gdb {
 
 struct displaced_step_closure *
 simple_displaced_step_copy_insn (struct gdbarch *gdbarch,
@@ -620,19 +621,28 @@ set_gdbarch_from_file (bfd *abfd)
   set_target_gdbarch (gdbarch);
 }
 
+} /* namespace gdb */
+
+#ifdef DEFAULT_BFD_ARCH
+extern const bfd_arch_info_type DEFAULT_BFD_ARCH;
+#endif
+#ifdef DEFAULT_BFD_VEC
+extern const bfd_target DEFAULT_BFD_VEC;
+#endif
+
+namespace gdb {
+
 /* Initialize the current architecture.  Update the ``set
    architecture'' command so that it specifies a list of valid
    architectures.  */
 
 #ifdef DEFAULT_BFD_ARCH
-extern const bfd_arch_info_type DEFAULT_BFD_ARCH;
 static const bfd_arch_info_type *default_bfd_arch = &DEFAULT_BFD_ARCH;
 #else
 static const bfd_arch_info_type *default_bfd_arch;
 #endif
 
 #ifdef DEFAULT_BFD_VEC
-extern const bfd_target DEFAULT_BFD_VEC;
 static const bfd_target *default_bfd_vec = &DEFAULT_BFD_VEC;
 #else
 static const bfd_target *default_bfd_vec;
@@ -977,3 +987,5 @@ _initialize_gdbarch_utils (void)
 			NULL, set_endian, show_endian,
 			&setlist, &showlist);
 }
+
+} /* namespace gdb */
