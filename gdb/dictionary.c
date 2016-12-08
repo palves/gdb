@@ -26,6 +26,7 @@
 #include "symtab.h"
 #include "buildsym.h"
 #include "dictionary.h"
+#include <algorithm>
 
 /* This file implements dictionaries, which are tables that associate
    symbols to names.  They are represented by an opaque type 'struct
@@ -787,6 +788,16 @@ expand_hashtable (struct dictionary *dict)
 static unsigned int
 dict_hash (const char *string0)
 {
+  /* Only consider the last component in "foo::bar::function()", so
+     that later on looking up for "function" or "bar::function" in all
+     namespaces is easy/efficient.  */
+  static const char scope_op[] = "::";
+  const char *string0_end = string0 + strlen (string0);
+  const char *end = std::find_end (string0, string0_end,
+				   scope_op, scope_op + 2);
+  if (end != string0_end)
+    string0 = end + 2;
+
   /* The Ada-encoded version of a name P1.P2...Pn has either the form
      P1__P2__...Pn<suffix> or _ada_P1__P2__...Pn<suffix> (where the Pi
      are lower-cased identifiers).  The <suffix> (which can be empty)

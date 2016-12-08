@@ -2494,6 +2494,43 @@ fprintf_symbol_filtered (struct ui_file *stream, const char *name,
 int
 strcmp_iw (const char *string1, const char *string2)
 {
+  const char *end_str1 = string1 + strlen (string1);
+  const char *end_str2 = string2 + strlen (string2);
+
+  /*  STRING2 == 'FOO' ?  I.e., no parameters specified?  */
+  if (*(end_str2 - 1) != ')')
+    {
+      /* Ignore trailing () in STRING1 then.  */
+      if (*(end_str1 - 1) == ')')
+	{
+	  end_str1--;
+	  while (*end_str1 != '(')
+	    end_str1--;
+	}
+    }
+
+  /* Now, if STRING1 is longer than STRING2, ignore the prefix of
+     STRING1, iff the following char would be a scope operator.  I.e.,
+     these two match:
+
+      [string1]  foo::bar::func
+      [string2]       bar::func
+
+     but these two don't:
+
+      [string1]  foo::zbar::func
+      [string2]        bar::func
+  */
+  if ((end_str1 - string1) > (end_str2 - string2))
+    {
+      size_t prefix_len = (end_str1 - string1) - (end_str2 - string2);
+
+      if (prefix_len >= 2 && strncmp (string1 + prefix_len - 2, "::", 2) == 0)
+	string1 += prefix_len;
+      else
+	return 1;
+    }
+
   while ((*string1 != '\0') && (*string2 != '\0'))
     {
       while (isspace (*string1))
