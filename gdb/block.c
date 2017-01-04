@@ -665,7 +665,7 @@ block_iter_name_next (const char *name, struct block_iterator *iterator)
 static struct symbol *
 block_iter_match_step (struct block_iterator *iterator,
 		       const char *name,
-		       symbol_compare_ftype *compare,
+		       symbol_name_cmp_ftype *compare,
 		       int first)
 {
   struct symbol *sym;
@@ -708,7 +708,7 @@ block_iter_match_step (struct block_iterator *iterator,
 struct symbol *
 block_iter_match_first (const struct block *block,
 			const char *name,
-			symbol_compare_ftype *compare,
+			symbol_name_cmp_ftype *compare,
 			struct block_iterator *iterator)
 {
   initialize_block_iterator (block, iterator);
@@ -724,7 +724,7 @@ block_iter_match_first (const struct block *block,
 
 struct symbol *
 block_iter_match_next (const char *name,
-		       symbol_compare_ftype *compare,
+		       symbol_name_cmp_ftype *compare,
 		       struct block_iterator *iterator)
 {
   if (iterator->which == FIRST_LOCAL_BLOCK)

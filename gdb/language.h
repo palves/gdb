@@ -125,16 +125,6 @@ struct language_arch_info
   struct type *bool_type_default;
 };
 
-/* A pointer to a function expected to return nonzero if
-   SYMBOL_SEARCH_NAME matches the given LOOKUP_NAME.
-
-   SYMBOL_SEARCH_NAME should be a symbol's "search" name.
-   LOOKUP_NAME should be the name of an entity after it has been
-   transformed for lookup.  */
-
-typedef int (*symbol_name_cmp_ftype) (const char *symbol_search_name,
-					  const char *lookup_name);
-
 /* Structure tying together assorted information about a language.  */
 
 struct language_defn
@@ -363,7 +353,7 @@ struct language_defn
 
        This field may be NULL, in which case strcmp_iw will be used
        to perform the matching.  */
-    symbol_name_cmp_ftype (*la_get_symbol_name_cmp) (const char *lookup_name);
+    symbol_name_cmp_ftype *(*la_get_symbol_name_cmp) (const char *lookup_name);
 
     /* Find all symbols in the current program space matching NAME in
        DOMAIN, according to this language's rules.

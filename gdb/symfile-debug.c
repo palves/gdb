@@ -265,8 +265,8 @@ debug_qf_map_matching_symbols (struct objfile *objfile,
 			       int (*callback) (struct block *,
 						struct symbol *, void *),
 			       void *data,
-			       symbol_compare_ftype *match,
-			       symbol_compare_ftype *ordered_compare)
+			       symbol_name_cmp_ftype *match,
+			       symbol_name_cmp_ftype *ordered_compare)
 {
   const struct debug_sym_fns_data *debug_data
     = ((const struct debug_sym_fns_data *)

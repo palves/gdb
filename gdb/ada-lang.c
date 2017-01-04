@@ -14017,7 +14017,7 @@ static const struct exp_descriptor ada_exp_descriptor = {
 /* Implement the "la_get_symbol_name_cmp" language_defn method
    for Ada.  */
 
-static symbol_name_cmp_ftype
+static symbol_name_cmp_ftype *
 ada_get_symbol_name_cmp (const char *lookup_name)
 {
   if (should_use_wild_match (lookup_name))

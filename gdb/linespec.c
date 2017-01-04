@@ -952,7 +952,7 @@ struct symbol_matcher_data
   const char *lookup_name;
 
   /* The routine to be used for comparison.  */
-  symbol_name_cmp_ftype symbol_name_cmp;
+  symbol_name_cmp_ftype *symbol_name_cmp;
 };
 
 /* A helper for iterate_over_all_matching_symtabs that is passed as a
