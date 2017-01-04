@@ -5666,11 +5666,13 @@ add_nonlocal_symbols (struct obstack *obstackp, const char *name,
       data.objfile = objfile;
 
       if (is_wild_match)
-	objfile->sf->qf->map_matching_symbols (objfile, name, domain, global,
+	objfile->sf->qf->map_matching_symbols (objfile, name, language_ada,
+					       domain, global,
 					       aux_add_nonlocal_symbols, &data,
 					       wild_match, NULL);
       else
-	objfile->sf->qf->map_matching_symbols (objfile, name, domain, global,
+	objfile->sf->qf->map_matching_symbols (objfile, name, language_ada,
+					       domain, global,
 					       aux_add_nonlocal_symbols, &data,
 					       full_match, compare_names);
 
@@ -5693,7 +5695,8 @@ add_nonlocal_symbols (struct obstack *obstackp, const char *name,
 	  strcpy (name1, "_ada_");
 	  strcpy (name1 + sizeof ("_ada_") - 1, name);
 	  data.objfile = objfile;
-	  objfile->sf->qf->map_matching_symbols (objfile, name1, domain,
+	  objfile->sf->qf->map_matching_symbols (objfile, name1, language_ada,
+						 domain,
 						 global,
 						 aux_add_nonlocal_symbols,
 						 &data,
@@ -5851,7 +5854,10 @@ ada_lookup_symbol_list (const char *name0, const struct block *block0,
 
 static void
 ada_iterate_over_symbols (const struct block *block,
-			  const char *name, domain_enum domain,
+			  const char *name,
+			  enum language name_language,
+			  symbol_name_cmp_ftype *symbol_compare,
+			  domain_enum domain,
 			  symbol_found_callback_ftype *callback,
 			  void *data)
 {
@@ -6246,8 +6252,10 @@ ada_add_block_symbols (struct obstack *obstackp,
   found_sym = 0;
   if (wild)
     {
-      for (sym = block_iter_match_first (block, name, wild_match, &iter);
-	   sym != NULL; sym = block_iter_match_next (name, wild_match, &iter))
+      for (sym = block_iter_match_first (block, name, language_ada,
+					 wild_match, &iter);
+	   sym != NULL; sym = block_iter_match_next (name, language_ada,
+						     wild_match, &iter))
       {
         if (symbol_matches_domain (SYMBOL_LANGUAGE (sym),
                                    SYMBOL_DOMAIN (sym), domain)
@@ -6269,8 +6277,10 @@ ada_add_block_symbols (struct obstack *obstackp,
     }
   else
     {
-     for (sym = block_iter_match_first (block, name, full_match, &iter);
-	  sym != NULL; sym = block_iter_match_next (name, full_match, &iter))
+     for (sym = block_iter_match_first (block, name, language_ada,
+					full_match, &iter);
+	  sym != NULL; sym = block_iter_match_next (name, language_ada,
+						    full_match, &iter))
       {
         if (symbol_matches_domain (SYMBOL_LANGUAGE (sym),
                                    SYMBOL_DOMAIN (sym), domain))

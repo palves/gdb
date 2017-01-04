@@ -394,13 +394,16 @@ spu_bfd_open (char *pathname)
 static struct block_symbol
 spu_lookup_lib_symbol (struct objfile *objfile,
 		       const char *name,
+		       enum language name_language,
 		       const domain_enum domain)
 {
   if (bfd_get_arch (objfile->obfd) == bfd_arch_spu)
-    return lookup_global_symbol_from_objfile (objfile, name, domain);
+    return lookup_global_symbol_from_objfile (objfile, name, name_language,
+					      domain);
 
   if (svr4_so_ops.lookup_lib_global_symbol != NULL)
-    return svr4_so_ops.lookup_lib_global_symbol (objfile, name, domain);
+    return svr4_so_ops.lookup_lib_global_symbol (objfile, name, name_language,
+						 domain);
   return (struct block_symbol) {NULL, NULL};
 }
 

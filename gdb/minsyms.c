@@ -147,7 +147,9 @@ add_minsym_to_demangled_hash_table (struct minimal_symbol *sym,
    but the demangled names are all the same: S::S or S::~S.  */
 
 struct bound_minimal_symbol
-lookup_minimal_symbol (const char *name, const char *sfile,
+lookup_minimal_symbol (const char *name,
+		       enum language name_language,
+		       const char *sfile,
 		       struct objfile *objf)
 {
   struct objfile *objfile;
@@ -165,7 +167,7 @@ lookup_minimal_symbol (const char *name, const char *sfile,
 
   /* For C++, canonicalize the input name.  */
   std::string modified_name_storage;
-  if (current_language->la_language == language_cplus)
+  if (name_language == language_cplus)
     {
       std::string cname = cp_canonicalize_string (name);
       if (!cname.empty ())
@@ -220,8 +222,9 @@ lookup_minimal_symbol (const char *name, const char *sfile,
 		  else
 		    {
 		      /* The function respects CASE_SENSITIVITY.  */
-		      match = MSYMBOL_MATCHES_SEARCH_NAME (msymbol,
-							  modified_name);
+		      match
+			= strcmp_iw (MSYMBOL_SEARCH_NAME (msymbol),
+				     modified_name) == 0;
 		    }
 
 		  if (match)
@@ -311,6 +314,14 @@ lookup_minimal_symbol (const char *name, const char *sfile,
   return trampoline_symbol;
 }
 
+struct bound_minimal_symbol
+lookup_minimal_symbol (const char *name, const char *sfile,
+		       struct objfile *objf)
+{
+  return lookup_minimal_symbol (name, current_language->la_language,
+				sfile, objf);
+}
+
 /* See minsyms.h.  */
 
 struct bound_minimal_symbol
@@ -338,6 +349,8 @@ find_minimal_symbol_address (const char *name, CORE_ADDR *addr,
 
 void
 iterate_over_minimal_symbols (struct objfile *objf, const char *name,
+			      enum language name_language,
+			      symbol_name_cmp_ftype *symbol_compare,
 			      void (*callback) (struct minimal_symbol *,
 						void *),
 			      void *user_data)
@@ -362,7 +375,7 @@ iterate_over_minimal_symbols (struct objfile *objf, const char *name,
   iter = objf->per_bfd->msymbol_demangled_hash[hash];
   while (iter)
     {
-      if (MSYMBOL_MATCHES_SEARCH_NAME (iter, name))
+      if (symbol_compare (MSYMBOL_SEARCH_NAME (iter), name) == 0)
 	(*callback) (iter, user_data);
       iter = iter->demangled_hash_next;
     }

@@ -2099,10 +2099,13 @@ rust_lookup_symbol_nonlocal (const struct language_defn *langdef,
 	{
 	  std::string scopedname = std::string (scope) + "::" + name;
 
-	  result = lookup_symbol_in_static_block (scopedname.c_str (), block,
+	  result = lookup_symbol_in_static_block (scopedname.c_str (),
+						  language_rust, block,
 						  domain);
 	  if (result.symbol == NULL)
-	    result = lookup_global_symbol (scopedname.c_str (), block, domain);
+	    result = lookup_global_symbol (scopedname.c_str (),
+					   langdef->la_language,
+					   block, domain);
 	}
     }
   return result;

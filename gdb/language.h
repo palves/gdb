@@ -273,7 +273,8 @@ struct language_defn
        const domain_enum);
 
     /* Find the definition of the type with the given name.  */
-    struct type *(*la_lookup_transparent_type) (const char *);
+    struct type *(*la_lookup_transparent_type) (const char *,
+						enum language);
 
     /* Return demangled language symbol, or NULL.  */
     char *(*la_demangle) (const char *mangled, int options);
@@ -371,6 +372,8 @@ struct language_defn
        used as the definition.  */
     void (*la_iterate_over_symbols) (const struct block *block,
 				     const char *name,
+				     enum language name_language,
+				     symbol_name_cmp_ftype *compare,
 				     domain_enum domain,
 				     symbol_found_callback_ftype *callback,
 				     void *data);
@@ -517,8 +520,12 @@ extern enum language set_language (enum language);
 #define LA_PRINT_ARRAY_INDEX(index_value, stream, options) \
   (current_language->la_print_array_index(index_value, stream, options))
 
-#define LA_ITERATE_OVER_SYMBOLS(BLOCK, NAME, DOMAIN, CALLBACK, DATA) \
-  (current_language->la_iterate_over_symbols (BLOCK, NAME, DOMAIN, CALLBACK, \
+#define LA_ITERATE_OVER_SYMBOLS(BLOCK, NAME, NAME_COMPARE,		\
+				DOMAIN, CALLBACK, DATA)			\
+  (current_language->la_iterate_over_symbols (BLOCK, NAME,		\
+					      current_language->la_language, \
+					      NAME_COMPARE,		\
+					      DOMAIN, CALLBACK,		\
 					      DATA))
 
 /* Test a character to decide whether it can be printed in literal form

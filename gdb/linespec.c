@@ -265,7 +265,9 @@ typedef struct ls_parser linespec_parser;
 /* Prototypes for local functions.  */
 
 static void iterate_over_file_blocks (struct symtab *symtab,
-				      const char *name, domain_enum domain,
+				      const char *name,
+				      symbol_name_cmp_ftype *name_compare,
+				      domain_enum domain,
 				      symbol_found_callback_ftype *callback,
 				      void *data);
 
@@ -987,6 +989,7 @@ iterate_over_all_matching_symtabs (struct linespec_state *state,
   struct objfile *objfile;
   struct program_space *pspace;
   struct symbol_matcher_data matcher_data;
+  enum language name_language = state->language->la_language;
 
   matcher_data.lookup_name = name;
   matcher_data.symbol_name_cmp =
@@ -1017,7 +1020,8 @@ iterate_over_all_matching_symtabs (struct linespec_state *state,
 	{
 	  struct symtab *symtab = COMPUNIT_FILETABS (cu);
 
-	  iterate_over_file_blocks (symtab, name, domain, callback, data);
+	  iterate_over_file_blocks (symtab, name, strcmp_iw,
+				    domain, callback, data);
 
 	  if (include_inline)
 	    {
@@ -1031,7 +1035,8 @@ iterate_over_all_matching_symtabs (struct linespec_state *state,
 		{
 		  block = BLOCKVECTOR_BLOCK (SYMTAB_BLOCKVECTOR (symtab), i);
 		  state->language->la_iterate_over_symbols
-		    (block, name, domain, iterate_inline_only, &cad);
+		    (block, name, name_language, strcmp_iw,
+		     domain, iterate_inline_only, &cad);
 		}
 	    }
 	}
@@ -1061,7 +1066,9 @@ get_current_search_block (void)
 
 static void
 iterate_over_file_blocks (struct symtab *symtab,
-			  const char *name, domain_enum domain,
+			  const char *name,
+			  symbol_name_cmp_ftype *symbol_compare,
+			  domain_enum domain,
 			  symbol_found_callback_ftype *callback, void *data)
 {
   struct block *block;
@@ -1069,7 +1076,7 @@ iterate_over_file_blocks (struct symtab *symtab,
   for (block = BLOCKVECTOR_BLOCK (SYMTAB_BLOCKVECTOR (symtab), STATIC_BLOCK);
        block != NULL;
        block = BLOCK_SUPERBLOCK (block))
-    LA_ITERATE_OVER_SYMBOLS (block, name, domain, callback, data);
+    LA_ITERATE_OVER_SYMBOLS (block, name, symbol_compare, domain, callback, data);
 }
 
 /* A helper for find_method.  This finds all methods in type T which
@@ -2905,9 +2912,9 @@ lookup_prefix_sym (struct linespec_state *state, VEC (symtab_ptr) *file_symtabs,
 	     been filtered out earlier.  */
 	  gdb_assert (!SYMTAB_PSPACE (elt)->executing_startup);
 	  set_current_program_space (SYMTAB_PSPACE (elt));
-	  iterate_over_file_blocks (elt, class_name, STRUCT_DOMAIN,
+	  iterate_over_file_blocks (elt, class_name, strcmp_iw, STRUCT_DOMAIN,
 				    collect_one_symbol, &collector);
-	  iterate_over_file_blocks (elt, class_name, VAR_DOMAIN,
+	  iterate_over_file_blocks (elt, class_name, strcmp_iw, VAR_DOMAIN,
 				    collect_one_symbol, &collector);
 	}
     }
@@ -3774,7 +3781,10 @@ search_minsyms_for_name (struct collect_info *info, const char *name,
 	ALL_OBJFILES (objfile)
 	{
 	  local.objfile = objfile;
-	  iterate_over_minimal_symbols (objfile, name, add_minsym, &local);
+	  iterate_over_minimal_symbols (objfile, name,
+					info->state->language->la_language,
+					strcmp_iw,
+					add_minsym, &local);
 	}
       }
     }
@@ -3784,8 +3794,10 @@ search_minsyms_for_name (struct collect_info *info, const char *name,
 	{
 	  set_current_program_space (SYMTAB_PSPACE (symtab));
 	  local.objfile = SYMTAB_OBJFILE(symtab);
-	  iterate_over_minimal_symbols (local.objfile, name, add_minsym,
-					&local);
+	  iterate_over_minimal_symbols (local.objfile, name,
+					info->state->language->la_language,
+					strcmp_iw,
+					add_minsym, &local);
 	}
     }
 
@@ -3850,7 +3862,7 @@ add_matching_symbols_to_info (const char *name,
 	     been filtered out earlier.  */
 	  gdb_assert (!SYMTAB_PSPACE (elt)->executing_startup);
 	  set_current_program_space (SYMTAB_PSPACE (elt));
-	  iterate_over_file_blocks (elt, name, VAR_DOMAIN,
+	  iterate_over_file_blocks (elt, name, strcmp_iw, VAR_DOMAIN,
 				    collect_symbols, info);
 
 	  /* If no new symbols were found in this iteration and this symtab

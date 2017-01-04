@@ -80,13 +80,13 @@ d_lookup_symbol (const struct language_defn *langdef,
 {
   struct block_symbol sym;
 
-  sym = lookup_symbol_in_static_block (name, block, domain);
+  sym = lookup_symbol_in_static_block (name, language_d, block, domain);
   if (sym.symbol != NULL)
     return sym;
 
   /* If we didn't find a definition for a builtin type in the static block,
      such as "ucent" which is a specialist type, search for it now.  */
-  if (langdef != NULL && domain == VAR_DOMAIN)
+  if (domain == VAR_DOMAIN)
     {
       struct gdbarch *gdbarch;
 
@@ -101,7 +101,7 @@ d_lookup_symbol (const struct language_defn *langdef,
 	return sym;
     }
 
-  sym = lookup_global_symbol (name, block, domain);
+  sym = lookup_global_symbol (name, langdef->la_language, block, domain);
 
   if (sym.symbol != NULL)
     return sym;
@@ -155,7 +155,8 @@ d_lookup_symbol (const struct language_defn *langdef,
 
       /* Lookup a class named CLASSNAME.  If none is found, there is nothing
 	 more that can be done.  */
-      class_sym = lookup_global_symbol (classname, block, domain);
+      class_sym = lookup_global_symbol (classname, langdef->la_language,
+					block, domain);
       if (class_sym.symbol == NULL)
 	{
 	  do_cleanups (cleanup);
@@ -180,6 +181,7 @@ d_lookup_symbol_in_module (const char *module, const char *name,
 			   const struct block *block,
 			   const domain_enum domain, int search)
 {
+  const struct language_defn *langdef = language_def (language_d);
   char *concatenated_name = NULL;
 
   if (module[0] != '\0')
@@ -192,7 +194,7 @@ d_lookup_symbol_in_module (const char *module, const char *name,
       name = concatenated_name;
     }
 
-  return d_lookup_symbol (NULL, name, block, domain, search);
+  return d_lookup_symbol (langdef, name, block, domain, search);
 }
 
 /* Lookup NAME at module scope.  SCOPE is the module that the current
@@ -290,7 +292,8 @@ find_symbol_in_baseclass (struct type *parent_type, const char *name,
       len = strlen (base_name) + strlen (name) + 2;
       concatenated_name = (char *) xrealloc (concatenated_name, len);
       xsnprintf (concatenated_name, len, "%s.%s", base_name, name);
-      sym = lookup_symbol_in_static_block (concatenated_name, block,
+      sym = lookup_symbol_in_static_block (concatenated_name,
+					   language_d, block,
 					   VAR_DOMAIN);
       if (sym.symbol != NULL)
 	break;
@@ -298,7 +301,7 @@ find_symbol_in_baseclass (struct type *parent_type, const char *name,
       /* Nope.  We now have to search all static blocks in all objfiles,
 	 even if block != NULL, because there's no guarantees as to which
 	 symtab the symbol we want is in.  */
-      sym = lookup_static_symbol (concatenated_name, VAR_DOMAIN);
+      sym = lookup_static_symbol (concatenated_name, language_d, VAR_DOMAIN);
       if (sym.symbol != NULL)
 	break;
 
@@ -359,7 +362,8 @@ d_lookup_nested_symbol (struct type *parent_type,
 	  xsnprintf (concatenated_name, size, "%s.%s",
 		     parent_name, nested_name);
 
-	  sym = lookup_static_symbol (concatenated_name, VAR_DOMAIN);
+	  sym = lookup_static_symbol (concatenated_name,
+				      language_d, VAR_DOMAIN);
 	  if (sym.symbol != NULL)
 	    return sym;
 

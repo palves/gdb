@@ -629,6 +629,7 @@ darwin_relocate_section_addresses (struct so_list *so,
 static struct block_symbol
 darwin_lookup_lib_symbol (struct objfile *objfile,
 			  const char *name,
+			  enum language name_language,
 			  const domain_enum domain)
 {
   return (struct block_symbol) {NULL, NULL};

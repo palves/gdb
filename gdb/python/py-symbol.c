@@ -448,6 +448,7 @@ gdbpy_lookup_global_symbol (PyObject *self, PyObject *args, PyObject *kw)
   static char *keywords[] = { "name", "domain", NULL };
   struct symbol *symbol = NULL;
   PyObject *sym_obj;
+  enum language name_language = current_language->la_language;
 
   if (! PyArg_ParseTupleAndKeywords (args, kw, "s|i", keywords, &name,
 				     &domain))
@@ -455,7 +456,8 @@ gdbpy_lookup_global_symbol (PyObject *self, PyObject *args, PyObject *kw)
 
   TRY
     {
-      symbol = lookup_global_symbol (name, NULL, (domain_enum) domain).symbol;
+      symbol = lookup_global_symbol (name, name_language,
+				     NULL, (domain_enum) domain).symbol;
     }
   CATCH (except, RETURN_MASK_ALL)
     {

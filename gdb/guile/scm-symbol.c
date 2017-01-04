@@ -654,6 +654,7 @@ gdbscm_lookup_global_symbol (SCM name_scm, SCM rest)
   struct symbol *symbol = NULL;
   struct cleanup *cleanups;
   struct gdb_exception except = exception_none;
+  enum language name_language = current_language->la_language;
 
   gdbscm_parse_function_args (FUNC_NAME, SCM_ARG1, keywords, "s#i",
 			      name_scm, &name, rest,
@@ -663,7 +664,8 @@ gdbscm_lookup_global_symbol (SCM name_scm, SCM rest)
 
   TRY
     {
-      symbol = lookup_global_symbol (name, NULL, (domain_enum) domain).symbol;
+      symbol = lookup_global_symbol (name, name_language,
+				     NULL, (domain_enum) domain).symbol;
     }
   CATCH (ex, RETURN_MASK_ALL)
     {

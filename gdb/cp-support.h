@@ -109,24 +109,28 @@ extern struct block_symbol cp_lookup_symbol_nonlocal
       const domain_enum domain);
 
 extern struct block_symbol
-  cp_lookup_symbol_namespace (const char *the_namespace,
+  cp_lookup_symbol_namespace (const struct language_defn *langdef,
+			      const char *the_namespace,
 			      const char *name,
 			      const struct block *block,
 			      const domain_enum domain);
 
 extern struct block_symbol cp_lookup_symbol_imports_or_template
-     (const char *scope,
+     (enum language lang,
+      const char *scope,
       const char *name,
       const struct block *block,
       const domain_enum domain);
 
 extern struct block_symbol
-  cp_lookup_nested_symbol (struct type *parent_type,
+  cp_lookup_nested_symbol (const struct language_defn *langdef,
+			   struct type *parent_type,
 			   const char *nested_name,
 			   const struct block *block,
 			   const domain_enum domain);
 
-struct type *cp_lookup_transparent_type (const char *name);
+struct type *cp_lookup_transparent_type (const char *name,
+					 enum language language);
 
 /* See description in cp-namespace.c.  */
 

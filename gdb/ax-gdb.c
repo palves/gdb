@@ -1648,7 +1648,8 @@ gen_maybe_namespace_elt (struct expression *exp,
   const char *namespace_name = TYPE_TAG_NAME (curtype);
   struct block_symbol sym;
 
-  sym = cp_lookup_symbol_namespace (namespace_name, name,
+  sym = cp_lookup_symbol_namespace (exp->language_defn,
+				    namespace_name, name,
 				    block_for_pc (ax->scope),
 				    VAR_DOMAIN);
 

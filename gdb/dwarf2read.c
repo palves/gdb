@@ -3686,7 +3686,8 @@ dw2_symtab_iter_next (struct dw2_symtab_iterator *iter)
 
 static struct compunit_symtab *
 dw2_lookup_symbol (struct objfile *objfile, int block_index,
-		   const char *name, domain_enum domain)
+		   const char *name, enum language name_language,
+		   domain_enum domain)
 {
   struct compunit_symtab *stab_best = NULL;
   struct mapped_index *index;
@@ -3710,7 +3711,7 @@ dw2_lookup_symbol (struct objfile *objfile, int block_index,
 	  const struct blockvector *bv = COMPUNIT_BLOCKVECTOR (stab);
 	  struct block *block = BLOCKVECTOR_BLOCK (bv, block_index);
 
-	  sym = block_find_symbol (block, name, domain,
+	  sym = block_find_symbol (block, name, name_language, domain,
 				   block_find_non_opaque_type_preferred,
 				   &with_opaque);
 
@@ -3863,7 +3864,8 @@ dw2_expand_symtabs_with_fullname (struct objfile *objfile,
 
 static void
 dw2_map_matching_symbols (struct objfile *objfile,
-			  const char * name, domain_enum domain,
+			  const char *name, enum language name_language,
+			  domain_enum domain,
 			  int global,
 			  int (*callback) (struct block *,
 					   struct symbol *, void *),

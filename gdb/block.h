@@ -237,25 +237,6 @@ extern struct symbol *block_iterator_first (const struct block *block,
 extern struct symbol *block_iterator_next (struct block_iterator *iterator);
 
 /* Initialize ITERATOR to point at the first symbol in BLOCK whose
-   SYMBOL_SEARCH_NAME is NAME (as tested using strcmp_iw), and return
-   that first symbol, or NULL if there are no such symbols.  */
-
-extern struct symbol *block_iter_name_first (const struct block *block,
-					     const char *name,
-					     struct block_iterator *iterator);
-
-/* Advance ITERATOR to point at the next symbol in BLOCK whose
-   SYMBOL_SEARCH_NAME is NAME (as tested using strcmp_iw), or NULL if
-   there are no more such symbols.  Don't call this if you've
-   previously received NULL from block_iterator_first or
-   block_iterator_next on this iteration.  And don't call it unless
-   ITERATOR was created by a previous call to block_iter_name_first
-   with the same NAME.  */
-
-extern struct symbol *block_iter_name_next (const char *name,
-					    struct block_iterator *iterator);
-
-/* Initialize ITERATOR to point at the first symbol in BLOCK whose
    SYMBOL_SEARCH_NAME is NAME, as tested using COMPARE (which must use
    the same conventions as strcmp_iw and be compatible with any
    block hashing function), and return that first symbol, or NULL
@@ -263,6 +244,7 @@ extern struct symbol *block_iter_name_next (const char *name,
 
 extern struct symbol *block_iter_match_first (const struct block *block,
 					      const char *name,
+					      enum language name_language,
 					      symbol_name_cmp_ftype *compare,
 					      struct block_iterator *iterator);
 
@@ -275,6 +257,7 @@ extern struct symbol *block_iter_match_first (const struct block *block,
    previous call to block_iter_match_first with the same NAME and COMPARE.  */
 
 extern struct symbol *block_iter_match_next (const char *name,
+					     enum language name_language,
 					     symbol_name_cmp_ftype *compare,
 					     struct block_iterator *iterator);
 
@@ -282,6 +265,7 @@ extern struct symbol *block_iter_match_next (const char *name,
 
 extern struct symbol *block_lookup_symbol (const struct block *block,
 					   const char *name,
+					   enum language name_language,
 					   const domain_enum domain);
 
 /* Search BLOCK for symbol NAME in DOMAIN but only in primary symbol table of
@@ -290,6 +274,7 @@ extern struct symbol *block_lookup_symbol (const struct block *block,
 
 extern struct symbol *block_lookup_symbol_primary (const struct block *block,
 						   const char *name,
+						   enum language name_language,
 						   const domain_enum domain);
 
 /* The type of the MATCHER argument to block_find_symbol.  */
@@ -302,6 +287,7 @@ typedef int (block_symbol_matcher_ftype) (struct symbol *, void *);
 
 extern struct symbol *block_find_symbol (const struct block *block,
 					 const char *name,
+					 enum language name_language,
 					 const domain_enum domain,
 					 block_symbol_matcher_ftype *matcher,
 					 void *data);
@@ -339,9 +325,12 @@ extern int block_find_non_opaque_type_preferred (struct symbol *sym,
    in no particular order.  ITER helps keep track of the iteration, and
    must be a struct block_iterator.  SYM points to the current symbol.  */
 
-#define ALL_BLOCK_SYMBOLS_WITH_NAME(block, name, iter, sym)		\
-  for ((sym) = block_iter_name_first ((block), (name), &(iter));	\
+#define ALL_BLOCK_SYMBOLS_WITH_NAME(block, name, name_language,		\
+				    name_compare, iter, sym)		\
+  for ((sym) = block_iter_match_first ((block), (name), (name_language), \
+				       (name_compare), &(iter));	\
        (sym) != NULL;							\
-       (sym) = block_iter_name_next ((name), &(iter)))
+       (sym) = block_iter_match_next ((name), (name_language),		\
+				      (name_compare), &(iter)))
 
 #endif /* BLOCK_H */

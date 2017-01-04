@@ -149,6 +149,7 @@ debug_qf_map_symtabs_matching_filename (struct objfile *objfile,
 
 static struct compunit_symtab *
 debug_qf_lookup_symbol (struct objfile *objfile, int kind, const char *name,
+			enum language name_language,
 			domain_enum domain)
 {
   const struct debug_sym_fns_data *debug_data
@@ -162,7 +163,7 @@ debug_qf_lookup_symbol (struct objfile *objfile, int kind, const char *name,
 		    domain_name (domain));
 
   retval = debug_data->real_sf->qf->lookup_symbol (objfile, kind, name,
-						   domain);
+						   name_language, domain);
 
   fprintf_filtered (gdb_stdlog, "qf->lookup_symbol (...) = %s\n",
 		    retval
@@ -260,7 +261,8 @@ debug_qf_expand_symtabs_with_fullname (struct objfile *objfile,
 
 static void
 debug_qf_map_matching_symbols (struct objfile *objfile,
-			       const char *name, domain_enum domain,
+			       const char *name, enum language name_language,
+			       domain_enum domain,
 			       int global,
 			       int (*callback) (struct block *,
 						struct symbol *, void *),
@@ -282,6 +284,7 @@ debug_qf_map_matching_symbols (struct objfile *objfile,
 		    host_address_to_string (ordered_compare));
 
   debug_data->real_sf->qf->map_matching_symbols (objfile, name,
+						 name_language,
 						 domain, global,
 						 callback, data,
 						 match,

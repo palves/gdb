@@ -503,6 +503,7 @@ fixup_psymbol_section (struct partial_symbol *psym, struct objfile *objfile)
 static struct compunit_symtab *
 psym_lookup_symbol (struct objfile *objfile,
 		    int block_index, const char *name,
+		    enum language name_language,
 		    const domain_enum domain)
 {
   struct partial_symtab *ps;
@@ -522,7 +523,8 @@ psym_lookup_symbol (struct objfile *objfile,
 	const struct blockvector *bv = COMPUNIT_BLOCKVECTOR (stab);
 	struct block *block = BLOCKVECTOR_BLOCK (bv, block_index);
 
-	sym = block_find_symbol (block, name, domain,
+	sym = block_find_symbol (block, name, name_language,
+				 domain,
 				 block_find_non_opaque_type_preferred,
 				 &with_opaque);
 
@@ -1231,7 +1233,8 @@ psymtab_to_fullname (struct partial_symtab *ps)
    ever returns non-zero, and otherwise returns 0.  */
 
 static int
-map_block (const char *name, domain_enum domain, struct objfile *objfile,
+map_block (const char *name, enum language name_language,
+	   domain_enum domain, struct objfile *objfile,
 	   struct block *block,
 	   int (*callback) (struct block *, struct symbol *, void *),
 	   void *data, symbol_name_cmp_ftype *match)
@@ -1239,8 +1242,10 @@ map_block (const char *name, domain_enum domain, struct objfile *objfile,
   struct block_iterator iter;
   struct symbol *sym;
 
-  for (sym = block_iter_match_first (block, name, match, &iter);
-       sym != NULL; sym = block_iter_match_next (name, match, &iter))
+  for (sym = block_iter_match_first (block, name, name_language,
+				     match, &iter);
+       sym != NULL; sym = block_iter_match_next (name, name_language,
+						 match, &iter))
     {
       if (symbol_matches_domain (SYMBOL_LANGUAGE (sym),
 				 SYMBOL_DOMAIN (sym), domain))
@@ -1258,7 +1263,8 @@ map_block (const char *name, domain_enum domain, struct objfile *objfile,
 
 static void
 psym_map_matching_symbols (struct objfile *objfile,
-			   const char *name, domain_enum domain,
+			   const char *name, enum language name_language,
+			   domain_enum domain,
 			   int global,
 			   int (*callback) (struct block *,
 					    struct symbol *, void *),
@@ -1282,7 +1288,7 @@ psym_map_matching_symbols (struct objfile *objfile,
 	  if (cust == NULL)
 	    continue;
 	  block = BLOCKVECTOR_BLOCK (COMPUNIT_BLOCKVECTOR (cust), block_kind);
-	  if (map_block (name, domain, objfile, block,
+	  if (map_block (name, name_language, domain, objfile, block,
 			 callback, data, match))
 	    return;
 	  if (callback (block, NULL, data))
@@ -2262,6 +2268,7 @@ maintenance_check_psymtabs (char *ignore, int from_tty)
     while (length--)
       {
 	sym = block_lookup_symbol (b, SYMBOL_LINKAGE_NAME (*psym),
+				   SYMBOL_LANGUAGE (*psym),
 				   SYMBOL_DOMAIN (*psym));
 	if (!sym)
 	  {
@@ -2279,6 +2286,7 @@ maintenance_check_psymtabs (char *ignore, int from_tty)
     while (length--)
       {
 	sym = block_lookup_symbol (b, SYMBOL_LINKAGE_NAME (*psym),
+				   SYMBOL_LANGUAGE (*psym),
 				   SYMBOL_DOMAIN (*psym));
 	if (!sym)
 	  {

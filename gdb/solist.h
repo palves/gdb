@@ -134,6 +134,7 @@ struct target_so_ops
     struct block_symbol (*lookup_lib_global_symbol)
       (struct objfile *objfile,
        const char *name,
+       enum language name_language,
        const domain_enum domain);
 
     /* Given two so_list objects, one from the GDB thread list
@@ -188,7 +189,8 @@ extern struct target_so_ops *current_target_so_ops;
 
 /* Handler for library-specific global symbol lookup in solib.c.  */
 struct block_symbol solib_global_lookup (struct objfile *objfile,
-					    const char *name,
-					    const domain_enum domain);
+					 const char *name,
+					 enum language name_language,
+					 const domain_enum domain);
 
 #endif

@@ -128,6 +128,7 @@ extern struct symbol *dict_iterator_next (struct dict_iterator *iterator);
 
 extern struct symbol *dict_iter_name_first (const struct dictionary *dict,
 					    const char *name,
+					    enum language name_language,
 					    struct dict_iterator *iterator);
 
 /* Advance ITERATOR to point at the next symbol in DICT whose
@@ -149,6 +150,7 @@ extern struct symbol *dict_iter_name_next (const char *name,
 
 extern struct symbol *dict_iter_match_first (const struct dictionary *dict,
 					     const char *name,
+					     enum language name_language,
 					     symbol_name_cmp_ftype *compare,
 					     struct dict_iterator *iterator);
 

@@ -429,8 +429,6 @@ struct minimal_symbol
   (symbol_set_language (&(symbol)->mginfo, (language), (obstack)))
 #define MSYMBOL_SEARCH_NAME(symbol)					 \
    (symbol_search_name (&(symbol)->mginfo))
-#define MSYMBOL_MATCHES_SEARCH_NAME(symbol, name)			\
-  (strcmp_iw (MSYMBOL_SEARCH_NAME (symbol), (name)) == 0)
 #define MSYMBOL_SET_NAMES(symbol,linkage_name,len,copy_name,objfile)	\
   symbol_set_names (&(symbol)->mginfo, linkage_name, len, copy_name, objfile)
 
@@ -1286,6 +1284,7 @@ extern struct block_symbol
 
 extern struct block_symbol
   lookup_symbol_in_static_block (const char *name,
+				 enum language name_language,
 				 const struct block *block,
 				 const domain_enum domain);
 
@@ -1293,6 +1292,7 @@ extern struct block_symbol
    Upon success fixes up the symbol's section if necessary.  */
 
 extern struct block_symbol lookup_static_symbol (const char *name,
+						 enum language name_language,
 						 const domain_enum domain);
 
 /* Lookup a symbol in all files' global blocks.
@@ -1308,6 +1308,7 @@ extern struct block_symbol lookup_static_symbol (const char *name,
 
 extern struct block_symbol
   lookup_global_symbol (const char *name,
+			enum language name_language,
 			const struct block *block,
 			const domain_enum domain);
 
@@ -1316,6 +1317,7 @@ extern struct block_symbol
 
 extern struct symbol *
   lookup_symbol_in_block (const char *name,
+			  enum language name_language,
 			  const struct block *block,
 			  const domain_enum domain);
 
@@ -1379,7 +1381,8 @@ extern void reread_symbols (void);
 
 extern struct type *lookup_transparent_type (const char *);
 
-extern struct type *basic_lookup_transparent_type (const char *);
+extern struct type *basic_lookup_transparent_type (const char *,
+						   enum language);
 
 /* Macro for name of symbol to indicate a file compiled with gcc.  */
 #ifndef GCC_COMPILED_FLAG_SYMBOL
@@ -1591,6 +1594,7 @@ extern enum language main_language (void);
 extern struct block_symbol
   lookup_global_symbol_from_objfile (struct objfile *main_objfile,
 				     const char *name,
+				     enum language name_language,
 				     const domain_enum domain);
 
 /* Return 1 if the supplied producer string matches the ARM RealView
@@ -1642,6 +1646,8 @@ VEC (CORE_ADDR) *find_pcs_for_symtab_line (struct symtab *symtab, int line,
 typedef int (symbol_found_callback_ftype) (struct symbol *sym, void *data);
 
 void iterate_over_symbols (const struct block *block, const char *name,
+			   enum language name_language,
+			   symbol_name_cmp_ftype *name_compare,
 			   const domain_enum domain,
 			   symbol_found_callback_ftype *callback,
 			   void *data);

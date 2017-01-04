@@ -116,6 +116,7 @@ struct dict_vector
   /* Functions to iterate over symbols with a given name.  */
   struct symbol *(*iter_match_first) (const struct dictionary *dict,
 				      const char *name,
+				      enum language name_language,
 				      symbol_name_cmp_ftype *equiv,
 				      struct dict_iterator *iterator);
   struct symbol *(*iter_match_next) (const char *name,
@@ -238,8 +239,9 @@ static struct symbol *iterator_next_hashed (struct dict_iterator *iterator);
 
 static struct symbol *iter_match_first_hashed (const struct dictionary *dict,
 					       const char *name,
+					       enum language name_language,
 					       symbol_name_cmp_ftype *compare,
-					      struct dict_iterator *iterator);
+					       struct dict_iterator *iterator);
 
 static struct symbol *iter_match_next_hashed (const char *name,
 					      symbol_name_cmp_ftype *compare,
@@ -270,6 +272,7 @@ static struct symbol *iterator_next_linear (struct dict_iterator *iterator);
 
 static struct symbol *iter_match_first_linear (const struct dictionary *dict,
 					       const char *name,
+					       enum language name_language,
 					       symbol_name_cmp_ftype *compare,
 					       struct dict_iterator *iterator);
 
@@ -532,9 +535,11 @@ dict_iterator_next (struct dict_iterator *iterator)
 struct symbol *
 dict_iter_name_first (const struct dictionary *dict,
 		      const char *name,
+		      enum language name_language,
 		      struct dict_iterator *iterator)
 {
-  return dict_iter_match_first (dict, name, strcmp_iw, iterator);
+  return dict_iter_match_first (dict, name, name_language,
+				strcmp_iw, iterator);
 }
 
 struct symbol *
@@ -545,10 +550,12 @@ dict_iter_name_next (const char *name, struct dict_iterator *iterator)
 
 struct symbol *
 dict_iter_match_first (const struct dictionary *dict,
-		       const char *name, symbol_name_cmp_ftype *compare,
+		       const char *name,
+		       enum language name_language,
+		       symbol_name_cmp_ftype *compare,
 		       struct dict_iterator *iterator)
 {
-  return (DICT_VECTOR (dict))->iter_match_first (dict, name,
+  return (DICT_VECTOR (dict))->iter_match_first (dict, name, name_language,
 						 compare, iterator);
 }
 
@@ -649,6 +656,7 @@ iterator_hashed_advance (struct dict_iterator *iterator)
 
 static struct symbol *
 iter_match_first_hashed (const struct dictionary *dict, const char *name,
+			 enum language name_language,
 			 symbol_name_cmp_ftype *compare,
 			 struct dict_iterator *iterator)
 {
@@ -878,7 +886,9 @@ iterator_next_linear (struct dict_iterator *iterator)
 
 static struct symbol *
 iter_match_first_linear (const struct dictionary *dict,
-			 const char *name, symbol_name_cmp_ftype *compare,
+			 const char *name,
+			 enum language name_language,
+			 symbol_name_cmp_ftype *compare,
 			 struct dict_iterator *iterator)
 {
   DICT_ITERATOR_DICT (iterator) = dict;

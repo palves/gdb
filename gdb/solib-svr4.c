@@ -3289,6 +3289,7 @@ struct target_so_ops svr4_so_ops;
 static struct block_symbol
 elf_lookup_lib_symbol (struct objfile *objfile,
 		       const char *name,
+		       enum language name_language,
 		       const domain_enum domain)
 {
   bfd *abfd;
@@ -3306,7 +3307,8 @@ elf_lookup_lib_symbol (struct objfile *objfile,
   if (abfd == NULL || scan_dyntag (DT_SYMBOLIC, abfd, NULL, NULL) != 1)
     return (struct block_symbol) {NULL, NULL};
 
-  return lookup_global_symbol_from_objfile (objfile, name, domain);
+  return lookup_global_symbol_from_objfile (objfile, name, name_language,
+					    domain);
 }
 
 extern initialize_file_ftype _initialize_svr4_solib; /* -Wmissing-prototypes */

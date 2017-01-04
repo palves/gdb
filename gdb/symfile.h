@@ -204,6 +204,7 @@ struct quick_symbol_functions
      only TYPE_OPAQUE symbol(s), return at least that compunit.  */
   struct compunit_symtab *(*lookup_symbol) (struct objfile *objfile,
 					    int block_index, const char *name,
+					    enum language name_language,
 					    domain_enum domain);
 
   /* Print statistics about any indices loaded for OBJFILE.  The
@@ -255,7 +256,8 @@ struct quick_symbol_functions
      non-zero to indicate that the scan should be terminated.  */
 
   void (*map_matching_symbols) (struct objfile *,
-				const char *name, domain_enum domain,
+				const char *name, enum language name_language,
+				domain_enum domain,
 				int global,
 				int (*callback) (struct block *,
 						 struct symbol *, void *),

@@ -1469,7 +1469,8 @@ evaluate_subexp_standard (struct type *expect_type,
 	  function_name = NULL;
 	  if (TYPE_CODE (type) == TYPE_CODE_NAMESPACE)
 	    {
-	      function = cp_lookup_symbol_namespace (TYPE_TAG_NAME (type),
+	      function = cp_lookup_symbol_namespace (exp->language_defn,
+						     TYPE_TAG_NAME (type),
 						     name,
 						     get_selected_block (0),
 						     VAR_DOMAIN).symbol;

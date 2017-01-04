@@ -3639,7 +3639,7 @@ create_std_terminate_master_breakpoint (void)
 	{
 	  struct bound_minimal_symbol m;
 
-	  m = lookup_minimal_symbol (func_name, NULL, objfile);
+	  m = lookup_minimal_symbol (func_name, language_cplus, NULL, objfile);
 	  if (m.minsym == NULL || (MSYMBOL_TYPE (m.minsym) != mst_text
 				   && MSYMBOL_TYPE (m.minsym) != mst_file_text))
 	    {

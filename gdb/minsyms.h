@@ -183,8 +183,13 @@ unsigned int msymbol_hash_iw (const char *);
    matches, or an empty bound minimal symbol if no match is found.  */
 
 struct bound_minimal_symbol lookup_minimal_symbol (const char *,
+						   enum language name_language,
 						   const char *,
 						   struct objfile *);
+
+struct bound_minimal_symbol lookup_minimal_symbol (const char *name,
+						   const char *sfile,
+						   struct objfile *objf);
 
 /* Like lookup_minimal_symbol, but searches all files and
    objfiles.  */
@@ -259,6 +264,8 @@ struct bound_minimal_symbol lookup_minimal_symbol_by_pc (CORE_ADDR);
 
 void iterate_over_minimal_symbols (struct objfile *objf,
 				   const char *name,
+				   enum language name_language,
+				   symbol_name_cmp_ftype *compare,
 				   void (*callback) (struct minimal_symbol *,
 						     void *),
 				   void *user_data);

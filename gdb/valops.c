@@ -3574,7 +3574,7 @@ value_maybe_namespace_elt (const struct type *curtype,
   struct block_symbol sym;
   struct value *result;
 
-  sym = cp_lookup_symbol_namespace (namespace_name, name,
+  sym = cp_lookup_symbol_namespace (current_language, namespace_name, name,
 				    get_selected_block (0), VAR_DOMAIN);
 
   if (sym.symbol == NULL)
