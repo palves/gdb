@@ -1822,6 +1822,14 @@ demangle_for_lookup (const char *name, enum language lang,
   return name;
 }
 
+/* See symtab.h.  */
+
+unsigned int
+search_name_hash (enum language language, const char *search_name)
+{
+  return generic_search_name_hash (search_name);
+}
+
 /* See symtab.h.
 
    This function (or rather its subordinates) have a bunch of loops and

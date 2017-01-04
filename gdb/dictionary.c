@@ -247,8 +247,6 @@ static struct symbol *iter_match_next_hashed (const char *name,
 					      symbol_name_cmp_ftype *compare,
 					      struct dict_iterator *iterator);
 
-static unsigned int dict_hash (const char *string);
-
 /* Functions only for DICT_HASHED.  */
 
 static int size_hashed (const struct dictionary *dict);
@@ -660,7 +658,8 @@ iter_match_first_hashed (const struct dictionary *dict, const char *name,
 			 symbol_name_cmp_ftype *compare,
 			 struct dict_iterator *iterator)
 {
-  unsigned int hash_index = dict_hash (name) % DICT_HASHED_NBUCKETS (dict);
+  unsigned int hash_index
+    = search_name_hash (name_language, name) % DICT_HASHED_NBUCKETS (dict);
   struct symbol *sym;
 
   DICT_ITERATOR_DICT (iterator) = dict;
@@ -711,10 +710,11 @@ insert_symbol_hashed (struct dictionary *dict,
 		      struct symbol *sym)
 {
   unsigned int hash_index;
+  unsigned int hash;
   struct symbol **buckets = DICT_HASHED_BUCKETS (dict);
 
-  hash_index = 
-    dict_hash (SYMBOL_SEARCH_NAME (sym)) % DICT_HASHED_NBUCKETS (dict);
+  hash = search_name_hash (SYMBOL_LANGUAGE (sym), SYMBOL_SEARCH_NAME (sym));
+  hash_index = hash % DICT_HASHED_NBUCKETS (dict);
   sym->hash_next = buckets[hash_index];
   buckets[hash_index] = sym;
 }
@@ -787,13 +787,8 @@ expand_hashtable (struct dictionary *dict)
   xfree (old_buckets);
 }
 
-/* Produce an unsigned hash value from STRING0 that is consistent
-   with strcmp_iw, strcmp, and, at least on Ada symbols, wild_match.
-   That is, two identifiers equivalent according to any of those three
-   comparison operators hash to the same value.  */
-
-static unsigned int
-dict_hash (const char *string0)
+unsigned int
+generic_search_name_hash (const char *string0)
 {
   /* The Ada-encoded version of a name P1.P2...Pn has either the form
      P1__P2__...Pn<suffix> or _ada_P1__P2__...Pn<suffix> (where the Pi

@@ -36,6 +36,11 @@ struct symbol;
 struct obstack;
 struct pending;
 
+/* Produce an unsigned hash value from STRING0 that is consistent with
+   strcmp_iw, strcmp, and, at least on Ada symbols, wild_match.  That
+   is, two identifiers equivalent according to any of those three
+   comparison operators hash to the same value.  */
+unsigned int generic_search_name_hash (const char *search_name);
 
 /* The creation functions for various implementations of
    dictionaries.  */

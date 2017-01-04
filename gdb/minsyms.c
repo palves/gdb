@@ -118,11 +118,15 @@ add_minsym_to_demangled_hash_table (struct minimal_symbol *sym,
 {
   if (sym->demangled_hash_next == NULL)
     {
-      unsigned int hash = msymbol_hash_iw (MSYMBOL_SEARCH_NAME (sym))
-	% MINIMAL_SYMBOL_HASH_SIZE;
+      unsigned int hash_index;
+      unsigned int hash;
 
-      sym->demangled_hash_next = table[hash];
-      table[hash] = sym;
+      hash = search_name_hash (MSYMBOL_LANGUAGE (sym),
+			       MSYMBOL_SEARCH_NAME (sym));
+
+      hash_index = hash % MINIMAL_SYMBOL_HASH_SIZE;
+      sym->demangled_hash_next = table[hash_index];
+      table[hash_index] = sym;
     }
 }
 
@@ -158,7 +162,8 @@ lookup_minimal_symbol (const char *name,
   struct bound_minimal_symbol trampoline_symbol = { NULL, NULL };
 
   unsigned int hash = msymbol_hash (name) % MINIMAL_SYMBOL_HASH_SIZE;
-  unsigned int dem_hash = msymbol_hash_iw (name) % MINIMAL_SYMBOL_HASH_SIZE;
+  unsigned int dem_hash = (search_name_hash (name_language,
+					     name) % MINIMAL_SYMBOL_HASH_SIZE);
 
   const char *modified_name = name;
 
@@ -357,21 +362,21 @@ iterate_over_minimal_symbols (struct objfile *objf, const char *name,
 {
   unsigned int hash;
   struct minimal_symbol *iter;
-  int (*cmp) (const char *, const char *);
+  int (*mangled_cmp) (const char *, const char *);
 
   /* The first pass is over the ordinary hash table.  */
   hash = msymbol_hash (name) % MINIMAL_SYMBOL_HASH_SIZE;
   iter = objf->per_bfd->msymbol_hash[hash];
-  cmp = (case_sensitivity == case_sensitive_on ? strcmp : strcasecmp);
+  mangled_cmp = (case_sensitivity == case_sensitive_on ? strcmp : strcasecmp);
   while (iter)
     {
-      if (cmp (MSYMBOL_LINKAGE_NAME (iter), name) == 0)
+      if (mangled_cmp (MSYMBOL_LINKAGE_NAME (iter), name) == 0)
 	(*callback) (iter, user_data);
       iter = iter->hash_next;
     }
 
   /* The second pass is over the demangled table.  */
-  hash = msymbol_hash_iw (name) % MINIMAL_SYMBOL_HASH_SIZE;
+  hash = search_name_hash (name_language, name) % MINIMAL_SYMBOL_HASH_SIZE;
   iter = objf->per_bfd->msymbol_demangled_hash[hash];
   while (iter)
     {
