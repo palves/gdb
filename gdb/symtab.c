@@ -5188,7 +5188,14 @@ struct add_name_data
   compare_symbol_name_ftype *compare_name;
 
   const char *sym_text;
+  /* The length of SYM_TEXT that is usable for symbol matching.  */
   int sym_text_len;
+  /* The length of SYM_TEXT that is usable for psymbol matching.  Same
+     as SYM_TEXT_LEN, except for functions/methods.  psyms for those
+     don't include the parameters.  This is used when deciding whether
+     to expand a partial symtab.  */
+  int psym_text_len;
+
   const char *text;
   const char *word;
 
@@ -5221,7 +5228,7 @@ symbol_completion_matcher (const char *name, void *user_data)
 
   return datum->compare_name (name,
 			      datum->sym_text,
-			      datum->sym_text_len,
+			      datum->psym_text_len,
 			      NULL);
 }
 
@@ -5344,7 +5351,6 @@ default_collect_symbol_completion_matches_break_on
   const char *sym_text;
   /* Length of sym_text.  */
   int sym_text_len;
-  struct add_name_data datum;
   struct cleanup *cleanups;
 
   /* Now look for the symbol we are supposed to complete on.  */
@@ -5403,15 +5409,6 @@ default_collect_symbol_completion_matches_break_on
 
   sym_text_len = strlen (sym_text);
 
-  datum.tracker = &tracker;
-  datum.mode = mode;
-  datum.compare_name = compare_name;
-  datum.sym_text = sym_text;
-  datum.sym_text_len = sym_text_len;
-  datum.text = text;
-  datum.word = word;
-  datum.code = code;
-
   /* At this point scan through the misc symbol vectors and add each
      symbol you find to the list.  Eventually we want to ignore
      anything that isn't a text symbol (everything else will be
@@ -5441,13 +5438,39 @@ default_collect_symbol_completion_matches_break_on
     add_symtab_completions (cust, tracker, mode, compare_name,
 			    sym_text, sym_text_len, text, word, code);
 
-  /* Look through the partial symtabs for all symbols which begin
-     by matching SYM_TEXT.  Expand all CUs that you find to the list.
-     symtab_expansion_callback is called for each expanded symtab,
-     causing those symtab's completions to be added to the list too.  */
-  expand_symtabs_matching (NULL, symbol_completion_matcher,
-			   symtab_expansion_callback, ALL_DOMAIN,
-			   &datum);
+  {
+    struct add_name_data datum;
+    datum.tracker = &tracker;
+    datum.mode = mode;
+    datum.compare_name = compare_name;
+    datum.sym_text = sym_text;
+    datum.sym_text_len = sym_text_len;
+    datum.psym_text_len = sym_text_len;
+    datum.text = text;
+    datum.word = word;
+    datum.code = code;
+
+    /* Function symbols in psymtabs don't include parameters.  Compute
+       the symbol name length without parameters, to use when deciding
+       whether to expand a partial symtab.  Note this means that
+       symtabs with the "wrong" overload end up expanded as well.  */
+    for (size_t len = 0; len < sym_text_len; len++)
+      {
+	if (sym_text[len] == '(')
+	  {
+	    datum.psym_text_len = len;
+	    break;
+	  }
+      }
+
+    /* Look through the partial symtabs for all symbols which begin
+       by matching SYM_TEXT.  Expand all CUs that you find to the list.
+       symtab_expansion_callback is called for each expanded symtab,
+       causing those symtab's completions to be added to the list too.  */
+    expand_symtabs_matching (NULL, symbol_completion_matcher,
+			     symtab_expansion_callback, ALL_DOMAIN,
+			     &datum);
+  }
 
   /* Search upwards from currently selected frame (so that we can
      complete on local vars).  Also catch fields of types defined in
@@ -5509,6 +5532,16 @@ default_collect_symbol_completion_matches_break_on
       && code == TYPE_CODE_UNDEF)
     {
       struct macro_scope *scope;
+      struct add_name_data datum;
+      datum.tracker = &tracker;
+      datum.mode = mode;
+      datum.compare_name = compare_name;
+      datum.sym_text = sym_text;
+      datum.sym_text_len = sym_text_len;
+      datum.psym_text_len = sym_text_len;
+      datum.text = text;
+      datum.word = word;
+      datum.code = code;
 
       /* Add any macros visible in the default scope.  Note that this
 	 may yield the occasional wrong result, because an expression
