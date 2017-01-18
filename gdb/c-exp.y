@@ -1483,7 +1483,7 @@ oper:	OPERATOR NEW
 	|	OPERATOR '>'
 			{ $$ = operator_stoken (">"); }
 	|	OPERATOR ASSIGN_MODIFY
-			{ const char *op = "unknown";
+			{ const char *op = " unknown";
 			  switch ($2)
 			    {
 			    case BINOP_RSH:
@@ -1559,7 +1559,7 @@ oper:	OPERATOR NEW
 
 			  c_print_type ($2, NULL, buf, -1, 0,
 					&type_print_raw_options);
-			  std::string name = ui_file_as_string (buf);
+			  std::string name = " " + ui_file_as_string (buf);
 			  ui_file_delete (buf);
 			  $$ = operator_stoken (name.c_str ());
 			}
