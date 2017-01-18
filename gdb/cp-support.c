@@ -36,6 +36,7 @@
 #include <signal.h>
 #include "gdb_setjmp.h"
 #include "safe-ctype.h"
+#include "selftest.h"
 
 #define d_left(dc) (dc)->u.s_binary.left
 #define d_right(dc) (dc)->u.s_binary.right
@@ -962,10 +963,6 @@ cp_find_first_component (const char *name)
    the recursion easier, it also stops if it reaches an unexpected ')'
    or '>' if the value of PERMISSIVE is nonzero.  */
 
-/* Let's optimize away calls to strlen("operator").  */
-
-#define LENGTH_OF_OPERATOR 8
-
 static unsigned int
 cp_find_first_component_aux (const char *name, int permissive)
 {
@@ -1037,10 +1034,10 @@ cp_find_first_component_aux (const char *name, int permissive)
 	case 'o':
 	  /* Operator names can screw up the recursion.  */
 	  if (operator_possible
-	      && strncmp (name + index, "operator",
-			  LENGTH_OF_OPERATOR) == 0)
+	      && strncmp (name + index, CP_OPERATOR_STR,
+			  CP_OPERATOR_LEN) == 0)
 	    {
-	      index += LENGTH_OF_OPERATOR;
+	      index += CP_OPERATOR_LEN;
 	      while (ISSPACE(name[index]))
 		++index;
 	      switch (name[index])
@@ -1627,6 +1624,283 @@ gdb_sniff_from_mangled_name (const char *mangled, char **demangled)
   return *demangled != NULL;
 }
 
+/* Produce an unsigned hash value from SEARCH_NAME that is consistent
+   with cp_symbol_name_cmp.  That is, any identifiers equivalent
+   according to that comparison operator hashes to the same value.  */
+
+unsigned int
+cp_search_name_hash (const char *search_name)
+{
+  /* Only consider the last component in "foo::bar::function()" (i.e.,
+     skip the entire prefix), so that later on looking up for
+     "function" or "bar::function" in all namespaces is
+     easy/efficient.  */
+
+  /* cp_entire_prefix_len assumes a fully-qualified name with no
+     leading "::".  */
+  if (startswith (search_name, "::"))
+    search_name += 2;
+
+  unsigned int prefix_len = cp_entire_prefix_len (search_name);
+  if (prefix_len != 0)
+    search_name += prefix_len + 2;
+
+  return generic_search_name_hash (search_name);
+}
+
+/* Workhorse for C++ symbol_name_cmp and
+   compare_symbol_name_for_completion implementations.
+
+   In C++, linespecs match functions/methods in all namespaces and
+   classes.  To override that, the user can specify a fully qualified
+   symbol name in the global namespace (i.e., prefix with "::").
+
+   IOW, if SYMBOL_SEARCH_NAME has more scopes than LOOKUP_NAME, we try
+   to match ignoring the extra leading scopes of SYMBOL_SEARCH_NAME.
+   This allows conveniently setting breakpoints on functions/methods
+   inside any namespace/class without specifying the fully-qualified
+   name.  Prefixing the lookup name with the global scope operator
+   disables this all-scopes matching.
+
+   E.g., these match:
+
+    [symbol search name]   [lookup name]
+    foo::bar::func         bar::func
+    foo::bar::func         ::foo:bar::func
+
+   While these don't:
+
+    [symbol search name]   [lookup name]
+    foo::zbar::func        bar::func
+    foo::bar::func         ::bar::func
+
+   Likewise, "ba<tab>" finds "foo::bar", but "::ba<tab>" doesn't.
+
+   See more examples in the test_cp_symbol_name_cmp selftest function
+   below.
+
+   SYMBOL_SEARCH_NAME, LOOKUP_NAME, LOOKUP_NAME_LEN,
+   SYMBOL_SEARCH_NAME_MATCHED and NON_SYMBOL_PREFIX are like in
+   language_defn::la_compare_symbol_for_completion.
+
+   MODE like is the same parameter in strncmp_iw, i.e., whether to
+   behave like strcmp or strncmp.
+*/
+
+static int
+cp_symbol_name_ncmp (const char *symbol_search_name,
+		     const char *lookup_name, size_t lookup_name_len,
+		     strncmp_iw_mode mode,
+		     const char **symbol_search_name_matched)
+{
+  const char *sname = symbol_search_name;
+
+  while (true)
+    {
+      if (strncmp_iw_with_mode (sname,
+				lookup_name, lookup_name_len,
+				mode) == 0)
+	{
+	  if (symbol_search_name_matched != NULL)
+	    *symbol_search_name_matched = sname;
+	  return 0;
+	}
+
+      unsigned int len = cp_find_first_component (sname);
+
+      if (sname[len] == '\0')
+	return 1;
+
+      gdb_assert (sname[len] == ':');
+      /* Skip the '::'.  */
+      sname += len + 2;
+    }
+}
+
+/* C++ symbol_name_cmp implementation.  Defers work to
+   cp_symbol_name_ncmp.  */
+
+int
+cp_symbol_name_cmp (const char *symbol_search_name, const char *lookup_name)
+{
+  return cp_symbol_name_ncmp (symbol_search_name,
+			      lookup_name, strlen (lookup_name),
+			      strncmp_iw_mode::MATCH_PARAMS,
+			      NULL);
+}
+
+/* C++ compare_symbol_name implementation.  Defers work to
+   cp_symbol_name_ncmp.  */
+
+static bool
+cp_compare_fq_symbol_name (const char *symbol_search_name,
+			   const char *lookup_name, size_t lookup_name_len,
+			   const char **symbol_search_name_matched)
+{
+  if (strncmp_iw_with_mode (symbol_search_name,
+			    lookup_name, lookup_name_len,
+			    strncmp_iw_mode::NORMAL) == 0)
+    {
+      if (symbol_search_name_matched != NULL)
+	*symbol_search_name_matched = symbol_search_name;
+      return true;
+    }
+
+  return false;
+}
+
+/* C++ compare_symbol_name implementation.  Defers work to
+   cp_symbol_name_ncmp.  */
+
+static bool
+cp_compare_symbol_name (const char *symbol_search_name,
+			const char *lookup_name, size_t lookup_name_len,
+			const char **symbol_search_name_matched)
+{
+  return cp_symbol_name_ncmp (symbol_search_name, lookup_name, lookup_name_len,
+			      strncmp_iw_mode::NORMAL,
+			      symbol_search_name_matched) == 0;
+}
+
+/* In C++ and other languages, if the user searches for
+   "::foo::function", the initial "::" indicates a request for a
+   fully-qualified name search.  */
+
+static int
+cp_fq_symbol_name_cmp (const char *string1, const char *string2)
+{
+  return strcmp_iw (string1, string2 + 2);
+}
+
+/* Implement the "la_get_symbol_name_cmp" language_defn method for C++
+   and other language that use "::" as global namespace operator.  */
+
+symbol_name_cmp_ftype *
+cp_get_symbol_name_cmp (const char *lookup_name)
+{
+  if (startswith (lookup_name, "::"))
+    return cp_fq_symbol_name_cmp;
+  return cp_symbol_name_cmp;
+}
+
+/* Implement the "la_get_compare_symbol_name" language_defn method for
+   C++ and other languages that use "::" as global namespace
+   operator.  */
+
+compare_symbol_name_ftype *
+cp_get_compare_symbol_name (const char *lookup_name, size_t lookup_name_len)
+{
+  if (lookup_name_len >= 2 && startswith (lookup_name, "::"))
+    return cp_compare_fq_symbol_name;
+  return cp_compare_symbol_name;
+}
+
+
+#if GDB_SELF_TEST
+
+namespace selftests {
+
+void
+test_cp_symbol_name_cmp ()
+{
+#define CHECK_MATCH(SYMBOL, INPUT) \
+  SELF_CHECK (cp_symbol_name_cmp (SYMBOL, INPUT) == 0)
+#define CHECK_NOT_MATCH(SYMBOL, INPUT) \
+  SELF_CHECK (cp_symbol_name_cmp (SYMBOL, INPUT) != 0)
+
+  /* Like CHECK_MATCH, and also check that INPUT (and all substrings
+     that start at index 0) completes to SYMBOL.  */
+#define CHECK_MATCH_C(SYMBOL, INPUT)					\
+  CHECK_MATCH (SYMBOL, INPUT);						\
+  for (size_t i = 0; i < sizeof (INPUT) - 1; i++)			\
+    SELF_CHECK (cp_symbol_name_ncmp (SYMBOL, INPUT, i,			\
+				     strncmp_iw_mode::NORMAL,		\
+				     NULL) == 0)
+
+  /* Like CHECK_NOT_MATCH, and also check that INPUT does NOT complete
+     to SYMBOL.  */
+#define CHECK_NOT_MATCH_C(SYMBOL, INPUT)				\
+  CHECK_NOT_MATCH (SYMBOL, INPUT);					\
+  SELF_CHECK (cp_symbol_name_ncmp (SYMBOL, INPUT,			\
+				   sizeof (INPUT) - 1,			\
+				   strncmp_iw_mode::NORMAL,		\
+				   NULL) != 0)
+
+  /* Lookup name without parens matches all overloads.  */
+  CHECK_MATCH_C ("function()", "function");
+  CHECK_MATCH_C ("function(int)", "function");
+
+  /* Check whitespace around parameters is ignored.  */
+  CHECK_MATCH_C ("function()", "function ()");
+  CHECK_MATCH_C ("function ( )", "function()");
+  CHECK_MATCH_C ("function ()", "function( )");
+  CHECK_MATCH_C ("func(int)", "func( int )");
+  CHECK_MATCH_C ("func(int)", "func ( int ) ");
+  CHECK_MATCH_C ("func ( int )", "func( int )");
+  CHECK_MATCH_C ("func ( int )", "func ( int ) ");
+
+  /* Check symbol name prefixes aren't incorrectly matched.  */
+  CHECK_NOT_MATCH ("func", "function");
+  CHECK_NOT_MATCH ("function", "func");
+  CHECK_NOT_MATCH ("function()", "func");
+
+  /* Check that if the lookup name includes parameters, only the right
+     overload matches.  */
+  CHECK_MATCH_C ("function(int)", "function(int)");
+  CHECK_NOT_MATCH_C ("function(int)", "function()");
+
+  /* Tests matching symbols in some scope.  */
+  CHECK_MATCH_C ("foo::function()", "function");
+  CHECK_MATCH_C ("foo::function(int)", "function");
+  CHECK_MATCH_C ("foo::bar::function()", "function");
+  CHECK_MATCH_C ("bar::function()", "bar::function");
+  CHECK_MATCH_C ("foo::bar::function()", "bar::function");
+  CHECK_MATCH_C ("foo::bar::function(int)", "bar::function");
+
+  /* Same, with parameters in the lookup name.  */
+  CHECK_MATCH_C ("foo::function()", "function()");
+  CHECK_MATCH_C ("foo::bar::function()", "function()");
+  CHECK_MATCH_C ("foo::function(int)", "function(int)");
+  CHECK_MATCH_C ("foo::function()", "foo::function()");
+  CHECK_MATCH_C ("foo::bar::function()", "bar::function()");
+  CHECK_MATCH_C ("foo::bar::function(int)", "bar::function(int)");
+  CHECK_NOT_MATCH_C ("foo::bar::function(int)", "bar::function()");
+
+  CHECK_MATCH_C ("(anonymous namespace)::bar::function(int)",
+		 "bar::function(int)");
+  CHECK_MATCH_C ("foo::(anonymous namespace)::bar::function(int)",
+		 "function(int)");
+
+  /* Lookup scope wider than symbol scope, should not match.  */
+  CHECK_NOT_MATCH_C ("function()", "bar::function");
+  CHECK_NOT_MATCH_C ("function()", "bar::function()");
+
+  /* An explicit global scope forces a fully qualified match.  */
+  CHECK_NOT_MATCH_C ("foo::function()", "::function");
+  CHECK_NOT_MATCH_C ("foo::function()", "::function()");
+  CHECK_NOT_MATCH_C ("foo::function(int)", "::function()");
+  CHECK_NOT_MATCH_C ("foo::function(int)", "::function(int)");
+
+  CHECK_MATCH_C ("abc::def::ghi()", "abc::def::ghi()");
+  CHECK_MATCH_C ("abc::def::ghi ( )", "abc::def::ghi()");
+  CHECK_MATCH_C ("abc::def::ghi()", "abc::def::ghi ( )");
+  CHECK_MATCH_C ("function()", "function()");
+  CHECK_MATCH_C ("foo::function()", "function()");
+  CHECK_MATCH_C ("foo::bar::function()", "function()");
+  CHECK_MATCH_C ("bar::function()", "bar::function()");
+  CHECK_MATCH_C ("foo::bar::function()", "bar::function");
+  CHECK_MATCH_C ("(anonymous namespace)::bar::function(int)",
+		 "function(int)");
+  CHECK_MATCH_C ("foo::(anonymous namespace)::bar::function(int)",
+		 "function(int)");
+  CHECK_NOT_MATCH_C ("function()", "bar::function");
+  CHECK_NOT_MATCH_C ("foo::function()", "::function");
+}
+
+}
+
+#endif
+
 /* Don't allow just "maintenance cplus".  */
 
 static  void
@@ -1711,5 +1985,9 @@ display the offending symbol."),
 			   NULL,
 			   &maintenance_set_cmdlist,
 			   &maintenance_show_cmdlist);
+#endif
+
+#if GDB_SELF_TEST
+  register_self_test (selftests::test_cp_symbol_name_cmp);
 #endif
 }

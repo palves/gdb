@@ -46,6 +46,14 @@ struct using_direct;
 
 #define CP_ANONYMOUS_NAMESPACE_LEN 21
 
+/* A string representing the start of an operator name.  */
+
+#define CP_OPERATOR_STR "operator"
+
+/* The length of CP_OPERATOR_STR.  */
+
+#define CP_OPERATOR_LEN 8
+
 /* The result of parsing a name.  */
 
 struct demangle_parse_info
@@ -94,6 +102,15 @@ extern struct symbol **make_symbol_overload_list_adl (struct type **arg_types,
 
 extern struct type *cp_lookup_rtti_type (const char *name,
 					 struct block *block);
+
+extern unsigned int cp_search_name_hash (const char *string0);
+
+extern int cp_symbol_name_cmp (const char *sym, const char *search_name);
+
+extern symbol_name_cmp_ftype *cp_get_symbol_name_cmp (const char *lookup_name);
+
+extern compare_symbol_name_ftype *cp_get_compare_symbol_name
+  (const char *lookup_name, size_t lookup_name_len);
 
 /* Functions/variables from cp-namespace.c.  */
 

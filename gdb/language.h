@@ -313,14 +313,18 @@ struct language_defn
     /* The list of characters forming word boundaries.  */
     char *(*la_word_break_characters) (void);
 
-    /* Should return a vector of all symbols which are possible
+    /* Add to the completion tracker all symbols which are possible
        completions for TEXT.  WORD is the entire command on which the
        completion is being made.  If CODE is TYPE_CODE_UNDEF, then all
        symbols should be examined; otherwise, only STRUCT_DOMAIN
        symbols whose type has a code of CODE should be matched.  */
-    VEC (char_ptr) *(*la_make_symbol_completion_list) (const char *text,
-						       const char *word,
-						       enum type_code code);
+    void (*la_collect_symbol_completion_matches)
+      (completion_tracker &tracker,
+       complete_symbol_mode mode,
+       compare_symbol_name_ftype *compare_name,
+       const char *text,
+       const char *word,
+       enum type_code code);
 
     /* The per-architecture (OS/ABI) language information.  */
     void (*la_language_arch_info) (struct gdbarch *,
@@ -348,13 +352,39 @@ struct language_defn
     void (*la_get_string) (struct value *value, gdb_byte **buffer, int *length,
 			   struct type **chartype, const char **charset);
 
-    /* Return a pointer to the function that should be used to match
-       a symbol name against LOOKUP_NAME. This is mostly for languages
-       such as Ada where the matching algorithm depends on LOOKUP_NAME.
+    /* Return a pointer to the function that should be used to match a
+       symbol name against LOOKUP_NAME in linespecs.  In Ada the
+       matching algorithm depends on LOOKUP_NAME.  In C++, linespecs
+       match functions/methods in all namespaces and classes, unless
+       overridden by specifying a fully qualified symbol name in the
+       global namespace (i.e., lookup name is prefixed with "::").
 
-       This field may be NULL, in which case strcmp_iw will be used
-       to perform the matching.  */
+       This field may be NULL, in which case strcmp_iw will be used to
+       perform the matching.  */
     symbol_name_cmp_ftype *(*la_get_symbol_name_cmp) (const char *lookup_name);
+
+    /* Return a pointer to the function that should be used to match a
+       symbol name against LOOKUP_NAME in linespecs.
+
+       SYMBOL_SEARCH_NAME and LOOKUP_NAME are like in
+       symbol_name_cmp_ftype.  LOOKUP_NAME_LEN is how much of
+       LOOKUP_NAME to consider.
+
+       On exit, *SYMBOL_SEARCH_NAME_MATCHED points the part of
+       SYMBOL_SEARCH_NAME that was considered to match LOOKUP_NAME.
+       E.g., in C++, if the symbol is "foo::function()" and
+       LOOKUP_NAME is "function(", *SYMBOL_SEARCH_NAME_MATCHED points
+       to "function()" inside SYMBOL_SEARCH_NAME.
+
+       On exit, *NON_SYMBOL_PREFIX tells how many characters of
+       LOOKUP_NAME form a prefix that is not considered part of a
+       symbol name.  E.g., in C++, if the user searches for
+       "::foo::function", the initial "::" is not be found in symbol
+       names, even though it has meaning, so NON_SYMBOL_PREFIX is set
+       to 2 (see la_get_symbol_name_cmp above).  */
+    compare_symbol_name_ftype *(*la_get_compare_symbol_name)
+      (const char *lookup_name,
+       size_t lookup_name_len);
 
     /* Find all symbols in the current program space matching NAME in
        DOMAIN, according to this language's rules.
@@ -604,6 +634,18 @@ void default_get_string (struct value *value, gdb_byte **buffer, int *length,
 
 void c_get_string (struct value *value, gdb_byte **buffer, int *length,
 		   struct type **char_type, const char **charset);
+
+/* The default implementation of la_compare_symbol_name.  Compares
+   with strncmp_iw.  */
+extern bool default_compare_symbol_name
+  (const char *symbol_search_name,
+   const char *lookup_name, size_t lookup_name_len,
+   const char **symbol_search_name_matched);
+
+/* The default implementation of la_get_compare_symbol_name.  Returns
+   default_compare_symbol_name.  */
+compare_symbol_name_ftype *default_get_compare_symbol_name
+  (const char *lookup_name, size_t lookup_name_len);
 
 /* The languages supported by GDB.  */
 

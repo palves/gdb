@@ -187,7 +187,7 @@ namespace eval $testfile {
 	set tst "complete unique function name"
 	send_gdb "break -function mai\t"
 	gdb_test_multiple "" $tst {
-	    "break -function mai\\\x07n" {
+	    "break -function main" {
 		send_gdb "\n"
 		gdb_test "" ".*Breakpoint \[0-9\]+.*" $tst
 		gdb_test_no_output "delete \$bpnum" "delete $tst breakpoint"

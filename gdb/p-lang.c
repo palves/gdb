@@ -447,12 +447,13 @@ extern const struct language_defn pascal_language_defn =
   1,				/* c-style arrays */
   0,				/* String lower bound */
   default_word_break_characters,
-  default_make_symbol_completion_list,
+  default_collect_symbol_completion_matches,
   pascal_language_arch_info,
   default_print_array_index,
   default_pass_by_reference,
   default_get_string,
   NULL,				/* la_get_symbol_name_cmp */
+  NULL,				/* la_compare_symbol_for_completion */
   iterate_over_symbols,
   &default_varobj_ops,
   NULL,

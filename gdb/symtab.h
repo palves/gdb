@@ -21,9 +21,11 @@
 #define SYMTAB_H 1
 
 #include "vec.h"
+#include <vector>
 #include "gdb_vecs.h"
 #include "gdbtypes.h"
 #include "common/enum-flags.h"
+#include "completer.h"
 
 /* Opaque declarations.  */
 struct ui_file;
@@ -50,6 +52,25 @@ struct cmd_list_element;
    entity after it has been transformed for lookup.  */
 typedef int (symbol_name_cmp_ftype) (const char *symbol_search_name,
 				     const char *lookup_name);
+
+/* Comparison function for completion symbol lookup.
+
+   Returns true if the symbol name matches against LOOKUP_NAME.
+
+   SYMBOL_SEARCH_NAME and LOOKUP_NAME are like in
+   symbol_name_cmp_ftype.  LOOKUP_NAME_LEN is how much of LOOKUP_NAME
+   to consider.
+
+   On exit, *SYMBOL_SEARCH_NAME_MATCHED points the part of
+   SYMBOL_SEARCH_NAME that was considered to match LOOKUP_NAME.  E.g.,
+   in C++, in linespec mode, if the symbol is "foo::function()" and
+   LOOKUP_NAME is "function(", *SYMBOL_SEARCH_NAME_MATCHED points to
+   "function()" inside SYMBOL_SEARCH_NAME.  */
+
+typedef bool (compare_symbol_name_ftype) (const char *symbol_search_name,
+					  const char *lookup_name,
+					  size_t lookup_name_len,
+					  const char **symbol_search_name_matched);
 
 /* Some of the structures in this file are space critical.
    The space-critical structures are:
@@ -286,6 +307,8 @@ extern const char *symbol_search_name (const struct general_symbol_info *);
 
 extern unsigned int search_name_hash (enum language language,
 				      const char *search_name);
+
+const char *global_namespace_search_name_prefix (enum language language);
 
 /* Classification types for a minimal symbol.  These should be taken as
    "advisory only", since if gdb can't easily figure out a
@@ -1512,25 +1535,50 @@ extern void forget_cached_source_info (void);
 
 extern void select_source_symtab (struct symtab *);
 
-extern VEC (char_ptr) *default_make_symbol_completion_list_break_on
-  (const char *text, const char *word, const char *break_on,
+enum class complete_symbol_mode
+  {
+    /* Completing an expression.  */
+    EXPRESSION,
+
+    /* Completing a linespec.  */
+    LINESPEC,
+  };
+
+extern void default_collect_symbol_completion_matches_break_on
+  (completion_tracker &tracker,
+   complete_symbol_mode mode,
+   compare_symbol_name_ftype *compare_name,
+   const char *text, const char *word, const char *break_on,
    enum type_code code);
-extern VEC (char_ptr) *default_make_symbol_completion_list (const char *,
-							    const char *,
-							    enum type_code);
-extern VEC (char_ptr) *make_symbol_completion_list (const char *, const char *);
-extern VEC (char_ptr) *make_symbol_completion_type (const char *, const char *,
+extern void default_collect_symbol_completion_matches
+  (completion_tracker &tracker,
+   complete_symbol_mode,
+   compare_symbol_name_ftype *,
+   const char *,
+   const char *,
+   enum type_code);
+extern void collect_symbol_completion_matches (completion_tracker &tracker,
+					       complete_symbol_mode,
+					       compare_symbol_name_ftype *compare_name,
+					       const char *, const char *);
+extern void collect_symbol_completion_matches_type (completion_tracker &tracker,
+						    const char *, const char *,
 						    enum type_code);
-extern VEC (char_ptr) *make_symbol_completion_list_fn (struct cmd_list_element *,
-						       const char *,
-						       const char *);
 
-extern VEC (char_ptr) *make_file_symbol_completion_list (const char *,
-							 const char *,
-							 const char *);
+extern void collect_file_symbol_completion_matches (completion_tracker &tracker,
+						    complete_symbol_mode,
+						    compare_symbol_name_ftype *compare_name,
+						    const char *,
+						    const char *,
+						    const char *);
 
-extern VEC (char_ptr) *make_source_files_completion_list (const char *,
-							  const char *);
+extern completion_list
+  make_source_files_completion_list (const char *, const char *);
+
+extern bool compare_symbol_name_for_expressions (const char *name,
+						 const char *sym_text,
+						 size_t sym_text_len,
+						 const char **matched_name);
 
 /* symtab.c */
 
@@ -1698,5 +1746,12 @@ struct symbol *allocate_symbol (struct objfile *);
 void initialize_objfile_symbol (struct symbol *);
 
 struct template_symbol *allocate_template_symbol (struct objfile *);
+
+void completion_list_add_name (completion_tracker &tracker,
+			       complete_symbol_mode mode,
+			       compare_symbol_name_ftype *compare_name,
+			       const char *symname,
+			       const char *sym_text, int sym_text_len,
+			       const char *text, const char *word);
 
 #endif /* !defined(SYMTAB_H) */

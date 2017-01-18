@@ -228,11 +228,16 @@ f_word_break_characters (void)
 /* Consider the modules separator :: as a valid symbol name character
    class.  */
 
-static VEC (char_ptr) *
-f_make_symbol_completion_list (const char *text, const char *word,
-			       enum type_code code)
+static void
+f_collect_symbol_completion_matches (completion_tracker &tracker,
+				     complete_symbol_mode mode,
+				     compare_symbol_name_ftype *compare_name,
+				     const char *text, const char *word,
+				     enum type_code code)
 {
-  return default_make_symbol_completion_list_break_on (text, word, ":", code);
+  default_collect_symbol_completion_matches_break_on (tracker, mode,
+						      compare_name,
+						      text, word, ":", code);
 }
 
 static const char *f_extensions[] =
@@ -282,12 +287,13 @@ extern const struct language_defn f_language_defn =
   0,				/* arrays are first-class (not c-style) */
   1,				/* String lower bound */
   f_word_break_characters,
-  f_make_symbol_completion_list,
+  f_collect_symbol_completion_matches,
   f_language_arch_info,
   default_print_array_index,
   default_pass_by_reference,
   default_get_string,
   NULL,				/* la_get_symbol_name_cmp */
+  default_get_compare_symbol_name,
   iterate_over_symbols,
   &default_varobj_ops,
   NULL,

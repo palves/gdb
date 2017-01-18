@@ -45,7 +45,7 @@ static const struct cmdpy_completer completers[] =
   { "COMPLETE_FILENAME", filename_completer },
   { "COMPLETE_LOCATION", location_completer },
   { "COMPLETE_COMMAND", command_completer },
-  { "COMPLETE_SYMBOL", make_symbol_completion_list_fn },
+  { "COMPLETE_SYMBOL", symbol_completer },
   { "COMPLETE_EXPRESSION", expression_completer },
 };
 
@@ -254,11 +254,20 @@ cmdpy_completer_helper (struct cmd_list_element *command,
   textobj = PyUnicode_Decode (text, strlen (text), host_charset (), NULL);
   if (textobj == NULL)
     error (_("Could not convert argument to Python string."));
-  wordobj = PyUnicode_Decode (word, strlen (word), host_charset (), NULL);
-  if (wordobj == NULL)
+  if (word == NULL)
     {
-      Py_DECREF (textobj);
-      error (_("Could not convert argument to Python string."));
+      /* "brkchars" phase.  */
+      wordobj = Py_None;
+      Py_INCREF (wordobj);
+    }
+  else
+    {
+      wordobj = PyUnicode_Decode (word, strlen (word), host_charset (), NULL);
+      if (wordobj == NULL)
+	{
+	  Py_DECREF (textobj);
+	  error (_("Could not convert argument to Python string."));
+	}
     }
 
   resultobj = PyObject_CallMethodObjArgs ((PyObject *) obj, complete_cst,
@@ -283,6 +292,7 @@ cmdpy_completer_helper (struct cmd_list_element *command,
 
 static void
 cmdpy_completer_handle_brkchars (struct cmd_list_element *command,
+				 completion_tracker &tracker,
 				 const char *text, const char *word)
 {
   PyObject *resultobj = NULL;
@@ -312,11 +322,14 @@ cmdpy_completer_handle_brkchars (struct cmd_list_element *command,
 	}
       else if (value >= 0 && value < (long) N_COMPLETERS)
 	{
+	  completer_handle_brkchars_ftype *brkchars_fn;
+
 	  /* This is the core of this function.  Depending on which
 	     completer type the Python function returns, we have to
 	     adjust the break characters accordingly.  */
-	  set_gdb_completion_word_break_characters
-	    (completers[value].completer);
+	  brkchars_fn = (completer_handle_brkchars_func_for_completer
+			 (completers[value].completer));
+	  brkchars_fn (command, tracker, text, word);
 	}
     }
 
@@ -328,12 +341,12 @@ cmdpy_completer_handle_brkchars (struct cmd_list_element *command,
 
 /* Called by gdb for command completion.  */
 
-static VEC (char_ptr) *
+static void
 cmdpy_completer (struct cmd_list_element *command,
+		 completion_tracker &tracker,
 		 const char *text, const char *word)
 {
   PyObject *resultobj = NULL;
-  VEC (char_ptr) *result = NULL;
   struct cleanup *cleanup;
 
   cleanup = ensure_python_env (get_current_arch (), current_language);
@@ -348,7 +361,6 @@ cmdpy_completer (struct cmd_list_element *command,
   if (resultobj == NULL)
     goto done;
 
-  result = NULL;
   if (PyInt_Check (resultobj))
     {
       /* User code may also return one of the completion constants,
@@ -361,12 +373,13 @@ cmdpy_completer (struct cmd_list_element *command,
 	  PyErr_Clear ();
 	}
       else if (value >= 0 && value < (long) N_COMPLETERS)
-	result = completers[value].completer (command, text, word);
+	completers[value].completer (command, tracker, text, word);
     }
   else
     {
       PyObject *iter = PyObject_GetIter (resultobj);
       PyObject *elt;
+      bool got_matches = false;
 
       if (iter == NULL)
 	goto done;
@@ -389,14 +402,15 @@ cmdpy_completer (struct cmd_list_element *command,
 	      PyErr_Clear ();
 	      continue;
 	    }
-	  VEC_safe_push (char_ptr, result, item.release ());
+	  tracker.add_completion (std::move (item));
+	  got_matches = true;
 	}
 
       Py_DECREF (iter);
 
       /* If we got some results, ignore problems.  Otherwise, report
 	 the problem.  */
-      if (result != NULL && PyErr_Occurred ())
+      if (got_matches && PyErr_Occurred ())
 	PyErr_Clear ();
     }
 
@@ -404,8 +418,6 @@ cmdpy_completer (struct cmd_list_element *command,
 
   Py_XDECREF (resultobj);
   do_cleanups (cleanup);
-
-  return result;
 }
 
 /* Helper for cmdpy_init which locates the command list to use and

@@ -441,13 +441,44 @@ event_location_to_string (struct event_location *location)
   return EL_STRING (location);
 }
 
+/* Find an instance of the quote character C in the string S that is
+   outside of all single- and double-quoted strings (i.e., any quoting
+   other than C).  */
+
+static const char *
+find_end_quote (const char *s, char end_quote_char)
+{
+  /* zero if we're not in quotes;
+     '"' if we're in a double-quoted string;
+     '\'' if we're in a single-quoted string.  */
+  char nested_quote_char = '\0';
+
+  for (const char *scan = s; *scan != '\0'; scan++)
+    {
+      if (nested_quote_char != '\0')
+	{
+	  if (*scan == nested_quote_char)
+	    nested_quote_char = '\0';
+	  else if (scan[0] == '\\' && *(scan + 1) != '\0')
+	    scan++;
+	}
+      else if (*scan == end_quote_char && nested_quote_char == '\0')
+	return scan;
+      else if (*scan == '"' || *scan == '\'')
+	nested_quote_char = *scan;
+    }
+
+  return 0;
+}
+
 /* A lexer for explicit locations.  This function will advance INP
    past any strings that it lexes.  Returns a malloc'd copy of the
    lexed string or NULL if no lexing was done.  */
 
 static char *
 explicit_location_lex_one (const char **inp,
-			   const struct language_defn *language)
+			   const struct language_defn *language,
+			   explicit_completion_info *completion_info)
 {
   const char *start = *inp;
 
@@ -457,20 +488,25 @@ explicit_location_lex_one (const char **inp,
   /* If quoted, skip to the ending quote.  */
   if (strchr (get_gdb_linespec_parser_quote_characters (), *start))
     {
-      char quote_char = *start;
+      if (completion_info != NULL)
+	completion_info->quoted_arg_start = start;
 
-      /* If the input is not an Ada operator, skip to the matching
-	 closing quote and return the string.  */
-      if (!(language->la_language == language_ada
-	    && quote_char == '\"' && is_ada_operator (start)))
+      const char *end = find_end_quote (start + 1, *start);
+
+      if (end == NULL)
 	{
-	  const char *end = find_toplevel_char (start + 1, quote_char);
-
-	  if (end == NULL)
+	  if (completion_info == NULL)
 	    error (_("Unmatched quote, %s."), start);
-	  *inp = end + 1;
-	  return savestring (start + 1, *inp - start - 2);
+
+	  end = start + strlen (start);
+	  *inp = end;
+	  return savestring (start + 1, *inp - start - 1);
 	}
+
+      if (completion_info != NULL)
+	completion_info->quoted_arg_end = end;
+      *inp = end + 1;
+      return savestring (start + 1, *inp - start - 2);
     }
 
   /* If the input starts with '-' or '+', the string ends with the next
@@ -510,12 +546,163 @@ explicit_location_lex_one (const char **inp,
   return NULL;
 }
 
+#include "cp-support.h"
+
+static bool
+is_cp_operator (const char *start, const char *comma)
+{
+  if (comma != NULL
+      && (comma - start) >= CP_OPERATOR_LEN)
+    {
+      const char *p = comma;
+
+      while (p > start && isspace (p[-1]))
+	p--;
+      if (p - start >= CP_OPERATOR_LEN)
+	{
+	  p-= CP_OPERATOR_LEN;
+	  if (strncmp (p, CP_OPERATOR_STR, CP_OPERATOR_LEN) == 0
+	      && (p == start
+		  || !(isalnum (p[-1]) || p[-1] == '_')))
+	    {
+	      return true;
+	    }
+	}
+    }
+  return false;
+}
+
+static const char *
+skip_op_false_positives (enum language language,
+			 const char *start, const char *found)
+{
+  while (found != NULL && is_cp_operator (start, found))
+    {
+      if (found[0] == '-' && found[1] == '-')
+	start = found + 2;
+      else
+	start = found + 1;
+      found = find_toplevel_char (language, start, *found);
+    }
+
+  return found;
+}
+
+static const char *
+first_of (const char *first, const char *new_tok)
+{
+  if (first == NULL)
+    return new_tok;
+  else if (new_tok != NULL && new_tok < first)
+    return new_tok;
+  else
+    return first;
+}
+
+/* A lexer for functions in explicit locations.  This function will
+   advance INP past a function until the next option, or until end of
+   string.  Returns a malloc'd copy of the lexed string or NULL if no
+   lexing was done.  */
+
+static char *
+explicit_location_lex_one_function (const char **inp,
+				    const struct language_defn *language,
+				    explicit_completion_info *completion_info)
+{
+  const char *start = *inp;
+
+  if (*start == '\0')
+    return NULL;
+
+  /* If quoted, skip to the ending quote.  */
+  if (strchr (get_gdb_linespec_parser_quote_characters (), *start))
+    {
+      char quote_char = *start;
+
+      /* If the input is not an Ada operator, skip to the matching
+	 closing quote and return the string.  */
+      if (!(language->la_language == language_ada
+	    && quote_char == '\"' && is_ada_operator (start)))
+	{
+	  if (completion_info != NULL)
+	    completion_info->quoted_arg_start = start;
+
+	  const char *end = find_toplevel_char (language->la_language,
+						start + 1, quote_char);
+
+	  if (end == NULL)
+	    {
+	      if (completion_info == NULL)
+		error (_("Unmatched quote, %s."), start);
+
+	      end = start + strlen (start);
+	      *inp = end;
+	      return savestring (start + 1, *inp - start - 1);
+	    }
+
+	  if (completion_info != NULL)
+	    completion_info->quoted_arg_end = end;
+	  *inp = end + 1;
+	  return savestring (start + 1, *inp - start - 2);
+	}
+    }
+
+  const char *comma = find_toplevel_char (language->la_language, start, ',');
+
+  /* If we have "-function -myfunction", or perhaps better example,
+     "-function -[BasicClass doIt]" (objc selector), treat
+     "-myfunction" as the function name.  I.e., skip the first char if
+     it is an hyphen.  Don't skip the first char always, because we
+     may have C++ "operator<", and find_toplevel_char needs to see the
+     'o' in that case.  */
+  const char *hyphen
+    = (*start == '-'
+       ? find_toplevel_char (language->la_language, start + 1, '-')
+       : find_toplevel_char (language->la_language, start, '-'));
+
+  /* Special case: C++ "operator," and "operator-".  */
+  if (language->la_language == language_cplus)
+    {
+      comma = skip_op_false_positives (language->la_language, start, comma);
+      hyphen = skip_op_false_positives (language->la_language, start, hyphen);
+    }
+
+  /* Pick the one that appears first.  */
+  const char *end = first_of (hyphen, comma);
+
+  /* See if a linespec keyword appears first.  */
+  const char *s = start;
+  const char *ws = find_toplevel_char (language->la_language, start, ' ');
+  while (ws != NULL && linespec_lexer_lex_keyword (ws + 1) == NULL)
+    {
+      s = ws + 1;
+      ws = find_toplevel_char (language->la_language, s, ' ');
+    }
+  if (ws != NULL)
+    end = first_of (end, ws + 1);
+
+  /* If we don't have any terminator, then take the whole string.  */
+  if (end == NULL)
+    end = start + strlen (start);
+
+  /* Trim whitespace at the end.  */
+  while (end > start && end[-1] == ' ')
+    end--;
+
+  *inp = end;
+
+  if (*inp - start > 0)
+    return savestring (start, *inp - start);
+
+  return NULL;
+}
+
 /* See description in location.h.  */
 
 struct event_location *
 string_to_explicit_location (const char **argp,
 			     const struct language_defn *language,
-			     int dont_throw)
+			     explicit_completion_info *completion_info)
 {
   struct cleanup *cleanup;
   struct event_location *location;
@@ -538,9 +725,17 @@ string_to_explicit_location (const char **argp,
   while ((*argp)[0] != '\0' && (*argp)[0] != ',')
     {
       int len;
-      char *opt, *oarg;
+      char *opt, *oarg = NULL;
       const char *start;
       struct cleanup *opt_cleanup, *oarg_cleanup;
+
+      /* Clear these on each iteration, since they should be filled
+	 with info about the last option.  */
+      if (completion_info != NULL)
+	{
+	  completion_info->quoted_arg_start = NULL;
+	  completion_info->quoted_arg_end = NULL;
+	}
 
       /* If *ARGP starts with a keyword, stop processing
 	 options.  */
@@ -550,28 +745,39 @@ string_to_explicit_location (const char **argp,
       /* Mark the start of the string in case we need to rewind.  */
       start = *argp;
 
+      if (completion_info != NULL)
+	completion_info->last_option = start;
+
       /* Get the option string.  */
-      opt = explicit_location_lex_one (argp, language);
+      opt = explicit_location_lex_one (argp, language, NULL);
       opt_cleanup = make_cleanup (xfree, opt);
 
-      *argp = skip_spaces_const (*argp);
-
-      /* Get the argument string.  */
-      oarg = explicit_location_lex_one (argp, language);
-      oarg_cleanup = make_cleanup (xfree, oarg);
       *argp = skip_spaces_const (*argp);
 
       /* Use the length of the option to allow abbreviations.  */
       len = strlen (opt);
 
+      /* Get the argument string.  */
+      oarg_cleanup = make_cleanup (free_current_contents, &oarg);
+      *argp = skip_spaces_const (*argp);
+
       /* All options have a required argument.  Checking for this required
 	 argument is deferred until later.  */
       if (strncmp (opt, "-source", len) == 0)
-	EL_EXPLICIT (location)->source_filename = oarg;
+	{
+	  oarg = explicit_location_lex_one (argp, language, completion_info);
+	  EL_EXPLICIT (location)->source_filename = oarg;
+	}
       else if (strncmp (opt, "-function", len) == 0)
-	EL_EXPLICIT (location)->function_name = oarg;
+	{
+	  oarg = explicit_location_lex_one_function (argp, language,
+						     completion_info);
+	  EL_EXPLICIT (location)->function_name = oarg;
+	}
       else if (strncmp (opt, "-line", len) == 0)
 	{
+	  oarg = explicit_location_lex_one (argp, language, NULL);
+	  *argp = skip_spaces_const (*argp);
 	  if (oarg != NULL)
 	    {
 	      EL_EXPLICIT (location)->line_offset
@@ -582,12 +788,15 @@ string_to_explicit_location (const char **argp,
 	    }
 	}
       else if (strncmp (opt, "-label", len) == 0)
-	EL_EXPLICIT (location)->label_name = oarg;
+	{
+	  oarg = explicit_location_lex_one (argp, language, completion_info);
+	  EL_EXPLICIT (location)->label_name = oarg;
+	}
       /* Only emit an "invalid argument" error for options
 	 that look like option strings.  */
       else if (opt[0] == '-' && !isdigit (opt[1]))
 	{
-	  if (!dont_throw)
+	  if (completion_info == NULL)
 	    error (_("invalid explicit location argument, \"%s\""), opt);
 	}
       else
@@ -602,11 +811,13 @@ string_to_explicit_location (const char **argp,
 	  return location;
 	}
 
+      *argp = skip_spaces_const (*argp);
+
       /* It's a little lame to error after the fact, but in this
 	 case, it provides a much better user experience to issue
 	 the "invalid argument" error before any missing
 	 argument error.  */
-      if (oarg == NULL && !dont_throw)
+      if (oarg == NULL && completion_info == NULL)
 	error (_("missing argument for \"%s\""), opt);
 
       /* The option/argument pair was successfully processed;
@@ -622,7 +833,7 @@ string_to_explicit_location (const char **argp,
       && EL_EXPLICIT (location)->function_name == NULL
       && EL_EXPLICIT (location)->label_name == NULL
       && (EL_EXPLICIT (location)->line_offset.sign == LINE_OFFSET_UNKNOWN)
-      && !dont_throw)
+      && completion_info == NULL)
     {
       error (_("Source filename requires function, label, or "
 	       "line offset."));
@@ -682,7 +893,7 @@ string_to_event_location (char **stringp,
 
   /* Try an explicit location.  */
   orig = arg = *stringp;
-  location = string_to_explicit_location (&arg, language, 0);
+  location = string_to_explicit_location (&arg, language, NULL);
   if (location != NULL)
     {
       /* It was a valid explicit location.  Advance STRINGP to

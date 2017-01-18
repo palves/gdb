@@ -26,7 +26,16 @@ proc add {var name params expected {kind {func}}} {
 	set method_name "$name"
     }
 
-    set expect ".*// ${method_name}\\($expected\\)"
+    # If we're picking a symbol in the global namespace using a
+    # fully-qualified name, remove the leading "::" from the expected
+    # name in the source, since it won't be present there.
+    if {[string first "::" $name] == 0} {
+	set expected_name [string replace $method_name 0 1]
+    } else {
+	set expected_name $method_name
+    }
+
+    set expect ".*// ${expected_name}\\($expected\\)"
     lappend result [list "${method_name}($params)" $expect]
 }
 
@@ -77,7 +86,7 @@ foreach meth {A::FOO::test A::FOO::foo} {
 }
 
 # Add three-parameter methods/functions
-foreach meth {A::FOO::test A::FOO::foo B::test test} {
+foreach meth {A::FOO::test A::FOO::foo B::test ::test} {
     set type "aenum, astruct const&, aunion const\\*\\*\\*"
     foreach t1 $typedefs(aenum) {
 	foreach t2 $typedefs(astruct) {
@@ -116,7 +125,7 @@ foreach meth {A::FOO::test A::FOO::foo} {
 
 set type1 "my_other_type"
 set type2 "my_other_type, my_other_type_2"
-foreach meth {"test" "B::test"} {
+foreach meth {"::test" "B::test"} {
     foreach t1 $typedefs(my_other_type) {
 	add methods $meth $t1 $type1
 	foreach t2 $typedefs(my_other_type_2) {
@@ -153,6 +162,29 @@ foreach test $methods {
     if {[gdb_breakpoint '$func']} {
       pass "break '$func'"
     }
+}
+
+# The tests above use "::test" to explicitly pick the one "test"
+# symbol in the global namespace of the overloaded type each test
+# cares about.  Now check that both "break test(..)" and "list
+# test(..)"  without the leading '::'" do find "test(..)"  in all the
+# 3 scopes that have the this particular overload.
+set func "test(aenum, astruct const&, aunion const***)"
+set line1 [gdb_get_line_number " A::FOO::$func"]
+set line2 [gdb_get_line_number " B::$func"]
+set line3 [gdb_get_line_number " $func"]
+
+foreach f [list "$func" "'$func'"] {
+    gdb_test \
+	"list $f" \
+	[multi_line \
+	     "file: \".*$srcfile\", line number: $line1" \
+	     "file: \".*$srcfile\", line number: $line2" \
+	     "file: \".*$srcfile\", line number: $line3"] \
+	"list $f"
+
+    delete_breakpoints
+    gdb_test "break $f" "\\(3 locations\\)"
 }
 
 gdb_exit

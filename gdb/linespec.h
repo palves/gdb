@@ -180,12 +180,29 @@ extern int is_ada_operator (const char *string);
    strings.  Also, ignore the char within a template name, like a ','
    within foo<int, int>.  */
 
-extern const char *find_toplevel_char (const char *s, char c);
+extern const char *find_toplevel_char (enum language language,
+				       const char *s, char c);
 
 /* Find the end of the (first) linespec pointed to by *STRINGP.
    STRINGP will be advanced to this point.  */
 
 extern void linespec_lex_to_end (char **stringp);
+
+extern const char * const linespec_keywords[];
+
+extern void linespec_complete (completion_tracker &tracker,
+			       const char *text);
+
+extern void linespec_complete_function (completion_tracker &tracker,
+					enum language language,
+					const char *text,
+					const char *source_filename);
+
+extern void linespec_complete_label (completion_tracker &tracker,
+				     const struct language_defn *language,
+				     const char *source_filename,
+				     const char *function_name,
+				     const char *label_name);
 
 /* Evaluate the expression pointed to by EXP_PTR into a CORE_ADDR,
    advancing EXP_PTR past any parsed text.  */

@@ -31,7 +31,27 @@ extern void initialize_utils (void);
 
 extern int sevenbit_strings;
 
+enum class strncmp_iw_mode
+{
+  /* Work like strncmp, while ignoring whitespace.  */
+  NORMAL,
+
+  /* Like NORMAL, but also apply the strcmp_iw hack.  I.e.,
+     string1=="FOO(PARAMS)" matches string2=="FOO".  */
+  MATCH_PARAMS,
+};
+
+/* Helper for strcmp_iw and strncmp_iw.  Exported so that languages
+   can implement both NORMAL and MATCH_PARAMS variants in a single
+   function and defer part of the work to strncmp_iw_with_mode.  */
+extern int strncmp_iw_with_mode (const char *string1,
+				 const char *string2,
+				 size_t string2_len,
+				 strncmp_iw_mode mode);
+
 extern int strcmp_iw (const char *, const char *);
+extern int strncmp_iw (const char *, const char *, size_t);
+
 
 extern int strcmp_iw_ordered (const char *, const char *);
 

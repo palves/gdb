@@ -6468,7 +6468,7 @@ symbol_completion_match (const char *sym_name,
    encoded).  */
 
 static void
-symbol_completion_add (VEC(char_ptr) **sv,
+symbol_completion_add (completion_tracker &tracker,
                        const char *sym_name,
                        const char *text, int text_len,
                        const char *orig_text, const char *word,
@@ -6504,7 +6504,8 @@ symbol_completion_add (VEC(char_ptr) **sv,
       strcat (completion, match);
     }
 
-  VEC_safe_push (char_ptr, *sv, completion);
+  gdb::unique_xmalloc_ptr<char> comp (completion);
+  tracker.add_completion (std::move (comp), completion);
 }
 
 /* An object of this type is passed as the user_data argument to the
@@ -6534,8 +6535,11 @@ ada_complete_symbol_matcher (const char *name, void *user_data)
 /* Return a list of possible symbol names completing TEXT0.  WORD is
    the entire command on which completion is made.  */
 
-static VEC (char_ptr) *
-ada_make_symbol_completion_list (const char *text0, const char *word,
+static void
+ada_make_symbol_completion_list (completion_tracker &tracker,
+				 complete_symbol_mode mode,
+				 compare_symbol_name_ftype *compare_name,
+				 const char *text0, const char *word,
 				 enum type_code code)
 {
   char *text;
@@ -6601,7 +6605,7 @@ ada_make_symbol_completion_list (const char *text0, const char *word,
   ALL_MSYMBOLS (objfile, msymbol)
   {
     QUIT;
-    symbol_completion_add (&completions, MSYMBOL_LINKAGE_NAME (msymbol),
+    symbol_completion_add (tracker, MSYMBOL_LINKAGE_NAME (msymbol),
 			   text, text_len, text0, word, wild_match_p,
 			   encoded_p);
   }
@@ -6616,7 +6620,7 @@ ada_make_symbol_completion_list (const char *text0, const char *word,
 
       ALL_BLOCK_SYMBOLS (b, iter, sym)
       {
-        symbol_completion_add (&completions, SYMBOL_LINKAGE_NAME (sym),
+        symbol_completion_add (tracker, SYMBOL_LINKAGE_NAME (sym),
                                text, text_len, text0, word,
                                wild_match_p, encoded_p);
       }
@@ -6631,7 +6635,7 @@ ada_make_symbol_completion_list (const char *text0, const char *word,
     b = BLOCKVECTOR_BLOCK (COMPUNIT_BLOCKVECTOR (s), GLOBAL_BLOCK);
     ALL_BLOCK_SYMBOLS (b, iter, sym)
     {
-      symbol_completion_add (&completions, SYMBOL_LINKAGE_NAME (sym),
+      symbol_completion_add (tracker, SYMBOL_LINKAGE_NAME (sym),
                              text, text_len, text0, word,
                              wild_match_p, encoded_p);
     }
@@ -6646,14 +6650,13 @@ ada_make_symbol_completion_list (const char *text0, const char *word,
       continue;
     ALL_BLOCK_SYMBOLS (b, iter, sym)
     {
-      symbol_completion_add (&completions, SYMBOL_LINKAGE_NAME (sym),
+      symbol_completion_add (tracker, SYMBOL_LINKAGE_NAME (sym),
                              text, text_len, text0, word,
                              wild_match_p, encoded_p);
     }
   }
 
   do_cleanups (old_chain);
-  return completions;
 }
 
                                 /* Field Access */
@@ -14104,6 +14107,7 @@ extern const struct language_defn ada_language_defn = {
   default_pass_by_reference,
   c_get_string,
   ada_get_symbol_name_cmp,	/* la_get_symbol_name_cmp */
+  default_get_compare_symbol_name,
   ada_iterate_over_symbols,
   &ada_varobj_ops,
   NULL,
