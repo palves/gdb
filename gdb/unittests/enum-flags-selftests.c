@@ -43,6 +43,14 @@ enum RE2
     RE2_FLAG2 = 1 << 2,
   };
 
+/* An unsigned "real enum".  */
+enum URE
+  {
+    URE_FLAG1 = 1 << 1,
+    URE_FLAG2 = 1 << 2,
+    URE_FLAG3 = 0xffffffff,
+  };
+
 /* A non-flags enum.  */
 enum NF
   {
@@ -53,6 +61,7 @@ enum NF
 /* The corresponding "enum flags" types.  */
 DEF_ENUM_FLAGS_TYPE (RE, EF);
 DEF_ENUM_FLAGS_TYPE (RE2, EF2);
+DEF_ENUM_FLAGS_TYPE (URE, UEF);
 
 /* So that std::vectors of types that have enum_flags fields can
    reallocate efficiently memcpy.  */
@@ -75,7 +84,7 @@ static EF ef ATTRIBUTE_UNUSED;
 */
 
 #define CHECK_VALID(VALID, EXPR_TYPE, EXPR)		\
-  CHECK_VALID_EXPR_4 (EF, RE, EF2, RE2, VALID, EXPR_TYPE, EXPR)
+  CHECK_VALID_EXPR_6 (EF, RE, EF2, RE2, UEF, URE, VALID, EXPR_TYPE, EXPR)
 
 typedef std::underlying_type<RE>::type und;
 
@@ -241,6 +250,17 @@ CHECK_VALID (true,  int,  true ? EF2 () : EF ())
 #if GCC_VERSION >= 5003 || defined __clang__
 CHECK_VALID (true,  int,  true ? EF () : RE2 ())
 CHECK_VALID (true,  int,  true ? RE2 () : EF ())
+#endif
+
+/* Same, but with an unsigned enum.  */
+
+typedef unsigned int uns;
+
+CHECK_VALID (true,  uns,  true ? EF () : UEF ())
+CHECK_VALID (true,  uns,  true ? UEF () : EF ())
+#if GCC_VERSION >= 5003 || defined __clang__
+CHECK_VALID (true,  uns,  true ? EF () : URE ())
+CHECK_VALID (true,  uns,  true ? URE () : EF ())
 #endif
 
 /* Unfortunately this can't work due to the way C++ computes the
