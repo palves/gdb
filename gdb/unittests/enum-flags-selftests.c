@@ -83,7 +83,7 @@ CHECK_VALID (true,  RE,   RE (1))
 CHECK_VALID (true,  RE,   RE (RE2 ()))
 CHECK_VALID (false, void, RE (EF2 ()))
 CHECK_VALID (true,  RE,   RE (RE ()))
-CHECK_VALID (true,  RE,   RE (EF ()))
+CHECK_VALID (false, void, RE (EF ()))
 
 /* other -> EF.  */
 
@@ -205,23 +205,28 @@ CHECK_VALID (true,  EF,   ~EF ())
 
 /* Check ternary operator.  This exercises implicit conversions.  */
 
-/* Invalid since each type can be converted to the other.  */
-/* GCC 4.8 incorrectly fails to compile this test with:
-     error: operands to ?: have different types ‘enum_flags<RE>’ and ‘RE’
-   Confirmed to compile/pass with gcc 4.9, 5.3 and clang 3.7.
-*/
-#if GCC_VERSION >= 4009
-CHECK_VALID (false, void, true ? EF () : RE ())
-CHECK_VALID (false, void, true ? RE () : EF ())
-#endif
+CHECK_VALID (true,  EF,   true ? EF () : RE ())
+CHECK_VALID (true,  EF,   true ? RE () : EF ())
 
 /* These are valid, but it's not a big deal since you won't be able to
-   assign the resulting int to an enum or an enum_flags without a
-   cast.  */
+   assign the resulting integer to an enum or an enum_flags without a
+   cast.
+
+   The latter two tests are disabled on older GCCs because they
+   incorrectly fail with gcc 4.8 and 4.9 at least.  Running the test
+   outside a SFINAE context shows:
+
+    invalid user-defined conversion from ‘EF’ to ‘RE2’
+
+   They've been confirmed to compile/pass with gcc 5.3, gcc 7.1 and
+   clang 3.7.  */
+
 CHECK_VALID (true,  int,  true ? EF () : EF2 ())
 CHECK_VALID (true,  int,  true ? EF2 () : EF ())
+#if GCC_VERSION >= 5003 || defined __clang__
 CHECK_VALID (true,  int,  true ? EF () : RE2 ())
 CHECK_VALID (true,  int,  true ? RE2 () : EF ())
+#endif
 
 /* Unfortunately this can't work due to the way C++ computes the
    return type of the ternary conditional operator.  int isn't
@@ -426,11 +431,32 @@ self_test ()
   }
 
   /* Check the ternary operator.  */
+
   {
+    /* raw enum, raw enum */
     constexpr test_flags f1 = true ? FLAG1 : FLAG2;
     static_assert (f1 == FLAG1, "");
     constexpr test_flags f2 = false ? FLAG1 : FLAG2;
     static_assert (f2 == FLAG2, "");
+  }
+
+  {
+    /* enum flags, raw enum */
+    constexpr test_flags src = FLAG1;
+    constexpr test_flags f1 = true ? src : FLAG2;
+    static_assert (f1 == FLAG1, "");
+    constexpr test_flags f2 = false ? src : FLAG2;
+    static_assert (f2 == FLAG2, "");
+  }
+
+  {
+    /* enum flags, enum flags */
+    constexpr test_flags src1 = FLAG1;
+    constexpr test_flags src2 = FLAG2;
+    constexpr test_flags f1 = true ? src1 : src2;
+    static_assert (f1 == src1, "");
+    constexpr test_flags f2 = false ? src1 : src2;
+    static_assert (f2 == src2, "");
   }
 
   /* Check that we can use operator| in switch cases, where only

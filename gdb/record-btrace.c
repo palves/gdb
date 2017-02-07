@@ -1803,7 +1803,7 @@ record_btrace_to_get_tailcall_unwinder (struct target_ops *self)
 /* Return a human-readable string for FLAG.  */
 
 static const char *
-btrace_thread_flag_to_str (enum btrace_thread_flag flag)
+btrace_thread_flag_to_str (btrace_thread_flags flag)
 {
   switch (flag)
     {
@@ -2105,7 +2105,7 @@ record_btrace_commit_resume (struct target_ops *ops)
 static void
 record_btrace_cancel_resume (struct thread_info *tp)
 {
-  enum btrace_thread_flag flags;
+  btrace_thread_flags flags;
 
   flags = tp->btrace.flags & (BTHR_MOVE | BTHR_STOP);
   if (flags == 0)
@@ -2113,7 +2113,7 @@ record_btrace_cancel_resume (struct thread_info *tp)
 
   DEBUG ("cancel resume thread %s (%s): %x (%s)",
 	 print_thread_id (tp),
-	 target_pid_to_str (tp->ptid), flags,
+	 target_pid_to_str (tp->ptid), flags.raw (),
 	 btrace_thread_flag_to_str (flags));
 
   tp->btrace.flags &= ~(BTHR_MOVE | BTHR_STOP);
@@ -2338,7 +2338,7 @@ record_btrace_step_thread (struct thread_info *tp)
 {
   struct btrace_thread_info *btinfo;
   struct target_waitstatus status;
-  enum btrace_thread_flag flags;
+  btrace_thread_flags flags;
 
   btinfo = &tp->btrace;
 
@@ -2346,7 +2346,7 @@ record_btrace_step_thread (struct thread_info *tp)
   btinfo->flags &= ~(BTHR_MOVE | BTHR_STOP);
 
   DEBUG ("stepping thread %s (%s): %x (%s)", print_thread_id (tp),
-	 target_pid_to_str (tp->ptid), flags,
+	 target_pid_to_str (tp->ptid), flags.raw (),
 	 btrace_thread_flag_to_str (flags));
 
   /* We can't step without an execution history.  */

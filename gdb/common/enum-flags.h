@@ -134,24 +134,28 @@ public:
     : m_enum_value ((enum_type) 0)
   {}
 
-  enum_flags &operator&= (enum_type e)
+  enum_flags &operator&= (enum_flags e)
   {
-    m_enum_value = (enum_type) (m_enum_value & e);
+    m_enum_value = (enum_type) (m_enum_value & e.m_enum_value);
     return *this;
   }
-  enum_flags &operator|= (enum_type e)
+  enum_flags &operator|= (enum_flags e)
   {
-    m_enum_value = (enum_type) (m_enum_value | e);
+    m_enum_value = (enum_type) (m_enum_value | e.m_enum_value);
     return *this;
   }
-  enum_flags &operator^= (enum_type e)
+  enum_flags &operator^= (enum_flags e)
   {
-    m_enum_value = (enum_type) (m_enum_value ^ e);
+    m_enum_value = (enum_type) (m_enum_value ^ e.m_enum_value);
     return *this;
   }
 
-  /* Allow conversion to the enum type.  */
-  constexpr operator enum_type () const
+  /* Like raw enums, allow conversion to the underlying type.  */
+  constexpr operator underlying_type () const
+  { return m_enum_value; }
+
+  /* Get the underlying value as a raw enum.  */
+  constexpr enum_type raw () const
   { return m_enum_value; }
 
   /* Binary operations involving some unrelated type (which would be a
@@ -193,21 +197,21 @@ using is_enum_flags_enum_type_t
 	    typename = is_enum_flags_enum_type_t<enum_type>>		\
   constexpr enum_flags<enum_type>					\
   OPERATOR_OP (enum_flags<enum_type> e1, enum_type e2)			\
-  { return enum_type (e1) OP e2; }					\
+  { return e1.raw () OP e2; }						\
 									\
   /* enum_flags on the RHS.  */						\
   template <typename enum_type,						\
 	    typename = is_enum_flags_enum_type_t<enum_type>>		\
   constexpr enum_flags<enum_type>					\
   OPERATOR_OP (enum_type e1, enum_flags<enum_type> e2)			\
-  { return e1 OP enum_type (e2); }					\
+  { return e1 OP e2.raw (); }						\
 									\
   /* enum_flags on both LHS/RHS.  */					\
   template <typename enum_type,						\
 	    typename = is_enum_flags_enum_type_t<enum_type>>		\
   constexpr enum_flags<enum_type>					\
   OPERATOR_OP (enum_flags<enum_type> e1, enum_flags<enum_type> e2)	\
-  { return enum_type (e1) OP enum_type (e2); }				\
+  { return e1.raw () OP e2.raw (); }					\
 									\
   /* Delete cases involving unrelated types.  */			\
 									\

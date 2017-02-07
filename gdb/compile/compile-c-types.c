@@ -306,7 +306,7 @@ convert_qualified (struct compile_c_instance *context, struct type *type)
 
   return C_CTX (context)->c_ops->build_qualified_type (C_CTX (context),
 						       unqual_converted,
-						       quals);
+						       quals.raw ());
 }
 
 /* Convert a complex type to its gcc representation.  */
