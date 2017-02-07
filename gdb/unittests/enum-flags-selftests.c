@@ -35,11 +35,19 @@ enum RE
     RE_FLAG1 = 1 << 1,
     RE_FLAG2 = 1 << 2,
   };
+
 /* Another "real enum".  */
 enum RE2
   {
     RE2_FLAG1 = 1 << 1,
     RE2_FLAG2 = 1 << 2,
+  };
+
+/* A non-flags enum.  */
+enum NF
+  {
+    NF_FLAG1 = 1 << 1,
+    NF_FLAG2 = 1 << 2,
   };
 
 /* The corresponding "enum flags" types.  */
@@ -69,7 +77,13 @@ static EF ef ATTRIBUTE_UNUSED;
 #define CHECK_VALID(VALID, EXPR_TYPE, EXPR)		\
   CHECK_VALID_EXPR_4 (EF, RE, EF2, RE2, VALID, EXPR_TYPE, EXPR)
 
+typedef std::underlying_type<RE>::type und;
+
 /* Test construction / conversion from/to different types.  */
+
+/* RE/EF -> underlying (explicit) */
+CHECK_VALID (true,  und,  und (RE ()))
+CHECK_VALID (true,  und,  und (EF ()))
 
 /* RE/EF -> int (explicit) */
 CHECK_VALID (true,  int,  int (RE ()))
@@ -89,9 +103,10 @@ CHECK_VALID (false, void, RE (EF ()))
 
 /* As expected, enum-flags is a stronger type than the backing raw
    enum.  Unlike with raw enums, you can't construct an enum flags
-   from an int nor from an unrelated enum type explicitly.  Add an
+   from an integer nor from an unrelated enum type explicitly.  Add an
    intermediate conversion via the raw enum if you really need it.  */
 CHECK_VALID (false, void, EF (1))
+CHECK_VALID (false, void, EF (1u))
 CHECK_VALID (false, void, EF (RE2 ()))
 CHECK_VALID (false, void, EF (EF2 ()))
 CHECK_VALID (true,  EF,   EF (RE ()))
@@ -259,6 +274,47 @@ CHECK_VALID (false, void, RE () <<= 1)
 CHECK_VALID (false, void, RE () >>= 1)
 CHECK_VALID (false, void, EF () <<= 1)
 CHECK_VALID (false, void, EF () >>= 1)
+
+/* Test comparison operators.  */
+
+CHECK_VALID (false, void, EF () == EF2 ())
+CHECK_VALID (false, void, EF () == RE2 ())
+CHECK_VALID (false, void, RE () == EF2 ())
+
+CHECK_VALID (true,  bool, EF (RE (1)) == EF (RE (1)))
+CHECK_VALID (true,  bool, EF (RE (1)) == RE (1))
+CHECK_VALID (true,  bool, RE (1)      == EF (RE (1)))
+
+CHECK_VALID (false, void, EF () != EF2 ())
+CHECK_VALID (false, void, EF () != RE2 ())
+CHECK_VALID (false, void, RE () != EF2 ())
+
+/* On clang, disable -Wenum-compare due to "error: comparison of two
+   values with different enumeration types [-Werror,-Wenum-compare]".
+   clang doesn't suppress -Wenum-compare in SFINAE contexts.  Not a
+   big deal since misuses like these in GDB will be caught by -Werror
+   anyway.  This check is here mainly for completeness.  */
+#if defined __clang__
+# pragma GCC diagnostic push
+# pragma GCC diagnostic ignored "-Wenum-compare"
+#endif
+CHECK_VALID (true,  bool, RE () == RE2 ())
+CHECK_VALID (true,  bool, RE () != RE2 ())
+#if defined __clang__
+# pragma GCC diagnostic pop
+#endif
+
+CHECK_VALID (true,  bool, EF (RE (1)) != EF (RE (2)))
+CHECK_VALID (true,  bool, EF (RE (1)) != RE (2))
+CHECK_VALID (true,  bool, RE (1)      != EF (RE (2)))
+
+CHECK_VALID (true,  bool, EF () == 0)
+
+/* Check we didn't disable/delete comparison between non-flags enums
+   and unrelated types by mistake.  */
+CHECK_VALID (true,  bool, NF (1) == NF (1))
+CHECK_VALID (true,  bool, NF (1) == int (1))
+CHECK_VALID (true,  bool, NF (1) == char (1))
 
 /* -------------------------------------------------------------------- */
 
@@ -459,9 +515,10 @@ self_test ()
     static_assert (f2 == src2, "");
   }
 
-  /* Check that we can use operator| in switch cases, where only
-     constants are allowed.  This should work because operator| is
-     constexpr.  */
+  /* Check that we can use flags in switch expressions (requires
+     unambiguous conversion to integer).  Also check that we can use
+     operator| in switch cases, where only constants are allowed.
+     This should work because operator| is constexpr.  */
   {
     test_flags f = FLAG1 | FLAG2;
     bool ok = false;

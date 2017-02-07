@@ -289,6 +289,59 @@ ENUM_FLAGS_GEN_COMPOUND_ASSIGN (operator|=, |)
 ENUM_FLAGS_GEN_COMPOUND_ASSIGN (operator&=, &)
 ENUM_FLAGS_GEN_COMPOUND_ASSIGN (operator^=, ^)
 
+/* Allow comparison with enum_flags, raw enum, and integers, only.
+   The latter case allows "== 0".  As side effect, it allows comparing
+   with integer variables too, but that's not a common mistake to
+   make.  It's important to disable comparison with unrelated types to
+   prevent accidentally comparing with unrelated enum values, which
+   are convertible to integer, and thus coupled with enum_flags
+   convertion to underlying type too, would trigger the built-in 'bool
+   operator==(unsigned, int)' operator.  */
+
+#define ENUM_FLAGS_GEN_COMP(OPERATOR_OP, OP)				\
+									\
+  /* enum_flags OP enum_flags */					\
+									\
+  template <typename enum_type>						\
+  constexpr bool							\
+  OPERATOR_OP (enum_flags<enum_type> lhs, enum_flags<enum_type> rhs)	\
+  { return lhs.raw () OP rhs.raw (); }					\
+									\
+  /* enum_flags OP other */						\
+									\
+  template <typename enum_type>						\
+  constexpr bool							\
+  OPERATOR_OP (enum_flags<enum_type> lhs, enum_type rhs)		\
+  { return lhs.raw () OP rhs; }						\
+									\
+  template <typename enum_type>						\
+  constexpr bool							\
+  OPERATOR_OP (enum_flags<enum_type> lhs, int rhs)			\
+  { return lhs.raw () OP rhs; }						\
+									\
+  template <typename enum_type, typename U>				\
+  constexpr bool							\
+  OPERATOR_OP (enum_flags<enum_type> lhs, U rhs) = delete;		\
+									\
+  /* other OP enum_flags */						\
+									\
+  template <typename enum_type>						\
+  constexpr bool							\
+  OPERATOR_OP (enum_type lhs, enum_flags<enum_type> rhs)		\
+  { return lhs OP rhs.raw (); }						\
+									\
+  template <typename enum_type>						\
+  constexpr bool							\
+  OPERATOR_OP (int lhs, enum_flags<enum_type> rhs)			\
+  { return lhs OP rhs.raw (); }						\
+									\
+  template <typename enum_type, typename U>				\
+  constexpr bool							\
+  OPERATOR_OP (U lhs, enum_flags<enum_type> rhs) = delete;
+
+ENUM_FLAGS_GEN_COMP (operator==, ==)
+ENUM_FLAGS_GEN_COMP (operator!=, !=)
+
 /* Unary operators for the raw flags enum.  */
 
 template <typename enum_type,
