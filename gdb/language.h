@@ -600,7 +600,11 @@ void default_get_string (struct value *value, gdb_byte **buffer, int *length,
 
 /* Default name hashing function.  */
 
-extern unsigned int default_compute_string_hash (const char *string);
+/* Produce an unsigned hash value from STRING0 that is consistent with
+   strcmp_iw, strcmp, and, at least on Ada symbols, wild_match.  That
+   is, two identifiers equivalent according to any of those three
+   comparison operators hash to the same value.  */
+extern unsigned int default_search_name_hash (const char *search_name);
 
 void c_get_string (struct value *value, gdb_byte **buffer, int *length,
 		   struct type **char_type, const char **charset);
