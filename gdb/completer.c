@@ -1282,10 +1282,13 @@ complete_line_internal_1 (completion_tracker &tracker,
       word = tmp_command + point - strlen (text);
     }
 
-  if (point == 0)
+  /* Move P up to the start of the command.  */
+  p = skip_spaces_const (p);
+
+  if (*p == '\0')
     {
-      /* An empty line we want to consider ambiguous; that is, it
-	 could be any command.  */
+      /* An empty line is ambiguous; that is, it could be any
+	 command.  */
       c = CMD_LIST_AMBIGUOUS;
       result_list = 0;
     }
