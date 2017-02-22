@@ -135,19 +135,22 @@ get_objfile_bfd_data (struct objfile *objfile, struct bfd *abfd)
 
   if (storage == NULL)
     {
+      void *buf;
+
       /* If the object requires gdb to do relocations, we simply fall
 	 back to not sharing data across users.  These cases are rare
 	 enough that this seems reasonable.  */
       if (abfd != NULL && !gdb_bfd_requires_relocations (abfd))
 	{
-	  storage
+	  buf
 	    = ((struct objfile_per_bfd_storage *)
 	       bfd_zalloc (abfd, sizeof (struct objfile_per_bfd_storage)));
 	  set_bfd_data (abfd, objfiles_bfd_data, storage);
 	}
       else
-	storage = OBSTACK_ZALLOC (&objfile->objfile_obstack,
-				  struct objfile_per_bfd_storage);
+	buf = OBSTACK_ZALLOC (&objfile->objfile_obstack,
+			      struct objfile_per_bfd_storage);
+      storage = new (buf) objfile_per_bfd_storage ();
 
       /* Look up the gdbarch associated with the BFD.  */
       if (abfd != NULL)
@@ -172,6 +175,7 @@ free_objfile_per_bfd_storage (struct objfile_per_bfd_storage *storage)
   if (storage->demangled_names_hash)
     htab_delete (storage->demangled_names_hash);
   obstack_free (&storage->storage_obstack, 0);
+  storage->~objfile_per_bfd_storage ();
 }
 
 /* A wrapper for free_objfile_per_bfd_storage that can be passed as a

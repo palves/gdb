@@ -27,6 +27,7 @@
 #include "progspace.h"
 #include "registry.h"
 #include "gdb_bfd.h"
+#include <vector>
 
 struct bcache;
 struct htab;
@@ -260,6 +261,9 @@ struct objfile_per_bfd_storage
   /* This hash table is used to index the minimal symbols by their
      demangled names.  */
 
+  /* A flat/vector-based map is more efficient than a map here, since
+     this will only usually contain one entry.  */
+  std::vector<enum language> demangled_hash_languages;
   struct minimal_symbol *msymbol_demangled_hash[MINIMAL_SYMBOL_HASH_SIZE];
 };
 
