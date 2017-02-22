@@ -1831,6 +1831,67 @@ test_cp_symbol_name_cmp ()
   CHECK_MATCH_C ("function(int)", "function(int)");
   CHECK_NOT_MATCH_C ("function(int)", "function()");
 
+  /* Check that whitespace within symbol names is not ignored.  */
+  CHECK_NOT_MATCH_C ("function", "func tion");
+  CHECK_NOT_MATCH_C ("func__tion", "func_ _tion");
+  CHECK_NOT_MATCH_C ("func11tion", "func1 1tion");
+
+  /* Check the converse, which can happen with template function,
+     where the return type is part of the demangled name.  */
+  CHECK_NOT_MATCH_C ("func tion", "function");
+  CHECK_NOT_MATCH_C ("func1 1tion", "func11tion");
+  CHECK_NOT_MATCH_C ("func_ _tion", "func__tion");
+
+  /* Within parameters too.  */
+  CHECK_NOT_MATCH_C ("func(param)", "func(par am)");
+
+  /* Check handling of whitespace around C++ operators.  */
+  CHECK_NOT_MATCH_C ("operator<<", "opera tor<<");
+  CHECK_NOT_MATCH_C ("operator<<", "operator< <");
+  CHECK_NOT_MATCH_C ("operator<<", "operator < <");
+  CHECK_NOT_MATCH_C ("operator==", "operator= =");
+  CHECK_NOT_MATCH_C ("operator==", "operator = =");
+  CHECK_MATCH_C ("operator<<", "operator <<");
+  CHECK_MATCH_C ("operator<<()", "operator <<");
+  CHECK_NOT_MATCH_C ("operator<<()", "operator<<(int)");
+  CHECK_NOT_MATCH_C ("operator<<(int)", "operator<<()");
+  CHECK_MATCH_C ("operator==", "operator ==");
+  CHECK_MATCH_C ("operator==()", "operator ==");
+  CHECK_MATCH_C ("operator <<", "operator<<");
+  CHECK_MATCH_C ("operator ==", "operator==");
+  CHECK_MATCH_C ("operator bool", "operator  bool");
+  CHECK_MATCH_C ("operator bool ()", "operator  bool");
+  CHECK_MATCH_C ("operatorX<<", "operatorX < <");
+  CHECK_MATCH_C ("Xoperator<<", "Xoperator < <");
+
+  CHECK_MATCH_C ("operator()(int)", "operator()(int)");
+  CHECK_MATCH_C ("operator()(int)", "operator ( ) ( int )");
+  CHECK_MATCH_C ("operator()<long>(int)", "operator ( ) < long > ( int )");
+  /* The first "()" is not the parameter list.  */
+  CHECK_NOT_MATCH ("operator()(int)", "operator");
+
+  /* Misc user-defined operator tests.  */
+
+  CHECK_NOT_MATCH_C ("operator/=()", "operator ^=");
+  /* Same length at end of input.  */
+  CHECK_NOT_MATCH_C ("operator>>", "operator[]");
+  /* Same length but not at end of input.  */
+  CHECK_NOT_MATCH_C ("operator>>()", "operator[]()");
+
+  CHECK_MATCH_C ("base::operator char*()", "base::operator char*()");
+  CHECK_MATCH_C ("base::operator char*()", "base::operator char * ()");
+  CHECK_MATCH_C ("base::operator char**()", "base::operator char * * ()");
+  CHECK_MATCH ("base::operator char**()", "base::operator char * *");
+  CHECK_MATCH_C ("base::operator*()", "base::operator*()");
+  CHECK_NOT_MATCH_C ("base::operator char*()", "base::operatorc");
+  CHECK_NOT_MATCH ("base::operator char*()", "base::operator char");
+  CHECK_NOT_MATCH ("base::operator char*()", "base::operat");
+
+  /* Check handling of whitespace around C++ scope operators.  */
+  CHECK_NOT_MATCH_C ("foo::bar", "foo: :bar");
+  CHECK_MATCH_C ("foo::bar", "foo :: bar");
+  CHECK_MATCH_C ("foo :: bar", "foo::bar");
+
   /* Tests matching symbols in some scope.  */
   CHECK_MATCH_C ("foo::function()", "function");
   CHECK_MATCH_C ("foo::function(int)", "function");
