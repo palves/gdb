@@ -146,14 +146,32 @@ struct lookup_minimal_symbol_result
   bound_minimal_symbol trampoline_symbol = { NULL, NULL };
 };
 
-void
+struct msymbol_mangled_lookup
+{
+  static const char *msymbol_lookup_name (minimal_symbol *msym)
+  { return MSYMBOL_LINKAGE_NAME (msym); }
+
+  static minimal_symbol *next_msymbol (minimal_symbol *msym)
+  { return msym->hash_next; }
+};
+
+struct msymbol_demangled_lookup
+{
+  static const char *msymbol_lookup_name (minimal_symbol *msym)
+  { return MSYMBOL_SEARCH_NAME (msym); }
+
+  static minimal_symbol *next_msymbol (minimal_symbol *msym)
+  { return msym->demangled_hash_next; }
+};
+
+template <typename LookupTrait>
+static void
 lookup_minimal_symbol_once (const char *name,
 			    const char *sfile,
 			    struct objfile *objfile,
 			    struct minimal_symbol **table,
 			    unsigned int hash,
 			    int (*namecmp) (const char *, const char *),
-			    struct minimal_symbol *(*next_msymbol) (struct minimal_symbol *),
 			    lookup_minimal_symbol_result &res)
 {
   if (symbol_lookup_debug)
@@ -168,7 +186,7 @@ lookup_minimal_symbol_once (const char *name,
 
   while (msymbol != NULL)
     {
-      bool match = namecmp (MSYMBOL_LINKAGE_NAME (msymbol),
+      bool match = namecmp (LookupTrait::msymbol_lookup_name (msymbol),
 			    name) == 0;
 
       if (match)
@@ -209,7 +227,7 @@ lookup_minimal_symbol_once (const char *name,
 	}
 
       /* Find the next symbol on the hash chain.  */
-      msymbol = next_msymbol (msymbol);
+      msymbol = LookupTrait::next_msymbol (msymbol);
     }
 }
 
@@ -290,21 +308,15 @@ lookup_minimal_symbol (const char *name, const char *sfile,
 				objfile_debug_name (objfile));
 	  }
 
-	auto next_hash_msymbol = [] (minimal_symbol *msymbol)
-	  { return msymbol->hash_next; };
-
-	static auto next_demangled_hash_msymbol = [] (minimal_symbol *msymbol)
-	  { return msymbol->demangled_hash_next; };
-
 	  /* Do two passes: the first over the ordinary hash table,
 	     and the second over the demangled hash table.  */
 
 	  /* Look over the mangled hash table, and the second over the
 	     demangled hash table.  */
-	lookup_minimal_symbol_once (modified_name, sfile, objfile,
-				    objfile->per_bfd->msymbol_hash,
-				    hash, mangled_namecmp,
-				    next_hash_msymbol, res);
+	lookup_minimal_symbol_once<msymbol_mangled_lookup>
+	  (modified_name, sfile, objfile,
+	   objfile->per_bfd->msymbol_hash,
+	   hash, mangled_namecmp, res);
 
 	/* If not found, try the demangled hash table.  */
 	if (res.found_symbol.minsym == NULL)
@@ -315,15 +327,23 @@ lookup_minimal_symbol (const char *name, const char *sfile,
 		if (!demangled_hashes_p[lang])
 		  {
 		    demangled_hashes[lang]
-		      = search_name_hash (lang, name) % MINIMAL_SYMBOL_HASH_SIZE;
+		      = (search_name_hash (lang, name)
+			 % MINIMAL_SYMBOL_HASH_SIZE);
 		    demangled_hashes_p[lang] = true;
 		  }
 
 		unsigned int hash = demangled_hashes[lang];
-		lookup_minimal_symbol_once (modified_name, sfile, objfile,
-					    objfile->per_bfd->msymbol_demangled_hash,
-					    hash, strcmp_iw,
-					    next_demangled_hash_msymbol, res);
+
+		symbol_name_cmp_ftype *cmp
+		  = language_get_symbol_name_cmp (language_def (lang),
+						  modified_name);
+		struct minimal_symbol **msymbol_demangled_hash
+		  = objfile->per_bfd->msymbol_demangled_hash;
+
+		lookup_minimal_symbol_once<msymbol_demangled_lookup>
+		  (modified_name, sfile, objfile,
+		   msymbol_demangled_hash, hash, cmp,
+		   res);
 
 		if (res.found_symbol.minsym != NULL)
 		  break;
