@@ -1191,7 +1191,7 @@ make_symbol_overload_list_block (const char *name,
   struct block_iterator iter;
   struct symbol *sym;
 
-  ALL_BLOCK_SYMBOLS_WITH_NAME (block, name, iter, sym)
+  ALL_BLOCK_SYMBOLS_WITH_NAME (block, name, strcmp_iw, iter, sym)
     overload_list_add_symbol (sym, name);
 }
 

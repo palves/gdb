@@ -370,7 +370,8 @@ struct language_defn
        special processing here, 'iterate_over_symbols' should be
        used as the definition.  */
     void (*la_iterate_over_symbols)
-      (const struct block *block, const char *name, domain_enum domain,
+      (const struct block *block, const char *name,
+       symbol_name_cmp_ftype *compare, domain_enum domain,
        gdb::function_view<symbol_found_callback_ftype> callback);
 
     /* Hash the given STRING.  Use default_compute_string_hash if no
@@ -519,8 +520,9 @@ extern enum language set_language (enum language);
 #define LA_PRINT_ARRAY_INDEX(index_value, stream, options) \
   (current_language->la_print_array_index(index_value, stream, options))
 
-#define LA_ITERATE_OVER_SYMBOLS(BLOCK, NAME, DOMAIN, CALLBACK) \
-  (current_language->la_iterate_over_symbols (BLOCK, NAME, DOMAIN, CALLBACK))
+#define LA_ITERATE_OVER_SYMBOLS(BLOCK, NAME, NAME_COMPARE, DOMAIN, CALLBACK) \
+  (current_language->la_iterate_over_symbols (BLOCK, NAME, NAME_COMPARE, \
+					      DOMAIN, CALLBACK))
 
 /* Test a character to decide whether it can be printed in literal form
    or needs to be printed in another representation.  For example,

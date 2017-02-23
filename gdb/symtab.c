@@ -2765,13 +2765,14 @@ basic_lookup_transparent_type (const char *name)
 
 void
 iterate_over_symbols (const struct block *block, const char *name,
+		      symbol_name_cmp_ftype *compare,
 		      const domain_enum domain,
 		      gdb::function_view<symbol_found_callback_ftype> callback)
 {
   struct block_iterator iter;
   struct symbol *sym;
 
-  ALL_BLOCK_SYMBOLS_WITH_NAME (block, name, iter, sym)
+  ALL_BLOCK_SYMBOLS_WITH_NAME (block, name, compare, iter, sym)
     {
       if (symbol_matches_domain (SYMBOL_LANGUAGE (sym),
 				 SYMBOL_DOMAIN (sym), domain))

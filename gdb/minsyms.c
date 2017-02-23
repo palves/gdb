@@ -220,8 +220,9 @@ lookup_minimal_symbol (const char *name, const char *sfile,
 		  else
 		    {
 		      /* The function respects CASE_SENSITIVITY.  */
-		      match = MSYMBOL_MATCHES_SEARCH_NAME (msymbol,
-							  modified_name);
+		      match
+			= strcmp_iw (MSYMBOL_SEARCH_NAME (msymbol),
+				     modified_name) == 0;
 		    }
 
 		  if (match)
@@ -338,6 +339,7 @@ find_minimal_symbol_address (const char *name, CORE_ADDR *addr,
 
 void
 iterate_over_minimal_symbols (struct objfile *objf, const char *name,
+			      symbol_name_cmp_ftype *symbol_compare,
 			      void (*callback) (struct minimal_symbol *,
 						void *),
 			      void *user_data)
@@ -362,7 +364,7 @@ iterate_over_minimal_symbols (struct objfile *objf, const char *name,
   iter = objf->per_bfd->msymbol_demangled_hash[hash];
   while (iter)
     {
-      if (MSYMBOL_MATCHES_SEARCH_NAME (iter, name))
+      if (symbol_compare (MSYMBOL_SEARCH_NAME (iter), name) == 0)
 	(*callback) (iter, user_data);
       iter = iter->demangled_hash_next;
     }

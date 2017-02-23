@@ -5852,7 +5852,9 @@ ada_lookup_symbol_list (const char *name0, const struct block *block0,
 
 static void
 ada_iterate_over_symbols
-  (const struct block *block, const char *name, domain_enum domain,
+  (const struct block *block, const char *name,
+   symbol_name_cmp_ftype *symbol_compare,
+   domain_enum domain,
    gdb::function_view<symbol_found_callback_ftype> callback)
 {
   int ndefs, i;

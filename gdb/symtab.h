@@ -430,8 +430,6 @@ struct minimal_symbol
   (symbol_set_language (&(symbol)->mginfo, (language), (obstack)))
 #define MSYMBOL_SEARCH_NAME(symbol)					 \
    (symbol_search_name (&(symbol)->mginfo))
-#define MSYMBOL_MATCHES_SEARCH_NAME(symbol, name)			\
-  (strcmp_iw (MSYMBOL_SEARCH_NAME (symbol), (name)) == 0)
 #define MSYMBOL_SET_NAMES(symbol,linkage_name,len,copy_name,objfile)	\
   symbol_set_names (&(symbol)->mginfo, linkage_name, len, copy_name, objfile)
 
@@ -1638,6 +1636,7 @@ VEC (CORE_ADDR) *find_pcs_for_symtab_line (struct symtab *symtab, int line,
 typedef bool (symbol_found_callback_ftype) (symbol *sym);
 
 void iterate_over_symbols (const struct block *block, const char *name,
+			   symbol_name_cmp_ftype *name_compare,
 			   const domain_enum domain,
 			   gdb::function_view<symbol_found_callback_ftype> callback);
 

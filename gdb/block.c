@@ -589,75 +589,6 @@ block_iterator_next (struct block_iterator *iterator)
   return block_iterator_step (iterator, 0);
 }
 
-/* Perform a single step for a "name" block iterator, iterating across
-   symbol tables as needed.  Returns the next symbol, or NULL when
-   iteration is complete.  */
-
-static struct symbol *
-block_iter_name_step (struct block_iterator *iterator, const char *name,
-		      int first)
-{
-  struct symbol *sym;
-
-  gdb_assert (iterator->which != FIRST_LOCAL_BLOCK);
-
-  while (1)
-    {
-      if (first)
-	{
-	  struct compunit_symtab *cust
-	    = find_iterator_compunit_symtab (iterator);
-	  const struct block *block;
-
-	  /* Iteration is complete.  */
-	  if (cust == NULL)
-	    return  NULL;
-
-	  block = BLOCKVECTOR_BLOCK (COMPUNIT_BLOCKVECTOR (cust),
-				     iterator->which);
-	  sym = dict_iter_name_first (BLOCK_DICT (block), name,
-				      &iterator->dict_iter);
-	}
-      else
-	sym = dict_iter_name_next (name, &iterator->dict_iter);
-
-      if (sym != NULL)
-	return sym;
-
-      /* We have finished iterating the appropriate block of one
-	 symtab.  Now advance to the next symtab and begin iteration
-	 there.  */
-      ++iterator->idx;
-      first = 1;
-    }
-}
-
-/* See block.h.  */
-
-struct symbol *
-block_iter_name_first (const struct block *block,
-		       const char *name,
-		       struct block_iterator *iterator)
-{
-  initialize_block_iterator (block, iterator);
-
-  if (iterator->which == FIRST_LOCAL_BLOCK)
-    return dict_iter_name_first (block->dict, name, &iterator->dict_iter);
-
-  return block_iter_name_step (iterator, name, 1);
-}
-
-/* See block.h.  */
-
-struct symbol *
-block_iter_name_next (const char *name, struct block_iterator *iterator)
-{
-  if (iterator->which == FIRST_LOCAL_BLOCK)
-    return dict_iter_name_next (name, &iterator->dict_iter);
-
-  return block_iter_name_step (iterator, name, 0);
-}
-
 /* Perform a single step for a "match" block iterator, iterating
    across symbol tables as needed.  Returns the next symbol, or NULL
    when iteration is complete.  */
@@ -755,7 +686,7 @@ block_lookup_symbol (const struct block *block, const char *name,
     {
       struct symbol *other = NULL;
 
-      ALL_BLOCK_SYMBOLS_WITH_NAME (block, name, iter, sym)
+      ALL_BLOCK_SYMBOLS_WITH_NAME (block, name, strcmp_iw, iter, sym)
 	{
 	  if (SYMBOL_DOMAIN (sym) == domain)
 	    return sym;
@@ -782,7 +713,7 @@ block_lookup_symbol (const struct block *block, const char *name,
 
       struct symbol *sym_found = NULL;
 
-      ALL_BLOCK_SYMBOLS_WITH_NAME (block, name, iter, sym)
+      ALL_BLOCK_SYMBOLS_WITH_NAME (block, name, strcmp_iw, iter, sym)
 	{
 	  if (symbol_matches_domain (SYMBOL_LANGUAGE (sym),
 				     SYMBOL_DOMAIN (sym), domain))
@@ -845,7 +776,7 @@ block_find_symbol (const struct block *block, const char *name,
   gdb_assert (BLOCK_SUPERBLOCK (block) == NULL
 	      || BLOCK_SUPERBLOCK (BLOCK_SUPERBLOCK (block)) == NULL);
 
-  ALL_BLOCK_SYMBOLS_WITH_NAME (block, name, iter, sym)
+  ALL_BLOCK_SYMBOLS_WITH_NAME (block, name, strcmp_iw, iter, sym)
     {
       /* MATCHER is deliberately called second here so that it never sees
 	 a non-domain-matching symbol.  */
