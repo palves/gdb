@@ -373,6 +373,10 @@ struct language_defn
       (const struct block *block, const char *name, domain_enum domain,
        gdb::function_view<symbol_found_callback_ftype> callback);
 
+    /* Hash the given STRING.  Use default_compute_string_hash if no
+       special treatment is required.  */
+    unsigned int (*la_compute_string_hash) (const char *name);
+
     /* Various operations on varobj.  */
     const struct lang_varobj_ops *la_varobj_ops;
 
@@ -591,6 +595,10 @@ void default_print_typedef (struct type *type, struct symbol *new_symbol,
 
 void default_get_string (struct value *value, gdb_byte **buffer, int *length,
 			 struct type **char_type, const char **charset);
+
+/* Default name hashing function.  */
+
+extern unsigned int default_compute_string_hash (const char *string);
 
 void c_get_string (struct value *value, gdb_byte **buffer, int *length,
 		   struct type **char_type, const char **charset);

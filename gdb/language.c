@@ -44,6 +44,7 @@
 #include "cp-support.h"
 #include "frame.h"
 #include <algorithm>
+#include "dictionary.h"		/* for dict_hash  */
 
 extern void _initialize_language (void);
 
@@ -709,6 +710,14 @@ default_get_string (struct value *value, gdb_byte **buffer, int *length,
   error (_("Getting a string is unsupported in this language."));
 }
 
+/* See language.h.  */
+
+unsigned int
+default_compute_string_hash (const char *name)
+{
+  return dict_hash (name);
+}
+
 /* Define the language that is no language.  */
 
 static int
@@ -848,6 +857,7 @@ const struct language_defn unknown_language_defn =
   default_get_string,
   NULL,				/* la_get_symbol_name_cmp */
   iterate_over_symbols,
+  default_compute_string_hash,
   &default_varobj_ops,
   NULL,
   NULL,
@@ -897,6 +907,7 @@ const struct language_defn auto_language_defn =
   default_get_string,
   NULL,				/* la_get_symbol_name_cmp */
   iterate_over_symbols,
+  default_compute_string_hash,
   &default_varobj_ops,
   NULL,
   NULL,

@@ -865,6 +865,7 @@ extern const struct language_defn c_language_defn =
   c_get_string,
   NULL,				/* la_get_symbol_name_cmp */
   iterate_over_symbols,
+  default_compute_string_hash,
   &c_varobj_ops,
   c_get_compile_context,
   c_compute_program,
@@ -999,6 +1000,7 @@ extern const struct language_defn cplus_language_defn =
   c_get_string,
   NULL,				/* la_get_symbol_name_cmp */
   iterate_over_symbols,
+  default_compute_string_hash,
   &cplus_varobj_ops,
   NULL,
   NULL,
@@ -1051,6 +1053,7 @@ extern const struct language_defn asm_language_defn =
   c_get_string,
   NULL,				/* la_get_symbol_name_cmp */
   iterate_over_symbols,
+  default_compute_string_hash,
   &default_varobj_ops,
   NULL,
   NULL,
@@ -1103,6 +1106,7 @@ extern const struct language_defn minimal_language_defn =
   c_get_string,
   NULL,				/* la_get_symbol_name_cmp */
   iterate_over_symbols,
+  default_compute_string_hash,
   &default_varobj_ops,
   NULL,
   NULL,
