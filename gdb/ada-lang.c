@@ -108,10 +108,13 @@ static struct value *make_array_descriptor (struct type *, struct value *);
 
 static void ada_add_block_symbols (struct obstack *,
                                    const struct block *, const char *,
-                                   domain_enum, struct objfile *, int);
+                                   domain_enum, struct objfile *,
+				   symbol_name_match_type);
 
 static void ada_add_all_symbols (struct obstack *, const struct block *,
-				 const char *, domain_enum, int, int *);
+				 const char *,
+				 symbol_name_match_type name_match_type,
+				 domain_enum, int, int *);
 
 static int is_nonfunction (struct block_symbol *, int);
 
@@ -4976,7 +4979,7 @@ ada_lookup_simple_minsym (const char *name)
 static void
 add_symbols_from_enclosing_procs (struct obstack *obstackp,
                                   const char *name, domain_enum domain,
-                                  int wild_match_p)
+                                  symbol_name_match_type name_match_type)
 {
 }
 
@@ -5430,7 +5433,7 @@ remove_irrelevant_renamings (struct block_symbol *syms,
 static void
 ada_add_local_symbols (struct obstack *obstackp, const char *name,
                        const struct block *block, domain_enum domain,
-                       int wild_match_p)
+                       symbol_name_match_type name_match_type)
 {
   int block_depth = 0;
 
@@ -5438,7 +5441,7 @@ ada_add_local_symbols (struct obstack *obstackp, const char *name,
     {
       block_depth += 1;
       ada_add_block_symbols (obstackp, block, name, domain, NULL,
-			     wild_match_p);
+			     name_match_type);
 
       /* If we found a non-function match, assume that's the one.  */
       if (is_nonfunction (defns_collected (obstackp, 0),
@@ -5451,7 +5454,7 @@ ada_add_local_symbols (struct obstack *obstackp, const char *name,
   /* If no luck so far, try to find NAME as a local symbol in some lexically
      enclosing subprogram.  */
   if (num_defns_collected (obstackp) == 0 && block_depth > 2)
-    add_symbols_from_enclosing_procs (obstackp, name, domain, wild_match_p);
+    add_symbols_from_enclosing_procs (obstackp, name, domain, name_match_type);
 }
 
 /* An object of this type is used as the user_data argument when
@@ -5516,7 +5519,7 @@ ada_add_block_renamings (struct obstack *obstackp,
 			 const struct block *block,
 			 const char *name,
 			 domain_enum domain,
-			 int wild_match_p)
+			 symbol_name_match_type name_match_type)
 {
   struct using_direct *renaming;
   int defns_mark = num_defns_collected (obstackp);
@@ -5552,9 +5555,12 @@ ada_add_block_renamings (struct obstack *obstackp,
 		? renaming->alias
 		: renaming->declaration);
       name_match
-	= wild_match_p ? wild_match (r_name, name) : strcmp (r_name, name);
+	= (name_match_type == symbol_name_match_type::WILD
+	   ? wild_match (r_name, name)
+	   : strcmp (r_name, name));
       if (name_match == 0)
-	ada_add_all_symbols (obstackp, block, renaming->declaration, domain,
+	ada_add_all_symbols (obstackp, block, renaming->declaration,
+			     name_match_type, domain,
 			     1, NULL);
       renaming->searched = 0;
     }
@@ -5653,7 +5659,7 @@ compare_names (const char *string1, const char *string2)
 static void
 add_nonlocal_symbols (struct obstack *obstackp, const char *name,
 		      domain_enum domain, int global,
-		      int is_wild_match)
+		      symbol_name_match_type name_match_type)
 {
   struct objfile *objfile;
   struct compunit_symtab *cu;
@@ -5666,14 +5672,16 @@ add_nonlocal_symbols (struct obstack *obstackp, const char *name,
     {
       data.objfile = objfile;
 
-      if (is_wild_match)
+      if (name_match_type == symbol_name_match_type::WILD)
 	objfile->sf->qf->map_matching_symbols (objfile, name, domain, global,
 					       aux_add_nonlocal_symbols, &data,
-					       wild_match, NULL);
+					       symbol_name_match_type::WILD,
+					       NULL);
       else
 	objfile->sf->qf->map_matching_symbols (objfile, name, domain, global,
 					       aux_add_nonlocal_symbols, &data,
-					       full_match, compare_names);
+					       symbol_name_match_type::FULL,
+					       compare_names);
 
       ALL_OBJFILE_COMPUNITS (objfile, cu)
 	{
@@ -5681,12 +5689,14 @@ add_nonlocal_symbols (struct obstack *obstackp, const char *name,
 	    = BLOCKVECTOR_BLOCK (COMPUNIT_BLOCKVECTOR (cu), GLOBAL_BLOCK);
 
 	  if (ada_add_block_renamings (obstackp, global_block , name, domain,
-				       is_wild_match))
+				       name_match_type))
 	    data.found_sym = 1;
 	}
     }
 
-  if (num_defns_collected (obstackp) == 0 && global && !is_wild_match)
+  if (num_defns_collected (obstackp) == 0
+      && global
+      && name_match_type == symbol_name_match_type::FULL)
     {
       ALL_OBJFILES (objfile)
         {
@@ -5698,7 +5708,8 @@ add_nonlocal_symbols (struct obstack *obstackp, const char *name,
 						 global,
 						 aux_add_nonlocal_symbols,
 						 &data,
-						 full_match, compare_names);
+						 symbol_name_match_type::FULL,
+						 compare_names);
 	}
     }      	
 }
@@ -5723,12 +5734,12 @@ static void
 ada_add_all_symbols (struct obstack *obstackp,
 		     const struct block *block,
 		     const char *name,
+		     symbol_name_match_type name_match_type,
 		     domain_enum domain,
 		     int full_search,
 		     int *made_global_lookup_p)
 {
   struct symbol *sym;
-  const int wild_match_p = should_use_wild_match (name);
 
   if (made_global_lookup_p)
     *made_global_lookup_p = 0;
@@ -5751,14 +5762,14 @@ ada_add_all_symbols (struct obstack *obstackp,
   if (block != NULL)
     {
       if (full_search)
-	ada_add_local_symbols (obstackp, name, block, domain, wild_match_p);
+	ada_add_local_symbols (obstackp, name, block, domain, name_match_type);
       else
 	{
 	  /* In the !full_search case we're are being called by
 	     ada_iterate_over_symbols, and we don't want to search
 	     superblocks.  */
 	  ada_add_block_symbols (obstackp, block, name, domain, NULL,
-				 wild_match_p);
+				 name_match_type);
 	}
       if (num_defns_collected (obstackp) > 0 || !full_search)
 	return;
@@ -5780,13 +5791,13 @@ ada_add_all_symbols (struct obstack *obstackp,
 
   /* Search symbols from all global blocks.  */
  
-  add_nonlocal_symbols (obstackp, name, domain, 1, wild_match_p);
+  add_nonlocal_symbols (obstackp, name, domain, 1, name_match_type);
 
   /* Now add symbols from all per-file blocks if we've gotten no hits
      (not strictly correct, but perhaps better than an error).  */
 
   if (num_defns_collected (obstackp) == 0)
-    add_nonlocal_symbols (obstackp, name, domain, 0, wild_match_p);
+    add_nonlocal_symbols (obstackp, name, domain, 0, name_match_type);
 }
 
 /* Find symbols in DOMAIN matching NAME, in BLOCK and, if full_search is
@@ -5807,18 +5818,20 @@ ada_add_all_symbols (struct obstack *obstackp,
    is first stripped off, and only static and global symbols are searched.  */
 
 static int
-ada_lookup_symbol_list_worker (const char *name, const struct block *block,
+ada_lookup_symbol_list_worker (const char *name,
+			       symbol_name_match_type name_match_type,
+			       const struct block *block,
 			       domain_enum domain,
 			       struct block_symbol **results,
 			       int full_search)
 {
-  const int wild_match_p = should_use_wild_match (name);
   int syms_from_global_search;
   int ndefns;
 
   obstack_free (&symbol_list_obstack, NULL);
   obstack_init (&symbol_list_obstack);
-  ada_add_all_symbols (&symbol_list_obstack, block, name, domain,
+  ada_add_all_symbols (&symbol_list_obstack, block, name,
+		       name_match_type, domain,
 		       full_search, &syms_from_global_search);
 
   ndefns = num_defns_collected (&symbol_list_obstack);
@@ -5845,7 +5858,13 @@ int
 ada_lookup_symbol_list (const char *name0, const struct block *block0,
 			domain_enum domain, struct block_symbol **results)
 {
-  return ada_lookup_symbol_list_worker (name0, block0, domain, results, 1);
+  const symbol_name_match_type name_match_type
+    = (should_use_wild_match (name0)
+       ? symbol_name_match_type::WILD
+       : symbol_name_match_type::FULL);
+
+  return ada_lookup_symbol_list_worker (name0, name_match_type,
+					block0, domain, results, 1);
 }
 
 /* Implementation of the la_iterate_over_symbols method.  */
@@ -5853,14 +5872,15 @@ ada_lookup_symbol_list (const char *name0, const struct block *block0,
 static void
 ada_iterate_over_symbols
   (const struct block *block, const char *name,
-   symbol_name_cmp_ftype *symbol_compare,
+   symbol_name_match_type name_match_type,
    domain_enum domain,
    gdb::function_view<symbol_found_callback_ftype> callback)
 {
   int ndefs, i;
   struct block_symbol *results;
 
-  ndefs = ada_lookup_symbol_list_worker (name, block, domain, &results, 0);
+  ndefs = ada_lookup_symbol_list_worker (name, name_match_type,
+					 block, domain, &results, 0);
   for (i = 0; i < ndefs; ++i)
     {
       if (!callback (results[i].symbol))
@@ -6234,7 +6254,7 @@ static void
 ada_add_block_symbols (struct obstack *obstackp,
                        const struct block *block, const char *name,
                        domain_enum domain, struct objfile *objfile,
-                       int wild)
+                       symbol_name_match_type name_match_type)
 {
   struct block_iterator iter;
   int name_len = strlen (name);
@@ -6246,10 +6266,15 @@ ada_add_block_symbols (struct obstack *obstackp,
 
   arg_sym = NULL;
   found_sym = 0;
-  if (wild)
+  if (name_match_type == symbol_name_match_type::WILD)
     {
-      for (sym = block_iter_match_first (block, name, wild_match, &iter);
-	   sym != NULL; sym = block_iter_match_next (name, wild_match, &iter))
+      for (sym = block_iter_match_first (block, name,
+					 symbol_name_match_type::WILD,
+					 &iter);
+	   sym != NULL;
+	   sym = block_iter_match_next (name,
+					symbol_name_match_type::WILD,
+					&iter))
       {
         if (symbol_matches_domain (SYMBOL_LANGUAGE (sym),
                                    SYMBOL_DOMAIN (sym), domain)
@@ -6271,8 +6296,13 @@ ada_add_block_symbols (struct obstack *obstackp,
     }
   else
     {
-     for (sym = block_iter_match_first (block, name, full_match, &iter);
-	  sym != NULL; sym = block_iter_match_next (name, full_match, &iter))
+     for (sym = block_iter_match_first (block, name,
+					symbol_name_match_type::FULL,
+					&iter);
+	  sym != NULL;
+	  sym = block_iter_match_next (name,
+				       symbol_name_match_type::FULL,
+				       &iter))
       {
         if (symbol_matches_domain (SYMBOL_LANGUAGE (sym),
                                    SYMBOL_DOMAIN (sym), domain))
@@ -6295,7 +6325,7 @@ ada_add_block_symbols (struct obstack *obstackp,
 
   /* Handle renamings.  */
 
-  if (ada_add_block_renamings (obstackp, block, name, domain, wild))
+  if (ada_add_block_renamings (obstackp, block, name, domain, name_match_type))
     found_sym = 1;
 
   if (!found_sym && arg_sym != NULL)
@@ -6305,7 +6335,7 @@ ada_add_block_symbols (struct obstack *obstackp,
                        block);
     }
 
-  if (!wild)
+  if (name_match_type == symbol_name_match_type::FULL)
     {
       arg_sym = NULL;
       found_sym = 0;
@@ -6371,10 +6401,14 @@ ada_add_block_symbols (struct obstack *obstackp,
 static const char *
 symbol_completion_match (const char *sym_name,
                          const char *text, int text_len,
-                         int wild_match_p, int encoded_p)
+                         symbol_name_match_type name_match_type,
+			 int encoded_p)
 {
   const int verbatim_match = (text[0] == '<');
   int match = 0;
+
+  if (name_match_type == symbol_name_match_type::EXPRESSION)
+    name_match_type = symbol_name_match_type::WILD;
 
   if (verbatim_match)
     {
@@ -6419,7 +6453,7 @@ symbol_completion_match (const char *sym_name,
 
   /* Second: Try wild matching...  */
 
-  if (!match && wild_match_p)
+  if (!match && name_match_type == symbol_name_match_type::WILD)
     {
       /* Since we are doing wild matching, this means that TEXT
          may represent an unqualified symbol name.  We therefore must
@@ -6460,14 +6494,15 @@ symbol_completion_match (const char *sym_name,
    encoded).  */
 
 static void
-symbol_completion_add (VEC(char_ptr) **sv,
+symbol_completion_add (completion_tracker &tracker,
                        const char *sym_name,
                        const char *text, int text_len,
                        const char *orig_text, const char *word,
-                       int wild_match_p, int encoded_p)
+                       symbol_name_match_type name_match_type,
+		       int encoded_p)
 {
   const char *match = symbol_completion_match (sym_name, text, text_len,
-                                               wild_match_p, encoded_p);
+                                               name_match_type, encoded_p);
   char *completion;
 
   if (match == NULL)
@@ -6496,19 +6531,22 @@ symbol_completion_add (VEC(char_ptr) **sv,
       strcat (completion, match);
     }
 
-  VEC_safe_push (char_ptr, *sv, completion);
+  gdb::unique_xmalloc_ptr<char> comp (completion);
+  tracker.add_completion (std::move (comp), completion);
 }
 
 /* Return a list of possible symbol names completing TEXT0.  WORD is
    the entire command on which completion is made.  */
 
-static VEC (char_ptr) *
-ada_make_symbol_completion_list (const char *text0, const char *word,
+static void
+ada_make_symbol_completion_list (completion_tracker &tracker,
+				 complete_symbol_mode mode,
+				 symbol_name_match_type name_match_type,
+				 const char *text0, const char *word,
 				 enum type_code code)
 {
   char *text;
   int text_len;
-  int wild_match_p;
   int encoded_p;
   VEC(char_ptr) *completions = VEC_alloc (char_ptr, 128);
   struct symbol *sym;
@@ -6527,7 +6565,6 @@ ada_make_symbol_completion_list (const char *text0, const char *word,
       text = xstrdup (text0);
       make_cleanup (xfree, text);
       text_len = strlen (text);
-      wild_match_p = 0;
       encoded_p = 1;
     }
   else
@@ -6539,11 +6576,6 @@ ada_make_symbol_completion_list (const char *text0, const char *word,
         text[i] = tolower (text[i]);
 
       encoded_p = (strstr (text0, "__") != NULL);
-      /* If the name contains a ".", then the user is entering a fully
-         qualified entity name, and the match must not be done in wild
-         mode.  Similarly, if the user wants to complete what looks like
-         an encoded name, the match must not be done in wild mode.  */
-      wild_match_p = (strchr (text0, '.') == NULL && !encoded_p);
     }
 
   /* First, look at the partial symtab symbols.  */
@@ -6552,7 +6584,7 @@ ada_make_symbol_completion_list (const char *text0, const char *word,
 			   {
 			     return symbol_completion_match (symname,
 							     text, text_len,
-							     wild_match_p,
+							     name_match_type,
 							     encoded_p);
 			   },
 			   NULL,
@@ -6566,8 +6598,8 @@ ada_make_symbol_completion_list (const char *text0, const char *word,
   ALL_MSYMBOLS (objfile, msymbol)
   {
     QUIT;
-    symbol_completion_add (&completions, MSYMBOL_LINKAGE_NAME (msymbol),
-			   text, text_len, text0, word, wild_match_p,
+    symbol_completion_add (tracker, MSYMBOL_LINKAGE_NAME (msymbol),
+			   text, text_len, text0, word, name_match_type,
 			   encoded_p);
   }
 
@@ -6581,9 +6613,9 @@ ada_make_symbol_completion_list (const char *text0, const char *word,
 
       ALL_BLOCK_SYMBOLS (b, iter, sym)
       {
-        symbol_completion_add (&completions, SYMBOL_LINKAGE_NAME (sym),
+        symbol_completion_add (tracker, SYMBOL_LINKAGE_NAME (sym),
                                text, text_len, text0, word,
-                               wild_match_p, encoded_p);
+                               name_match_type, encoded_p);
       }
     }
 
@@ -6596,9 +6628,9 @@ ada_make_symbol_completion_list (const char *text0, const char *word,
     b = BLOCKVECTOR_BLOCK (COMPUNIT_BLOCKVECTOR (s), GLOBAL_BLOCK);
     ALL_BLOCK_SYMBOLS (b, iter, sym)
     {
-      symbol_completion_add (&completions, SYMBOL_LINKAGE_NAME (sym),
+      symbol_completion_add (tracker, SYMBOL_LINKAGE_NAME (sym),
                              text, text_len, text0, word,
-                             wild_match_p, encoded_p);
+                             name_match_type, encoded_p);
     }
   }
 
@@ -6611,14 +6643,13 @@ ada_make_symbol_completion_list (const char *text0, const char *word,
       continue;
     ALL_BLOCK_SYMBOLS (b, iter, sym)
     {
-      symbol_completion_add (&completions, SYMBOL_LINKAGE_NAME (sym),
+      symbol_completion_add (tracker, SYMBOL_LINKAGE_NAME (sym),
                              text, text_len, text0, word,
-                             wild_match_p, encoded_p);
+                             name_match_type, encoded_p);
     }
   }
 
   do_cleanups (old_chain);
-  return completions;
 }
 
                                 /* Field Access */
@@ -13979,12 +14010,19 @@ static const struct exp_descriptor ada_exp_descriptor = {
    for Ada.  */
 
 static symbol_name_cmp_ftype *
-ada_get_symbol_name_cmp (const char *lookup_name)
+ada_get_symbol_name_cmp (symbol_name_match_type match_type,
+			 const char *lookup_name)
 {
-  if (should_use_wild_match (lookup_name))
-    return wild_match;
-  else
-    return compare_names;
+  switch (match_type)
+    {
+    case symbol_name_match_type::WILD:
+    case symbol_name_match_type::EXPRESSION:
+      return wild_match;
+    case symbol_name_match_type::FULL:
+      return full_match;
+    }
+
+  gdb_assert_not_reached ("");
 }
 
 /* Implement the "la_read_var_value" language_defn method for Ada.  */
@@ -14055,6 +14093,7 @@ extern const struct language_defn ada_language_defn = {
   default_pass_by_reference,
   c_get_string,
   ada_get_symbol_name_cmp,	/* la_get_symbol_name_cmp */
+  NULL,				/* la_get_compare_symbol_name */
   ada_iterate_over_symbols,
   default_search_name_hash,
   &ada_varobj_ops,

@@ -244,7 +244,7 @@ extern struct symbol *block_iterator_next (struct block_iterator *iterator);
 
 extern struct symbol *block_iter_match_first (const struct block *block,
 					      const char *name,
-					      symbol_name_cmp_ftype *compare,
+					      symbol_name_match_type compare_name,
 					      struct block_iterator *iterator);
 
 /* Advance ITERATOR to point at the next symbol in BLOCK whose
@@ -256,7 +256,7 @@ extern struct symbol *block_iter_match_first (const struct block *block,
    previous call to block_iter_match_first with the same NAME and COMPARE.  */
 
 extern struct symbol *block_iter_match_next (const char *name,
-					     symbol_name_cmp_ftype *compare,
+					     symbol_name_match_type compare_name,
 					     struct block_iterator *iterator);
 
 /* Search BLOCK for symbol NAME in DOMAIN.  */

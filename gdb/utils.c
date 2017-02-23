@@ -2439,6 +2439,59 @@ fprintf_symbol_filtered (struct ui_file *stream, const char *name,
     }
 }
 
+/* Helper for strncmp_iw and strcmp_iw.  If mode is PREFIX, behave
+   like strncmp_iw.  If mode is EXACT, behave like strcmp_iw.  */
+
+int
+strncmp_iw_with_mode (const char *string1, const char *string2,
+		      size_t string2_len,
+		      strncmp_iw_mode mode)
+{
+  const char *end_str2 = string2 + string2_len;
+
+  while (1)
+    {
+      while (isspace (*string1))
+	string1++;
+      while (string2 < end_str2 && isspace (*string2))
+	string2++;
+      if (*string1 == '\0' || string2 == end_str2)
+	break;
+      if (case_sensitivity == case_sensitive_on && *string1 != *string2)
+	break;
+      if (case_sensitivity == case_sensitive_off
+	  && (tolower ((unsigned char) *string1)
+	      != tolower ((unsigned char) *string2)))
+	break;
+
+      string1++;
+      string2++;
+    }
+
+  if (string2 == end_str2)
+    {
+      if (mode == strncmp_iw_mode::NORMAL)
+	return 0;
+      else
+	return (*string1 != '\0' && *string1 != '(');
+    }
+  else
+    return 1;
+}
+
+/* Do a strncmp() type operation on STRING1 and STRING2, ignoring any
+   differences in whitespace.  STRING2_LEN is STRING2's length.
+   Returns 0 if STRING1 matches STRING2_LEN characters of STRING2,
+   non-zero otherwise (slightly different than strncmp()'s range of
+   return values).  */
+
+int
+strncmp_iw (const char *string1, const char *string2, size_t string2_len)
+{
+  return strncmp_iw_with_mode (string1, string2, string2_len,
+			       strncmp_iw_mode::NORMAL);
+}
+
 /* Do a strcmp() type operation on STRING1 and STRING2, ignoring any
    differences in whitespace.  Returns 0 if they match, non-zero if they
    don't (slightly different than strcmp()'s range of return values).
@@ -2451,30 +2504,10 @@ fprintf_symbol_filtered (struct ui_file *stream, const char *name,
 int
 strcmp_iw (const char *string1, const char *string2)
 {
-  while ((*string1 != '\0') && (*string2 != '\0'))
-    {
-      while (isspace (*string1))
-	{
-	  string1++;
-	}
-      while (isspace (*string2))
-	{
-	  string2++;
-	}
-      if (case_sensitivity == case_sensitive_on && *string1 != *string2)
-	break;
-      if (case_sensitivity == case_sensitive_off
-	  && (tolower ((unsigned char) *string1)
-	      != tolower ((unsigned char) *string2)))
-	break;
-      if (*string1 != '\0')
-	{
-	  string1++;
-	  string2++;
-	}
-    }
-  return (*string1 != '\0' && *string1 != '(') || (*string2 != '\0');
+  return strncmp_iw_with_mode (string1, string2, strlen (string2),
+			       strncmp_iw_mode::MATCH_PARAMS);
 }
+
 
 /* This is like strcmp except that it ignores whitespace and treats
    '(' as the first non-NULL character in terms of ordering.  Like

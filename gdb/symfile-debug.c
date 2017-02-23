@@ -260,7 +260,7 @@ debug_qf_map_matching_symbols (struct objfile *objfile,
 			       int (*callback) (struct block *,
 						struct symbol *, void *),
 			       void *data,
-			       symbol_name_cmp_ftype *match,
+			       symbol_name_match_type match,
 			       symbol_name_cmp_ftype *ordered_compare)
 {
   const struct debug_sym_fns_data *debug_data
@@ -273,7 +273,7 @@ debug_qf_map_matching_symbols (struct objfile *objfile,
 		    domain_name (domain), global,
 		    host_address_to_string (callback),
 		    host_address_to_string (data),
-		    host_address_to_string (match),
+		    plongest ((LONGEST) match),
 		    host_address_to_string (ordered_compare));
 
   debug_data->real_sf->qf->map_matching_symbols (objfile, name,

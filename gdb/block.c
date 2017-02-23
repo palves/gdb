@@ -596,7 +596,7 @@ block_iterator_next (struct block_iterator *iterator)
 static struct symbol *
 block_iter_match_step (struct block_iterator *iterator,
 		       const char *name,
-		       symbol_name_cmp_ftype *compare,
+		       symbol_name_match_type match_type,
 		       int first)
 {
   struct symbol *sym;
@@ -618,10 +618,10 @@ block_iter_match_step (struct block_iterator *iterator,
 	  block = BLOCKVECTOR_BLOCK (COMPUNIT_BLOCKVECTOR (cust),
 				     iterator->which);
 	  sym = dict_iter_match_first (BLOCK_DICT (block), name,
-				       compare, &iterator->dict_iter);
+				       match_type, &iterator->dict_iter);
 	}
       else
-	sym = dict_iter_match_next (name, compare, &iterator->dict_iter);
+	sym = dict_iter_match_next (name, match_type, &iterator->dict_iter);
 
       if (sym != NULL)
 	return sym;
@@ -639,23 +639,23 @@ block_iter_match_step (struct block_iterator *iterator,
 struct symbol *
 block_iter_match_first (const struct block *block,
 			const char *name,
-			symbol_name_cmp_ftype *compare,
+			symbol_name_match_type match_type,
 			struct block_iterator *iterator)
 {
   initialize_block_iterator (block, iterator);
 
   if (iterator->which == FIRST_LOCAL_BLOCK)
-    return dict_iter_match_first (block->dict, name, compare,
+    return dict_iter_match_first (block->dict, name, match_type,
 				  &iterator->dict_iter);
 
-  return block_iter_match_step (iterator, name, compare, 1);
+  return block_iter_match_step (iterator, name, match_type, 1);
 }
 
 /* See block.h.  */
 
 struct symbol *
 block_iter_match_next (const char *name,
-		       symbol_name_cmp_ftype *compare,
+		       symbol_name_match_type compare,
 		       struct block_iterator *iterator)
 {
   if (iterator->which == FIRST_LOCAL_BLOCK)
@@ -686,7 +686,9 @@ block_lookup_symbol (const struct block *block, const char *name,
     {
       struct symbol *other = NULL;
 
-      ALL_BLOCK_SYMBOLS_WITH_NAME (block, name, strcmp_iw, iter, sym)
+      ALL_BLOCK_SYMBOLS_WITH_NAME (block, name,
+				   symbol_name_match_type::FULL,
+				   iter, sym)
 	{
 	  if (SYMBOL_DOMAIN (sym) == domain)
 	    return sym;
@@ -713,7 +715,9 @@ block_lookup_symbol (const struct block *block, const char *name,
 
       struct symbol *sym_found = NULL;
 
-      ALL_BLOCK_SYMBOLS_WITH_NAME (block, name, strcmp_iw, iter, sym)
+      ALL_BLOCK_SYMBOLS_WITH_NAME (block, name,
+				   symbol_name_match_type::FULL,
+				   iter, sym)
 	{
 	  if (symbol_matches_domain (SYMBOL_LANGUAGE (sym),
 				     SYMBOL_DOMAIN (sym), domain))
@@ -776,7 +780,9 @@ block_find_symbol (const struct block *block, const char *name,
   gdb_assert (BLOCK_SUPERBLOCK (block) == NULL
 	      || BLOCK_SUPERBLOCK (BLOCK_SUPERBLOCK (block)) == NULL);
 
-  ALL_BLOCK_SYMBOLS_WITH_NAME (block, name, strcmp_iw, iter, sym)
+  ALL_BLOCK_SYMBOLS_WITH_NAME (block, name,
+			       symbol_name_match_type::FULL,
+			       iter, sym)
     {
       /* MATCHER is deliberately called second here so that it never sees
 	 a non-domain-matching symbol.  */

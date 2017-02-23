@@ -710,6 +710,41 @@ default_get_string (struct value *value, gdb_byte **buffer, int *length,
   error (_("Getting a string is unsupported in this language."));
 }
 
+/* See language.h.  */
+
+bool
+default_compare_symbol_name (const char *name,
+			     const char *sym_text, size_t sym_text_len,
+			     const char **symbol_search_name_matched)
+{
+  if (symbol_search_name_matched != NULL)
+    *symbol_search_name_matched = name;
+  return strncmp_iw (name, sym_text, sym_text_len) == 0;
+}
+
+compare_symbol_name_ftype *
+language_get_compare_symbol_name (const language_defn *lang,
+				  symbol_name_match_type match_type,
+				  const char *lookup_name,
+				  size_t lookup_name_len)
+{
+  if (lang->la_get_compare_symbol_name != nullptr)
+    return lang->la_get_compare_symbol_name (match_type,
+					     lookup_name,
+					     lookup_name_len);
+  return default_compare_symbol_name;
+}
+
+symbol_name_cmp_ftype *
+language_get_symbol_name_cmp (const language_defn *lang,
+			      symbol_name_match_type match_type,
+			      const char *lookup_name)
+{
+  if (lang->la_get_symbol_name_cmp != nullptr)
+    return lang->la_get_symbol_name_cmp (match_type, lookup_name);
+  return strcmp_iw;
+}
+
 /* Define the language that is no language.  */
 
 static int
@@ -842,12 +877,13 @@ const struct language_defn unknown_language_defn =
   1,				/* c-style arrays */
   0,				/* String lower bound */
   default_word_break_characters,
-  default_make_symbol_completion_list,
+  default_collect_symbol_completion_matches,
   unknown_language_arch_info,	/* la_language_arch_info.  */
   default_print_array_index,
   default_pass_by_reference,
   default_get_string,
   NULL,				/* la_get_symbol_name_cmp */
+  NULL,				/* la_get_compare_symbol_name */
   iterate_over_symbols,
   default_search_name_hash,
   &default_varobj_ops,
@@ -892,12 +928,13 @@ const struct language_defn auto_language_defn =
   1,				/* c-style arrays */
   0,				/* String lower bound */
   default_word_break_characters,
-  default_make_symbol_completion_list,
+  default_collect_symbol_completion_matches,
   unknown_language_arch_info,	/* la_language_arch_info.  */
   default_print_array_index,
   default_pass_by_reference,
   default_get_string,
   NULL,				/* la_get_symbol_name_cmp */
+  NULL,				/* la_get_compare_symbol_name */
   iterate_over_symbols,
   default_search_name_hash,
   &default_varobj_ops,

@@ -259,7 +259,7 @@ struct bound_minimal_symbol lookup_minimal_symbol_by_pc (CORE_ADDR);
 
 void iterate_over_minimal_symbols (struct objfile *objf,
 				   const char *name,
-				   symbol_name_cmp_ftype *compare,
+				   symbol_name_match_type name_match_type,
 				   void (*callback) (struct minimal_symbol *,
 						     void *),
 				   void *user_data);

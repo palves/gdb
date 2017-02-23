@@ -239,12 +239,13 @@ extern const struct language_defn d_language_defn =
   1,				/* C-style arrays.  */
   0,				/* String lower bound.  */
   default_word_break_characters,
-  default_make_symbol_completion_list,
+  default_collect_symbol_completion_matches,
   d_language_arch_info,
   default_print_array_index,
   default_pass_by_reference,
   c_get_string,
   NULL,				/* la_get_symbol_name_cmp */
+  NULL,				/* la_get_compare_symbol_name */
   iterate_over_symbols,
   default_search_name_hash,
   &default_varobj_ops,

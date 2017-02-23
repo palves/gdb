@@ -116,10 +116,10 @@ struct dict_vector
   /* Functions to iterate over symbols with a given name.  */
   struct symbol *(*iter_match_first) (const struct dictionary *dict,
 				      const char *name,
-				      symbol_name_cmp_ftype *equiv,
+				      symbol_name_match_type equiv,
 				      struct dict_iterator *iterator);
   struct symbol *(*iter_match_next) (const char *name,
-				     symbol_name_cmp_ftype *equiv,
+				     symbol_name_match_type equiv,
 				     struct dict_iterator *iterator);
   /* A size function, for maint print symtabs.  */
   int (*size) (const struct dictionary *dict);
@@ -240,11 +240,11 @@ static struct symbol *iterator_next_hashed (struct dict_iterator *iterator);
 
 static struct symbol *iter_match_first_hashed (const struct dictionary *dict,
 					       const char *name,
-					       symbol_name_cmp_ftype *compare,
+					       symbol_name_match_type compare,
 					      struct dict_iterator *iterator);
 
 static struct symbol *iter_match_next_hashed (const char *name,
-					      symbol_name_cmp_ftype *compare,
+					      symbol_name_match_type compare,
 					      struct dict_iterator *iterator);
 
 /* Functions only for DICT_HASHED.  */
@@ -270,11 +270,11 @@ static struct symbol *iterator_next_linear (struct dict_iterator *iterator);
 
 static struct symbol *iter_match_first_linear (const struct dictionary *dict,
 					       const char *name,
-					       symbol_name_cmp_ftype *compare,
+					       symbol_name_match_type compare,
 					       struct dict_iterator *iterator);
 
 static struct symbol *iter_match_next_linear (const char *name,
-					      symbol_name_cmp_ftype *compare,
+					      symbol_name_match_type compare,
 					      struct dict_iterator *iterator);
 
 static int size_linear (const struct dictionary *dict);
@@ -540,18 +540,21 @@ dict_iter_name_first (const struct dictionary *dict,
 		      const char *name,
 		      struct dict_iterator *iterator)
 {
-  return dict_iter_match_first (dict, name, strcmp_iw, iterator);
+  return dict_iter_match_first (dict, name,
+				symbol_name_match_type::FULL,
+				iterator);
 }
 
 struct symbol *
 dict_iter_name_next (const char *name, struct dict_iterator *iterator)
 {
-  return dict_iter_match_next (name, strcmp_iw, iterator);
+  return dict_iter_match_next (name, symbol_name_match_type::FULL, iterator);
 }
 
 struct symbol *
 dict_iter_match_first (const struct dictionary *dict,
-		       const char *name, symbol_name_cmp_ftype *compare,
+		       const char *name,
+		       symbol_name_match_type compare,
 		       struct dict_iterator *iterator)
 {
   return (DICT_VECTOR (dict))->iter_match_first (dict, name,
@@ -559,7 +562,8 @@ dict_iter_match_first (const struct dictionary *dict,
 }
 
 struct symbol *
-dict_iter_match_next (const char *name, symbol_name_cmp_ftype *compare,
+dict_iter_match_next (const char *name,
+		      symbol_name_match_type compare,
 		      struct dict_iterator *iterator)
 {
   return (DICT_VECTOR (DICT_ITERATOR_DICT (iterator)))
@@ -655,12 +659,14 @@ iterator_hashed_advance (struct dict_iterator *iterator)
 
 static struct symbol *
 iter_match_first_hashed (const struct dictionary *dict, const char *name,
-			 symbol_name_cmp_ftype *compare,
+			 symbol_name_match_type match_type,
 			 struct dict_iterator *iterator)
 {
-  unsigned int hash_index
-    = (search_name_hash (DICT_LANGUAGE (dict)->la_language, name)
-       % DICT_HASHED_NBUCKETS (dict));
+  const language_defn *lang = DICT_LANGUAGE (dict);
+  unsigned int hash_index = (search_name_hash (lang->la_language, name)
+			     % DICT_HASHED_NBUCKETS (dict));
+  symbol_name_cmp_ftype *compare
+    = language_get_symbol_name_cmp (lang, match_type, name);
   struct symbol *sym;
 
   DICT_ITERATOR_DICT (iterator) = dict;
@@ -686,9 +692,12 @@ iter_match_first_hashed (const struct dictionary *dict, const char *name,
 }
 
 static struct symbol *
-iter_match_next_hashed (const char *name, symbol_name_cmp_ftype *compare,
+iter_match_next_hashed (const char *name, symbol_name_match_type match_type,
 			struct dict_iterator *iterator)
 {
+  const language_defn *lang = DICT_LANGUAGE (DICT_ITERATOR_DICT (iterator));
+  symbol_name_cmp_ftype *compare
+    = language_get_symbol_name_cmp (lang, match_type, name);
   struct symbol *next;
 
   for (next = DICT_ITERATOR_CURRENT (iterator)->hash_next;
@@ -888,7 +897,7 @@ iterator_next_linear (struct dict_iterator *iterator)
 
 static struct symbol *
 iter_match_first_linear (const struct dictionary *dict,
-			 const char *name, symbol_name_cmp_ftype *compare,
+			 const char *name, symbol_name_match_type compare,
 			 struct dict_iterator *iterator)
 {
   DICT_ITERATOR_DICT (iterator) = dict;
@@ -898,10 +907,13 @@ iter_match_first_linear (const struct dictionary *dict,
 }
 
 static struct symbol *
-iter_match_next_linear (const char *name, symbol_name_cmp_ftype *compare,
+iter_match_next_linear (const char *name, symbol_name_match_type match_type,
 			struct dict_iterator *iterator)
 {
   const struct dictionary *dict = DICT_ITERATOR_DICT (iterator);
+  const language_defn *lang = DICT_LANGUAGE (dict);
+  symbol_name_cmp_ftype *compare
+    = language_get_symbol_name_cmp (lang, match_type, name);
   int i, nsyms = DICT_LINEAR_NSYMS (dict);
   struct symbol *sym, *retval = NULL;
 

@@ -45,7 +45,7 @@ static struct partial_symbol *match_partial_symbol (struct objfile *,
 						    struct partial_symtab *,
 						    int,
 						    const char *, domain_enum,
-						    symbol_name_cmp_ftype *,
+						    symbol_name_match_type,
 						    symbol_name_cmp_ftype *);
 
 static struct partial_symbol *lookup_partial_symbol (struct objfile *,
@@ -554,7 +554,7 @@ static struct partial_symbol *
 match_partial_symbol (struct objfile *objfile,
 		      struct partial_symtab *pst, int global,
 		      const char *name, domain_enum domain,
-		      symbol_name_cmp_ftype *match,
+		      symbol_name_match_type match_type,
 		      symbol_name_cmp_ftype *ordered_compare)
 {
   struct partial_symbol **start, **psym;
@@ -592,12 +592,18 @@ match_partial_symbol (struct objfile *objfile,
 	}
       gdb_assert (top == bottom);
 
-      while (top <= real_top
-	     && match (SYMBOL_SEARCH_NAME (*top), name) == 0)
+      while (top <= real_top)
 	{
-	  if (symbol_matches_domain (SYMBOL_LANGUAGE (*top),
-				     SYMBOL_DOMAIN (*top), domain))
-	    return *top;
+	  const language_defn *lang = language_def (SYMBOL_LANGUAGE (*top));
+	  symbol_name_cmp_ftype *cmp
+	    = language_get_symbol_name_cmp (lang, match_type, name);
+
+	  if (cmp (SYMBOL_SEARCH_NAME (*top), name) == 0)
+	    {
+	      if (symbol_matches_domain (SYMBOL_LANGUAGE (*top),
+					 SYMBOL_DOMAIN (*top), domain))
+		return *top;
+	    }
 	  top++;
 	}
     }
@@ -610,9 +616,16 @@ match_partial_symbol (struct objfile *objfile,
       for (psym = start; psym < start + length; psym++)
 	{
 	  if (symbol_matches_domain (SYMBOL_LANGUAGE (*psym),
-				     SYMBOL_DOMAIN (*psym), domain)
-	      && match (SYMBOL_SEARCH_NAME (*psym), name) == 0)
-	    return *psym;
+				     SYMBOL_DOMAIN (*psym), domain))
+	    {
+	      const language_defn *lang
+		= language_def (SYMBOL_LANGUAGE (*psym));
+	      symbol_name_cmp_ftype *cmp
+		= language_get_symbol_name_cmp (lang, match_type, name);
+
+	      if (cmp (SYMBOL_SEARCH_NAME (*psym), name) == 0)
+		return *psym;
+	    }
 	}
     }
 
@@ -1232,7 +1245,7 @@ static int
 map_block (const char *name, domain_enum domain, struct objfile *objfile,
 	   struct block *block,
 	   int (*callback) (struct block *, struct symbol *, void *),
-	   void *data, symbol_name_cmp_ftype *match)
+	   void *data, symbol_name_match_type match)
 {
   struct block_iterator iter;
   struct symbol *sym;
@@ -1261,7 +1274,7 @@ psym_map_matching_symbols (struct objfile *objfile,
 			   int (*callback) (struct block *,
 					    struct symbol *, void *),
 			   void *data,
-			   symbol_name_cmp_ftype *match,
+			   symbol_name_match_type match,
 			   symbol_name_cmp_ftype *ordered_compare)
 {
   const int block_kind = global ? GLOBAL_BLOCK : STATIC_BLOCK;

@@ -1044,8 +1044,9 @@ set_breakpoint_condition (struct breakpoint *b, const char *exp,
 
 /* Completion for the "condition" command.  */
 
-static VEC (char_ptr) *
+static void
 condition_completer (struct cmd_list_element *cmd,
+		     completion_tracker &tracker,
 		     const char *text, const char *word)
 {
   const char *space;
@@ -1061,9 +1062,9 @@ condition_completer (struct cmd_list_element *cmd,
       if (text[0] == '$')
 	{
 	  /* We don't support completion of history indices.  */
-	  if (isdigit (text[1]))
-	    return NULL;
-	  return complete_internalvar (&text[1]);
+	  if (!isdigit (text[1]))
+	    complete_internalvar (tracker, &text[1]);
+	  return;
 	}
 
       /* We're completing the breakpoint number.  */
@@ -1076,15 +1077,18 @@ condition_completer (struct cmd_list_element *cmd,
 	  xsnprintf (number, sizeof (number), "%d", b->number);
 
 	  if (strncmp (number, text, len) == 0)
-	    VEC_safe_push (char_ptr, result, xstrdup (number));
+	    {
+	      gdb::unique_xmalloc_ptr<char> copy (xstrdup (number));
+	      tracker.add_completion (std::move (copy), number);
+	    }
 	}
 
-      return result;
+      return;
     }
 
   /* We're completing the expression part.  */
   text = skip_spaces_const (space);
-  return expression_completer (cmd, text, word);
+  expression_completer (cmd, tracker, text, word);
 }
 
 /* condition N EXP -- set break condition of breakpoint N to EXP.  */

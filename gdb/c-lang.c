@@ -858,12 +858,13 @@ extern const struct language_defn c_language_defn =
   1,				/* c-style arrays */
   0,				/* String lower bound */
   default_word_break_characters,
-  default_make_symbol_completion_list,
+  default_collect_symbol_completion_matches,
   c_language_arch_info,
   default_print_array_index,
   default_pass_by_reference,
   c_get_string,
   NULL,				/* la_get_symbol_name_cmp */
+  NULL,				/* la_get_compare_symbol_name */
   iterate_over_symbols,
   default_search_name_hash,
   &c_varobj_ops,
@@ -959,7 +960,7 @@ static const char *cplus_extensions[] =
   ".C", ".cc", ".cp", ".cpp", ".cxx", ".c++", NULL
 };
 
-extern const struct language_defn cplus_language_defn =
+const struct language_defn cplus_language_defn =
 {
   "c++",			/* Language name */
   "C++",
@@ -993,14 +994,15 @@ extern const struct language_defn cplus_language_defn =
   1,				/* c-style arrays */
   0,				/* String lower bound */
   default_word_break_characters,
-  default_make_symbol_completion_list,
+  default_collect_symbol_completion_matches,
   cplus_language_arch_info,
   default_print_array_index,
   cp_pass_by_reference,
   c_get_string,
-  NULL,				/* la_get_symbol_name_cmp */
+  cp_get_symbol_name_cmp,
+  cp_get_compare_symbol_name,
   iterate_over_symbols,
-  default_search_name_hash,
+  cp_search_name_hash,
   &cplus_varobj_ops,
   NULL,
   NULL,
@@ -1046,12 +1048,13 @@ extern const struct language_defn asm_language_defn =
   1,				/* c-style arrays */
   0,				/* String lower bound */
   default_word_break_characters,
-  default_make_symbol_completion_list,
+  default_collect_symbol_completion_matches,
   c_language_arch_info, 	/* FIXME: la_language_arch_info.  */
   default_print_array_index,
   default_pass_by_reference,
   c_get_string,
   NULL,				/* la_get_symbol_name_cmp */
+  NULL,				/* la_get_compare_symbol_name */
   iterate_over_symbols,
   default_search_name_hash,
   &default_varobj_ops,
@@ -1099,12 +1102,13 @@ extern const struct language_defn minimal_language_defn =
   1,				/* c-style arrays */
   0,				/* String lower bound */
   default_word_break_characters,
-  default_make_symbol_completion_list,
+  default_collect_symbol_completion_matches,
   c_language_arch_info,
   default_print_array_index,
   default_pass_by_reference,
   c_get_string,
   NULL,				/* la_get_symbol_name_cmp */
+  NULL,				/* la_get_compare_symbol_name */
   iterate_over_symbols,
   default_search_name_hash,
   &default_varobj_ops,

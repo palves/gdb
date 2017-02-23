@@ -257,7 +257,7 @@ struct quick_symbol_functions
 				int (*callback) (struct block *,
 						 struct symbol *, void *),
 				void *data,
-				symbol_name_cmp_ftype *match,
+				symbol_name_match_type match,
 				symbol_name_cmp_ftype *ordered_compare);
 
   /* Expand all symbol tables in OBJFILE matching some criteria.

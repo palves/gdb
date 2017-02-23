@@ -336,6 +336,7 @@ lookup_minimal_symbol (const char *name, const char *sfile,
 
 		symbol_name_cmp_ftype *cmp
 		  = language_get_symbol_name_cmp (language_def (lang),
+						  symbol_name_match_type::FULL,
 						  modified_name);
 		struct minimal_symbol **msymbol_demangled_hash
 		  = objfile->per_bfd->msymbol_demangled_hash;
@@ -420,7 +421,7 @@ find_minimal_symbol_address (const char *name, CORE_ADDR *addr,
 
 void
 iterate_over_minimal_symbols (struct objfile *objf, const char *name,
-			      symbol_name_cmp_ftype *symbol_compare,
+			      symbol_name_match_type match_type,
 			      void (*callback) (struct minimal_symbol *,
 						void *),
 			      void *user_data)
@@ -444,11 +445,15 @@ iterate_over_minimal_symbols (struct objfile *objf, const char *name,
 
   for (auto lang : objf->per_bfd->demangled_hash_languages)
     {
+      const language_defn *lang_def = language_def (lang);
+      symbol_name_cmp_ftype *compare
+	= language_get_symbol_name_cmp (lang_def, match_type, name);
+
       hash = search_name_hash (lang, name) % MINIMAL_SYMBOL_HASH_SIZE;
       for (iter = objf->per_bfd->msymbol_demangled_hash[hash];
 	   iter != NULL;
 	   iter = iter->demangled_hash_next)
-	if (symbol_compare (MSYMBOL_SEARCH_NAME (iter), name) == 0)
+	if (compare (MSYMBOL_SEARCH_NAME (iter), name) == 0)
 	  (*callback) (iter, user_data);
     }
 }
