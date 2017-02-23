@@ -40,11 +40,6 @@ struct frame_info;
 struct agent_expr;
 struct axs_value;
 
-/* Comparison function for symbol look ups.  */
-
-typedef int (symbol_compare_ftype) (const char *string1,
-				    const char *string2);
-
 /* Partial symbols are stored in the psymbol_cache and pointers to
    them are kept in a dynamically grown array that is obtained from
    malloc and grown as necessary via realloc.  Each objfile typically
@@ -262,8 +257,8 @@ struct quick_symbol_functions
 				int (*callback) (struct block *,
 						 struct symbol *, void *),
 				void *data,
-				symbol_compare_ftype *match,
-				symbol_compare_ftype *ordered_compare);
+				symbol_name_cmp_ftype *match,
+				symbol_name_cmp_ftype *ordered_compare);
 
   /* Expand all symbol tables in OBJFILE matching some criteria.
 

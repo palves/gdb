@@ -947,7 +947,7 @@ iterate_over_all_matching_symtabs
   struct program_space *pspace;
 
   /* The routine to be used for comparison.  */
-  symbol_name_cmp_ftype symbol_name_cmp
+  symbol_name_cmp_ftype *symbol_name_cmp
     = (state->language->la_get_symbol_name_cmp != NULL
        ? state->language->la_get_symbol_name_cmp (name)
        : strcmp_iw);

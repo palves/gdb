@@ -45,8 +45,8 @@ static struct partial_symbol *match_partial_symbol (struct objfile *,
 						    struct partial_symtab *,
 						    int,
 						    const char *, domain_enum,
-						    symbol_compare_ftype *,
-						    symbol_compare_ftype *);
+						    symbol_name_cmp_ftype *,
+						    symbol_name_cmp_ftype *);
 
 static struct partial_symbol *lookup_partial_symbol (struct objfile *,
 						     struct partial_symtab *,
@@ -554,8 +554,8 @@ static struct partial_symbol *
 match_partial_symbol (struct objfile *objfile,
 		      struct partial_symtab *pst, int global,
 		      const char *name, domain_enum domain,
-		      symbol_compare_ftype *match,
-		      symbol_compare_ftype *ordered_compare)
+		      symbol_name_cmp_ftype *match,
+		      symbol_name_cmp_ftype *ordered_compare)
 {
   struct partial_symbol **start, **psym;
   struct partial_symbol **top, **real_top, **bottom, **center;
@@ -1232,7 +1232,7 @@ static int
 map_block (const char *name, domain_enum domain, struct objfile *objfile,
 	   struct block *block,
 	   int (*callback) (struct block *, struct symbol *, void *),
-	   void *data, symbol_compare_ftype *match)
+	   void *data, symbol_name_cmp_ftype *match)
 {
   struct block_iterator iter;
   struct symbol *sym;
@@ -1261,8 +1261,8 @@ psym_map_matching_symbols (struct objfile *objfile,
 			   int (*callback) (struct block *,
 					    struct symbol *, void *),
 			   void *data,
-			   symbol_compare_ftype *match,
-			   symbol_compare_ftype *ordered_compare)
+			   symbol_name_cmp_ftype *match,
+			   symbol_name_cmp_ftype *ordered_compare)
 {
   const int block_kind = global ? GLOBAL_BLOCK : STATIC_BLOCK;
   struct partial_symtab *ps;

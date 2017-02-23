@@ -43,6 +43,15 @@ struct common_block;
 struct obj_section;
 struct cmd_list_element;
 
+/* Comparison function for symbol look ups.
+
+   The function is expected to return zero if SYMBOL_SEARCH_NAME
+   matches the given LOOKUP_NAME.  SYMBOL_SEARCH_NAME should be a
+   symbol's "search" name.  LOOKUP_NAME should be the name of an
+   entity after it has been transformed for lookup.  */
+typedef int (symbol_name_cmp_ftype) (const char *symbol_search_name,
+				     const char *lookup_name);
+
 /* Some of the structures in this file are space critical.
    The space-critical structures are:
 
