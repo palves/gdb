@@ -313,11 +313,14 @@ extern int demangle;
    (symbol_search_name (&(symbol)->ginfo))
 extern const char *symbol_search_name (const struct general_symbol_info *);
 
-/* Return non-zero if NAME matches the "search" name of SYMBOL.
-   Whitespace and trailing parentheses are ignored.
-   See strcmp_iw for details about its behavior.  */
-#define SYMBOL_MATCHES_SEARCH_NAME(symbol, name)			\
-  (strcmp_iw (SYMBOL_SEARCH_NAME (symbol), (name)) == 0)
+/* Return true if NAME matches the "search" name of SYMBOL, according
+   to the symbol's language.  */
+#define SYMBOL_MATCHES_SEARCH_NAME(symbol, name)                       \
+  symbol_matches_search_name (&(symbol)->ginfo, (name))
+
+extern bool symbol_matches_search_name
+  (const struct general_symbol_info *gsymbol,
+   const char *name);
 
 extern unsigned int search_name_hash (enum language language,
 				      const char *search_name);

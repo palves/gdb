@@ -944,6 +944,17 @@ symbol_search_name (const struct general_symbol_info *gsymbol)
     return symbol_natural_name (gsymbol);
 }
 
+bool
+symbol_matches_search_name (const struct general_symbol_info *gsymbol,
+			    const char *name)
+{
+  symbol_name_cmp_ftype *cmp
+    = language_get_symbol_name_cmp (language_def (gsymbol->language),
+				    symbol_name_match_type::FULL,
+				    name);
+  return cmp (symbol_search_name (gsymbol), name) == 0;
+}
+
 /* Initialize the structure fields to zero values.  */
 
 void
@@ -1108,11 +1119,11 @@ eq_symbol_entry (const struct symbol_cache_slot *slot,
     }
   else if (slot_name != NULL && name != NULL)
     {
-      /* It's important that we use the same comparison that was done the
-	 first time through.  If the slot records a found symbol, then this
-	 means using strcmp_iw on SYMBOL_SEARCH_NAME.  See dictionary.c.
-	 It also means using symbol_matches_domain for found symbols.
-	 See block.c.
+      /* It's important that we use the same comparison that was done
+	 the first time through.  If the slot records a found symbol,
+	 then this means using the symbol name comparison function
+	 SYMBOL_SEARCH_NAME.  See dictionary.c.  It also means using
+	 symbol_matches_domain for found symbols.  See block.c.
 
 	 If the slot records a not-found symbol, then require a precise match.
 	 We could still be lax with whitespace like strcmp_iw though.  */
@@ -1127,8 +1138,11 @@ eq_symbol_entry (const struct symbol_cache_slot *slot,
       else
 	{
 	  struct symbol *sym = slot->value.found.symbol;
-
-	  if (strcmp_iw (slot_name, name) != 0)
+	  const language_defn *lang = language_def (SYMBOL_LANGUAGE (sym));
+	  symbol_name_cmp_ftype *cmp
+	    = language_get_symbol_name_cmp (lang, symbol_name_match_type::FULL,
+					    name);
+	  if (cmp (slot_name, name) != 0)
 	    return 0;
 	  if (!symbol_matches_domain (SYMBOL_LANGUAGE (sym),
 				      slot_domain, domain))

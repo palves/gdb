@@ -237,27 +237,27 @@ extern struct symbol *block_iterator_first (const struct block *block,
 extern struct symbol *block_iterator_next (struct block_iterator *iterator);
 
 /* Initialize ITERATOR to point at the first symbol in BLOCK whose
-   SYMBOL_SEARCH_NAME is NAME, as tested using COMPARE (which must use
-   the same conventions as strcmp_iw and be compatible with any
-   block hashing function), and return that first symbol, or NULL
-   if there are no such symbols.  */
+   SYMBOL_SEARCH_NAME is NAME, as tested using the name compare
+   function of the symbol's language, for NAME_MATCH_TYPE, and return
+   that first symbol, or NULL if there are no such symbols.  */
 
 extern struct symbol *block_iter_match_first (const struct block *block,
 					      const char *name,
-					      symbol_name_match_type compare_name,
+					      symbol_name_match_type name_match_type,
 					      struct block_iterator *iterator);
 
 /* Advance ITERATOR to point at the next symbol in BLOCK whose
-   SYMBOL_SEARCH_NAME is NAME, as tested using COMPARE (see
-   block_iter_match_first), or NULL if there are no more such symbols.
-   Don't call this if you've previously received NULL from 
-   block_iterator_match_first or block_iterator_match_next on this
-   iteration.  And don't call it unless ITERATOR was created by a
-   previous call to block_iter_match_first with the same NAME and COMPARE.  */
+   SYMBOL_SEARCH_NAME is NAME, according to a NAME_MATCH_TYPE
+   comparison (see block_iter_match_first), or NULL if there are no
+   more such symbols.  Don't call this if you've previously received
+   NULL from block_iterator_match_first or block_iterator_match_next
+   on this iteration.  And don't call it unless ITERATOR was created
+   by a previous call to block_iter_match_first with the same NAME and
+   COMPARE.  */
 
-extern struct symbol *block_iter_match_next (const char *name,
-					     symbol_name_match_type compare_name,
-					     struct block_iterator *iterator);
+extern struct symbol *block_iter_match_next
+  (const char *name, symbol_name_match_type name_match_type,
+   struct block_iterator *iterator);
 
 /* Search BLOCK for symbol NAME in DOMAIN.  */
 
