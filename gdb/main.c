@@ -545,7 +545,8 @@ captured_main_1 (struct captured_main_args *context)
 #endif
 
   /* Prefix warning messages with the command name.  */
-  warning_pre_print = xstrprintf ("%s: warning: ", gdb_program_name);
+  std::string warn_preprint_str = string_printf ("%s: warning: ", gdb_program_name);
+  warning_pre_print = warn_preprint_str.c_str ();
 
   if (! getcwd (gdb_dirbuf, sizeof (gdb_dirbuf)))
     perror_warning_with_name (_("error finding working directory"));
@@ -972,7 +973,6 @@ captured_main_1 (struct captured_main_args *context)
     }
 
   /* Set off error and warning messages with a blank line.  */
-  xfree (warning_pre_print);
   warning_pre_print = _("\nwarning: ");
 
   /* Read and execute the system-wide gdbinit file, if it exists.
