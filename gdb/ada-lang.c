@@ -317,7 +317,7 @@ static unsigned int varsize_limit;
 
 /* FIXME: brobecker/2003-09-17: No longer a const because it is
    returned by a function that does not return a const char *.  */
-static char *ada_completer_word_break_characters =
+static const char ada_completer_word_break_characters[] =
 #ifdef VMS
   " \t\n!@#%^&*()+=|~`}{[]\";:?/,-";
 #else
@@ -558,7 +558,7 @@ add_angle_brackets (const char *str)
   return result;
 }
 
-static char *
+static const char *
 ada_get_gdb_completer_word_break_characters (void)
 {
   return ada_completer_word_break_characters;
