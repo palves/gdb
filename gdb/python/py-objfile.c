@@ -432,7 +432,7 @@ objfpy_is_valid (PyObject *self, PyObject *args)
 static PyObject *
 objfpy_add_separate_debug_file (PyObject *self, PyObject *args, PyObject *kw)
 {
-  static char *keywords[] = { "file_name", NULL };
+  static const char *keywords[] = { "file_name", NULL };
   objfile_object *obj = (objfile_object *) self;
   const char *file_name;
 
@@ -559,7 +559,7 @@ objfpy_lookup_objfile_by_build_id (const char *build_id)
 PyObject *
 gdbpy_lookup_objfile (PyObject *self, PyObject *args, PyObject *kw)
 {
-  static char *keywords[] = { "name", "by_build_id", NULL };
+  static const char *keywords[] = { "name", "by_build_id", NULL };
   const char *name;
   PyObject *by_build_id_obj = NULL;
   int by_build_id;

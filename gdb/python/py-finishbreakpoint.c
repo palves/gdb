@@ -156,7 +156,7 @@ bpfinishpy_post_stop_hook (struct gdbpy_breakpoint_object *bp_obj)
 static int
 bpfinishpy_init (PyObject *self, PyObject *args, PyObject *kwargs)
 {
-  static char *keywords[] = { "frame", "internal", NULL };
+  static const char *keywords[] = { "frame", "internal", NULL };
   struct finish_breakpoint_object *self_bpfinish =
       (struct finish_breakpoint_object *) self;
   PyObject *frame_obj = NULL;

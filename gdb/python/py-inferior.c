@@ -435,7 +435,7 @@ infpy_read_memory (PyObject *self, PyObject *args, PyObject *kw)
   CORE_ADDR addr, length;
   gdb_byte *buffer = NULL;
   PyObject *addr_obj, *length_obj, *result;
-  static char *keywords[] = { "address", "length", NULL };
+  static const char *keywords[] = { "address", "length", NULL };
 
   if (! PyArg_ParseTupleAndKeywords (args, kw, "OO", keywords,
 				     &addr_obj, &length_obj))
@@ -494,7 +494,7 @@ infpy_write_memory (PyObject *self, PyObject *args, PyObject *kw)
   const gdb_byte *buffer;
   CORE_ADDR addr, length;
   PyObject *addr_obj, *length_obj = NULL;
-  static char *keywords[] = { "address", "buffer", "length", NULL };
+  static const char *keywords[] = { "address", "buffer", "length", NULL };
 #ifdef IS_PY3K
   Py_buffer pybuf;
 
@@ -643,7 +643,7 @@ infpy_search_memory (PyObject *self, PyObject *args, PyObject *kw)
 {
   struct gdb_exception except = exception_none;
   CORE_ADDR start_addr, length;
-  static char *keywords[] = { "address", "length", "pattern", NULL };
+  static const char *keywords[] = { "address", "length", "pattern", NULL };
   PyObject *start_addr_obj, *length_obj;
   Py_ssize_t pattern_size;
   const gdb_byte *buffer;

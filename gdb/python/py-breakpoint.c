@@ -637,8 +637,8 @@ bppy_get_ignore_count (PyObject *self, void *closure)
 static int
 bppy_init (PyObject *self, PyObject *args, PyObject *kwargs)
 {
-  static char *keywords[] = { "spec", "type", "wp_class", "internal",
-			      "temporary", NULL };
+  static const char *keywords[] = { "spec", "type", "wp_class", "internal",
+				    "temporary", NULL };
   const char *spec;
   int type = bp_breakpoint;
   int access_type = hw_write;

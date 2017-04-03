@@ -116,7 +116,7 @@ archpy_name (PyObject *self, PyObject *args)
 static PyObject *
 archpy_disassemble (PyObject *self, PyObject *args, PyObject *kw)
 {
-  static char *keywords[] = { "start_pc", "end_pc", "count", NULL };
+  static const char *keywords[] = { "start_pc", "end_pc", "count", NULL };
   CORE_ADDR start, end = 0;
   CORE_ADDR pc;
   gdb_py_ulongest start_temp;

@@ -373,7 +373,7 @@ gdbpy_lookup_symbol (PyObject *self, PyObject *args, PyObject *kw)
   int domain = VAR_DOMAIN;
   struct field_of_this_result is_a_field_of_this;
   const char *name;
-  static char *keywords[] = { "name", "block", "domain", NULL };
+  static const char *keywords[] = { "name", "block", "domain", NULL };
   struct symbol *symbol = NULL;
   PyObject *block_obj = NULL, *sym_obj, *bool_obj;
   const struct block *block = NULL;
@@ -443,7 +443,7 @@ gdbpy_lookup_global_symbol (PyObject *self, PyObject *args, PyObject *kw)
 {
   int domain = VAR_DOMAIN;
   const char *name;
-  static char *keywords[] = { "name", "domain", NULL };
+  static const char *keywords[] = { "name", "domain", NULL };
   struct symbol *symbol = NULL;
   PyObject *sym_obj;
 
