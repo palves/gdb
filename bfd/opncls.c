@@ -1155,6 +1155,11 @@ bfd_calc_gnu_debuglink_crc32 (unsigned long crc,
   return ~crc & 0xffffffff;
 }
 
+union build_id_info
+{
+  unsigned long crc32;
+  void *ptr;
+};
 
 /*
 FUNCTION
@@ -1171,17 +1176,16 @@ DESCRIPTION
 	is the responsibility of the caller.
 */
 
-char *
-bfd_get_debug_link_info (bfd *abfd, unsigned long *crc32_out)
+static char *
+bfd_get_debug_link_info_1 (bfd *abfd, union build_id_info *buildid_out)
 {
   asection *sect;
-  unsigned long crc32;
   bfd_byte *contents;
   unsigned int crc_offset;
   char *name;
 
   BFD_ASSERT (abfd);
-  BFD_ASSERT (crc32_out);
+  BFD_ASSERT (buildid_out);
 
   sect = bfd_get_section_by_name (abfd, GNU_DEBUGLINK);
 
@@ -1203,10 +1207,35 @@ bfd_get_debug_link_info (bfd *abfd, unsigned long *crc32_out)
   if (crc_offset >= bfd_get_section_size (sect))
     return NULL;
 
-  crc32 = bfd_get_32 (abfd, contents + crc_offset);
-
-  *crc32_out = crc32;
+  buildid_out->crc32 = bfd_get_32 (abfd, contents + crc_offset);
   return name;
+}
+
+
+/*
+FUNCTION
+	bfd_get_debug_link_info
+
+SYNOPSIS
+	char *bfd_get_debug_link_info (bfd *abfd, unsigned long *crc32_out);
+
+DESCRIPTION
+	Fetch the filename and CRC32 value for any separate debuginfo
+	associated with @var{abfd}.  Return NULL if no such info found,
+	otherwise return filename and update @var{crc32_out}.  The
+	returned filename is allocated with @code{malloc}; freeing it
+	is the responsibility of the caller.
+*/
+
+char *
+bfd_get_debug_link_info (bfd *abfd, unsigned long *crc32_out)
+{
+  union build_id_info buildid;
+  char *ret = bfd_get_debug_link_info_1 (abfd, &buildid);
+
+  if (ret != NULL)
+    *crc32_out = buildid.crc32;
+  return ret;
 }
 
 /*
@@ -1279,7 +1308,8 @@ DESCRIPTION
 */
 
 static bfd_boolean
-separate_debug_file_exists (const char *name, const unsigned long crc)
+separate_debug_file_exists (const char *name,
+			    union build_id_info build_id_info)
 {
   static unsigned char buffer [8 * 1024];
   unsigned long file_crc = 0;
@@ -1297,7 +1327,7 @@ separate_debug_file_exists (const char *name, const unsigned long crc)
 
   fclose (f);
 
-  return crc == file_crc;
+  return build_id_info.crc32 == file_crc;
 }
 
 /*
@@ -1315,7 +1345,7 @@ DESCRIPTION
 
 static bfd_boolean
 separate_alt_debug_file_exists (const char *name,
-				const unsigned long buildid ATTRIBUTE_UNUSED)
+				union build_id_info buildid ATTRIBUTE_UNUSED)
 {
   FILE *f;
 
@@ -1354,8 +1384,8 @@ DESCRIPTION
 	file could be found.
 */
 
-typedef char *      (* get_func_type) (bfd *, unsigned long *);
-typedef bfd_boolean (* check_func_type) (const char *, const unsigned long);
+typedef char *      (* get_func_type) (bfd *, union build_id_info *);
+typedef bfd_boolean (* check_func_type) (const char *, union build_id_info);
 
 static char *
 find_separate_debug_file (bfd *           abfd,
@@ -1368,7 +1398,7 @@ find_separate_debug_file (bfd *           abfd,
   char *dir;
   char *debugfile;
   char *canon_dir;
-  unsigned long crc32;
+  union build_id_info build_id;
   size_t dirlen;
   size_t canon_dirlen;
 
@@ -1383,7 +1413,7 @@ find_separate_debug_file (bfd *           abfd,
       return NULL;
     }
 
-  base = get_func (abfd, & crc32);
+  base = get_func (abfd, &build_id);
 
   if (base == NULL)
     return NULL;
@@ -1457,19 +1487,19 @@ find_separate_debug_file (bfd *           abfd,
      a file into the root filesystem.  (See binutils/testsuite/
      binutils-all/objdump.exp for the test).  */
   sprintf (debugfile, "%s%s", dir, base);
-  if (check_func (debugfile, crc32))
+  if (check_func (debugfile, build_id))
     goto found;
 
   /* Then try in a subdirectory called .debug.  */
   sprintf (debugfile, "%s.debug/%s", dir, base);
-  if (check_func (debugfile, crc32))
+  if (check_func (debugfile, build_id))
     goto found;
 
 #ifdef EXTRA_DEBUG_ROOT1
   /* Try the first extra debug file root.  */
   sprintf (debugfile, "%s%s%s", EXTRA_DEBUG_ROOT1,
 	   include_dirs ? canon_dir : "/", base);
-  if (check_func (debugfile, crc32))
+  if (check_func (debugfile, build_id))
     goto found;
 #endif
 
@@ -1477,7 +1507,7 @@ find_separate_debug_file (bfd *           abfd,
   /* Try the second extra debug file root.  */
   sprintf (debugfile, "%s%s%s", EXTRA_DEBUG_ROOT2,
 	   include_dirs ? canon_dir : "/", base);
-  if (check_func (debugfile, crc32))
+  if (check_func (debugfile, build_id))
     goto found;
 #endif
   
@@ -1499,7 +1529,7 @@ find_separate_debug_file (bfd *           abfd,
     }
   strcat (debugfile, base);
 
-  if (check_func (debugfile, crc32))
+  if (check_func (debugfile, build_id))
     goto found;
 
   /* Failed to find the file.  */
@@ -1543,7 +1573,7 @@ char *
 bfd_follow_gnu_debuglink (bfd *abfd, const char *dir)
 {
   return find_separate_debug_file (abfd, dir, TRUE,
-				   bfd_get_debug_link_info,
+				   bfd_get_debug_link_info_1,
 				   separate_debug_file_exists);
 }
 
@@ -1553,13 +1583,13 @@ bfd_follow_gnu_debuglink (bfd *abfd, const char *dir)
    CRC anyway.  */
 
 static char *
-get_alt_debug_link_info_shim (bfd * abfd, unsigned long *crc32_out)
+get_alt_debug_link_info_shim (bfd * abfd,
+			      union build_id_info *buildid_out ATTRIBUTE_UNUSED)
 {
   bfd_size_type len;
   bfd_byte *buildid = NULL;
   char *result = bfd_get_alt_debug_link_info (abfd, &len, &buildid);
 
-  *crc32_out = 0;
   free (buildid);
 
   return result;
@@ -1865,7 +1895,7 @@ DESCRIPTION
 */
 
 static char *
-get_build_id_name (bfd *abfd, unsigned long *build_id_out)
+get_build_id_name (bfd *abfd, union build_id_info *build_id_out)
 {
   struct bfd_build_id *build_id;
   char *name;
@@ -1901,7 +1931,7 @@ get_build_id_name (bfd *abfd, unsigned long *build_id_out)
     n += sprintf (n, "%02x", (unsigned) *d++);
   n += sprintf (n, ".debug");
 
-  * build_id_out = (unsigned long) build_id;
+  build_id_out->ptr = build_id;
   return name;
 }
 
@@ -1923,7 +1953,7 @@ DESCRIPTION
 
 static bfd_boolean
 check_build_id_file (const char *name,
-		     const unsigned long buildid)
+		     union build_id_info buildid_info)
 {
   struct bfd_build_id *orig_build_id;
   struct bfd_build_id *build_id;
@@ -1931,7 +1961,6 @@ check_build_id_file (const char *name,
   bfd_boolean result;
 
   BFD_ASSERT (name);
-  BFD_ASSERT (buildid);
 
   file = bfd_openr (name, NULL);
   if (file == NULL)
@@ -1951,7 +1980,7 @@ check_build_id_file (const char *name,
       return FALSE;
     }
 
-  orig_build_id = (struct bfd_build_id *) buildid;
+  orig_build_id = buildid_info.ptr;
 
   result = build_id->size == orig_build_id->size
     && memcmp (build_id->data, orig_build_id->data, build_id->size) == 0;
