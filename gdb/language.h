@@ -561,7 +561,15 @@ extern int value_true (struct value *);
 
 extern enum language language_enum (char *str);
 
-extern const struct language_defn *language_def (enum language);
+/* Return the language struct for a given language enum.  */
+
+static inline const struct language_defn *
+language_def (enum language lang)
+{
+  extern const struct language_defn *languages[];
+
+  return languages[lang];
+}
 
 extern const char *language_str (enum language);
 

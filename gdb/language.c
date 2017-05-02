@@ -95,7 +95,7 @@ const struct language_defn *expected_language;
 /* The list of supported languages.  Keep this in the same order as
    the 'enum language' values.  */
 
-static const struct language_defn *languages[] = {
+const struct language_defn *languages[] = {
   &unknown_language_defn,
   &auto_language_defn,
   &c_language_defn,
@@ -490,14 +490,6 @@ language_enum (char *str)
     return language_auto;
 
   return language_unknown;
-}
-
-/* Return the language struct for a given language enum.  */
-
-const struct language_defn *
-language_def (enum language lang)
-{
-  return languages[lang];
 }
 
 /* Return the language as a string.  */
