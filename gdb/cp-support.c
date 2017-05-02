@@ -1004,8 +1004,21 @@ unsigned int
 cp_find_first_component (const char *name)
 {
   const char *name_start = name;
-  int tpl_depth = 0;
-  int paren_depth = 0;
+  int depth = 0;
+
+  /* The set of characters to use look up when at depth zero.  Look
+     for both template parameters and function parameters, the "::"
+     operator and 'o', to handle "operator".  */
+  const char top_set[] = "<>():o";
+  /* The set to use when inside top-level template parameters.  We
+     assume function parameters are balanced while here.  */
+  const char tmpl_set[] = "<>:o";
+  /* Similarly, the set to use when inside top-level function
+     parameters.  */
+  const char param_set[] = "():o";
+
+  /* The set currently active.  */
+  const char *search_set = top_set;
 
   /* What to do when we reach the end of NAME.  Validates the depth
      counters and returns the current index.  Split to a lambda simply
@@ -1013,13 +1026,17 @@ cp_find_first_component (const char *name)
      one place below.  */
   auto eos = [&] ()
     {
-      if (tpl_depth != 0 || paren_depth != 0)
+      if (depth != 0)
 	demangled_name_complaint (name_start);
       return name - name_start;
     };
 
   for (;; name++)
     {
+      /* strcspn is usually optimized to take advantage of vector
+	 instructions.  */
+      name += strcspn (name, search_set);
+
       switch (*name)
 	{
 	case '<':
@@ -1027,27 +1044,24 @@ cp_find_first_component (const char *name)
 	     should only return (I hope!) when they reach the '>'
 	     terminating the component or a '::' between two
 	     components.  (Hence the '+ 2'.)  */
-	  tpl_depth++;
+	  depth++;
+	  search_set = tmpl_set;
 	  break;
 	case '(':
 	  /* Similar comment as to '<'.  */
-	  paren_depth++;
+	  depth++;
+	  search_set = param_set;
 	  break;
 	case '>':
-	  if (tpl_depth == 0)
-	    {
-	      demangled_name_complaint (name_start);
-	      return name - name_start + strlen (name);
-	    }
-	  tpl_depth--;
-	  break;
 	case ')':
-	  if (paren_depth == 0)
+	  if (depth == 0)
 	    {
 	      demangled_name_complaint (name_start);
 	      return name - name_start + strlen (name);
 	    }
-	  paren_depth--;
+	  depth--;
+	  if (depth == 0)
+	    search_set = top_set;
 	  break;
 	case '\0':
 	  return eos ();
@@ -1056,7 +1070,7 @@ cp_find_first_component (const char *name)
 	     Otherwise it is probably malformed input.  */
 	  if (name[1] == ':')
 	    {
-	      if (tpl_depth == 0 && paren_depth == 0)
+	      if (depth == 0)
 		return name - name_start;
 	      name++;
 	    }
