@@ -5211,6 +5211,10 @@ default_collect_symbol_completion_matches_break_on
     add_symtab_completions (cust, tracker, mode, lookup_name,
 			    sym_text, word, code);
 
+  enum search_domain search_domain
+    = (mode == complete_symbol_mode::LINESPEC
+       ? FUNCTIONS_DOMAIN : ALL_DOMAIN);
+
   /* Look through the partial symtabs for all symbols which begin by
      matching SYM_TEXT.  Expand all CUs that you find to the list.  */
   expand_symtabs_matching (NULL,
@@ -5222,7 +5226,7 @@ default_collect_symbol_completion_matches_break_on
 						       tracker, mode, lookup_name,
 						       sym_text, word, code);
 			     },
-			   ALL_DOMAIN);
+			   search_domain);
 
   /* Search upwards from currently selected frame (so that we can
      complete on local vars).  Also catch fields of types defined in
