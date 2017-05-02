@@ -972,12 +972,12 @@ cp_remove_params_if_any (const char *demangled_name, bool completion_mode)
 
 static bool
 cp_operator_possible (const char *name,
-		      unsigned int index)
+		      const char *start_name)
 {
-  if (index == 0)
+  if (name == start_name)
     return true;
 
-  switch (name[index - 1])
+  switch (name[-1])
     {
       /* NOTE: carlton/2003-04-18: I'm not sure what the precise set
 	 of relevant characters are here: it's necessary to include
@@ -1003,7 +1003,7 @@ cp_operator_possible (const char *name,
 unsigned int
 cp_find_first_component (const char *name)
 {
-  unsigned int index = 0;
+  const char *name_start = name;
   int tpl_depth = 0;
   int paren_depth = 0;
 
@@ -1014,13 +1014,13 @@ cp_find_first_component (const char *name)
   auto eos = [&] ()
     {
       if (tpl_depth != 0 || paren_depth != 0)
-	demangled_name_complaint (name);
-      return index;
+	demangled_name_complaint (name_start);
+      return name - name_start;
     };
 
-  for (;; index++)
+  for (;; name++)
     {
-      switch (name[index])
+      switch (*name)
 	{
 	case '<':
 	  /* Template; eat it up.  The calls to cp_first_component
@@ -1036,16 +1036,16 @@ cp_find_first_component (const char *name)
 	case '>':
 	  if (tpl_depth == 0)
 	    {
-	      demangled_name_complaint (name);
-	      return strlen (name);
+	      demangled_name_complaint (name_start);
+	      return name - name_start + strlen (name);
 	    }
 	  tpl_depth--;
 	  break;
 	case ')':
 	  if (paren_depth == 0)
 	    {
-	      demangled_name_complaint (name);
-	      return strlen (name);
+	      demangled_name_complaint (name_start);
+	      return name - name_start + strlen (name);
 	    }
 	  paren_depth--;
 	  break;
@@ -1054,22 +1054,22 @@ cp_find_first_component (const char *name)
 	case ':':
 	  /* ':' marks a component iff the next character is also a ':'.
 	     Otherwise it is probably malformed input.  */
-	  if (name[index + 1] == ':')
+	  if (name[1] == ':')
 	    {
 	      if (tpl_depth == 0 && paren_depth == 0)
-		return index;
-	      index++;
+		return name - name_start;
+	      name++;
 	    }
 	  break;
 	case 'o':
 	  /* Operator names can screw up the recursion.  */
-	  if (cp_operator_possible (name, index)
-	      && startswith (name + index, CP_OPERATOR_STR))
+	  if (cp_operator_possible (name, name_start)
+	      && startswith (name, CP_OPERATOR_STR))
 	    {
-	      index += CP_OPERATOR_LEN;
-	      while (ISSPACE (name[index]))
-		++index;
-	      switch (name[index])
+	      name += CP_OPERATOR_LEN;
+	      while (ISSPACE (*name))
+		++name;
+	      switch (*name)
 		{
 		case '\0':
 		  return eos ();
@@ -1077,16 +1077,16 @@ cp_find_first_component (const char *name)
 		     characters: the for loop will skip over the last
 		     one.  */
 		case '<':
-		  if (name[index + 1] == '<')
-		    index += 1;
+		  if (name[1] == '<')
+		    name += 1;
 		  break;
 		case '>':
 		case '-':
-		  if (name[index + 1] == '>')
-		    index += 1;
+		  if (name[1] == '>')
+		    name += 1;
 		  break;
 		case '(':
-		  index += 1;
+		  name += 1;
 		  break;
 		}
 	    }
