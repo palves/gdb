@@ -43,9 +43,6 @@
 
 /* Functions related to demangled name parsing.  */
 
-static unsigned int cp_find_first_component_aux (const char *name,
-						 int permissive);
-
 static void demangled_name_complaint (const char *name);
 
 /* Functions/variables related to overload resolution.  */
@@ -966,10 +963,36 @@ cp_remove_params_if_any (const char *demangled_name, bool completion_mode)
    cp_find_first_component_aux might go past the end of malformed
    input.  */
 
-unsigned int
-cp_find_first_component (const char *name)
+/* Operator names can show up in unexpected places.  Since these can
+   contain parentheses or angle brackets, they can screw up the
+   recursion.  But not every string 'operator' is part of an operater
+   name: e.g. you could have a variable 'cooperator'.  So this
+   variable tells us whether or not we should treat the string
+   'operator' as starting an operator.  */
+
+static bool
+cp_operator_possible (const char *name,
+		      unsigned int index)
 {
-  return cp_find_first_component_aux (name, 0);
+  if (index == 0)
+    return true;
+
+  switch (name[index - 1])
+    {
+      /* NOTE: carlton/2003-04-18: I'm not sure what the precise set
+	 of relevant characters are here: it's necessary to include
+	 any character that can show up before 'operator' in a
+	 demangled name, and it's safe to include any character that
+	 can't be part of an identifier's name.  */
+    case ' ':
+    case ',':
+    case '.':
+    case '&':
+    case '*':
+      return true;
+    }
+
+  return false;
 }
 
 /* Helper function for cp_find_first_component.  Like that function,
@@ -977,19 +1000,25 @@ cp_find_first_component (const char *name)
    the recursion easier, it also stops if it reaches an unexpected ')'
    or '>' if the value of PERMISSIVE is nonzero.  */
 
-static unsigned int
-cp_find_first_component_aux (const char *name, int permissive)
+unsigned int
+cp_find_first_component (const char *name)
 {
   unsigned int index = 0;
-  /* Operator names can show up in unexpected places.  Since these can
-     contain parentheses or angle brackets, they can screw up the
-     recursion.  But not every string 'operator' is part of an
-     operater name: e.g. you could have a variable 'cooperator'.  So
-     this variable tells us whether or not we should treat the string
-     'operator' as starting an operator.  */
-  int operator_possible = 1;
+  int tpl_depth = 0;
+  int paren_depth = 0;
 
-  for (;; ++index)
+  /* What to do when we reach the end of NAME.  Validates the depth
+     counters and returns the current index.  Split to a lambda simply
+     to avoid duplication -- we check for end of string in more than
+     one place below.  */
+  auto eos = [&] ()
+    {
+      if (tpl_depth != 0 || paren_depth != 0)
+	demangled_name_complaint (name);
+      return index;
+    };
+
+  for (;; index++)
     {
       switch (name[index])
 	{
@@ -998,105 +1027,69 @@ cp_find_first_component_aux (const char *name, int permissive)
 	     should only return (I hope!) when they reach the '>'
 	     terminating the component or a '::' between two
 	     components.  (Hence the '+ 2'.)  */
-	  index += 1;
-	  for (index += cp_find_first_component_aux (name + index, 1);
-	       name[index] != '>';
-	       index += cp_find_first_component_aux (name + index, 1))
-	    {
-	      if (name[index] != ':')
-		{
-		  demangled_name_complaint (name);
-		  return strlen (name);
-		}
-	      index += 2;
-	    }
-	  operator_possible = 1;
+	  tpl_depth++;
 	  break;
 	case '(':
 	  /* Similar comment as to '<'.  */
-	  index += 1;
-	  for (index += cp_find_first_component_aux (name + index, 1);
-	       name[index] != ')';
-	       index += cp_find_first_component_aux (name + index, 1))
-	    {
-	      if (name[index] != ':')
-		{
-		  demangled_name_complaint (name);
-		  return strlen (name);
-		}
-	      index += 2;
-	    }
-	  operator_possible = 1;
+	  paren_depth++;
 	  break;
 	case '>':
-	case ')':
-	  if (permissive)
-	    return index;
-	  else
+	  if (tpl_depth == 0)
 	    {
 	      demangled_name_complaint (name);
 	      return strlen (name);
 	    }
+	  tpl_depth--;
+	  break;
+	case ')':
+	  if (paren_depth == 0)
+	    {
+	      demangled_name_complaint (name);
+	      return strlen (name);
+	    }
+	  paren_depth--;
+	  break;
 	case '\0':
-	  return index;
+	  return eos ();
 	case ':':
 	  /* ':' marks a component iff the next character is also a ':'.
 	     Otherwise it is probably malformed input.  */
 	  if (name[index + 1] == ':')
-	    return index;
+	    {
+	      if (tpl_depth == 0 && paren_depth == 0)
+		return index;
+	      index++;
+	    }
 	  break;
 	case 'o':
 	  /* Operator names can screw up the recursion.  */
-	  if (operator_possible
+	  if (cp_operator_possible (name, index)
 	      && startswith (name + index, CP_OPERATOR_STR))
 	    {
 	      index += CP_OPERATOR_LEN;
-	      while (ISSPACE(name[index]))
+	      while (ISSPACE (name[index]))
 		++index;
 	      switch (name[index])
 		{
 		case '\0':
-		  return index;
+		  return eos ();
 		  /* Skip over one less than the appropriate number of
 		     characters: the for loop will skip over the last
 		     one.  */
 		case '<':
 		  if (name[index + 1] == '<')
 		    index += 1;
-		  else
-		    index += 0;
 		  break;
 		case '>':
 		case '-':
 		  if (name[index + 1] == '>')
 		    index += 1;
-		  else
-		    index += 0;
 		  break;
 		case '(':
 		  index += 1;
 		  break;
-		default:
-		  index += 0;
-		  break;
 		}
 	    }
-	  operator_possible = 0;
-	  break;
-	case ' ':
-	case ',':
-	case '.':
-	case '&':
-	case '*':
-	  /* NOTE: carlton/2003-04-18: I'm not sure what the precise
-	     set of relevant characters are here: it's necessary to
-	     include any character that can show up before 'operator'
-	     in a demangled name, and it's safe to include any
-	     character that can't be part of an identifier's name.  */
-	  operator_possible = 1;
-	  break;
-	default:
-	  operator_possible = 0;
 	  break;
 	}
     }
