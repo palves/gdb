@@ -5228,6 +5228,9 @@ default_collect_symbol_completion_matches_break_on
 			     },
 			   search_domain);
 
+  if (mode == complete_symbol_mode::LINESPEC)
+    return;
+
   /* Search upwards from currently selected frame (so that we can
      complete on local vars).  Also catch fields of types defined in
      this places which match our text string.  Only complete on types
