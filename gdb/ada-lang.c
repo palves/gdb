@@ -1160,10 +1160,31 @@ template <size_t N>
 static inline bool ALWAYS_INLINE
 const_startswith (const char *str, const char (&patn) [N])
 {
-  for (size_t i = 0; i < sizeof (patn) - 1; i++)
-    if (str[i] != patn[i])
-      return false;
-  return true;
+  constexpr size_t len = N - 1;
+  static_assert (len > 0 && len <= 5, "");
+
+  if (len == 1)
+    return (*str == *patn);
+  else if (len == 2)
+    return (str[0] == patn[0]
+	    && str[1] == patn[1]);
+  else if (len == 3)
+    return (str[0] == patn[0]
+	    && str[1] == patn[1]
+	    && str[2] == patn[2]);
+  else if (len == 4)
+    return (str[0] == patn[0]
+	    && str[1] == patn[1]
+	    && str[2] == patn[2]
+	    && str[3] == patn[3]);
+  else if (len == 5)
+    return (str[0] == patn[0]
+	    && str[1] == patn[1]
+	    && str[2] == patn[2]
+	    && str[3] == patn[3]
+	    && str[4] == patn[4]);
+  else
+    return false;
 };
 
 /* If ENCODED follows the GNAT entity encoding conventions, then return
