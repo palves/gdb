@@ -1216,6 +1216,18 @@ ada_decode (const char *encoded)
 	}
     };
 
+  auto suppress = [&] ()
+    {
+      GROW_VECT (decoding_buffer, decoding_buffer_size,
+		 encoded_end - encoded_start + 3);
+      if (encoded_start[0] == '<')
+	strcpy (decoding_buffer, encoded_start);
+      else
+	xsnprintf (decoding_buffer, decoding_buffer_size,
+		   "<%s>", encoded_start);
+      return decoding_buffer;
+    };
+
   /* The name of the Ada main procedure starts with "_ada_".
      This prefix is not part of the decoded name, so skip this part
      if we see this prefix.  */
@@ -1230,7 +1242,7 @@ ada_decode (const char *encoded)
      name, so do not attempt to decode it.  Similarly, if the name
      starts with '<', the name should not be decoded.  */
   if (encoded[0] == '_' || encoded[0] == '<')
-    goto Suppress;
+    return suppress ();
 
   ada_remove_trailing_digits (encoded, &len0);
   ada_remove_po_subprogram_suffix (encoded, &len0);
@@ -1245,7 +1257,7 @@ ada_decode (const char *encoded)
       if (p[3] == 'X')
 	encoded_end = p;
       else
-        goto Suppress;
+	return suppress ();
     }
 
   /* Remove any trailing TKB suffix.  It tells us that this symbol
@@ -1387,7 +1399,7 @@ ada_decode (const char *encoded)
 	  while (encoded < encoded_end
 		 && (encoded[0] == 'b' || encoded[0] == 'n'));
 	  if (encoded < encoded_end)
-            goto Suppress;
+	    return suppress ();
         }
       else if (encoded_left () > 2 && const_startswith (encoded, "__"))
         {
@@ -1411,21 +1423,12 @@ ada_decode (const char *encoded)
 
   for (const char *p = decoding_buffer; *p != '\0'; p++)
     if (isupper (*p) || *p == ' ')
-      goto Suppress;
+      return suppress ();
 
   if (strcmp (decoding_buffer, encoded_start) == 0)
     return encoded_start;
   else
     return decoding_buffer;
-
-Suppress:
-  GROW_VECT (decoding_buffer, decoding_buffer_size, encoded_end - encoded_start + 3);
-  if (encoded_start[0] == '<')
-    strcpy (decoding_buffer, encoded_start);
-  else
-    xsnprintf (decoding_buffer, decoding_buffer_size, "<%s>", encoded_start);
-  return decoding_buffer;
-
 }
 
 /* Table for keeping permanent unique copies of decoded names.  Once
