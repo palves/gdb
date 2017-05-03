@@ -1154,8 +1154,10 @@ ada_remove_Xbn_suffix (const char *encoded, int *len)
     *len = i;
 }
 
+#define ALWAYS_INLINE __attribute__((__always_inline__))
+
 template <size_t N>
-static inline bool
+static inline bool ALWAYS_INLINE
 const_startswith (const char *str, const char (&patn) [N])
 {
   for (size_t i = 0; i < sizeof (patn) - 1; i++)
