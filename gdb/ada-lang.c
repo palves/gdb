@@ -1278,7 +1278,7 @@ ada_decode (const char *encoded)
       /* Replace "TK__" with "__", which will eventually be translated
          into "." (just below).  */
 
-      if (i < len0 - 4 && startswith (encoded + i, "TK__"))
+      if (i < len0 - 4 && memcmp (encoded + i, "TK__", 4) == 0)
         i += 2;
 
       /* Replace "__B_{DIGITS}+__" sequences by "__", which will eventually
