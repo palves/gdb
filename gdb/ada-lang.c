@@ -1156,45 +1156,17 @@ ada_remove_Xbn_suffix (const char *encoded, int *len)
 
 #define ALWAYS_INLINE __attribute__((__always_inline__))
 
+template <size_t N>
 static inline bool ALWAYS_INLINE
-const_startswith (const char *str, const char (&patn) [2])
+const_startswith (const char *str, const char (&patn) [N])
 {
-  return (*str == *patn);
-};
-
-static inline bool ALWAYS_INLINE
-const_startswith (const char *str, const char (&patn) [3])
-{
-  return (str[0] == patn[0]
-	  && str[1] == patn[1]);
-};
-
-static inline bool ALWAYS_INLINE
-const_startswith (const char *str, const char (&patn) [4])
-{
-  return (str[0] == patn[0]
-	  && str[1] == patn[1]
-	  && str[2] == patn[2]);
+  return ((str[0] == patn[0])
+	  && (N <= 2 || str[1] == patn[1])
+	  && (N <= 3 || str[2] == patn[2])
+	  && (N <= 4 || str[3] == patn[3])
+	  && (N <= 5 || str[4] == patn[4])
+	  && (N <= 6 || str[5] == patn[5]));
 }
-
-static inline bool ALWAYS_INLINE
-const_startswith (const char *str, const char (&patn) [5])
-{
-  return (str[0] == patn[0]
-	  && str[1] == patn[1]
-	  && str[2] == patn[2]
-	  && str[3] == patn[3]);
-}
-
-static inline bool ALWAYS_INLINE
-const_startswith (const char *str, const char (&patn) [6])
-{
-  return (str[0] == patn[0]
-	  && str[1] == patn[1]
-	  && str[2] == patn[2]
-	  && str[3] == patn[3]
-	  && str[4] == patn[4]);
-};
 
 /* If ENCODED follows the GNAT entity encoding conventions, then return
    the decoded form of ENCODED.  Otherwise, return "<%s>" where "%s" is
