@@ -1154,6 +1154,16 @@ ada_remove_Xbn_suffix (const char *encoded, int *len)
     *len = i;
 }
 
+template <size_t N>
+static inline bool
+const_startswith (const char *str, const char (&patn) [N])
+{
+  for (size_t i = 0; i < sizeof (patn) - 1; i++)
+    if (str[i] != patn[i])
+      return false;
+  return true;
+};
+
 /* If ENCODED follows the GNAT entity encoding conventions, then return
    the decoded form of ENCODED.  Otherwise, return "<%s>" where "%s" is
    replaced by ENCODED.
@@ -1176,7 +1186,7 @@ ada_decode (const char *encoded)
   /* The name of the Ada main procedure starts with "_ada_".
      This prefix is not part of the decoded name, so skip this part
      if we see this prefix.  */
-  if (startswith (encoded, "_ada_"))
+  if (const_startswith (encoded, "_ada_"))
     encoded += 5;
 
   /* If the name starts with '_', then it is not a properly encoded
@@ -1207,20 +1217,20 @@ ada_decode (const char *encoded)
      is for the body of a task, but that information does not actually
      appear in the decoded name.  */
 
-  if (len0 > 3 && startswith (encoded + len0 - 3, "TKB"))
+  if (len0 > 3 && const_startswith (encoded + len0 - 3, "TKB"))
     len0 -= 3;
 
   /* Remove any trailing TB suffix.  The TB suffix is slightly different
      from the TKB suffix because it is used for non-anonymous task
      bodies.  */
 
-  if (len0 > 2 && startswith (encoded + len0 - 2, "TB"))
+  if (len0 > 2 && const_startswith (encoded + len0 - 2, "TB"))
     len0 -= 2;
 
   /* Remove trailing "B" suffixes.  */
   /* FIXME: brobecker/2006-04-19: Not sure what this are used for...  */
 
-  if (len0 > 1 && startswith (encoded + len0 - 1, "B"))
+  if (len0 > 1 && const_startswith (encoded + len0 - 1, "B"))
     len0 -= 1;
 
   /* Make decoded big enough for possible expansion by operator name.  */
@@ -1278,7 +1288,7 @@ ada_decode (const char *encoded)
       /* Replace "TK__" with "__", which will eventually be translated
          into "." (just below).  */
 
-      if (i < len0 - 4 && memcmp (encoded + i, "TK__", 4) == 0)
+      if (i < len0 - 4 && const_startswith (encoded + i, "TK__"))
         i += 2;
 
       /* Replace "__B_{DIGITS}+__" sequences by "__", which will eventually
