@@ -1184,13 +1184,36 @@ ada_decode (const char *encoded)
   const char *encoded_start;
   const char *encoded_end = NULL;
   char *decoded;
-  int at_start_name;
   static char *decoding_buffer = NULL;
   static size_t decoding_buffer_size = 0;
 
   auto encoded_left = [&] () ALWAYS_INLINE
     {
       return encoded_end - encoded;
+    };
+
+  auto check_start_name = [&] ()
+    {
+      /* Is this a symbol function?  */
+      if (*encoded == 'O')
+	{
+	  size_t k;
+
+	  for (k = 0; ada_opname_table[k].encoded != NULL; k += 1)
+	    {
+	      size_t op_len = strlen (ada_opname_table[k].encoded);
+	      if ((strncmp (ada_opname_table[k].encoded + 1, encoded + 1,
+			    op_len - 1) == 0)
+		  && !isalnum (encoded[op_len]))
+		{
+		  size_t dec_len = strlen (ada_opname_table[k].decoded);
+		  memcpy (decoded, ada_opname_table[k].decoded, dec_len + 1);
+		  encoded += op_len;
+		  decoded += dec_len;
+		  break;
+		}
+	    }
+	}
     };
 
   /* The name of the Ada main procedure starts with "_ada_".
@@ -1271,35 +1294,10 @@ ada_decode (const char *encoded)
   while (encoded < encoded_end && !isalpha (*encoded))
     *decoded++ = *encoded++;
 
-  at_start_name = 1;
+  check_start_name ();
 
   while (encoded < encoded_end)
     {
-      /* Is this a symbol function?  */
-      if (at_start_name && *encoded == 'O')
-        {
-	  size_t k;
-
-	  for (k = 0; ada_opname_table[k].encoded != NULL; k += 1)
-            {
-	      size_t op_len = strlen (ada_opname_table[k].encoded);
-	      if ((strncmp (ada_opname_table[k].encoded + 1, encoded + 1,
-                            op_len - 1) == 0)
-		  && !isalnum (encoded[op_len]))
-                {
-		  size_t dec_len = strlen (ada_opname_table[k].decoded);
-		  memcpy (decoded, ada_opname_table[k].decoded, dec_len + 1);
-		  at_start_name = 0;
-		  encoded += op_len;
-		  decoded += dec_len;
-                  break;
-                }
-            }
-          if (ada_opname_table[k].encoded != NULL)
-            continue;
-        }
-      at_start_name = 0;
-
       /* Replace "TK__" with "__", which will eventually be translated
          into "." (just below).  */
 
@@ -1395,8 +1393,9 @@ ada_decode (const char *encoded)
         {
          /* Replace '__' by '.'.  */
 	  *decoded++ = '.';
-          at_start_name = 1;
 	  encoded += 2;
+
+	  check_start_name ();
         }
       else
         {
