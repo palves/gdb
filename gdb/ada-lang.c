@@ -1413,17 +1413,18 @@ ada_decode (const char *encoded)
         {
           /* It's a character part of the decoded name, so just copy it
              over.  */
-	  *decoded++ = *encoded++;
+	  *decoded = *encoded++;
+
+	  /* Decoded names should never contain any uppercase
+	     character.  Double-check this, and abort the decoding if
+	     we find one.  */
+	  if (isupper (*decoded) || *decoded == ' ')
+	    return suppress ();
+
+	  decoded++;
         }
     }
   *decoded = '\000';
-
-  /* Decoded names should never contain any uppercase character.
-     Double-check this, and abort the decoding if we find one.  */
-
-  for (const char *p = decoding_buffer; *p != '\0'; p++)
-    if (isupper (*p) || *p == ' ')
-      return suppress ();
 
   if (strcmp (decoding_buffer, encoded_start) == 0)
     return encoded_start;
