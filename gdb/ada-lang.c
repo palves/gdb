@@ -1299,8 +1299,7 @@ ada_decode (const char *encoded)
          be translated into "." (just below).  These are internal names
          generated for anonymous blocks inside which our symbol is nested.  */
 
-      if (len0 - i > 5 && encoded [i] == '_' && encoded [i+1] == '_'
-          && encoded [i+2] == 'B' && encoded [i+3] == '_'
+      if (len0 - i > 5 && const_startswith (encoded + i, "__B_")
           && isdigit (encoded [i+4]))
         {
           int k = i + 5;
@@ -1327,7 +1326,7 @@ ada_decode (const char *encoded)
          to give the user a clue that the code he is debugging has been
          internally generated.  */
 
-      if (len0 - i > 3 && encoded [i] == '_' && encoded[i+1] == 'E'
+      if (len0 - i > 3 && const_startswith (encoded + i, "_E")
           && isdigit (encoded[i+2]))
         {
           int k = i + 3;
@@ -1352,7 +1351,7 @@ ada_decode (const char *encoded)
          the GNAT front-end in protected object subprograms.  */
 
       if (i < len0 + 3
-          && encoded[i] == 'N' && encoded[i+1] == '_' && encoded[i+2] == '_')
+	  && const_startswith (encoded + i, "N__"))
         {
           /* Backtrack a bit up until we reach either the begining of
              the encoded name, or "__".  Make sure that we only find
@@ -1381,7 +1380,7 @@ ada_decode (const char *encoded)
           if (i < len0)
             goto Suppress;
         }
-      else if (i < len0 - 2 && encoded[i] == '_' && encoded[i + 1] == '_')
+      else if (i < len0 - 2 && const_startswith (encoded + i, "__"))
         {
          /* Replace '__' by '.'.  */
           decoded[j] = '.';
