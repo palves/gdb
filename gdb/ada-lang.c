@@ -1179,13 +1179,19 @@ const_startswith (const char *str, const char (&patn) [N])
 const char *
 ada_decode (const char *encoded)
 {
-  int i, j;
   int len0;
   const char *p;
+  const char *encoded_start;
+  const char *encoded_end = NULL;
   char *decoded;
   int at_start_name;
   static char *decoding_buffer = NULL;
   static size_t decoding_buffer_size = 0;
+
+  auto encoded_left = [&] () ALWAYS_INLINE
+    {
+      return encoded_end - encoded;
+    };
 
   /* The name of the Ada main procedure starts with "_ada_".
      This prefix is not part of the decoded name, so skip this part
@@ -1193,13 +1199,15 @@ ada_decode (const char *encoded)
   if (const_startswith (encoded, "_ada_"))
     encoded += 5;
 
+  len0 = strlen (encoded);
+  encoded_start = encoded;
+  encoded_end = encoded + len0;
+
   /* If the name starts with '_', then it is not a properly encoded
      name, so do not attempt to decode it.  Similarly, if the name
      starts with '<', the name should not be decoded.  */
   if (encoded[0] == '_' || encoded[0] == '<')
     goto Suppress;
-
-  len0 = strlen (encoded);
 
   ada_remove_trailing_digits (encoded, &len0);
   ada_remove_po_subprogram_suffix (encoded, &len0);
@@ -1209,10 +1217,10 @@ ada_decode (const char *encoded)
      to avoid re-matching parts of ENCODED that have previously been
      marked as discarded (by decrementing LEN0).  */
   p = strstr (encoded, "___");
-  if (p != NULL && p - encoded < len0 - 3)
+  if (p != NULL && p < encoded_end - 3)
     {
       if (p[3] == 'X')
-        len0 = p - encoded;
+	encoded_end = p;
       else
         goto Suppress;
     }
@@ -1221,66 +1229,69 @@ ada_decode (const char *encoded)
      is for the body of a task, but that information does not actually
      appear in the decoded name.  */
 
-  if (len0 > 3 && const_startswith (encoded + len0 - 3, "TKB"))
-    len0 -= 3;
+  if (encoded_left () > 3 && const_startswith (encoded_end - 3, "TKB"))
+    encoded_end -= 3;
 
   /* Remove any trailing TB suffix.  The TB suffix is slightly different
      from the TKB suffix because it is used for non-anonymous task
      bodies.  */
 
-  if (len0 > 2 && const_startswith (encoded + len0 - 2, "TB"))
-    len0 -= 2;
+  if (encoded_left () > 2 && const_startswith (encoded_end - 2, "TB"))
+    encoded_end -= 2;
 
   /* Remove trailing "B" suffixes.  */
   /* FIXME: brobecker/2006-04-19: Not sure what this are used for...  */
 
-  if (len0 > 1 && const_startswith (encoded + len0 - 1, "B"))
-    len0 -= 1;
+  if (encoded_left () > 1 && const_startswith (encoded_end - 1, "B"))
+    encoded_end -= 1;
 
   /* Make decoded big enough for possible expansion by operator name.  */
 
-  GROW_VECT (decoding_buffer, decoding_buffer_size, 2 * len0 + 1);
+  GROW_VECT (decoding_buffer,
+	     decoding_buffer_size, 2 * (encoded_end - encoded_start) + 1);
   decoded = decoding_buffer;
 
   /* Remove trailing __{digit}+ or trailing ${digit}+.  */
 
-  if (len0 > 1 && isdigit (encoded[len0 - 1]))
+  if (encoded_left () > 1 && isdigit (encoded_end[-1]))
     {
-      i = len0 - 2;
-      while ((i >= 0 && isdigit (encoded[i]))
-             || (i >= 1 && encoded[i] == '_' && isdigit (encoded[i - 1])))
-        i -= 1;
-      if (i > 1 && encoded[i] == '_' && encoded[i - 1] == '_')
-        len0 = i - 1;
-      else if (encoded[i] == '$')
-        len0 = i;
+      const char *p = encoded_end - 2;
+      while ((p >= encoded_start && isdigit (*p))
+	     || (p > encoded_start && p[0] == '_' && isdigit (p[-1])))
+	p--;
+      if (p > encoded_start && p[0] == '_' && p[-1] == '_')
+	encoded_end = p - 1;
+      else if (*p == '$')
+	encoded_end = p;
     }
 
   /* The first few characters that are not alphabetic are not part
      of any encoding we use, so we can copy them over verbatim.  */
 
-  for (i = 0, j = 0; i < len0 && !isalpha (encoded[i]); i += 1, j += 1)
-    decoded[j] = encoded[i];
+  while (encoded < encoded_end && !isalpha (*encoded))
+    *decoded++ = *encoded++;
 
   at_start_name = 1;
-  while (i < len0)
+
+  while (encoded < encoded_end)
     {
       /* Is this a symbol function?  */
-      if (at_start_name && encoded[i] == 'O')
+      if (at_start_name && *encoded == 'O')
         {
-          int k;
+	  size_t k;
 
-          for (k = 0; ada_opname_table[k].encoded != NULL; k += 1)
+	  for (k = 0; ada_opname_table[k].encoded != NULL; k += 1)
             {
-              int op_len = strlen (ada_opname_table[k].encoded);
-              if ((strncmp (ada_opname_table[k].encoded + 1, encoded + i + 1,
+	      size_t op_len = strlen (ada_opname_table[k].encoded);
+	      if ((strncmp (ada_opname_table[k].encoded + 1, encoded + 1,
                             op_len - 1) == 0)
-                  && !isalnum (encoded[i + op_len]))
+		  && !isalnum (encoded[op_len]))
                 {
-                  strcpy (decoded + j, ada_opname_table[k].decoded);
-                  at_start_name = 0;
-                  i += op_len;
-                  j += strlen (ada_opname_table[k].decoded);
+		  size_t dec_len = strlen (ada_opname_table[k].decoded);
+		  memcpy (decoded, ada_opname_table[k].decoded, dec_len + 1);
+		  at_start_name = 0;
+		  encoded += op_len;
+		  decoded += dec_len;
                   break;
                 }
             }
@@ -1292,25 +1303,25 @@ ada_decode (const char *encoded)
       /* Replace "TK__" with "__", which will eventually be translated
          into "." (just below).  */
 
-      if (i < len0 - 4 && const_startswith (encoded + i, "TK__"))
-        i += 2;
+      if (encoded_left () > 4 && const_startswith (encoded, "TK__"))
+	encoded += 2;
 
       /* Replace "__B_{DIGITS}+__" sequences by "__", which will eventually
          be translated into "." (just below).  These are internal names
          generated for anonymous blocks inside which our symbol is nested.  */
 
-      if (len0 - i > 5 && const_startswith (encoded + i, "__B_")
-          && isdigit (encoded [i+4]))
-        {
-          int k = i + 5;
-          
-          while (k < len0 && isdigit (encoded[k]))
+      if (encoded_left () > 5 && const_startswith (encoded, "__B_")
+	  && isdigit (encoded[4]))
+      {
+	  const char *k = encoded + 5;
+
+	  while (k < encoded_end && isdigit (*k))
             k++;  /* Skip any extra digit.  */
 
           /* Double-check that the "__B_{DIGITS}+" sequence we found
              is indeed followed by "__".  */
-          if (len0 - k > 2 && encoded [k] == '_' && encoded [k+1] == '_')
-            i = k;
+	  if (encoded_end - k > 2 && k[0] == '_' && k[1] == '_')
+	    encoded = k;
         }
 
       /* Remove _E{DIGITS}+[sb] */
@@ -1326,46 +1337,45 @@ ada_decode (const char *encoded)
          to give the user a clue that the code he is debugging has been
          internally generated.  */
 
-      if (len0 - i > 3 && const_startswith (encoded + i, "_E")
-          && isdigit (encoded[i+2]))
+      if (encoded_left () > 3 && const_startswith (encoded, "_E")
+	  && isdigit (encoded[2]))
         {
-          int k = i + 3;
+	  const char *k = encoded + 3;
 
-          while (k < len0 && isdigit (encoded[k]))
-            k++;
+	  while (k < encoded_end && isdigit (*k))
+	    k++;
 
-          if (k < len0
-              && (encoded[k] == 'b' || encoded[k] == 's'))
+	  if (k < encoded_end
+	      && (*k == 'b' || *k == 's'))
             {
               k++;
               /* Just as an extra precaution, make sure that if this
                  suffix is followed by anything else, it is a '_'.
                  Otherwise, we matched this sequence by accident.  */
-              if (k == len0
-                  || (k < len0 && encoded[k] == '_'))
-                i = k;
+	      if (k == encoded_end
+		  || (k < encoded_end && *k == '_'))
+		encoded = k;
             }
         }
 
       /* Remove trailing "N" in [a-z0-9]+N__.  The N is added by
          the GNAT front-end in protected object subprograms.  */
 
-      if (i < len0 + 3
-	  && const_startswith (encoded + i, "N__"))
+      if (encoded_left () > 3 && const_startswith (encoded, "N__"))
         {
           /* Backtrack a bit up until we reach either the begining of
              the encoded name, or "__".  Make sure that we only find
              digits or lowercase characters.  */
-          const char *ptr = encoded + i - 1;
+	  const char *ptr = encoded - 1;
 
           while (ptr >= encoded && is_lower_alphanum (ptr[0]))
             ptr--;
           if (ptr < encoded
               || (ptr > encoded && ptr[0] == '_' && ptr[-1] == '_'))
-            i++;
+	    encoded++;
         }
 
-      if (encoded[i] == 'X' && i != 0 && isalnum (encoded[i - 1]))
+      if (encoded[0] == 'X' && encoded > encoded_start && isalnum (encoded[-1]))
         {
           /* This is a X[bn]* sequence not separated from the previous
              part of the name with a non-alpha-numeric character (in other
@@ -1375,50 +1385,47 @@ ada_decode (const char *encoded)
              decoding.  Otherwise, just skip it, it is used in body-nested
              package names.  */
           do
-            i += 1;
-          while (i < len0 && (encoded[i] == 'b' || encoded[i] == 'n'));
-          if (i < len0)
+	    encoded++;
+	  while (encoded < encoded_end
+		 && (encoded[0] == 'b' || encoded[0] == 'n'));
+	  if (encoded < encoded_end)
             goto Suppress;
         }
-      else if (i < len0 - 2 && const_startswith (encoded + i, "__"))
+      else if (encoded_left () > 2 && const_startswith (encoded, "__"))
         {
          /* Replace '__' by '.'.  */
-          decoded[j] = '.';
+	  *decoded++ = '.';
           at_start_name = 1;
-          i += 2;
-          j += 1;
+	  encoded += 2;
         }
       else
         {
           /* It's a character part of the decoded name, so just copy it
              over.  */
-          decoded[j] = encoded[i];
-          i += 1;
-          j += 1;
+	  *decoded++ = *encoded++;
         }
     }
-  decoded[j] = '\000';
+  *decoded = '\000';
 
   /* Decoded names should never contain any uppercase character.
      Double-check this, and abort the decoding if we find one.  */
 
-  for (i = 0; decoded[i] != '\0'; i += 1)
-    if (isupper (decoded[i]) || decoded[i] == ' ')
+  for (const char *p = decoding_buffer; *p != '\0'; p++)
+    if (isupper (*p) || *p == ' ')
       goto Suppress;
 
-  if (strcmp (decoded, encoded) == 0)
-    return encoded;
+  if (strcmp (decoding_buffer, encoded_start) == 0)
+    return encoded_start;
   else
-    return decoded;
+    return decoding_buffer;
 
 Suppress:
-  GROW_VECT (decoding_buffer, decoding_buffer_size, strlen (encoded) + 3);
-  decoded = decoding_buffer;
-  if (encoded[0] == '<')
-    strcpy (decoded, encoded);
+  GROW_VECT (decoding_buffer, decoding_buffer_size, encoded_end - encoded_start + 3);
+  if (encoded_start[0] == '<')
+    strcpy (decoding_buffer, encoded_start);
   else
-    xsnprintf (decoded, decoding_buffer_size, "<%s>", encoded);
-  return decoded;
+    xsnprintf (decoding_buffer, decoding_buffer_size, "<%s>", encoded_start);
+  return decoding_buffer;
 
 }
 
