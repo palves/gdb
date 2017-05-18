@@ -59,6 +59,7 @@ enum class strncmp_iw_mode
 extern int strncmp_iw_with_mode
   (const char *string1, const char *string2, size_t string2_len,
    strncmp_iw_mode mode, enum language language,
+   const char **next_component = NULL,
    completion_match_for_lcd *match_for_lcd = NULL);
 
 /* Do a strncmp() type operation on STRING1 and STRING2, ignoring any

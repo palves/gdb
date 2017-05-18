@@ -1725,8 +1725,11 @@ cp_symbol_name_matches_1 (const char *symbol_search_name,
 
   while (true)
     {
+      const char *next_component = NULL;
+
       if (strncmp_iw_with_mode (sname, lookup_name, lookup_name_len,
-				mode, language_cplus, match_for_lcd) == 0)
+				mode, language_cplus, &next_component,
+				match_for_lcd) == 0)
 	{
 	  if (match != NULL)
 	    match->set_match (symbol_search_name);
@@ -1735,14 +1738,19 @@ cp_symbol_name_matches_1 (const char *symbol_search_name,
 	  return true;
 	}
 
-      unsigned int len = cp_find_first_component (sname);
+      if (next_component != NULL)
+	sname = next_component;
+      else
+	{
+	  unsigned len = cp_find_first_component (sname);
 
-      if (sname[len] == '\0')
-	return false;
+	  if (sname[len] == '\0')
+	    return false;
 
-      gdb_assert (sname[len] == ':');
-      /* Skip the '::'.  */
-      sname += len + 2;
+	  gdb_assert (sname[len] == ':');
+	  /* Skip the '::'.  */
+	  sname += len + 2;
+	}
     }
 }
 
@@ -1763,7 +1771,7 @@ cp_fq_symbol_name_matches (const char *symbol_search_name,
 
   if (strncmp_iw_with_mode (symbol_search_name,
 			    name.c_str (), name.size (),
-			    mode, language_cplus, match_for_lcd) == 0)
+			    mode, language_cplus, NULL, match_for_lcd) == 0)
     {
       if (match != NULL)
 	match->set_match (symbol_search_name);

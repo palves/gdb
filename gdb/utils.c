@@ -2537,6 +2537,7 @@ int
 strncmp_iw_with_mode (const char *string1, const char *string2,
 		      size_t string2_len, strncmp_iw_mode mode,
 		      enum language language,
+		      const char **next_component,
 		      completion_match_for_lcd *match_for_lcd)
 {
   const char *string1_start = string1;
@@ -2545,6 +2546,7 @@ strncmp_iw_with_mode (const char *string1, const char *string2,
   bool have_colon_op = (language == language_cplus
 			|| language == language_rust
 			|| language == language_fortran);
+  int depth = 0;
 
   while (1)
     {
@@ -2593,6 +2595,9 @@ strncmp_iw_with_mode (const char *string1, const char *string2,
       /* Handle the :: operator.  */
       if (have_colon_op && string1[0] == ':' && string1[1] == ':')
 	{
+	  if (depth == 0 && next_component != NULL && *next_component == NULL)
+	    *next_component = string1 + 2;
+
 	  if (*string2 != ':')
 	    return 1;
 
@@ -2706,6 +2711,22 @@ strncmp_iw_with_mode (const char *string1, const char *string2,
 	  && (tolower ((unsigned char) *string1)
 	      != tolower ((unsigned char) *string2)))
 	break;
+
+      if (language == language_cplus)
+	{
+	  switch (*string1)
+	    {
+	    case '(':
+	    case '<':
+	      depth++;
+	      break;
+	    case ')':
+	    case '>':
+	      depth--;
+	      gdb_assert (depth >= 0);
+	      break;
+	    }
+	}
 
       /* If we see any non-whitespace, non-identifier-name character
 	 (any of "()<>*&" etc.), then skip spaces the next time
