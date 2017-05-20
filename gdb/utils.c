@@ -2484,14 +2484,25 @@ cp_skip_operator_token (const char *token, const char *end)
   return p;
 }
 
+static inline bool
+gdb_isspace (int ch)
+{
+  switch (ch)
+    {
+    case ' ':
+      return true;
+    }
+  return false;
+}
+
 /* Advance string1/string2 past whitespace.  */
 
-static void
+static inline void
 skip_ws (const char *&string1, const char *&string2, const char *end_str2)
 {
-  while (isspace (*string1))
+  while (gdb_isspace (*string1))
     string1++;
-  while (string2 < end_str2 && isspace (*string2))
+  while (string2 < end_str2 && gdb_isspace (*string2))
     string2++;
 }
 
@@ -2551,8 +2562,8 @@ strncmp_iw_with_mode (const char *string1, const char *string2,
   while (1)
     {
       if (skip_spaces
-	  || ((isspace (*string1) && !valid_identifier_name_char (*string2))
-	      || (isspace (*string2) && !valid_identifier_name_char (*string1))))
+	  || ((gdb_isspace (*string1) && !valid_identifier_name_char (*string2))
+	      || (gdb_isspace (*string2) && !valid_identifier_name_char (*string1))))
 	{
 	  skip_ws (string1, string2, end_str2);
 	  skip_spaces = false;
@@ -2585,7 +2596,7 @@ strncmp_iw_with_mode (const char *string1, const char *string2,
 	  if (match_for_lcd != NULL && abi_start != string1)
 	    match_for_lcd->mark_ignored_range (abi_start, string1);
 
-	  while (isspace (*string1))
+	  while (gdb_isspace (*string1))
 	    string1++;
 	}
 
@@ -2613,9 +2624,9 @@ strncmp_iw_with_mode (const char *string1, const char *string2,
 	  string1++;
 	  string2++;
 
-	  while (isspace (*string1))
+	  while (gdb_isspace (*string1))
 	    string1++;
-	  while (string2 < end_str2 && isspace (*string2))
+	  while (string2 < end_str2 && gdb_isspace (*string2))
 	    string2++;
 	  continue;
 	}
@@ -2731,7 +2742,7 @@ strncmp_iw_with_mode (const char *string1, const char *string2,
       /* If we see any non-whitespace, non-identifier-name character
 	 (any of "()<>*&" etc.), then skip spaces the next time
 	 around.  */
-      if (!isspace (*string1) && !valid_identifier_name_char (*string1))
+      if (!gdb_isspace (*string1) && !valid_identifier_name_char (*string1))
 	skip_spaces = true;
 
       string1++;
