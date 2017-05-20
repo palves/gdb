@@ -337,12 +337,14 @@ static int symbol_to_sal (struct symtab_and_line *result,
 
 static void add_matching_symbols_to_info (const char *name,
 					  symbol_name_match_type name_match_type,
+					  enum search_domain search_domain,
 					  struct collect_info *info,
 					  struct program_space *pspace);
 
 static void add_all_symbol_names_from_pspace (struct collect_info *info,
 					      struct program_space *pspace,
-					      VEC (const_char_ptr) *names);
+					      VEC (const_char_ptr) *names,
+					      enum search_domain search_domain);
 
 static VEC (symtab_ptr) *
   collect_symtabs_from_filename (const char *file,
@@ -1083,6 +1085,7 @@ iterate_over_all_matching_symtabs
   (struct linespec_state *state,
    const lookup_name_info &lookup_name,
    const domain_enum name_domain,
+   enum search_domain search_domain,
    struct program_space *search_pspace, bool include_inline,
    gdb::function_view<symbol_found_callback_ftype> callback)
 {
@@ -1107,7 +1110,7 @@ iterate_over_all_matching_symtabs
 						  NULL,
 						  lookup_name,
 						  NULL, NULL,
-						  ALL_DOMAIN);
+						  search_domain);
 
       ALL_OBJFILE_COMPUNITS (objfile, cu)
 	{
@@ -3434,7 +3437,8 @@ decode_objc (struct linespec_state *self, linespec_p ls, const char *arg)
       return values;
     }
 
-  add_all_symbol_names_from_pspace (&info, NULL, symbol_names);
+  add_all_symbol_names_from_pspace (&info, NULL, symbol_names,
+				    FUNCTIONS_DOMAIN);
 
   if (!VEC_empty (symbolp, info.result.symbols)
       || !VEC_empty (bound_minimal_symbol_d, info.result.minimal_symbols))
@@ -3561,11 +3565,11 @@ lookup_prefix_sym (struct linespec_state *state, VEC (symtab_ptr) *file_symtabs,
       if (elt == NULL)
 	{
 	  iterate_over_all_matching_symtabs (state, lookup_name,
-					     STRUCT_DOMAIN, NULL, false,
-					     collector);
+					     STRUCT_DOMAIN, ALL_DOMAIN,
+					     NULL, false, collector);
 	  iterate_over_all_matching_symtabs (state, lookup_name,
-					     VAR_DOMAIN, NULL, false,
-					     collector);
+					     VAR_DOMAIN, ALL_DOMAIN,
+					     NULL, false, collector);
 	}
       else
 	{
@@ -3649,7 +3653,8 @@ compare_msymbols (const void *a, const void *b)
 static void
 add_all_symbol_names_from_pspace (struct collect_info *info,
 				  struct program_space *pspace,
-				  VEC (const_char_ptr) *names)
+				  VEC (const_char_ptr) *names,
+				  enum search_domain search_domain)
 {
   int ix;
   const char *iter;
@@ -3657,7 +3662,7 @@ add_all_symbol_names_from_pspace (struct collect_info *info,
   for (ix = 0; VEC_iterate (const_char_ptr, names, ix, iter); ++ix)
     add_matching_symbols_to_info (iter,
 				  symbol_name_match_type::FULL,
-				  info, pspace);
+				  search_domain, info, pspace);
 }
 
 static void
@@ -3764,7 +3769,8 @@ find_method (struct linespec_state *self, VEC (symtab_ptr) *file_symtabs,
 	  /* We have a list of candidate symbol names, so now we
 	     iterate over the symbol tables looking for all
 	     matches in this pspace.  */
-	  add_all_symbol_names_from_pspace (&info, pspace, result_names);
+	  add_all_symbol_names_from_pspace (&info, pspace, result_names,
+					    FUNCTIONS_DOMAIN);
 
 	  VEC_truncate (typep, superclass_vec, 0);
 	  last_result_len = VEC_length (const_char_ptr, result_names);
@@ -3925,9 +3931,9 @@ find_function_symbols (struct linespec_state *state,
   find_imps (name, &symbol_names);
   if (!VEC_empty (const_char_ptr, symbol_names))
     add_all_symbol_names_from_pspace (&info, state->search_pspace,
-				      symbol_names);
+				      symbol_names, FUNCTIONS_DOMAIN);
   else
-    add_matching_symbols_to_info (name, name_match_type,
+    add_matching_symbols_to_info (name, name_match_type, FUNCTIONS_DOMAIN,
 				  &info, state->search_pspace);
 
   do_cleanups (cleanup);
@@ -4516,6 +4522,7 @@ search_minsyms_for_name (struct collect_info *info,
 static void
 add_matching_symbols_to_info (const char *name,
 			      symbol_name_match_type name_match_type,
+			      enum search_domain search_domain,
 			      struct collect_info *info,
 			      struct program_space *pspace)
 {
@@ -4529,7 +4536,7 @@ add_matching_symbols_to_info (const char *name,
       if (elt == NULL)
 	{
 	  iterate_over_all_matching_symtabs (info->state, lookup_name,
-					     VAR_DOMAIN,
+					     VAR_DOMAIN, search_domain,
 					     pspace, true, [&] (symbol *sym)
 	    { return info->add_symbol (sym); });
 	  search_minsyms_for_name (info, lookup_name, pspace, NULL);
