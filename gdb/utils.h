@@ -56,7 +56,8 @@ enum class strncmp_iw_mode
 extern int strncmp_iw_with_mode (const char *string1,
 				 const char *string2,
 				 size_t string2_len,
-				 strncmp_iw_mode mode);
+				 strncmp_iw_mode mode,
+				 enum language language);
 
 /* Do a strncmp() type operation on STRING1 and STRING2, ignoring any
    differences in whitespace.  STRING2_LEN is STRING2's length.
