@@ -52,6 +52,7 @@
 #include "cli/cli-utils.h"
 #include "symbol.h"
 #include <algorithm>
+#include "safe-ctype.h"
 
 /* Accumulate the minimal symbols for each objfile in bunches of BUNCH_SIZE.
    At the end, copy them all into one newly allocated location on an objfile's
