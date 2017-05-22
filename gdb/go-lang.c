@@ -608,6 +608,7 @@ extern const struct language_defn go_language_defn =
   c_watch_location_expression,
   NULL,
   iterate_over_symbols,
+  default_search_name_hash,
   &default_varobj_ops,
   NULL,
   NULL,
