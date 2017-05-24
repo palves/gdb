@@ -73,10 +73,10 @@
 #include "common/function-view.h"
 #include "common/gdb_optional.h"
 #include "common/underlying.h"
-
 #include <fcntl.h>
 #include <sys/types.h>
 #include <algorithm>
+#include "filename-seen-cache.h"
 
 typedef struct symbol *symbolp;
 DEF_VEC_P (symbolp);
@@ -324,6 +324,9 @@ struct dwarf2_per_objfile
 
   /* Table containing line_header indexed by offset and offset_in_dwz.  */
   htab_t line_header_hash;
+
+  /* Table containing all filenames.  */
+  filename_seen_cache *filenames_cache;
 };
 
 static struct dwarf2_per_objfile *dwarf2_per_objfile;
@@ -4256,64 +4259,76 @@ static void
 dw2_map_symbol_filenames (struct objfile *objfile, symbol_filename_ftype *fun,
 			  void *data, int need_fullname)
 {
-  int i;
-  htab_up visited (htab_create_alloc (10, htab_hash_pointer, htab_eq_pointer,
-				      NULL, xcalloc, xfree));
-
   dw2_setup (objfile);
 
-  /* The rule is CUs specify all the files, including those used by
-     any TU, so there's no need to scan TUs here.
-     We can ignore file names coming from already-expanded CUs.  */
-
-  for (i = 0; i < dwarf2_per_objfile->n_comp_units; ++i)
+  if (dwarf2_per_objfile->filenames_cache == NULL)
     {
-      struct dwarf2_per_cu_data *per_cu = dw2_get_cutu (i);
+      dwarf2_per_objfile->filenames_cache = new filename_seen_cache ();
 
-      if (per_cu->v.quick->compunit_symtab)
+      htab_up visited (htab_create_alloc (10,
+					  htab_hash_pointer, htab_eq_pointer,
+					  NULL, xcalloc, xfree));
+
+      /* The rule is CUs specify all the files, including those used
+	 by any TU, so there's no need to scan TUs here.  We can
+	 ignore file names coming from already-expanded CUs.  */
+
+      for (int i = 0; i < dwarf2_per_objfile->n_comp_units; ++i)
 	{
-	  void **slot = htab_find_slot (visited.get (),
-					per_cu->v.quick->file_names,
-					INSERT);
+	  struct dwarf2_per_cu_data *per_cu = dw2_get_cutu (i);
 
-	  *slot = per_cu->v.quick->file_names;
+	  if (per_cu->v.quick->compunit_symtab)
+	    {
+	      void **slot = htab_find_slot (visited.get (),
+					    per_cu->v.quick->file_names,
+					    INSERT);
+
+	      *slot = per_cu->v.quick->file_names;
+	    }
+	}
+
+      for (int i = 0; i < dwarf2_per_objfile->n_comp_units; ++i)
+	{
+	  int j;
+	  struct dwarf2_per_cu_data *per_cu = dw2_get_cu (i);
+	  struct quick_file_names *file_data;
+	  void **slot;
+
+	  /* We only need to look at symtabs not already expanded.  */
+	  if (per_cu->v.quick->compunit_symtab)
+	    continue;
+
+	  file_data = dw2_get_file_names (per_cu);
+	  if (file_data == NULL)
+	    continue;
+
+	  slot = htab_find_slot (visited.get (), file_data, INSERT);
+	  if (*slot)
+	    {
+	      /* Already visited.  */
+	      continue;
+	    }
+	  *slot = file_data;
+
+	  for (int j = 0; j < file_data->num_file_names; ++j)
+	    {
+	      const char *filename = file_data->file_names[j];
+	      dwarf2_per_objfile->filenames_cache->filename_seen (filename,
+								  true);
+	    }
 	}
     }
 
-  for (i = 0; i < dwarf2_per_objfile->n_comp_units; ++i)
+  dwarf2_per_objfile->filenames_cache->traverse ([&] (const char *filename)
     {
-      int j;
-      struct dwarf2_per_cu_data *per_cu = dw2_get_cu (i);
-      struct quick_file_names *file_data;
-      void **slot;
+      const char *this_real_name;
 
-      /* We only need to look at symtabs not already expanded.  */
-      if (per_cu->v.quick->compunit_symtab)
-	continue;
-
-      file_data = dw2_get_file_names (per_cu);
-      if (file_data == NULL)
-	continue;
-
-      slot = htab_find_slot (visited.get (), file_data, INSERT);
-      if (*slot)
-	{
-	  /* Already visited.  */
-	  continue;
-	}
-      *slot = file_data;
-
-      for (j = 0; j < file_data->num_file_names; ++j)
-	{
-	  const char *this_real_name;
-
-	  if (need_fullname)
-	    this_real_name = dw2_get_real_path (objfile, file_data, j);
-	  else
-	    this_real_name = NULL;
-	  (*fun) (file_data->file_names[j], this_real_name, data);
-	}
-    }
+      if (need_fullname)
+	this_real_name = gdb_realpath (filename);
+      else
+	this_real_name = NULL;
+      (*fun) (filename, this_real_name, data);
+    });
 }
 
 static int
