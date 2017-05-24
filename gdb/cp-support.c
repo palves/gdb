@@ -1659,7 +1659,23 @@ cp_search_name_hash (const char *search_name)
   if (prefix_len != 0)
     search_name += prefix_len + 2;
 
-  return default_search_name_hash (search_name);
+  unsigned int hash = 0;
+  for (const char *string = search_name; *string != '\0'; ++string)
+    {
+      string = skip_spaces_const (string);
+
+      if (*string == '(')
+	break;
+
+      /* Ignore ABI tags such as "[abi:cxx11].  */
+      if (*string == '['
+	  && startswith (string + 1, "abi:")
+	  && string[5] != ':')
+	break;
+
+      hash = SYMBOL_HASH_NEXT (hash, *string);
+    }
+  return hash;
 }
 
 /* Helper for cp_symbol_name_matches (i.e., symbol_name_matcher_ftype
@@ -1710,7 +1726,7 @@ cp_symbol_name_matches_1 (const char *symbol_search_name,
   while (true)
     {
       if (strncmp_iw_with_mode (sname, lookup_name, lookup_name_len,
-				mode, language_cplus) == 0)
+				mode, language_cplus, match_for_lcd) == 0)
 	{
 	  if (match != NULL)
 	    match->set_match (symbol_search_name);
@@ -1747,7 +1763,7 @@ cp_fq_symbol_name_matches (const char *symbol_search_name,
 
   if (strncmp_iw_with_mode (symbol_search_name,
 			    name.c_str (), name.size (),
-			    mode, language_cplus) == 0)
+			    mode, language_cplus, match_for_lcd) == 0)
     {
       if (match != NULL)
 	match->set_match (symbol_search_name);
@@ -1964,6 +1980,32 @@ test_cp_symbol_name_cmp ()
 		 "function(int)");
   CHECK_NOT_MATCH_C ("function()", "bar::function");
   CHECK_NOT_MATCH_C ("foo::function()", "::function");
+
+  /* Test ABI tag matching/ignoring.  */
+
+  /* If the symbol name has an ABI tag, but the lookup name doesn't,
+     then the ABI tag in the symbol name is ignored.  */
+  CHECK_MATCH_C ("function[abi:foo]()", "function");
+  CHECK_MATCH_C ("function[abi:foo](int)", "function");
+  CHECK_MATCH_C ("function[abi:foo]()", "function ()");
+  CHECK_NOT_MATCH_C ("function[abi:foo]()", "function (int)");
+
+  CHECK_MATCH_C ("function[abi:foo]()", "function[abi:foo]");
+  CHECK_MATCH_C ("function[abi:foo](int)", "function[abi:foo]");
+  CHECK_MATCH_C ("function[abi:foo]()", "function[abi:foo] ()");
+  CHECK_MATCH_C ("function[abi:foo][abi:bar]()", "function");
+  CHECK_MATCH_C ("function[abi:foo][abi:bar](int)", "function");
+  CHECK_MATCH_C ("function[abi:foo][abi:bar]()", "function[abi:foo]");
+  CHECK_MATCH_C ("function[abi:foo][abi:bar](int)", "function[abi:foo]");
+  CHECK_MATCH_C ("function[abi:foo][abi:bar]()", "function[abi:foo] ()");
+  CHECK_NOT_MATCH_C ("function[abi:foo][abi:bar]()", "function[abi:foo] (int)");
+
+  CHECK_MATCH_C ("function  [abi:foo][abi:bar] ( )", "function [abi:foo]");
+
+  /* If the symbol name does not have an ABI tag, while the lookup
+     name has one, then there's no match.  */
+  CHECK_NOT_MATCH_C ("function()", "function[abi:foo]()");
+  CHECK_NOT_MATCH_C ("function()", "function[abi:foo]");
 }
 
 /* If non-NULL, return STR wrapped in quotes.  Otherwise, return a
