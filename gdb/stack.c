@@ -1106,15 +1106,15 @@ find_frame_funname (struct frame_info *frame, char **funname,
 		 stored in the symbol table, but we stored a version
 		 with DMGL_PARAMS turned on, and here we don't want to
 		 display parameters.  So remove the parameters.  */
-	      char *func_only = cp_remove_params (print_name);
+	      gdb::unique_xmalloc_ptr<char> func_only
+		= cp_remove_params (print_name);
 
 	      if (func_only)
-		*funname = func_only;
+		*funname = func_only.release ();
 	    }
 
-	  /* If we didn't hit the C++ case above, set *funname here.
-	     This approach is taken to avoid having to install a
-	     cleanup in case cp_remove_params can throw.  */
+	  /* If we didn't hit the C++ case above, set *funname
+	     here.  */
 	  if (*funname == NULL)
 	    *funname = xstrdup (print_name);
 	}
@@ -1415,6 +1415,7 @@ frame_info (char *addr_exp, int from_tty)
   /* Initialize it to avoid "may be used uninitialized" warning.  */
   CORE_ADDR caller_pc = 0;
   int caller_pc_p = 0;
+  gdb::unique_xmalloc_ptr<char> func_only;
 
   fi = parse_frame_specification (addr_exp, &selected_frame_p);
   gdbarch = get_frame_arch (fi);
@@ -1448,13 +1449,10 @@ frame_info (char *addr_exp, int from_tty)
 	     stored in the symbol table, but we stored a version
 	     with DMGL_PARAMS turned on, and here we don't want to
 	     display parameters.  So remove the parameters.  */
-	  char *func_only = cp_remove_params (funname);
+	  func_only = cp_remove_params (funname);
 
 	  if (func_only)
-	    {
-	      funname = func_only;
-	      make_cleanup (xfree, func_only);
-	    }
+	    funname = func_only.get ();
 	}
     }
   else if (frame_pc_p)

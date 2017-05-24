@@ -95,7 +95,7 @@ extern unsigned int cp_entire_prefix_len (const char *name);
 
 extern char *cp_func_name (const char *full_name);
 
-extern char *cp_remove_params (const char *demangled_name);
+extern gdb::unique_xmalloc_ptr<char> cp_remove_params (const char *qualified);
 
 extern struct symbol **make_symbol_overload_list (const char *,
 						  const char *);
