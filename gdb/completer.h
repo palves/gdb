@@ -121,6 +121,12 @@ public:
      up in the event the user requests to complete on something vague
      that necessitates the time consuming expansion of many symbol
      tables.
+
+   - The custom word point to hand over to readline, for completers
+     that parse the input string in order to dynamically adjust
+     themselves depending on exactly what they're completing.  E.g.,
+     the linespec completer needs to bypass readline's too-simple word
+     breaking algorithm.
 */
 struct completion_tracker
 {
@@ -139,6 +145,54 @@ struct completion_tracker
   /* Add all completions matches in LIST.  Elements are moved out of
      LIST.  */
   void add_completions (completion_list &&list);
+
+  /* Set the quote char to be appended after a unique completion is
+     added to the input line.  Set to '\0' to clear.  See
+     m_quote_char's description.  */
+  void set_quote_char (int quote_char)
+  { m_quote_char = quote_char; }
+
+  /* The quote char to be appended after a unique completion is added
+     to the input line.  Returns '\0' if no quote char has been set.
+     See m_quote_char's description.  */
+  int quote_char () { return m_quote_char; }
+
+  /* Tell the tracker that the current completer wants to provide a
+     custom word point instead of a list of a break chars, in the
+     handle_brkchars phase.  Such completers must also compute their
+     completions then.  */
+  void set_use_custom_word_point (bool enable)
+  { m_use_custom_word_point = enable; }
+
+  /* Whether the current completer computes a custom word point.  */
+  bool use_custom_word_point () const
+  { return m_use_custom_word_point; }
+
+  /* The custom word point.  */
+  int custom_word_point () const
+  { return m_custom_word_point; }
+
+  /* Set the custom word point to POINT.  */
+  void set_custom_word_point (int point)
+  { m_custom_word_point = point; }
+
+  /* Advance the custom word point by LEN.  */
+  void advance_custom_word_point_by (size_t len);
+
+  /* Whether to tell readline to skip appending a whitespace after the
+     completion.  See m_suppress_append_ws.  */
+  bool suppress_append_ws () const
+  { return m_suppress_append_ws; }
+
+  /* Set whether to tell readline to skip appending a whitespace after
+     the completion.  See m_suppress_append_ws.  */
+  void set_suppress_append_ws (bool suppress)
+  { m_suppress_append_ws = suppress; }
+
+  /* Return true if we only have one completion, and it matches
+     exactly the completion word.  I.e., completing results in what we
+     already have.  */
+  bool completes_to_completion_word (const char *word);
 
   /* True if we have any completion match recorded.  */
   bool have_completions () const
@@ -162,18 +216,9 @@ private:
   bool maybe_add_completion (gdb::unique_xmalloc_ptr<char> name);
 
   /* Given a new match, recompute the lowest common denominator (LCD)
-     to hand over to readline.  Normally readline computes this itself
-     based on the whole set of completion matches.  However, some
-     completers want to override readline, in order to be able to
-     provide a LCD that is not really a prefix of the matches, but the
-     lowest common denominator of some relevant substring of each
-     match.  E.g., "b push_ba" completes to
-     "std::vector<..>::push_back", "std::string::push_back", etc., and
-     in this case we want the lowest common denominator to be
-     "push_back" instead of "std::".  */
+     to hand over to readline.  */
   void recompute_lowest_common_denominator (const char *new_match);
 
-private:
   /* The completion matches found so far, in a vector.  */
   completion_list m_entries_vec;
 
@@ -185,16 +230,42 @@ private:
      searching too early.  */
   htab_t m_entries_hash;
 
-  /* Our idea of lowest common denominator to hand over to readline.  */
+  /* If non-zero, then this is the quote char that needs to be
+     appended after completion (iff we have a unique completion).  We
+     don't rely on readline appending the quote char as delimiter as
+     then readline wouldn't append the ' ' after the completion.
+     I.e., we want this:
+
+      before tab: "b 'function("
+      after tab:  "b 'function()' "
+  */
+  int m_quote_char = '\0';
+
+  /* If true, the completer has its own idea of "word" point, and
+     doesn't want to rely on readline computing it based on brkchars.
+     Set in the handle_brkchars phase.  */
+  bool m_use_custom_word_point = false;
+
+  /* The completer's idea of where the "word" we were looking at is
+     relative to RL_LINE_BUFFER.  This is advanced in the
+     handle_brkchars phase as the completer discovers potential
+     completable words.  */
+  int m_custom_word_point = 0;
+
+  /* If true, tell readline to skip appending a whitespace after the
+     completion.  Automatically set if we have a unique completion
+     that already has a space at the end.  Completer may also
+     explicitly set this.  E.g., the linespec completer sets when when
+     the completion ends with the ":" separator between filename and
+     function name.  */
+  bool m_suppress_append_ws = false;
+
+  /* Our idea of lowest common denominator to hand over to readline.
+     See intro.  */
   char *m_lowest_common_denominator = NULL;
 
-  /* If true, the LCD is unique.  I.e., all completions had the same
-     MATCH_FOR_LCD substring, even if the completions were different.
-     For example, if "break function<tab>" found "a::function()" and
-     "b::function()", the LCD will be "function()" in both cases and
-     so we want to tell readline to complete the line with
-     "function()", instead of showing all the possible
-     completions.  */
+  /* If true, the LCD is unique.  I.e., all completion candidates had
+     the same string.  */
   bool m_lowest_common_denominator_unique = false;
 };
 
@@ -211,6 +282,9 @@ extern void complete_line (completion_tracker &tracker,
 extern const char *completion_find_completion_word (completion_tracker &tracker,
 						    const char *text,
 						    int *quote_char);
+
+const char *advance_to_expression_complete_word_point
+  (completion_tracker &tracker, const char *text);
 
 extern char **gdb_rl_attempted_completion_function (const char *text,
 						    int start, int end);

@@ -274,6 +274,7 @@ complete_command (char *arg_entry, int from_tty)
 
   completion_tracker tracker_handle_brkchars;
   completion_tracker tracker_handle_completions;
+  completion_tracker *tracker;
 
   int quote_char = '\0';
   const char *word;
@@ -283,8 +284,17 @@ complete_command (char *arg_entry, int from_tty)
       word = completion_find_completion_word (tracker_handle_brkchars,
 					      arg, &quote_char);
 
-      /* Completers must be called twice.  */
-      complete_line (tracker_handle_completions, word, arg, strlen (arg));
+      /* Completers that provide a custom word point in the
+	 handle_brkchars phase also compute their completions then.
+	 Completers that leave the completion word handling to readline
+	 must be called twice.  */
+      if (tracker_handle_brkchars.use_custom_word_point ())
+	tracker = &tracker_handle_brkchars;
+      else
+	{
+	  complete_line (tracker_handle_completions, word, arg, strlen (arg));
+	  tracker = &tracker_handle_completions;
+	}
     }
   CATCH (ex, RETURN_MASK_ALL)
     {
@@ -294,8 +304,7 @@ complete_command (char *arg_entry, int from_tty)
   std::string arg_prefix (arg, word - arg);
 
   completion_result result
-    = (tracker_handle_completions.build_completion_result
-       (word, word - arg, strlen (arg)));
+    = tracker->build_completion_result (word, word - arg, strlen (arg));
 
   if (result.number_matches != 0)
     {
