@@ -218,7 +218,7 @@ extern event_location_up
   string_to_event_location_basic (char **argp,
 				  const struct language_defn *language);
 
-/* Structure filled in by string_to_explicit_location to aid the
+/* Structured filled in by string_to_explicit_location to aid the
    completer.  */
 struct explicit_completion_info
 {
