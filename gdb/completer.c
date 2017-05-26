@@ -44,6 +44,25 @@
 
 #include "completer.h"
 
+/* Misc state that needs to be tracked across several different
+   readline completer entry point calls, all related to a single
+   completion invocation.  */
+
+struct gdb_completer_state
+{
+  /* The current completion's completion tracker.  This is a global
+     because a tracker can be shared between the handle_brkchars and
+     handle_completion phases, which involves different readline
+     callbacks.  */
+  completion_tracker *tracker = NULL;
+
+  /* Whether the current completion was aborted.  */
+  bool aborted = false;
+};
+
+/* The current completion state.  */
+static gdb_completer_state current_completion;
+
 /* An enumeration of the various things a user might
    attempt to complete for a location.  */
 
@@ -60,10 +79,6 @@ enum explicit_location_match_type
 };
 
 /* Prototypes for local functions.  */
-static
-char *line_completion_function (const char *text, int matches, 
-				char *line_buffer,
-				int point);
 
 /* readline uses the word breaks for two things:
    (1) In figuring out where to point the TEXT parameter to the
@@ -113,36 +128,30 @@ get_gdb_completer_quote_characters (void)
   return gdb_completer_quote_characters;
 }
 
-/* Line completion interface function for readline.  */
-
-char *
-readline_line_completion_function (const char *text, int matches)
-{
-  return line_completion_function (text, matches, 
-				   rl_line_buffer, rl_point);
-}
-
 /* This can be used for functions which don't want to complete on
    symbols but don't want to complete on anything else either.  */
-VEC (char_ptr) *
+
+void
 noop_completer (struct cmd_list_element *ignore, 
+		completion_tracker &tracker,
 		const char *text, const char *prefix)
 {
-  return NULL;
 }
 
 /* Complete on filenames.  */
 
 static void
 filename_completer_handle_brkchars (struct cmd_list_element *ignore,
+				    completion_tracker &tracker,
 				    const char *text, const char *word)
 {
   set_rl_completer_word_break_characters
     (gdb_completer_file_name_break_characters);
 }
 
-VEC (char_ptr) *
-filename_completer (struct cmd_list_element *ignore, 
+void
+filename_completer (struct cmd_list_element *ignore,
+		    completion_tracker &tracker,
 		    const char *text, const char *word)
 {
   int subsequent_name;
@@ -188,7 +197,7 @@ filename_completer (struct cmd_list_element *ignore,
 	  strcat (q, p);
 	  xfree (p);
 	}
-      VEC_safe_push (char_ptr, return_val, q);
+      tracker.add_completion (gdb::unique_xmalloc_ptr<char> (q));
     }
 #if 0
   /* There is no way to do this just long enough to affect quote
@@ -198,25 +207,181 @@ filename_completer (struct cmd_list_element *ignore,
      with respect to inserting quotes.  */
   rl_completer_word_break_characters = "";
 #endif
-  return return_val;
 }
 
-/* Complete on linespecs, which might be of two possible forms:
+/* Possible values for the found_quote flags word used by the completion
+   functions.  It says what kind of (shell-like) quoting we found anywhere
+   in the line. */
+#define RL_QF_SINGLE_QUOTE      0x01
+#define RL_QF_DOUBLE_QUOTE      0x02
+#define RL_QF_BACKSLASH         0x04
+#define RL_QF_OTHER_QUOTE       0x08
+
+/* Find the bounds of the current word for completion purposes, and leave
+   rl_point set to the end of the word.  This function skips quoted
+   substrings (characters between matched pairs of characters in
+   rl_completer_quote_characters).  First we try to find an unclosed
+   quoted substring on which to do matching.  If one is not found, we use
+   the word break characters to find the boundaries of the current word.
+   We call an application-specific function to decide whether or not a
+   particular word break character is quoted; if that function returns a
+   non-zero result, the character does not break a word.  This function
+   returns the opening quote character if we found an unclosed quoted
+   substring, '\0' otherwise.  FP, if non-null, is set to a value saying
+   which (shell-like) quote characters we found (single quote, double
+   quote, or backslash) anywhere in the string.  DP, if non-null, is set to
+   the value of the delimiter character that caused a word break. */
+
+struct gdb_rl_completion_word_info
+{
+  const char *word_break_characters;
+  const char *quote_characters;
+  const char *basic_quote_characters;
+};
+
+static const char *
+gdb_rl_find_completion_word (struct gdb_rl_completion_word_info *info,
+			     int *qc, int *dp,
+			     const char *line_buffer)
+{
+  int scan, end, found_quote, delimiter, pass_next, isbrk;
+  char quote_char;
+  const char *brkchars;
+  int point = strlen (line_buffer);
+
+  /* The algorithm below does '--point'.  Avoid buffer underflow with
+     the empty string.  */
+  if (point == 0)
+    {
+      if (qc != NULL)
+	*qc = '\0';
+      if (dp != NULL)
+	*dp = '\0';
+      return line_buffer;
+    }
+
+  end = point;
+  found_quote = delimiter = 0;
+  quote_char = '\0';
+
+  brkchars = info->word_break_characters;
+
+  if (info->quote_characters != NULL)
+    {
+      /* We have a list of characters which can be used in pairs to
+	 quote substrings for the completer.  Try to find the start of
+	 an unclosed quoted substring.  */
+      /* FOUND_QUOTE is set so we know what kind of quotes we
+	 found.  */
+      for (scan = pass_next = 0;
+	   scan < end;
+	   scan++)
+	{
+	  if (pass_next)
+	    {
+	      pass_next = 0;
+	      continue;
+	    }
+
+	  /* Shell-like semantics for single quotes -- don't allow
+	     backslash to quote anything in single quotes, especially
+	     not the closing quote.  If you don't like this, take out
+	     the check on the value of quote_char.  */
+	  if (quote_char != '\'' && line_buffer[scan] == '\\')
+	    {
+	      pass_next = 1;
+	      found_quote |= RL_QF_BACKSLASH;
+	      continue;
+	    }
+
+	  if (quote_char != '\0')
+	    {
+	      /* Ignore everything until the matching close quote
+		 char.  */
+	      if (line_buffer[scan] == quote_char)
+		{
+		  /* Found matching close.  Abandon this
+		     substring.  */
+		  quote_char = '\0';
+		  point = end;
+		}
+	    }
+	  else if (strchr (info->quote_characters, line_buffer[scan]))
+	    {
+	      /* Found start of a quoted substring.  */
+	      quote_char = line_buffer[scan];
+	      point = scan + 1;
+	      /* Shell-like quoting conventions.  */
+	      if (quote_char == '\'')
+		found_quote |= RL_QF_SINGLE_QUOTE;
+	      else if (quote_char == '"')
+		found_quote |= RL_QF_DOUBLE_QUOTE;
+	      else
+		found_quote |= RL_QF_OTHER_QUOTE;
+	    }
+	}
+    }
+
+  if (point == end && quote_char == '\0')
+    {
+      /* We didn't find an unclosed quoted substring upon which to do
+	 completion, so use the word break characters to find the
+	 substring on which to complete.  */
+      while (--point)
+	{
+	  scan = line_buffer[point];
+
+	  if (strchr (brkchars, scan) != 0)
+	    break;
+	}
+    }
+
+  /* If we are at an unquoted word break, then advance past it.  */
+  scan = line_buffer[point];
+
+  /* If there is an application-specific function to say whether or
+     not a character is quoted and we found a quote character, let
+     that function decide whether or not a character is a word break,
+     even if it is found in rl_completer_word_break_characters.  Don't
+     bother if we're at the end of the line, though.  */
+  if (scan)
+    {
+      isbrk = strchr (brkchars, scan) != 0;
+
+      if (isbrk)
+	{
+	  /* If the character that caused the word break was a quoting
+	     character, then remember it as the delimiter.  */
+	  if (info->basic_quote_characters
+	      && strchr (info->basic_quote_characters, scan)
+	      && (end - point) > 1)
+	    delimiter = scan;
+
+	  point++;
+	}
+    }
+
+  if (qc != NULL)
+    *qc = quote_char;
+  if (dp != NULL)
+    *dp = delimiter;
+
+  return line_buffer + point;
+}
+
+/* Complete on symbols, file symbols and files.
 
        file:line
    or
        symbol+offset
+*/
 
-   This is intended to be used in commands that set breakpoints
-   etc.  */
-
-static VEC (char_ptr) *
-linespec_location_completer (struct cmd_list_element *ignore,
-			     const char *text, const char *word)
+static void
+complete_files_symbols (completion_tracker &tracker,
+			const char *text, const char *word)
 {
-  int n_syms, n_files, ix;
-  VEC (char_ptr) *fn_list = NULL;
-  VEC (char_ptr) *list = NULL;
+  int ix;
+  completion_list fn_list;
   const char *p;
   int quote_found = 0;
   int quoted = *text == '\'' || *text == '"';
@@ -225,7 +390,6 @@ linespec_location_completer (struct cmd_list_element *ignore,
   char *file_to_match = NULL;
   const char *symbol_start = text;
   const char *orig_text = text;
-  size_t text_len;
 
   /* Do we have an unquoted colon, as in "break foo.c:bar"?  */
   for (p = text; *p != '\0'; ++p)
@@ -266,7 +430,6 @@ linespec_location_completer (struct cmd_list_element *ignore,
 
   if (quoted)
     text++;
-  text_len = strlen (text);
 
   /* Where is the file name?  */
   if (colon)
@@ -288,44 +451,23 @@ linespec_location_completer (struct cmd_list_element *ignore,
      symbols as well as on files.  */
   if (colon)
     {
-      list = make_file_symbol_completion_list (symbol_start, word,
-					       file_to_match);
+      collect_file_symbol_completion_matches (tracker, symbol_start, word,
+					      file_to_match);
       xfree (file_to_match);
     }
   else
     {
-      list = make_symbol_completion_list (symbol_start, word);
+      size_t text_len = strlen (text);
+
+      collect_symbol_completion_matches (tracker, symbol_start, word);
       /* If text includes characters which cannot appear in a file
 	 name, they cannot be asking for completion on files.  */
-      if (strcspn (text, 
+      if (strcspn (text,
 		   gdb_completer_file_name_break_characters) == text_len)
 	fn_list = make_source_files_completion_list (text, text);
     }
 
-  n_syms = VEC_length (char_ptr, list);
-  n_files = VEC_length (char_ptr, fn_list);
-
-  /* Catenate fn_list[] onto the end of list[].  */
-  if (!n_syms)
-    {
-      VEC_free (char_ptr, list); /* Paranoia.  */
-      list = fn_list;
-      fn_list = NULL;
-    }
-  else
-    {
-      char *fn;
-
-      for (ix = 0; VEC_iterate (char_ptr, fn_list, ix, fn); ++ix)
-	VEC_safe_push (char_ptr, list, fn);
-      VEC_free (char_ptr, fn_list);
-    }
-
-  if (n_syms && n_files)
-    {
-      /* Nothing.  */
-    }
-  else if (n_files)
+  if (!fn_list.empty () && !tracker.have_completions ())
     {
       char *fn;
 
@@ -344,31 +486,56 @@ linespec_location_completer (struct cmd_list_element *ignore,
 	 completion, because rl_complete will prepend "/foo/" to each
 	 candidate completion.  The loop below removes that leading
 	 part.  */
-      for (ix = 0; VEC_iterate (char_ptr, list, ix, fn); ++ix)
+      for (const auto &fn_up: fn_list)
 	{
-	  memmove (fn, fn + (word - text),
-		   strlen (fn) + 1 - (word - text));
+	  char *fn = fn_up.get ();
+	  memmove (fn, fn + (word - text), strlen (fn) + 1 - (word - text));
 	}
     }
-  else if (!n_syms)
+
+  tracker.add_completions (std::move (fn_list));
+
+  if (!tracker.have_completions ())
     {
       /* No completions at all.  As the final resort, try completing
 	 on the entire text as a symbol.  */
-      list = make_symbol_completion_list (orig_text, word);
+      collect_symbol_completion_matches (tracker,
+					 orig_text, word);
     }
+}
 
-  return list;
+completion_list
+complete_source_filenames (const char *text)
+{
+  size_t text_len = strlen (text);
+
+  /* If text includes characters which cannot appear in a file name,
+     the user cannot be asking for completion on files.  */
+  if (strcspn (text,
+	       gdb_completer_file_name_break_characters)
+      == text_len)
+    return make_source_files_completion_list (text, text);
+
+  return {};
+}
+
+/* Returns STRING if not NULL, the empty string otherwise.  */
+
+static const char *
+string_or_empty (const char *string)
+{
+  return string != NULL ? string : "";
 }
 
 /* A helper function to collect explicit location matches for the given
    LOCATION, which is attempting to match on WORD.  */
 
-static VEC (char_ptr) *
-collect_explicit_location_matches (struct event_location *location,
+static void
+collect_explicit_location_matches (completion_tracker &tracker,
+				   struct event_location *location,
 				   enum explicit_location_match_type what,
 				   const char *word)
 {
-  VEC (char_ptr) *matches = NULL;
   const struct explicit_location *explicit_loc
     = get_explicit_location (location);
 
@@ -376,26 +543,25 @@ collect_explicit_location_matches (struct event_location *location,
     {
     case MATCH_SOURCE:
       {
-	const char *text = (explicit_loc->source_filename == NULL
-			    ? "" : explicit_loc->source_filename);
-
-	matches = make_source_files_completion_list (text, word);
+	const char *source = string_or_empty (explicit_loc->source_filename);
+	completion_list matches
+	  = make_source_files_completion_list (source, word);
+	tracker.add_completions (std::move (matches));
       }
       break;
 
     case MATCH_FUNCTION:
       {
-	const char *text = (explicit_loc->function_name == NULL
-			    ? "" : explicit_loc->function_name);
-
+	const char *function = string_or_empty (explicit_loc->function_name);
 	if (explicit_loc->source_filename != NULL)
 	  {
 	    const char *filename = explicit_loc->source_filename;
 
-	    matches = make_file_symbol_completion_list (text, word, filename);
+	    collect_file_symbol_completion_matches (tracker,
+						    function, word, filename);
 	  }
-	else
-	  matches = make_symbol_completion_list (text, word);
+       else
+	 collect_symbol_completion_matches (tracker, function, word);
       }
       break;
 
@@ -406,8 +572,6 @@ collect_explicit_location_matches (struct event_location *location,
     default:
       gdb_assert_not_reached ("unhandled explicit_location_match_type");
     }
-
-  return matches;
 }
 
 /* A convenience macro to (safely) back up P to the previous word.  */
@@ -426,10 +590,10 @@ backup_text_ptr (const char *p, const char *text)
 /* A completer function for explicit locations.  This function
    completes both options ("-source", "-line", etc) and values.  */
 
-static VEC (char_ptr) *
-explicit_location_completer (struct cmd_list_element *ignore,
-			     struct event_location *location,
-			     const char *text, const char *word)
+static void
+complete_explicit_location (completion_tracker &tracker,
+			    struct event_location *location,
+			    const char *text, const char *word)
 {
   const char *p;
   VEC (char_ptr) *matches = NULL;
@@ -454,7 +618,8 @@ explicit_location_completer (struct cmd_list_element *ignore,
       /* Skip over the '-'.  */
       ++p;
 
-      return complete_on_enum (keywords, p, p);
+      complete_on_enum (tracker, keywords, p, p);
+      return;
     }
   else
     {
@@ -492,7 +657,7 @@ explicit_location_completer (struct cmd_list_element *ignore,
 	{
 	  /* The user isn't completing on any valid option name,
 	     e.g., "break -source foo.c [tab]".  */
-	  return NULL;
+	  return;
 	}
 
       /* If the user hasn't entered a search expression, e.g.,
@@ -502,43 +667,40 @@ explicit_location_completer (struct cmd_list_element *ignore,
 	new_word = "";
 
       /* Now gather matches  */
-      matches = collect_explicit_location_matches (location, what, new_word);
+      collect_explicit_location_matches (tracker, location, what, new_word);
     }
-
-  return matches;
 }
 
 /* A completer for locations.  */
 
-VEC (char_ptr) *
+void
 location_completer (struct cmd_list_element *ignore,
+		    completion_tracker &tracker,
 		    const char *text, const char *word)
 {
-  VEC (char_ptr) *matches = NULL;
   const char *copy = text;
 
   event_location_up location = string_to_explicit_location (&copy,
 							    current_language,
 							    1);
   if (location != NULL)
-    matches = explicit_location_completer (ignore, location.get (),
-					   text, word);
+    complete_explicit_location (tracker, location.get (),
+				text, word);
   else
     {
       /* This is an address or linespec location.
 	 Right now both of these are handled by the (old) linespec
 	 completer.  */
-      matches = linespec_location_completer (ignore, text, word);
+      complete_files_symbols (tracker, text, word);
     }
-
-  return matches;
 }
 
 /* Helper for expression_completer which recursively adds field and
-   method names from TYPE, a struct or union type, to the array
-   OUTPUT.  */
+   method names from TYPE, a struct or union type, to the OUTPUT
+   list.  */
+
 static void
-add_struct_fields (struct type *type, VEC (char_ptr) **output,
+add_struct_fields (struct type *type, completion_list *output,
 		   char *fieldname, int namelen)
 {
   int i;
@@ -557,8 +719,7 @@ add_struct_fields (struct type *type, VEC (char_ptr) **output,
 	    {
 	      if (! strncmp (TYPE_FIELD_NAME (type, i), 
 			     fieldname, namelen))
-		VEC_safe_push (char_ptr, *output,
-			       xstrdup (TYPE_FIELD_NAME (type, i)));
+		output->emplace_back (xstrdup (TYPE_FIELD_NAME (type, i)));
 	    }
 	  else if (TYPE_CODE (TYPE_FIELD_TYPE (type, i)) == TYPE_CODE_UNION)
 	    {
@@ -582,7 +743,7 @@ add_struct_fields (struct type *type, VEC (char_ptr) **output,
 	    }
 	  /* Omit constructors from the completion list.  */
 	  if (!type_name || strcmp (type_name, name))
-	    VEC_safe_push (char_ptr, *output, xstrdup (name));
+	    output->emplace_back (xstrdup (name));
 	}
     }
 }
@@ -590,13 +751,13 @@ add_struct_fields (struct type *type, VEC (char_ptr) **output,
 /* Complete on expressions.  Often this means completing on symbol
    names, but some language parsers also have support for completing
    field names.  */
-VEC (char_ptr) *
-expression_completer (struct cmd_list_element *ignore, 
-		      const char *text, const char *word)
+
+void
+complete_expression (completion_tracker &tracker,
+		     const char *text, const char *word)
 {
   struct type *type = NULL;
   char *fieldname;
-  const char *p;
   enum type_code code = TYPE_CODE_UNDEF;
 
   /* Perform a tentative parse of the expression, to see whether a
@@ -608,7 +769,7 @@ expression_completer (struct cmd_list_element *ignore,
     }
   CATCH (except, RETURN_MASK_ERROR)
     {
-      return NULL;
+      return;
     }
   END_CATCH
 
@@ -626,11 +787,12 @@ expression_completer (struct cmd_list_element *ignore,
 	  || TYPE_CODE (type) == TYPE_CODE_STRUCT)
 	{
 	  int flen = strlen (fieldname);
-	  VEC (char_ptr) *result = NULL;
+	  completion_list result;
 
 	  add_struct_fields (type, &result, fieldname, flen);
 	  xfree (fieldname);
-	  return result;
+	  tracker.add_completions (std::move (result));
+	  return;
 	}
     }
   else if (fieldname && code != TYPE_CODE_UNDEF)
@@ -638,24 +800,29 @@ expression_completer (struct cmd_list_element *ignore,
       VEC (char_ptr) *result;
       struct cleanup *cleanup = make_cleanup (xfree, fieldname);
 
-      result = make_symbol_completion_type (fieldname, fieldname, code);
+      collect_symbol_completion_matches_type (tracker, fieldname, fieldname,
+					      code);
       do_cleanups (cleanup);
-      return result;
+      return;
     }
   xfree (fieldname);
 
-  /* Commands which complete on locations want to see the entire
-     argument.  */
-  for (p = word;
-       p > text && p[-1] != ' ' && p[-1] != '\t';
-       p--)
-    ;
-
-  /* Not ideal but it is what we used to do before...  */
-  return linespec_location_completer (ignore, text, word);
+  complete_files_symbols (tracker, text, word);
 }
 
-/* See definition in completer.h.  */
+/* Complete on expressions.  Often this means completing on symbol
+   names, but some language parsers also have support for completing
+   field names.  */
+
+void
+expression_completer (struct cmd_list_element *ignore,
+		      completion_tracker &tracker,
+		      const char *text, const char *word)
+{
+  complete_expression (tracker, text, word);
+}
+
+/* Complete on symbols.  */
 
 void
 set_rl_completer_word_break_characters (const char *break_chars)
@@ -682,11 +849,12 @@ set_gdb_completion_word_break_characters (completer_ftype *fn)
 
 /* Complete on symbols.  */
 
-VEC (char_ptr) *
+void
 symbol_completer (struct cmd_list_element *ignore,
+		  completion_tracker &tracker,
 		  const char *text, const char *word)
 {
-  return make_symbol_completion_list (text, word);
+  collect_symbol_completion_matches (tracker, text, word);
 }
 
 /* Here are some useful test cases for completion.  FIXME: These
@@ -712,18 +880,30 @@ symbol_completer (struct cmd_list_element *ignore,
    "file ../gdb.stabs/we" "ird" (needs to not break word at slash)
  */
 
-typedef enum
+enum complete_line_internal_reason
 {
+  /* Preliminary phase, called by gdb_completion_word_break_characters
+     function, is used to determine the correct set of chars that are
+     word delimiters depending on the current command in line_buffer.
+     No completion list should be generated; the return value should
+     be NULL.  This is checked by an assertion.  */
   handle_brkchars,
+
+  /* Main phase, called by complete_line function, is used to get the
+     list of possible completions.  */
   handle_completions,
-  handle_help
-}
-complete_line_internal_reason;
+
+  /* Special case when completing a 'help' command.  In this case,
+     once sub-command completions are exhausted, we simply return
+     NULL.  */
+  handle_help,
+};
 
 /* Helper for complete_line_internal to simplify it.  */
 
-static VEC (char_ptr) *
-complete_line_internal_normal_command (const char *command, const char *word,
+static void
+complete_line_internal_normal_command (completion_tracker &tracker,
+				       const char *command, const char *word,
 				       const char *cmd_args,
 				       complete_line_internal_reason reason,
 				       struct cmd_list_element *c)
@@ -758,12 +938,11 @@ complete_line_internal_normal_command (const char *command, const char *word,
 	       (c->completer));
 	}
 
-      brkchars_fn (c, p, word);
+      brkchars_fn (c, tracker, p, word);
     }
 
   if (reason != handle_brkchars && c->completer != NULL)
-    return (*c->completer) (c, p, word);
-  return NULL;
+    (*c->completer) (c, tracker, p, word);
 }
 
 /* Internal function used to handle completions.
@@ -775,35 +954,19 @@ complete_line_internal_normal_command (const char *command, const char *word,
    text of the line.  POINT is the offset in that line of the cursor.
    You should pretend that the line ends at POINT.
 
-   REASON is of type complete_line_internal_reason.
+   See complete_line_internal_reason for description of REASON.  */
 
-   If REASON is handle_brkchars:
-   Preliminary phase, called by gdb_completion_word_break_characters
-   function, is used to determine the correct set of chars that are
-   word delimiters depending on the current command in line_buffer.
-   No completion list should be generated; the return value should be
-   NULL.  This is checked by an assertion in that function.
-
-   If REASON is handle_completions:
-   Main phase, called by complete_line function, is used to get the list
-   of posible completions.
-
-   If REASON is handle_help:
-   Special case when completing a 'help' command.  In this case,
-   once sub-command completions are exhausted, we simply return NULL.
- */
-
-static VEC (char_ptr) *
-complete_line_internal (const char *text, 
-			const char *line_buffer, int point,
-			complete_line_internal_reason reason)
+static void
+complete_line_internal_1 (completion_tracker &tracker,
+			  const char *text,
+			  const char *line_buffer, int point,
+			  complete_line_internal_reason reason)
 {
-  VEC (char_ptr) *list = NULL;
   char *tmp_command;
   const char *p;
   int ignore_help_classes;
   /* Pointer within tmp_command which corresponds to text.  */
-  char *word;
+  const char *word;
   struct cmd_list_element *c, *result_list;
 
   /* Choose the default set of word break characters to break
@@ -826,10 +989,18 @@ complete_line_internal (const char *text,
 
   strncpy (tmp_command, line_buffer, point);
   tmp_command[point] = '\0';
-  /* Since text always contains some number of characters leading up
-     to point, we can find the equivalent position in tmp_command
-     by subtracting that many characters from the end of tmp_command.  */
-  word = tmp_command + point - strlen (text);
+  if (reason == handle_brkchars)
+    {
+      gdb_assert (text == NULL);
+      word = NULL;
+    }
+  else
+    {
+      /* Since text always contains some number of characters leading up
+	 to point, we can find the equivalent position in tmp_command
+	 by subtracting that many characters from the end of tmp_command.  */
+      word = tmp_command + point - strlen (text);
+    }
 
   if (point == 0)
     {
@@ -853,7 +1024,6 @@ complete_line_internal (const char *text,
     {
       /* It is an unrecognized command.  So there are no
 	 possible completions.  */
-      list = NULL;
     }
   else if (c == CMD_LIST_AMBIGUOUS)
     {
@@ -871,7 +1041,6 @@ complete_line_internal (const char *text,
 	     example, "info t " or "info t foo" does not complete
 	     to anything, because "info t" can be "info target" or
 	     "info terminal".  */
-	  list = NULL;
 	}
       else
 	{
@@ -880,14 +1049,14 @@ complete_line_internal (const char *text,
 	  if (result_list)
 	    {
 	      if (reason != handle_brkchars)
-		list = complete_on_cmdlist (*result_list->prefixlist, p,
-					    word, ignore_help_classes);
+		complete_on_cmdlist (*result_list->prefixlist, tracker, p,
+				     word, ignore_help_classes);
 	    }
 	  else
 	    {
 	      if (reason != handle_brkchars)
-		list = complete_on_cmdlist (cmdlist, p, word,
-					    ignore_help_classes);
+		complete_on_cmdlist (cmdlist, tracker, p, word,
+				     ignore_help_classes);
 	    }
 	  /* Ensure that readline does the right thing with respect to
 	     inserting quotes.  */
@@ -913,8 +1082,8 @@ complete_line_internal (const char *text,
 		  /* It is a prefix command; what comes after it is
 		     a subcommand (e.g. "info ").  */
 		  if (reason != handle_brkchars)
-		    list = complete_on_cmdlist (*c->prefixlist, p, word,
-						ignore_help_classes);
+		    complete_on_cmdlist (*c->prefixlist, tracker, p, word,
+					 ignore_help_classes);
 
 		  /* Ensure that readline does the right thing
 		     with respect to inserting quotes.  */
@@ -922,11 +1091,11 @@ complete_line_internal (const char *text,
 		    (gdb_completer_command_word_break_characters);
 		}
 	      else if (reason == handle_help)
-		list = NULL;
+		;
 	      else if (c->enums)
 		{
 		  if (reason != handle_brkchars)
-		    list = complete_on_enum (c->enums, p, word);
+		    complete_on_enum (tracker, c->enums, p, word);
 		  set_rl_completer_word_break_characters
 		    (gdb_completer_command_word_break_characters);
 		}
@@ -934,9 +1103,9 @@ complete_line_internal (const char *text,
 		{
 		  /* It is a normal command; what comes after it is
 		     completed by the command's completer function.  */
-		  list = complete_line_internal_normal_command (tmp_command,
-								word, p,
-								reason, c);
+		  complete_line_internal_normal_command (tracker,
+							 tmp_command, word, p,
+							 reason, c);
 		}
 	    }
 	  else
@@ -958,8 +1127,8 @@ complete_line_internal (const char *text,
 		}
 
 	      if (reason != handle_brkchars)
-		list = complete_on_cmdlist (result_list, q, word,
-					    ignore_help_classes);
+		complete_on_cmdlist (result_list, tracker, q, word,
+				     ignore_help_classes);
 
 	      /* Ensure that readline does the right thing
 		 with respect to inserting quotes.  */
@@ -968,7 +1137,7 @@ complete_line_internal (const char *text,
 	    }
 	}
       else if (reason == handle_help)
-	list = NULL;
+	;
       else
 	{
 	  /* There is non-whitespace beyond the command.  */
@@ -977,93 +1146,111 @@ complete_line_internal (const char *text,
 	    {
 	      /* It is an unrecognized subcommand of a prefix command,
 		 e.g. "info adsfkdj".  */
-	      list = NULL;
 	    }
 	  else if (c->enums)
 	    {
 	      if (reason != handle_brkchars)
-		list = complete_on_enum (c->enums, p, word);
+		complete_on_enum (tracker, c->enums, p, word);
 	    }
 	  else
 	    {
 	      /* It is a normal command.  */
-	      list = complete_line_internal_normal_command (tmp_command,
-							    word, p,
-							    reason, c);
+	      complete_line_internal_normal_command (tracker,
+						     tmp_command, word, p,
+						     reason, c);
 	    }
 	}
     }
+}
 
-  return list;
+/* Wrapper around complete_line_internal_1 to handle
+   MAX_COMPLETIONS_REACHED_ERROR.  */
+
+static void
+complete_line_internal (completion_tracker &tracker,
+			const char *text,
+			const char *line_buffer, int point,
+			complete_line_internal_reason reason)
+{
+  TRY
+    {
+      complete_line_internal_1 (tracker, text, line_buffer, point, reason);
+    }
+  CATCH (except, RETURN_MASK_ERROR)
+    {
+      if (except.error != MAX_COMPLETIONS_REACHED_ERROR)
+	throw_exception (except);
+    }
 }
 
 /* See completer.h.  */
 
 int max_completions = 200;
 
-/* See completer.h.  */
-
-completion_tracker_t
-new_completion_tracker (void)
-{
-  if (max_completions <= 0)
-    return NULL;
-
-  return htab_create_alloc (max_completions,
-			    htab_hash_string, (htab_eq) streq,
-			    NULL, xcalloc, xfree);
-}
-
-/* Cleanup routine to free a completion tracker and reset the pointer
-   to NULL.  */
-
-static void
-free_completion_tracker (void *p)
-{
-  completion_tracker_t *tracker_ptr = (completion_tracker_t *) p;
-
-  htab_delete (*tracker_ptr);
-  *tracker_ptr = NULL;
-}
+/* Initial size of the table.  It automagically grows from here.  */
+#define INITIAL_COMPLETION_HTAB_SIZE 200
 
 /* See completer.h.  */
 
-struct cleanup *
-make_cleanup_free_completion_tracker (completion_tracker_t *tracker_ptr)
+completion_tracker::completion_tracker ()
 {
-  if (*tracker_ptr == NULL)
-    return make_cleanup (null_cleanup, NULL);
+  m_entries_hash = htab_create_alloc (INITIAL_COMPLETION_HTAB_SIZE,
+				      htab_hash_string, (htab_eq) streq,
+				      NULL, xcalloc, xfree);
+}
 
-  return make_cleanup (free_completion_tracker, tracker_ptr);
+void
+completion_tracker::discard_completions ()
+{
+  xfree (m_lowest_common_denominator);
+  m_lowest_common_denominator = NULL;
+
+  m_lowest_common_denominator_unique = false;
+
+  m_entries_vec.clear ();
+
+  htab_delete (m_entries_hash);
+  m_entries_hash = htab_create_alloc (INITIAL_COMPLETION_HTAB_SIZE,
+				      htab_hash_string, (htab_eq) streq,
+				      NULL, xcalloc, xfree);
+}
+
+completion_tracker::~completion_tracker ()
+{
+  xfree (m_lowest_common_denominator);
+  htab_delete (m_entries_hash);
 }
 
 /* See completer.h.  */
 
-enum maybe_add_completion_enum
-maybe_add_completion (completion_tracker_t tracker, char *name)
+bool
+completion_tracker::maybe_add_completion (gdb::unique_xmalloc_ptr<char> name)
 {
   void **slot;
 
-  if (max_completions < 0)
-    return MAYBE_ADD_COMPLETION_OK;
   if (max_completions == 0)
-    return MAYBE_ADD_COMPLETION_MAX_REACHED;
+    return false;
 
-  gdb_assert (tracker != NULL);
+  if (htab_elements (m_entries_hash) >= max_completions)
+    return false;
 
-  if (htab_elements (tracker) >= max_completions)
-    return MAYBE_ADD_COMPLETION_MAX_REACHED;
+  slot = htab_find_slot (m_entries_hash, name.get (), INSERT);
+  if (*slot == HTAB_EMPTY_ENTRY)
+    {
+      recompute_lowest_common_denominator (name.get ());
 
-  slot = htab_find_slot (tracker, name, INSERT);
+      *slot = name.get ();
+      m_entries_vec.push_back (std::move (name));
+    }
 
-  if (*slot != HTAB_EMPTY_ENTRY)
-    return MAYBE_ADD_COMPLETION_DUPLICATE;
+  return true;
+}
 
-  *slot = name;
-
-  return (htab_elements (tracker) < max_completions
-	  ? MAYBE_ADD_COMPLETION_OK
-	  : MAYBE_ADD_COMPLETION_OK_MAX_REACHED);
+void
+completion_tracker::add_completion (gdb::unique_xmalloc_ptr<char> name)
+{
+  if (!maybe_add_completion (std::move (name)))
+    throw_max_completions_reached_error ();
 }
 
 void
@@ -1072,10 +1259,16 @@ throw_max_completions_reached_error (void)
   throw_error (MAX_COMPLETIONS_REACHED_ERROR, _("Max completions reached."));
 }
 
-/* Generate completions all at once.  Returns a vector of unique strings
-   allocated with xmalloc.  Returns NULL if there are no completions
-   or if max_completions is 0.  If max_completions is non-negative, this will
-   return at most max_completions strings.
+void
+completion_tracker::add_completions (completion_list &&list)
+{
+  for (auto &candidate : list)
+    add_completion (std::move (candidate));
+}
+
+/* Generate completions all at once.  Does nothing if max_completions
+   is 0.  If max_completions is non-negative, this will collect at
+   most max_completions strings.
 
    TEXT is the caller's idea of the "word" we are looking at.
 
@@ -1085,74 +1278,30 @@ throw_max_completions_reached_error (void)
    POINT is the offset in that line of the cursor.  You
    should pretend that the line ends at POINT.  */
 
-VEC (char_ptr) *
-complete_line (const char *text, const char *line_buffer, int point)
+void
+complete_line (completion_tracker &tracker,
+	       const char *text, const char *line_buffer, int point)
 {
-  VEC (char_ptr) *list;
-  VEC (char_ptr) *result = NULL;
-  struct cleanup *cleanups;
-  completion_tracker_t tracker;
-  char *candidate;
-  int ix, max_reached;
-
   if (max_completions == 0)
-    return NULL;
-  list = complete_line_internal (text, line_buffer, point,
-				 handle_completions);
-  if (max_completions < 0)
-    return list;
-
-  tracker = new_completion_tracker ();
-  cleanups = make_cleanup_free_completion_tracker (&tracker);
-  make_cleanup_free_char_ptr_vec (list);
-
-  /* Do a final test for too many completions.  Individual completers may
-     do some of this, but are not required to.  Duplicates are also removed
-     here.  Otherwise the user is left scratching his/her head: readline and
-     complete_command will remove duplicates, and if removal of duplicates
-     there brings the total under max_completions the user may think gdb quit
-     searching too early.  */
-
-  for (ix = 0, max_reached = 0;
-       !max_reached && VEC_iterate (char_ptr, list, ix, candidate);
-       ++ix)
-    {
-      enum maybe_add_completion_enum add_status;
-
-      add_status = maybe_add_completion (tracker, candidate);
-
-      switch (add_status)
-	{
-	  case MAYBE_ADD_COMPLETION_OK:
-	    VEC_safe_push (char_ptr, result, xstrdup (candidate));
-	    break;
-	  case MAYBE_ADD_COMPLETION_OK_MAX_REACHED:
-	    VEC_safe_push (char_ptr, result, xstrdup (candidate));
-	    max_reached = 1;
-	    break;
-      	  case MAYBE_ADD_COMPLETION_MAX_REACHED:
-	    gdb_assert_not_reached ("more than max completions reached");
-	  case MAYBE_ADD_COMPLETION_DUPLICATE:
-	    break;
-	}
-    }
-
-  do_cleanups (cleanups);
-
-  return result;
+    return;
+  complete_line_internal (tracker, text, line_buffer, point,
+			  handle_completions);
 }
 
 /* Complete on command names.  Used by "help".  */
-VEC (char_ptr) *
+
+void
 command_completer (struct cmd_list_element *ignore, 
+		   completion_tracker &tracker,
 		   const char *text, const char *word)
 {
-  return complete_line_internal (word, text, 
-				 strlen (text), handle_help);
+  complete_line_internal (tracker, word, text,
+			  strlen (text), handle_help);
 }
 
 static void
 command_completer_handle_brkchars (struct cmd_list_element *ignore,
+				   completion_tracker &tracker,
 				   const char *text, const char *word)
 {
   set_rl_completer_word_break_characters
@@ -1161,11 +1310,11 @@ command_completer_handle_brkchars (struct cmd_list_element *ignore,
 
 /* Complete on signals.  */
 
-VEC (char_ptr) *
+void
 signal_completer (struct cmd_list_element *ignore,
+		  completion_tracker &tracker,
 		  const char *text, const char *word)
 {
-  VEC (char_ptr) *return_val = NULL;
   size_t len = strlen (word);
   int signum;
   const char *signame;
@@ -1183,10 +1332,11 @@ signal_completer (struct cmd_list_element *ignore,
 	continue;
 
       if (strncasecmp (signame, word, len) == 0)
-	VEC_safe_push (char_ptr, return_val, xstrdup (signame));
+	{
+	  gdb::unique_xmalloc_ptr<char> copy (xstrdup (signame));
+	  tracker.add_completion (std::move (copy));
+	}
     }
-
-  return return_val;
 }
 
 /* Bit-flags for selecting what the register and/or register-group
@@ -1202,12 +1352,11 @@ DEF_ENUM_FLAGS_TYPE (enum reg_completer_target, reg_completer_targets);
 /* Complete register names and/or reggroup names based on the value passed
    in TARGETS.  At least one bit in TARGETS must be set.  */
 
-static VEC (char_ptr) *
-reg_or_group_completer_1 (struct cmd_list_element *ignore,
+static void
+reg_or_group_completer_1 (completion_tracker &tracker,
 			  const char *text, const char *word,
 			  reg_completer_targets targets)
 {
-  VEC (char_ptr) *result = NULL;
   size_t len = strlen (word);
   struct gdbarch *gdbarch;
   const char *name;
@@ -1225,7 +1374,10 @@ reg_or_group_completer_1 (struct cmd_list_element *ignore,
 	   i++)
 	{
 	  if (*name != '\0' && strncmp (word, name, len) == 0)
-	    VEC_safe_push (char_ptr, result, xstrdup (name));
+	    {
+	      gdb::unique_xmalloc_ptr<char> copy (xstrdup (name));
+	      tracker.add_completion (std::move (copy));
+	    }
 	}
     }
 
@@ -1239,38 +1391,42 @@ reg_or_group_completer_1 (struct cmd_list_element *ignore,
 	{
 	  name = reggroup_name (group);
 	  if (strncmp (word, name, len) == 0)
-	    VEC_safe_push (char_ptr, result, xstrdup (name));
+	    {
+	      gdb::unique_xmalloc_ptr<char> copy (xstrdup (name));
+	      tracker.add_completion (std::move (copy));
+	    }
 	}
     }
-
-  return result;
 }
 
 /* Perform completion on register and reggroup names.  */
 
-VEC (char_ptr) *
+void
 reg_or_group_completer (struct cmd_list_element *ignore,
+			completion_tracker &tracker,
 			const char *text, const char *word)
 {
-  return reg_or_group_completer_1 (ignore, text, word,
-				   (complete_register_names
-				    | complete_reggroup_names));
+  reg_or_group_completer_1 (tracker, text, word,
+			    (complete_register_names
+			     | complete_reggroup_names));
 }
 
 /* Perform completion on reggroup names.  */
 
-VEC (char_ptr) *
+void
 reggroup_completer (struct cmd_list_element *ignore,
+		    completion_tracker &tracker,
 		    const char *text, const char *word)
 {
-  return reg_or_group_completer_1 (ignore, text, word,
-				   complete_reggroup_names);
+  reg_or_group_completer_1 (tracker, text, word,
+			    complete_reggroup_names);
 }
 
 /* The default completer_handle_brkchars implementation.  */
 
 static void
 default_completer_handle_brkchars (struct cmd_list_element *ignore,
+				   completion_tracker &tracker,
 				   const char *text, const char *word)
 {
   set_rl_completer_word_break_characters
@@ -1291,92 +1447,311 @@ completer_handle_brkchars_func_for_completer (completer_ftype *fn)
   return default_completer_handle_brkchars;
 }
 
+/* Since rl_basic_quote_characters is not completer-specific, we save
+   its original value here, in order to be able to restore it in
+   gdb_rl_attempted_completion_function.  */
+static const char *gdb_org_rl_basic_quote_characters = rl_basic_quote_characters;
+
 /* Get the list of chars that are considered as word breaks
    for the current command.  */
 
-char *
-gdb_completion_word_break_characters (void)
+static char *
+gdb_completion_word_break_characters_throw ()
 {
-  VEC (char_ptr) *list;
+  /* New completion starting.  Get rid of the previous tracker and
+     start afresh.  */
+  delete current_completion.tracker;
+  current_completion.tracker = new completion_tracker ();
 
-  list = complete_line_internal (rl_line_buffer, rl_line_buffer, rl_point,
-				 handle_brkchars);
-  gdb_assert (list == NULL);
+  completion_tracker &tracker = *current_completion.tracker;
+
+  complete_line_internal (tracker, NULL, rl_line_buffer,
+			  rl_point, handle_brkchars);
+
   return rl_completer_word_break_characters;
 }
 
-/* Generate completions one by one for the completer.  Each time we
-   are called return another potential completion to the caller.
-   line_completion just completes on commands or passes the buck to
-   the command's completer function, the stuff specific to symbol
-   completion is in make_symbol_completion_list.
+char *
+gdb_completion_word_break_characters ()
+{
+  /* New completion starting.  */
+  current_completion.aborted = false;
 
-   TEXT is the caller's idea of the "word" we are looking at.
+  TRY
+    {
+      return gdb_completion_word_break_characters_throw ();
+    }
+  CATCH (ex, RETURN_MASK_ALL)
+    {
+      /* Set this to that gdb_rl_attempted_completion_function knows
+	 to abort early.  */
+      current_completion.aborted = true;
+    }
+  END_CATCH
 
-   MATCHES is the number of matches that have currently been collected
-   from calling this completion function.  When zero, then we need to
-   initialize, otherwise the initialization has already taken place
-   and we can just return the next potential completion string.
+  return NULL;
+}
 
-   LINE_BUFFER is available to be looked at; it contains the entire
-   text of the line.  POINT is the offset in that line of the cursor.
-   You should pretend that the line ends at POINT.
+/* Get the list of chars that are considered as word breaks
+   for the current command.  */
 
-   Returns NULL if there are no more completions, else a pointer to a
-   string which is a possible completion, it is the caller's
-   responsibility to free the string.  */
+const char *
+completion_find_completion_word (completion_tracker &tracker, const char *text,
+				 int *quote_char)
+{
+  size_t point = strlen (text);
+
+  complete_line_internal (tracker, NULL, text, point, handle_brkchars);
+
+  gdb_rl_completion_word_info info;
+
+  info.word_break_characters = rl_completer_word_break_characters;
+  info.quote_characters = gdb_completer_quote_characters;
+  info.basic_quote_characters = rl_basic_quote_characters;
+
+  return gdb_rl_find_completion_word (&info, quote_char, NULL, text);
+}
+
+/* See completer.h.  */
+
+void
+completion_tracker::recompute_lowest_common_denominator (const char *new_match)
+{
+  if (m_lowest_common_denominator == NULL)
+    {
+      /* We don't have a lowest common denominator yet, so simply take
+	 the whole NEW_MATCH as being it.  */
+      m_lowest_common_denominator = xstrdup (new_match);
+      m_lowest_common_denominator_unique = true;
+    }
+  else
+    {
+      /* Find the common denominator between the currently-known
+	 lowest common denominator and NEW_MATCH.  That becomes the
+	 new lowest common denominator.  */
+      size_t i;
+
+      for (i = 0;
+	   (new_match[i] != '\0'
+	    && new_match[i] == m_lowest_common_denominator[i]);
+	   i++)
+	;
+      if (m_lowest_common_denominator[i] != new_match[i])
+	{
+	  m_lowest_common_denominator[i] = '\0';
+	  m_lowest_common_denominator_unique = false;
+	}
+    }
+}
 
 static char *
-line_completion_function (const char *text, int matches, 
-			  char *line_buffer, int point)
+expand_preserving_ws (const char *orig, size_t orig_len,
+		      const char *lcd)
 {
-  static VEC (char_ptr) *list = NULL;	/* Cache of completions.  */
-  static int index;			/* Next cached completion.  */
-  char *output = NULL;
+  const char *p_orig = orig;
+  const char *orig_end = orig + orig_len;
+  const char *p_lcd = lcd;
+  std::string res;
 
-  if (matches == 0)
+  /*  c   ()    */
+  /* c()*/
+
+  while (p_orig < orig_end)
     {
-      /* The caller is beginning to accumulate a new set of
-         completions, so we need to find all of them now, and cache
-         them for returning one at a time on future calls.  */
-
-      if (list)
+      if (*p_orig == ' ')
 	{
-	  /* Free the storage used by LIST, but not by the strings
-	     inside.  This is because rl_complete_internal () frees
-	     the strings.  As complete_line may abort by calling
-	     `error' clear LIST now.  */
-	  VEC_free (char_ptr, list);
+	  while (p_orig < orig_end && *p_orig == ' ')
+	    res += *p_orig++;
+	  p_lcd = skip_spaces_const (p_lcd);
 	}
-      index = 0;
-      list = complete_line (text, line_buffer, point);
-    }
-
-  /* If we found a list of potential completions during initialization
-     then dole them out one at a time.  After returning the last one,
-     return NULL (and continue to do so) each time we are called after
-     that, until a new list is available.  */
-
-  if (list)
-    {
-      if (index < VEC_length (char_ptr, list))
+      else
 	{
-	  output = VEC_index (char_ptr, list, index);
-	  index++;
+	  /* Take characters from the LCD instead of the original
+	     text, since some completions change upper/lowercase.
+	     E.g.:
+	       "handle sig<>"
+	     completes to:
+	       "handle SIG[QUIT|etc.]"
+	  */
+	  res += *p_lcd;
+	  p_orig++;
+	  p_lcd++;
 	}
     }
 
-#if 0
-  /* Can't do this because readline hasn't yet checked the word breaks
-     for figuring out whether to insert a quote.  */
-  if (output == NULL)
-    /* Make sure the word break characters are set back to normal for
-       the next time that readline tries to complete something.  */
-    rl_completer_word_break_characters =
-      current_language->la_word_break_characters();
-#endif
+  while (*p_lcd != '\0')
+    res += *p_lcd++;
 
-  return (output);
+  return xstrdup (res.c_str ());
+}
+
+completion_result
+completion_tracker::build_completion_result (const char *text,
+					     int start, int end)
+{
+  completion_list &list = m_entries_vec;	/* The completions.  */
+
+  if (list.empty ())
+    return {};
+
+  /* +1 for the LCD, and +1 for NULL termination.  */
+  char **match_list = XNEWVEC (char *, 1 + list.size () + 1);
+
+  /* Build replacement word, based on the LCD.  */
+
+  match_list[0]
+    = expand_preserving_ws (text, end - start,
+			    m_lowest_common_denominator);
+
+  if (m_lowest_common_denominator_unique)
+    {
+      match_list[1] = NULL;
+
+      /* If we already have a space at the end of the match, tell
+	 readline to skip appending another.  */
+      bool completion_suppress_append
+	= (match_list[0][strlen (match_list[0]) - 1] == ' ');
+
+      return completion_result (match_list, 1, completion_suppress_append);
+    }
+  else
+    {
+      int ix;
+
+      for (ix = 0; ix < list.size (); ++ix)
+	match_list[ix + 1] = list[ix].release ();
+      match_list[ix + 1] = NULL;
+
+      return completion_result (match_list, list.size (), false);
+    }
+}
+
+completion_result::completion_result ()
+  : match_list (NULL), number_matches (0),
+    completion_suppress_append (false)
+{}
+
+completion_result::completion_result (char **match_list_,
+				      size_t number_matches_,
+				      bool completion_suppress_append_)
+  : match_list (match_list_),
+    number_matches (number_matches_),
+    completion_suppress_append (completion_suppress_append_)
+{}
+
+completion_result::~completion_result ()
+{
+  reset_match_list ();
+}
+
+completion_result::completion_result (completion_result &&rhs)
+{
+  if (this == &rhs)
+    return;
+
+  reset_match_list ();
+  match_list = rhs.match_list;
+  rhs.match_list = NULL;
+  number_matches = rhs.number_matches;
+  rhs.number_matches = 0;
+}
+
+char **
+completion_result::release_match_list ()
+{
+  char **ret = match_list;
+  match_list = NULL;
+  return ret;
+}
+
+void
+completion_result::reset_match_list ()
+{
+  if (match_list != NULL)
+    {
+      for (char **p = match_list; *p != NULL; p++)
+	xfree (*p);
+      xfree (match_list);
+      match_list = NULL;
+    }
+}
+
+
+/* Line completion interface function for readline.  */
+
+/* Generate the completions for the completer in one go.
+
+   TEXT is the caller's idea of the "word" we are looking at, as
+   computed in the handle_brkchars phase.
+
+   START is the offset from RL_LINE_BUFFER where TEXT starts.  END is
+   the offset from RL_LINE_BUFFER where TEXT ends (i.e., where
+   rl_point is).
+
+   You should thus pretend that the line ends at END (relative to
+   RL_LINE_BUFFER).
+
+   RL_LINE_BUFFER contains the entire text of the line.  RL_POINT is
+   the offset in that line of the cursor.  You should pretend that the
+   line ends at POINT.
+
+   Returns NULL if there are no completions.  */
+
+/* Function installed as "rl_attempted_completion_function" readline
+   hook.  This is called by readline to build the match list array,
+   and determining the lowest common denominator.  The real matches
+   list starts at match[1], while match[0] is the slot holding
+   readline's idea of the lowest common denominator of all matches,
+   which is what readline replaces the completion "word" with.  */
+
+static char **
+gdb_rl_attempted_completion_function_throw (const char *text, int start, int end)
+{
+  /* Completers must be called twice.  If rl_point (i.e., END) is at
+     column 0, then readline skips the the handle_brkchars phase, and
+     so we create a tracker now in that case too.  */
+  delete current_completion.tracker;
+  current_completion.tracker = new completion_tracker ();
+
+  complete_line (*current_completion.tracker, text,
+		 rl_line_buffer, rl_point);
+
+  completion_tracker &tracker = *current_completion.tracker;
+
+  completion_result result
+    = tracker.build_completion_result (text, start, end);
+
+  rl_completion_suppress_append = result.completion_suppress_append;
+  return result.release_match_list ();
+}
+
+char **
+gdb_rl_attempted_completion_function (const char *text, int start, int end)
+{
+  /* Restore globals that might have been tweaked in
+     gdb_completion_word_break_characters.  */
+  rl_basic_quote_characters = gdb_org_rl_basic_quote_characters;
+
+  /* If we end up returning NULL, either on error, or simple because
+     there are no matches, inhibit readline's default filename
+     completer.  */
+  rl_attempted_completion_over = 1;
+
+  /* If the handle_brkchars phase was aborted, don't try
+     completing.  */
+  if (current_completion.aborted)
+    return NULL;
+
+  TRY
+    {
+      return gdb_rl_attempted_completion_function_throw (text, start, end);
+    }
+  CATCH (ex, RETURN_MASK_ALL)
+    {
+    }
+  END_CATCH
+
+  return NULL;
 }
 
 /* Skip over the possibly quoted word STR (as defined by the quote
