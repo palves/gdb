@@ -186,6 +186,9 @@ extern void linespec_lex_to_end (char **stringp);
 
 extern const char * const linespec_keywords[];
 
+extern void linespec_complete (completion_tracker &tracker,
+			       const char *text);
+
 /* Complete a function symbol, in linespec mode.  If SOURCE_FILENAME
    is non-NULL, limits completion to the list of functions defined in
    source files that match SOURCE_FILENAME.  */
