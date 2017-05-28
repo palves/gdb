@@ -4810,7 +4810,6 @@ completion_list_add_name (completion_tracker &tracker,
 			  language symbol_language,
 			  const char *symname,
 			  const lookup_name_info &lookup_name,
-			  const char *sym_text, int sym_text_len,
 			  const char *text, const char *word)
 {
   symbol_name_match_result &match_res
@@ -4832,23 +4831,23 @@ completion_list_add_name (completion_tracker &tracker,
   {
     char *newobj;
 
-    if (word == sym_text)
+    if (word == text)
       {
 	newobj = (char *) xmalloc (strlen (symname) + 5);
 	strcpy (newobj, symname);
       }
-    else if (word > sym_text)
+    else if (word > text)
       {
 	/* Return some portion of symname.  */
 	newobj = (char *) xmalloc (strlen (symname) + 5);
-	strcpy (newobj, symname + (word - sym_text));
+	strcpy (newobj, symname + (word - text));
       }
     else
       {
 	/* Return some of SYM_TEXT plus symname.  */
-	newobj = (char *) xmalloc (strlen (symname) + (sym_text - word) + 5);
-	strncpy (newobj, word, sym_text - word);
-	newobj[sym_text - word] = '\0';
+	newobj = (char *) xmalloc (strlen (symname) + (text - word) + 5);
+	strncpy (newobj, word, text - word);
+	newobj[text - word] = '\0';
 	strcat (newobj, symname);
       }
 
@@ -4864,12 +4863,11 @@ static inline void
 completion_list_add_symbol (completion_tracker &tracker,
 			    symbol *sym,
 			    const lookup_name_info &lookup_name,
-			    const char *sym_text, int sym_text_len,
 			    const char *text, const char *word)
 {
   completion_list_add_name (tracker, SYMBOL_LANGUAGE (sym),
 			    SYMBOL_NATURAL_NAME (sym),
-			    lookup_name, sym_text, sym_text_len, text, word);
+			    lookup_name, text, word);
 }
 
 /* completion_list_add_name wrapper for struct minimal_symbol.  */
@@ -4878,12 +4876,11 @@ static inline void
 completion_list_add_msymbol (completion_tracker &tracker,
 			     minimal_symbol *sym,
 			     const lookup_name_info &lookup_name,
-			     const char *sym_text, int sym_text_len,
 			     const char *text, const char *word)
 {
   completion_list_add_name (tracker, MSYMBOL_LANGUAGE (sym),
 			    MSYMBOL_NATURAL_NAME (sym),
-			    lookup_name, sym_text, sym_text_len, text, word);
+			    lookup_name, text, word);
 }
 
 
@@ -4894,7 +4891,6 @@ static void
 completion_list_objc_symbol (completion_tracker &tracker,
 			     struct minimal_symbol *msymbol,
 			     const lookup_name_info &lookup_name,
-			     const char *sym_text, int sym_text_len,
 			     const char *text, const char *word)
 {
   static char *tmp = NULL;
@@ -4909,12 +4905,12 @@ completion_list_objc_symbol (completion_tracker &tracker,
   if ((method[0] != '-') && (method[0] != '+'))
     return;
 
-  if (sym_text[0] == '[')
+  if (text[0] == '[')
     /* Complete on shortened method method.  */
     completion_list_add_name (tracker, language_objc,
 			      method + 1,
 			      lookup_name,
-			      sym_text, sym_text_len, text, word);
+			      text, word);
 
   while ((strlen (method) + 1) >= tmplen)
     {
@@ -4936,12 +4932,10 @@ completion_list_objc_symbol (completion_tracker &tracker,
       tmp[category - method] = ' ';
       memcpy (tmp + (category - method) + 1, selector, strlen (selector) + 1);
       completion_list_add_name (tracker, language_objc, tmp,
-				lookup_name,
-				sym_text, sym_text_len, text, word);
-      if (sym_text[0] == '[')
+				lookup_name, text, word);
+      if (text[0] == '[')
 	completion_list_add_name (tracker, language_objc, tmp + 1,
-				  lookup_name,
-				  sym_text, sym_text_len, text, word);
+				  lookup_name, text, word);
     }
 
   if (selector != NULL)
@@ -4953,8 +4947,7 @@ completion_list_objc_symbol (completion_tracker &tracker,
 	*tmp2 = '\0';
 
       completion_list_add_name (tracker, language_objc, tmp,
-				lookup_name,
-				sym_text, sym_text_len, text, word);
+				lookup_name, text, word);
     }
 }
 
@@ -5008,7 +5001,6 @@ static void
 completion_list_add_fields (completion_tracker &tracker,
 			    struct symbol *sym,
 			    const lookup_name_info &lookup_name,
-			    const char *sym_text, int sym_text_len,
 			    const char *text, const char *word)
 {
   if (SYMBOL_CLASS (sym) == LOC_TYPEDEF)
@@ -5022,8 +5014,7 @@ completion_list_add_fields (completion_tracker &tracker,
 	  if (TYPE_FIELD_NAME (t, j))
 	    completion_list_add_name (tracker, SYMBOL_LANGUAGE (sym),
 				      TYPE_FIELD_NAME (t, j),
-				      lookup_name,
-				      sym_text, sym_text_len, text, word);
+				      lookup_name, text, word);
     }
 }
 
@@ -5033,7 +5024,6 @@ static void
 add_symtab_completions (struct compunit_symtab *cust,
 			completion_tracker &tracker,
 			const lookup_name_info &lookup_name,
-			const char *sym_text, int sym_text_len,
 			const char *text, const char *word,
 			enum type_code code)
 {
@@ -5056,7 +5046,6 @@ add_symtab_completions (struct compunit_symtab *cust,
 		  && TYPE_CODE (SYMBOL_TYPE (sym)) == code))
 	    completion_list_add_symbol (tracker, sym,
 					lookup_name,
-					sym_text, sym_text_len,
 					text, word);
 	}
     }
@@ -5082,8 +5071,6 @@ default_collect_symbol_completion_matches_break_on
   struct block_iterator iter;
   /* The symbol we are completing on.  Points in same buffer as text.  */
   const char *sym_text;
-  /* Length of sym_text.  */
-  int sym_text_len;
   struct cleanup *cleanups;
 
   /* Now look for the symbol we are supposed to complete on.  */
@@ -5140,10 +5127,7 @@ default_collect_symbol_completion_matches_break_on
       }
   }
 
-  sym_text_len = strlen (sym_text);
-
-  lookup_name_info lookup_name (std::string (sym_text, sym_text_len),
-				name_match_type, true);
+  lookup_name_info lookup_name (sym_text, name_match_type, true);
 
   /* At this point scan through the misc symbol vectors and add each
      symbol you find to the list.  Eventually we want to ignore
@@ -5157,19 +5141,17 @@ default_collect_symbol_completion_matches_break_on
 	  QUIT;
 
 	  completion_list_add_msymbol (tracker, msymbol, lookup_name,
-				       sym_text, sym_text_len,
-				       text, word);
+				       sym_text, word);
 
 	  completion_list_objc_symbol (tracker, msymbol, lookup_name,
-				       sym_text, sym_text_len, text,
-				       word);
+				       sym_text, word);
 	}
     }
 
   /* Add completions for all currently loaded symbol tables.  */
   ALL_COMPUNITS (objfile, cust)
     add_symtab_completions (cust, tracker, lookup_name,
-			    sym_text, sym_text_len, text, word, code);
+			    sym_text, word, code);
 
   /* Look through the partial symtabs for all symbols which begin by
      matching SYM_TEXT.  Expand all CUs that you find to the list.  */
@@ -5180,8 +5162,7 @@ default_collect_symbol_completion_matches_break_on
 			     {
 			       add_symtab_completions (symtab,
 						       tracker, lookup_name,
-						       sym_text, sym_text_len,
-						       text, word, code);
+						       sym_text, word, code);
 			     },
 			   ALL_DOMAIN);
 
@@ -5203,17 +5184,14 @@ default_collect_symbol_completion_matches_break_on
 	    if (code == TYPE_CODE_UNDEF)
 	      {
 		completion_list_add_symbol (tracker, sym, lookup_name,
-					    sym_text, sym_text_len, text,
-					    word);
+					    sym_text, word);
 		completion_list_add_fields (tracker, sym, lookup_name,
-					    sym_text, sym_text_len, text,
-					    word);
+					    sym_text, word);
 	      }
 	    else if (SYMBOL_DOMAIN (sym) == STRUCT_DOMAIN
 		     && TYPE_CODE (SYMBOL_TYPE (sym)) == code)
 	      completion_list_add_symbol (tracker, sym, lookup_name,
-					  sym_text, sym_text_len, text,
-					  word);
+					  sym_text, word);
 	  }
 
 	/* Stop when we encounter an enclosing function.  Do not stop for
@@ -5231,12 +5209,12 @@ default_collect_symbol_completion_matches_break_on
       if (surrounding_static_block != NULL)
 	ALL_BLOCK_SYMBOLS (surrounding_static_block, iter, sym)
 	  completion_list_add_fields (tracker, sym, lookup_name,
-				      sym_text, sym_text_len, text, word);
+				      sym_text, word);
 
       if (surrounding_global_block != NULL)
 	ALL_BLOCK_SYMBOLS (surrounding_global_block, iter, sym)
 	  completion_list_add_fields (tracker, sym, lookup_name,
-				      sym_text, sym_text_len, text, word);
+				      sym_text, word);
     }
 
   /* Skip macros if we are completing a struct tag -- arguable but
@@ -5252,12 +5230,8 @@ default_collect_symbol_completion_matches_break_on
 				 macro_source_file *,
 				 int)
 	{
-	  completion_list_add_name (tracker,
-				    language_c,
-				    macro_name,
-				    lookup_name,
-				    sym_text, sym_text_len,
-				    text, word);
+	  completion_list_add_name (tracker, language_c, macro_name,
+				    lookup_name, sym_text, word);
 	};
 
       /* Add any macros visible in the default scope.  Note that this
@@ -5340,8 +5314,6 @@ collect_file_symbol_completion_matches (completion_tracker &tracker,
 {
   /* The symbol we are completing on.  Points in same buffer as text.  */
   const char *sym_text;
-  /* Length of sym_text.  */
-  int sym_text_len;
 
   /* Now look for the symbol we are supposed to complete on.
      FIXME: This should be language-specific.  */
@@ -5389,10 +5361,7 @@ collect_file_symbol_completion_matches (completion_tracker &tracker,
       }
   }
 
-  sym_text_len = strlen (sym_text);
-
-  lookup_name_info lookup_name (std::string (sym_text, sym_text_len),
-				name_match_type, true);
+  lookup_name_info lookup_name (sym_text, name_match_type, true);
 
   /* Go through symtabs for SRCFILE and check the externs and statics
      for symbols which match.  */
@@ -5400,8 +5369,7 @@ collect_file_symbol_completion_matches (completion_tracker &tracker,
     {
       add_symtab_completions (SYMTAB_COMPUNIT (s),
 			      tracker, lookup_name,
-			      sym_text, sym_text_len,
-			      text, word, TYPE_CODE_UNDEF);
+			      sym_text, word, TYPE_CODE_UNDEF);
       return false;
     });
 }
