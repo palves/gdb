@@ -527,6 +527,7 @@ SUBDIR_PYTHON_CFLAGS =
 
 SUBDIR_UNITTESTS_SRCS = \
 	unittests/function-view-selftests.c \
+	unittests/lookup_name_info-selftests.c \
 	unittests/offset-type-selftests.c \
 	unittests/optional-selftests.c \
 	unittests/ptid-selftests.c \
@@ -534,6 +535,7 @@ SUBDIR_UNITTESTS_SRCS = \
 
 SUBDIR_UNITTESTS_OBS = \
 	function-view-selftests.o \
+	lookup_name_info-selftests.o \
 	offset-type-selftests.o \
 	optional-selftests.o \
 	ptid-selftests.o \

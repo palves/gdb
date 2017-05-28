@@ -131,9 +131,11 @@ class lookup_name_info final
   /* Create a new object.  */
   lookup_name_info (std::string name,
 		    symbol_name_match_type match_type,
-		    bool completion_mode = false)
+		    bool completion_mode = false,
+		    bool ignore_parameters = false)
     : m_match_type (match_type),
       m_completion_mode (completion_mode),
+      m_ignore_parameters (ignore_parameters),
       m_name (std::move (name))
   {}
 
@@ -141,6 +143,16 @@ class lookup_name_info final
   symbol_name_match_type match_type () const { return m_match_type; }
   bool completion_mode () const { return m_completion_mode; }
   const std::string &name () const { return m_name; }
+  const bool ignore_parameters () const { return m_ignore_parameters; }
+
+  /* Return a version of this lookup name that is fit comparison
+     against symbols have have no parameter info, such as psymbols and
+     GDB index symbols.  */
+  lookup_name_info make_ignore_params () const
+  {
+    return lookup_name_info (m_name, m_match_type, m_completion_mode,
+			     true /* ignore params */);
+  }
 
   /* Get the search name hash for for searches in language LANG.  */
   unsigned int search_name_hash (language lang) const
@@ -217,6 +229,7 @@ private:
   /* The lookup info as passed to the ctor.  */
   symbol_name_match_type m_match_type;
   bool m_completion_mode;
+  bool m_ignore_parameters;
   std::string m_name;
 
   /* Language-specific info.  Filled lazily the first time a lookup is
