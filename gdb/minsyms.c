@@ -182,7 +182,7 @@ struct msymbol_demangled_lookup
 		       const lookup_name_info &lookup_name)
   {
     const char *symbol_name = MSYMBOL_SEARCH_NAME (msym);
-    return namecmp (symbol_name, lookup_name, NULL);
+    return namecmp (symbol_name, lookup_name, NULL, NULL);
   }
 };
 
@@ -457,7 +457,7 @@ iterate_over_minimal_symbols (struct objfile *objf,
       for (minimal_symbol *iter = objf->per_bfd->msymbol_demangled_hash[hash];
 	   iter != NULL;
 	   iter = iter->demangled_hash_next)
-	if (name_match (MSYMBOL_SEARCH_NAME (iter), lookup_name, NULL))
+	if (name_match (MSYMBOL_SEARCH_NAME (iter), lookup_name, NULL, NULL))
 	  (*callback) (iter, user_data);
     }
 }

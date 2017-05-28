@@ -113,12 +113,42 @@ private:
   std::string m_storage;
 };
 
+/* The result of a successful completion match, but for least common
+   denominator (LCD) computation.  Some completers provide matches
+   that don't start with the completion "word".  E.g., completing on
+   "b push_ba" on a C++ program usually completes to
+   std::vector<...>::push_back, std::string::push_back etc.  In such
+   case, the symbol comparison routine will set the LCD match to point
+   into the "push_back" substring within the symbol's name string.  */
+class completion_match_for_lcd
+{
+public:
+  /* Set the match for LCD.  See m_match's description.  */
+  void set_match (const char *match)
+  { m_match = match; }
+
+  /* Get the resulting LCD, after a successful match.  */
+  const char *finish ()
+  { return m_match; }
+
+  /* Prepare for another completion matching sequence.  */
+  void clear ()
+  { m_match = NULL; }
+
+private:
+  /* The completion match result for LCD.  This is usually either a
+     pointer into to a substring within a symbol's name, or to the
+     storage of the pairing completion_match object.  */
+  const char *m_match;
+};
+
 /* Convenience aggregate holding both the match and the match-for-lcd
    objects returned by the symbol name matching routines (see
    symbol_name_matcher_ftype).  */
 struct symbol_name_match_result
 {
   completion_match match;
+  completion_match_for_lcd match_for_lcd;
 };
 
 /* The final result of a completion that is handed over to either
@@ -178,6 +208,21 @@ public:
      that necessitates the time consuming expansion of many symbol
      tables.
 
+   - The completer's idea of least common denominator (aka the common
+     prefix) between all completion matches to hand over to readline.
+     Some completers provide matches that don't start with the
+     completion "word".  E.g., completing on "b push_ba" on a C++
+     program usually completes to std::vector<...>::push_back,
+     std::string::push_back etc.  If all matches happen to start with
+     "std::", then readline would figure out that the lowest common
+     denominator is "std::", and thus would do a partial completion
+     with that.  I.e., it would replace "push_ba" in the input buffer
+     with "std::", losing the original "push_ba", which is obviously
+     undesirable.  To avoid that, such completers pass the substring
+     of the match that matters for common denominator computation as
+     MATCH_FOR_LCD argument to add_completion.  The end result is
+     passed to readline in gdb_rl_attempted_completion_function.
+
    - The custom word point to hand over to readline, for completers
      that parse the input string in order to dynamically adjust
      themselves depending on exactly what they're completing.  E.g.,
@@ -196,7 +241,8 @@ struct completion_tracker
   /* Add the completion NAME to the list of generated completions if
      it is not there already.  If too many completions were already
      found, this throws an error.  */
-  void add_completion (gdb::unique_xmalloc_ptr<char> name);
+  void add_completion (gdb::unique_xmalloc_ptr<char> name,
+		       completion_match_for_lcd *match_for_lcd = NULL);
 
   /* Add all completions matches in LIST.  Elements are moved out of
      LIST.  */
@@ -259,6 +305,7 @@ struct completion_tracker
 
     /* Clear any previous match.  */
     res.match.clear ();
+    res.match_for_lcd.clear ();
     return m_symbol_name_match_result;
   }
 
@@ -281,7 +328,8 @@ private:
   /* Add the completion NAME to the list of generated completions if
      it is not there already.  If false is returned, too many
      completions were found.  */
-  bool maybe_add_completion (gdb::unique_xmalloc_ptr<char> name);
+  bool maybe_add_completion (gdb::unique_xmalloc_ptr<char> name,
+			     completion_match_for_lcd *match_for_lcd);
 
   /* Given a new match, recompute the lowest common denominator (LCD)
      to hand over to readline.  Normally readline computes this itself
@@ -347,8 +395,13 @@ private:
      See intro.  */
   char *m_lowest_common_denominator = NULL;
 
-  /* If true, the LCD is unique.  I.e., all completion candidates had
-     the same string.  */
+  /* If true, the LCD is unique.  I.e., all completions had the same
+     MATCH_FOR_LCD substring, even if the completions were different.
+     For example, if "break function<tab>" found "a::function()" and
+     "b::function()", the LCD will be "function()" in both cases and
+     so we want to tell readline to complete the line with
+     "function()", instead of showing all the possible
+     completions.  */
   bool m_lowest_common_denominator_unique = false;
 };
 

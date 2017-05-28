@@ -953,7 +953,7 @@ symbol_matches_search_name (const struct general_symbol_info *gsymbol,
   symbol_name_matcher_ftype *name_match
     = language_get_symbol_name_matcher (language_def (gsymbol->language),
 					name);
-  return name_match (symbol_search_name (gsymbol), name, NULL);
+  return name_match (symbol_search_name (gsymbol), name, NULL, NULL);
 }
 
 /* Initialize the structure fields to zero values.  */
@@ -1144,7 +1144,7 @@ eq_symbol_entry (const struct symbol_cache_slot *slot,
 	  lookup_name_info lookup_name (name, symbol_name_match_type::FULL);
 	  symbol_name_matcher_ftype *matcher
 	    = language_get_symbol_name_matcher (lang, lookup_name);
-	  if (!matcher (slot_name, lookup_name, NULL))
+	  if (!matcher (slot_name, lookup_name, NULL, NULL))
 	    return 0;
 	  if (!symbol_matches_domain (SYMBOL_LANGUAGE (sym),
 				      slot_domain, domain))
@@ -4798,7 +4798,8 @@ compare_symbol_name (const char *symbol_name, language symbol_language,
   symbol_name_matcher_ftype *name_match
     = language_get_symbol_name_matcher (lang, lookup_name);
 
-  return name_match (symbol_name, lookup_name, &match_res.match);
+  return name_match (symbol_name, lookup_name,
+		     &match_res.match, &match_res.match_for_lcd);
 }
 
 /*  Test to see if the symbol specified by SYMNAME (which is already
@@ -4853,7 +4854,14 @@ completion_list_add_name (completion_tracker &tracker,
 
     gdb::unique_xmalloc_ptr<char> completion (newobj);
 
-    tracker.add_completion (std::move (completion));
+    /* Here we pass the match-for-lcd object to add_completion.  Some
+       languages match the user text against substrings of symbol
+       names in some cases.  E.g., in C++, "b push_ba" completes to
+       "std::vector::push_back", "std::string::push_back", etc., and
+       in this case we want the completion lowest common denominator
+       to be "push_back" instead of "std::".  */
+    tracker.add_completion (std::move (completion),
+			    &match_res.match_for_lcd);
   }
 }
 

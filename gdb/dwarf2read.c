@@ -4090,7 +4090,7 @@ bool
 gdb_index_symbol_name_matcher::matches (const char *symbol_name)
 {
   for (auto name_matches : m_symbol_name_matcher_funcs)
-    if (name_matches (symbol_name, m_lookup_name, NULL))
+    if (name_matches (symbol_name, m_lookup_name, NULL, NULL))
       return true;
 
   return false;

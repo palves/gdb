@@ -68,10 +68,12 @@ class ada_lookup_name_info final
 
   /* Compare SYMBOL_SEARCH_NAME with our lookup name, using MATCH_TYPE
      as name match type.  Returns true if there's a match, false
-     otherwise.  If non-NULL, store the matching results in MATCH.  */
+     otherwise.  If non-NULL, store the matching results in MATCH and
+     MATCH_FOR_LCD as appropriate.  */
   bool matches (const char *symbol_search_name,
 		symbol_name_match_type match_type,
-		completion_match *match) const;
+		completion_match *match,
+		completion_match_for_lcd *match_for_lcd) const;
 
   /* The Ada-encoded lookup name.  */
   const std::string &lookup_name () const
@@ -257,11 +259,18 @@ private:
    name as should be presented to the user as a completion match list
    element.  In most languages, this is the same as the symbol's
    search name, but in some, like Ada, the display name is dynamically
-   computed within the comparison routine.  */
+   computed within the comparison routine.
+
+   Also, on success and if non-NULL, MATCH_FOR_LCD points the part of
+   SYMBOL_SEARCH_NAME that was considered to match LOOKUP_NAME.  E.g.,
+   in C++, in linespec mode, if the symbol is "foo::function()" and
+   LOOKUP_NAME is "function(", MATCH_FOR_LCD points to "function()"
+   inside SYMBOL_SEARCH_NAME.  */
 typedef bool (symbol_name_matcher_ftype)
   (const char *symbol_search_name,
    const lookup_name_info &lookup_name,
-   completion_match *match);
+   completion_match *match,
+   completion_match_for_lcd *match_for_lcd);
 
 /* Some of the structures in this file are space critical.
    The space-critical structures are:

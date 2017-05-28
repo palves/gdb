@@ -603,7 +603,7 @@ match_partial_symbol (struct objfile *objfile,
 	  symbol_name_matcher_ftype *name_match
 	    = language_get_symbol_name_matcher (lang, lookup_name);
 
-	  if (name_match (SYMBOL_SEARCH_NAME (*top), lookup_name, NULL))
+	  if (name_match (SYMBOL_SEARCH_NAME (*top), lookup_name, NULL, NULL))
 	    {
 	      if (symbol_matches_domain (SYMBOL_LANGUAGE (*top),
 					 SYMBOL_DOMAIN (*top), domain))
@@ -629,7 +629,7 @@ match_partial_symbol (struct objfile *objfile,
 		= language_get_symbol_name_matcher (lang, lookup_name);
 
 	      if (name_match (SYMBOL_SEARCH_NAME (*psym), lookup_name,
-			      NULL))
+			      NULL, NULL))
 		return *psym;
 	    }
 	}
@@ -1309,7 +1309,7 @@ psymbol_name_matches (partial_symbol *psym,
   const language_defn *lang = language_def (SYMBOL_LANGUAGE (psym));
   symbol_name_matcher_ftype *name_match
     = language_get_symbol_name_matcher (lang, lookup_name);
-  return name_match (SYMBOL_SEARCH_NAME (psym), lookup_name, NULL);
+  return name_match (SYMBOL_SEARCH_NAME (psym), lookup_name, NULL, NULL);
 }
 
 /* A helper for psym_expand_symtabs_matching that handles searching

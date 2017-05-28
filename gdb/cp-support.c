@@ -1646,7 +1646,8 @@ gdb_sniff_from_mangled_name (const char *mangled, char **demangled)
 static bool
 cp_fq_symbol_name_matches (const char *symbol_search_name,
 			   const lookup_name_info &lookup_name,
-			   completion_match *match)
+			   completion_match *match,
+			   completion_match_for_lcd *match_for_lcd)
 {
   const std::string &name = lookup_name.cplus ().lookup_name ();
 
@@ -1660,6 +1661,8 @@ cp_fq_symbol_name_matches (const char *symbol_search_name,
     {
       if (match != NULL)
 	match->set_match (symbol_search_name);
+      if (match_for_lcd != NULL)
+	match_for_lcd->set_match (symbol_search_name);
       return true;
     }
 

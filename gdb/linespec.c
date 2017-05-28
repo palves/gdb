@@ -1216,7 +1216,7 @@ find_methods (struct type *t, enum language t_lang, const char *name,
 		method_name = dem_opname;
 	    }
 
-	  if (symbol_name_compare (method_name, lookup_name, NULL))
+	  if (symbol_name_compare (method_name, lookup_name, NULL, NULL))
 	    {
 	      int field_counter;
 

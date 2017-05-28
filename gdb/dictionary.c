@@ -654,7 +654,7 @@ iter_match_first_hashed (const struct dictionary *dict,
        sym = sym->hash_next)
     {
       /* Warning: the order of arguments to compare matters!  */
-      if (name_match (SYMBOL_SEARCH_NAME (sym), name, NULL))
+      if (name_match (SYMBOL_SEARCH_NAME (sym), name, NULL, NULL))
 	break;
     }
 
@@ -675,7 +675,7 @@ iter_match_next_hashed (const lookup_name_info &name,
        next != NULL;
        next = next->hash_next)
     {
-      if (name_match (SYMBOL_SEARCH_NAME (next), name, NULL))
+      if (name_match (SYMBOL_SEARCH_NAME (next), name, NULL, NULL))
 	break;
     }
 
@@ -893,7 +893,7 @@ iter_match_next_linear (const lookup_name_info &name,
     {
       sym = DICT_LINEAR_SYM (dict, i);
 
-      if (name_match (SYMBOL_SEARCH_NAME (sym), name, NULL))
+      if (name_match (SYMBOL_SEARCH_NAME (sym), name, NULL, NULL))
 	{
 	  retval = sym;
 	  break;

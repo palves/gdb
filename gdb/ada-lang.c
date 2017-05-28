@@ -6404,7 +6404,8 @@ bool
 ada_lookup_name_info::matches
   (const char *sym_name,
    symbol_name_match_type match_type,
-   completion_match *comp_match) const
+   completion_match *comp_match,
+   completion_match_for_lcd *comp_match_for_lcd) const
 {
   bool match = false;
   const char *text = m_encoded_name.c_str ();
@@ -6470,6 +6471,7 @@ ada_lookup_name_info::matches
 	{
 	  match_str = ada_decode (sym_name);
 	  comp_match->set_match (match_str.c_str ());
+	  comp_match_for_lcd->set_match (match_str.c_str ());
 	}
       else
 	{
@@ -6479,6 +6481,7 @@ ada_lookup_name_info::matches
 	    match_str = sym_name;
 
 	  comp_match->set_match (match_str.c_str ());
+	  comp_match_for_lcd->set_match (match_str.c_str ());
 	}
     }
 
@@ -13927,7 +13930,8 @@ static const struct exp_descriptor ada_exp_descriptor = {
 static bool
 do_wild_match (const char *symbol_search_name,
 	       const lookup_name_info &lookup_name,
-	       completion_match *match)
+	       completion_match *match,
+	       completion_match_for_lcd *match_for_lcd)
 {
   return wild_match (symbol_search_name, ada_lookup_name (lookup_name)) == 0;
 }
@@ -13937,7 +13941,8 @@ do_wild_match (const char *symbol_search_name,
 static bool
 do_full_match (const char *symbol_search_name,
 	       const lookup_name_info &lookup_name,
-	       completion_match *match)
+	       completion_match *match,
+	       completion_match_for_lcd *match_for_lcd)
 {
   return full_match (symbol_search_name, ada_lookup_name (lookup_name)) == 0;
 }
@@ -13992,11 +13997,12 @@ ada_lookup_name_info::ada_lookup_name_info (const lookup_name_info &lookup_name)
 static bool
 ada_symbol_name_matches (const char *symbol_search_name,
 			 const lookup_name_info &lookup_name,
-			 completion_match *match)
+			 completion_match *match,
+			 completion_match_for_lcd *match_for_lcd)
 {
   return lookup_name.ada ().matches (symbol_search_name,
 				     lookup_name.match_type (),
-				     match);
+				     match, match_for_lcd);
 }
 
 /* Implement the "la_get_symbol_name_matcher" language_defn method for
