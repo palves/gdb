@@ -4548,8 +4548,27 @@ run_test ()
   CHECK_MATCH ("std::zfunction(int)", symbol_name_match_type::FULL, true,
 	       EXPECT ("std::zfunction", "std::zfunction2"));
 
+  CHECK_MATCH ("zfunction(int)", symbol_name_match_type::WILD, true,
+	       EXPECT ("std::zfunction", "std::zfunction2"));
+  CHECK_MATCH ("zfunc", symbol_name_match_type::WILD, true,
+	       EXPECT ("std::zfunction", "std::zfunction2"));
+
+  CHECK_MATCH ("bar2", symbol_name_match_type::WILD, false,
+	       {});
+
   CHECK_MATCH ("doesntexist", symbol_name_match_type::FULL, false,
 	       {});
+
+  CHECK_MATCH ("A::B::C", symbol_name_match_type::WILD, false,
+	       EXPECT ("(anonymous namespace)::A::B::C"));
+  CHECK_MATCH ("A:: B:: C ( int )", symbol_name_match_type::WILD, false,
+	       EXPECT ("(anonymous namespace)::A::B::C"));
+
+  CHECK_MATCH ("B::C", symbol_name_match_type::WILD, false,
+	       EXPECT ("(anonymous namespace)::A::B::C"));
+
+  CHECK_MATCH ("C", symbol_name_match_type::WILD, false,
+	       EXPECT ("(anonymous namespace)::A::B::C"));
 
   SELF_CHECK (!any_mismatch);
 

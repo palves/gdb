@@ -76,6 +76,9 @@ enum explicit_location_match_type
     /* The name of a function or method.  */
     MATCH_FUNCTION,
 
+    /* The fully-qualified name of a function or method.  */
+    MATCH_QUALIFIED,
+
     /* A line number.  */
     MATCH_LINE,
 
@@ -600,6 +603,7 @@ static const char *const explicit_options[] =
   {
     "-source",
     "-function",
+    "-qualified",
     "-line",
     "-label",
     NULL
@@ -651,6 +655,7 @@ collect_explicit_location_matches (completion_tracker &tracker,
       break;
 
     case MATCH_FUNCTION:
+    case MATCH_QUALIFIED:
       {
 	const char *function = string_or_empty (explicit_loc->function_name);
 	linespec_complete_function (tracker, function,

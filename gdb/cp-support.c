@@ -1641,7 +1641,97 @@ gdb_sniff_from_mangled_name (const char *mangled, char **demangled)
   return *demangled != NULL;
 }
 
-/* C++ symbol_name_matcher_ftype implementation.  */
+/* Produce an unsigned hash value from SEARCH_NAME that is compatible
+   with cp_symbol_name_matches.  Only the last component in
+   "foo::bar::function()" is considered for hashing purposes (i.e.,
+   the entire prefix is skipped), so that later on looking up for
+   "function" or "bar::function" in all namespaces is possible.  */
+
+unsigned int
+cp_search_name_hash (const char *search_name)
+{
+  /* cp_entire_prefix_len assumes a fully-qualified name with no
+     leading "::".  */
+  if (startswith (search_name, "::"))
+    search_name += 2;
+
+  unsigned int prefix_len = cp_entire_prefix_len (search_name);
+  if (prefix_len != 0)
+    search_name += prefix_len + 2;
+
+  return default_search_name_hash (search_name);
+}
+
+/* Helper for cp_symbol_name_matches (i.e., symbol_name_matcher_ftype
+   implementation for symbol_name_match_type::WILD matching).  Split
+   to a separate function for unit-testing convenience.
+
+   If SYMBOL_SEARCH_NAME has more scopes than LOOKUP_NAME, we try to
+   match ignoring the extra leading scopes of SYMBOL_SEARCH_NAME.
+   This allows conveniently setting breakpoints on functions/methods
+   inside any namespace/class without specifying the fully-qualified
+   name.
+
+   E.g., these match:
+
+    [symbol search name]   [lookup name]
+    foo::bar::func         bar::func
+    foo::bar::func         ::foo:bar::func
+
+   While these don't:
+
+    [symbol search name]   [lookup name]
+    foo::zbar::func        bar::func
+    foo::bar::func         ::bar::func
+
+   Likewise, "ba<tab>" finds "foo::bar", but "::ba<tab>" doesn't.
+
+   See more examples in the test_cp_symbol_name_matches selftest
+   function below.
+
+   SYMBOL_SEARCH_NAME, MATCH and MATCH_FOR_LCD in
+   symbol_name_matcher_ftype.
+
+   LOOKUP_NAME/LOOKUP_NAME_LEN is the name we're looking up.
+
+   MODE is like the same parameter in strncmp_iw_with_mode.
+*/
+
+static bool
+cp_symbol_name_matches_1 (const char *symbol_search_name,
+			  const char *lookup_name,
+			  size_t lookup_name_len,
+			  strncmp_iw_mode mode,
+			  completion_match *match,
+			  completion_match_for_lcd *match_for_lcd)
+{
+  const char *sname = symbol_search_name;
+
+  while (true)
+    {
+      if (strncmp_iw_with_mode (sname, lookup_name, lookup_name_len,
+				mode) == 0)
+	{
+	  if (match != NULL)
+	    match->set_match (symbol_search_name);
+	  if (match_for_lcd != NULL)
+	    match_for_lcd->set_match (sname);
+	  return true;
+	}
+
+      unsigned int len = cp_find_first_component (sname);
+
+      if (sname[len] == '\0')
+	return false;
+
+      gdb_assert (sname[len] == ':');
+      /* Skip the '::'.  */
+      sname += len + 2;
+    }
+}
+
+/* C++ symbol_name_matcher_ftype implementation for fully qualified
+   matches.  */
 
 static bool
 cp_fq_symbol_name_matches (const char *symbol_search_name,
@@ -1669,18 +1759,151 @@ cp_fq_symbol_name_matches (const char *symbol_search_name,
   return false;
 }
 
+/* C++ symbol_name_matcher_ftype implementation for wild matches.
+   Defers work to cp_symbol_name_ncmp.  */
+
+static bool
+cp_symbol_name_matches (const char *symbol_search_name,
+			const lookup_name_info &lookup_name,
+			completion_match *match,
+			completion_match_for_lcd *match_for_lcd)
+{
+  const std::string &name = lookup_name.cplus ().lookup_name ();
+
+  strncmp_iw_mode mode = (lookup_name.completion_mode ()
+			  ? strncmp_iw_mode::NORMAL
+			  : strncmp_iw_mode::MATCH_PARAMS);
+
+  return cp_symbol_name_matches_1 (symbol_search_name,
+				   name.c_str (), name.size (),
+				   mode, match, match_for_lcd);
+}
+
 /* Implement the "la_get_symbol_name_matcher" language_defn method for
    C++.  */
 
 symbol_name_matcher_ftype *
 cp_get_symbol_name_matcher (const lookup_name_info &lookup_name)
 {
-  return cp_fq_symbol_name_matches;
+  switch (lookup_name.match_type ())
+    {
+    case symbol_name_match_type::FULL:
+    case symbol_name_match_type::EXPRESSION:
+      return cp_fq_symbol_name_matches;
+    case symbol_name_match_type::WILD:
+      return cp_symbol_name_matches;
+    }
+
+  gdb_assert_not_reached ("");
 }
 
 #if GDB_SELF_TEST
 
 namespace selftests {
+
+void
+test_cp_symbol_name_cmp ()
+{
+#define CHECK_MATCH(SYMBOL, INPUT)					\
+  SELF_CHECK (cp_symbol_name_matches_1 (SYMBOL,				\
+					INPUT, sizeof (INPUT) - 1,	\
+					strncmp_iw_mode::MATCH_PARAMS,	\
+					NULL, NULL))
+
+#define CHECK_NOT_MATCH(SYMBOL, INPUT)					\
+  SELF_CHECK (!cp_symbol_name_matches_1 (SYMBOL,			\
+					 INPUT, sizeof (INPUT) - 1,	\
+					 strncmp_iw_mode::MATCH_PARAMS,	\
+					 NULL, NULL))
+
+  /* Like CHECK_MATCH, and also check that INPUT (and all substrings
+     that start at index 0) completes to SYMBOL.  */
+#define CHECK_MATCH_C(SYMBOL, INPUT)					\
+  CHECK_MATCH (SYMBOL, INPUT);						\
+  for (size_t i = 0; i < sizeof (INPUT) - 1; i++)			\
+    SELF_CHECK (cp_symbol_name_matches_1 (SYMBOL, INPUT, i,		\
+					  strncmp_iw_mode::NORMAL,	\
+					  NULL, NULL))
+
+  /* Like CHECK_NOT_MATCH, and also check that INPUT does NOT complete
+     to SYMBOL.  */
+#define CHECK_NOT_MATCH_C(SYMBOL, INPUT)				\
+  CHECK_NOT_MATCH (SYMBOL, INPUT);					\
+  SELF_CHECK (!cp_symbol_name_matches_1 (SYMBOL, INPUT,			\
+					 sizeof (INPUT) - 1,	\
+					 strncmp_iw_mode::NORMAL,	\
+					 NULL, NULL))
+
+  /* Lookup name without parens matches all overloads.  */
+  CHECK_MATCH_C ("function()", "function");
+  CHECK_MATCH_C ("function(int)", "function");
+
+  /* Check whitespace around parameters is ignored.  */
+  CHECK_MATCH_C ("function()", "function ()");
+  CHECK_MATCH_C ("function ( )", "function()");
+  CHECK_MATCH_C ("function ()", "function( )");
+  CHECK_MATCH_C ("func(int)", "func( int )");
+  CHECK_MATCH_C ("func(int)", "func ( int ) ");
+  CHECK_MATCH_C ("func ( int )", "func( int )");
+  CHECK_MATCH_C ("func ( int )", "func ( int ) ");
+
+  /* Check symbol name prefixes aren't incorrectly matched.  */
+  CHECK_NOT_MATCH ("func", "function");
+  CHECK_NOT_MATCH ("function", "func");
+  CHECK_NOT_MATCH ("function()", "func");
+
+  /* Check that if the lookup name includes parameters, only the right
+     overload matches.  */
+  CHECK_MATCH_C ("function(int)", "function(int)");
+  CHECK_NOT_MATCH_C ("function(int)", "function()");
+
+  /* Tests matching symbols in some scope.  */
+  CHECK_MATCH_C ("foo::function()", "function");
+  CHECK_MATCH_C ("foo::function(int)", "function");
+  CHECK_MATCH_C ("foo::bar::function()", "function");
+  CHECK_MATCH_C ("bar::function()", "bar::function");
+  CHECK_MATCH_C ("foo::bar::function()", "bar::function");
+  CHECK_MATCH_C ("foo::bar::function(int)", "bar::function");
+
+  /* Same, with parameters in the lookup name.  */
+  CHECK_MATCH_C ("foo::function()", "function()");
+  CHECK_MATCH_C ("foo::bar::function()", "function()");
+  CHECK_MATCH_C ("foo::function(int)", "function(int)");
+  CHECK_MATCH_C ("foo::function()", "foo::function()");
+  CHECK_MATCH_C ("foo::bar::function()", "bar::function()");
+  CHECK_MATCH_C ("foo::bar::function(int)", "bar::function(int)");
+  CHECK_NOT_MATCH_C ("foo::bar::function(int)", "bar::function()");
+
+  CHECK_MATCH_C ("(anonymous namespace)::bar::function(int)",
+		 "bar::function(int)");
+  CHECK_MATCH_C ("foo::(anonymous namespace)::bar::function(int)",
+		 "function(int)");
+
+  /* Lookup scope wider than symbol scope, should not match.  */
+  CHECK_NOT_MATCH_C ("function()", "bar::function");
+  CHECK_NOT_MATCH_C ("function()", "bar::function()");
+
+  /* An explicit global scope forces a fully qualified match.  */
+  CHECK_NOT_MATCH_C ("foo::function()", "::function");
+  CHECK_NOT_MATCH_C ("foo::function()", "::function()");
+  CHECK_NOT_MATCH_C ("foo::function(int)", "::function()");
+  CHECK_NOT_MATCH_C ("foo::function(int)", "::function(int)");
+
+  CHECK_MATCH_C ("abc::def::ghi()", "abc::def::ghi()");
+  CHECK_MATCH_C ("abc::def::ghi ( )", "abc::def::ghi()");
+  CHECK_MATCH_C ("abc::def::ghi()", "abc::def::ghi ( )");
+  CHECK_MATCH_C ("function()", "function()");
+  CHECK_MATCH_C ("foo::function()", "function()");
+  CHECK_MATCH_C ("foo::bar::function()", "function()");
+  CHECK_MATCH_C ("bar::function()", "bar::function()");
+  CHECK_MATCH_C ("foo::bar::function()", "bar::function");
+  CHECK_MATCH_C ("(anonymous namespace)::bar::function(int)",
+		 "function(int)");
+  CHECK_MATCH_C ("foo::(anonymous namespace)::bar::function(int)",
+		 "function(int)");
+  CHECK_NOT_MATCH_C ("function()", "bar::function");
+  CHECK_NOT_MATCH_C ("foo::function()", "::function");
+}
 
 /* If non-NULL, return STR wrapped in quotes.  Otherwise, return a
    "<null>" string (with no quotes).  */
@@ -1888,6 +2111,7 @@ display the offending symbol."),
 #endif
 
 #if GDB_SELF_TEST
+  register_self_test (selftests::test_cp_symbol_name_cmp);
   register_self_test (selftests::test_cp_remove_params);
 #endif
 }
