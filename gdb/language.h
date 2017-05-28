@@ -126,16 +126,6 @@ struct language_arch_info
   struct type *bool_type_default;
 };
 
-/* A pointer to a function expected to return nonzero if
-   SYMBOL_SEARCH_NAME matches the given LOOKUP_NAME.
-
-   SYMBOL_SEARCH_NAME should be a symbol's "search" name.
-   LOOKUP_NAME should be the name of an entity after it has been
-   transformed for lookup.  */
-
-typedef int (*symbol_name_cmp_ftype) (const char *symbol_search_name,
-				      const char *lookup_name);
-
 /* Structure tying together assorted information about a language.  */
 
 struct language_defn
@@ -331,6 +321,7 @@ struct language_defn
     void (*la_collect_symbol_completion_matches)
       (completion_tracker &tracker,
        complete_symbol_mode mode,
+       symbol_name_match_type compare_name,
        const char *text,
        const char *word,
        enum type_code code);
@@ -367,13 +358,28 @@ struct language_defn
     gdb::unique_xmalloc_ptr<char> (*la_watch_location_expression)
          (struct type *type, CORE_ADDR addr);
 
-    /* Return a pointer to the function that should be used to match
-       a symbol name against LOOKUP_NAME. This is mostly for languages
-       such as Ada where the matching algorithm depends on LOOKUP_NAME.
+    /* Return a pointer to the function that should be used to match a
+       symbol name against LOOKUP_NAME.  The matching algorithm
+       depends on LOOKUP_NAME.
 
-       This field may be NULL, in which case strcmp_iw will be used
-       to perform the matching.  */
-    symbol_name_cmp_ftype (*la_get_symbol_name_cmp) (const char *lookup_name);
+       This field may be NULL, in which case
+       default_symbol_name_matcher will be used to perform the
+       matching.
+
+       XXXX On exit, *SYMBOL_SEARCH_NAME_MATCHED points the part of
+       SYMBOL_SEARCH_NAME that was considered to match LOOKUP_NAME.
+       E.g., in C++, if the symbol is "foo::function()" and
+       LOOKUP_NAME is "function(", *SYMBOL_SEARCH_NAME_MATCHED points
+       to "function()" inside SYMBOL_SEARCH_NAME.
+
+       On exit, *NON_SYMBOL_PREFIX tells how many characters of
+       LOOKUP_NAME form a prefix that is not considered part of a
+       symbol name.  E.g., in C++, if the user searches for
+       "::foo::function", the initial "::" is not be found in symbol
+       names, even though it has meaning, so NON_SYMBOL_PREFIX is set
+       to 2 (see la_get_symbol_name_cmp above).  */
+    symbol_name_matcher_ftype *(*la_get_symbol_name_matcher)
+      (const lookup_name_info &);
 
     /* Find all symbols in the current program space matching NAME in
        DOMAIN, according to this language's rules.
@@ -389,7 +395,8 @@ struct language_defn
        special processing here, 'iterate_over_symbols' should be
        used as the definition.  */
     void (*la_iterate_over_symbols)
-      (const struct block *block, const char *name, domain_enum domain,
+      (const struct block *block, const lookup_name_info &name,
+       domain_enum domain,
        gdb::function_view<symbol_found_callback_ftype> callback);
 
     /* Hash the given STRING.  Use default_search_name_hash if no
@@ -539,7 +546,8 @@ extern enum language set_language (enum language);
   (current_language->la_print_array_index(index_value, stream, options))
 
 #define LA_ITERATE_OVER_SYMBOLS(BLOCK, NAME, DOMAIN, CALLBACK) \
-  (current_language->la_iterate_over_symbols (BLOCK, NAME, DOMAIN, CALLBACK))
+  (current_language->la_iterate_over_symbols (BLOCK, NAME, \
+					      DOMAIN, CALLBACK))
 
 /* Test a character to decide whether it can be printed in literal form
    or needs to be printed in another representation.  For example,
@@ -633,6 +641,18 @@ extern unsigned int default_search_name_hash (const char *search_name);
 
 void c_get_string (struct value *value, gdb_byte **buffer, int *length,
 		   struct type **char_type, const char **charset);
+
+/* The default implementation of la_symbol_name_matcher.  Matches with
+   strncmp_iw.  */
+extern bool default_symbol_name_matcher
+  (const char *symbol_search_name,
+   const lookup_name_info &lookup_name,
+   completion_match *match);
+
+/* Get the language LANG'S symbol_name_matcher method for LOOKUP_NAME.
+   Returns default_symbol_name_matcher if not set.  */
+symbol_name_matcher_ftype *language_get_symbol_name_matcher
+  (const language_defn *lang, const lookup_name_info &lookup_name);
 
 /* The languages supported by GDB.  */
 

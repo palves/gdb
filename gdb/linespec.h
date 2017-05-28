@@ -195,12 +195,14 @@ extern void linespec_complete (completion_tracker &tracker,
 
 extern void linespec_complete_function (completion_tracker &tracker,
 					const char *function,
+					symbol_name_match_type name_match_type,
 					const char *source_filename);
 
 extern void linespec_complete_label (completion_tracker &tracker,
 				     const struct language_defn *language,
 				     const char *source_filename,
 				     const char *function_name,
+				     symbol_name_match_type name_match_type,
 				     const char *label_name);
 
 /* Evaluate the expression pointed to by EXP_PTR into a CORE_ADDR,

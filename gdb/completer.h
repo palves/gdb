@@ -65,6 +65,62 @@ struct match_list_displayer
 
 using completion_list = std::vector<gdb::unique_xmalloc_ptr<char>>;
 
+/* The result of a successful completion match.  When doing symbol
+   comparison, we use the symbol search name for the symbol name match
+   check, but the matched name that is shown to the user may be
+   different.  For example, Ada uses encoded names for lookup, but
+   then wants to decode the symbol name to show to the user, and also
+   in some cases wrap the matched name in "<sym>" (meaning we can't
+   always use the symbol's print name.  */
+
+class completion_match
+{
+public:
+  /* Get the completion match result.  See m_match/m_storage's
+     descriptions.  */
+  const char *match ()
+  { return m_match; }
+
+  /* Set the completion match result.  See m_match/m_storage's
+     descriptions.  */
+  void set_match (const char *match)
+  { m_match = match; }
+
+  /* Get temporary storage for generating a match result, dynamically.
+     The built string is only good until the next clear() call.  I.e.,
+     good until the next symbol comparison.  */
+  std::string &storage ()
+  { return m_storage; }
+
+  /* Prepare for another completion matching sequence.  */
+  void clear ()
+  {
+    m_match = NULL;
+    m_storage.clear ();
+  }
+
+private:
+  /* The completion match result.  This can either be a pointer into
+     M_STORAGE string, or it can be a pointer into the some other
+     string that outlives the completion matching sequence (usually, a
+     pointer to a symbol's name.  */
+  const char *m_match;
+
+  /* Storage a symbol comparison routine can use for generating a
+     match result, dynamically.  The built string is only good until
+     the next clear() call.  I.e., good until the next symbol
+     comparison.  */
+  std::string m_storage;
+};
+
+/* Convenience aggregate holding both the match and the match-for-lcd
+   objects returned by the symbol name matching routines (see
+   symbol_name_matcher_ftype).  */
+struct symbol_name_match_result
+{
+  completion_match match;
+};
+
 /* The final result of a completion that is handed over to either
    readline or the completion command.  Mainly a wrapper for a
    readline-style match list array, though other bits of info are
@@ -194,6 +250,18 @@ struct completion_tracker
      already have.  */
   bool completes_to_completion_word (const char *word);
 
+  /* Get a reference to the shared (between all the multiple symbol
+     name comparison calls) symbol_name_match_result object, ready for
+     another symbol name match sequence.  */
+  symbol_name_match_result &reset_symbol_name_match_result ()
+  {
+    symbol_name_match_result &res = m_symbol_name_match_result;
+
+    /* Clear any previous match.  */
+    res.match.clear ();
+    return m_symbol_name_match_result;
+  }
+
   /* True if we have any completion match recorded.  */
   bool have_completions () const
   { return !m_entries_vec.empty (); }
@@ -216,8 +284,23 @@ private:
   bool maybe_add_completion (gdb::unique_xmalloc_ptr<char> name);
 
   /* Given a new match, recompute the lowest common denominator (LCD)
-     to hand over to readline.  */
+     to hand over to readline.  Normally readline computes this itself
+     based on the whole set of completion matches.  However, some
+     completers want to override readline, in order to be able to
+     provide a LCD that is not really a prefix of the matches, but the
+     lowest common denominator of some relevant substring of each
+     match.  E.g., "b push_ba" completes to
+     "std::vector<..>::push_back", "std::string::push_back", etc., and
+     in this case we want the lowest common denominator to be
+     "push_back" instead of "std::".  */
   void recompute_lowest_common_denominator (const char *new_match);
+
+  /* Completion match outputs returned by the symbol name matching
+     routines (see symbol_name_matcher_ftype).  These results are only
+     valid for a single match call.  This is here in order to be able
+     to conveniently share the same storage among all the calls to the
+     symbol name matching routines.  */
+  symbol_name_match_result m_symbol_name_match_result;
 
   /* The completion matches found so far, in a vector.  */
   completion_list m_entries_vec;

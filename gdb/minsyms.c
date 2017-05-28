@@ -128,7 +128,7 @@ add_minsym_to_demangled_hash_table (struct minimal_symbol *sym,
 			       MSYMBOL_SEARCH_NAME (sym));
 
       auto &vec = objfile->per_bfd->demangled_hash_languages;
-      auto it = std::lower_bound (vec.begin(), vec.end(),
+      auto it = std::lower_bound (vec.begin (), vec.end (),
 				  MSYMBOL_LANGUAGE (sym));
       if (it == vec.end () || *it != MSYMBOL_LANGUAGE (sym))
 	vec.insert (it, MSYMBOL_LANGUAGE (sym));
@@ -148,37 +148,60 @@ struct lookup_minimal_symbol_result
 
 struct msymbol_mangled_lookup
 {
-  static const char *msymbol_lookup_name (minimal_symbol *msym)
-  { return MSYMBOL_LINKAGE_NAME (msym); }
+  using Name = const char *;
+  using NameCmp = bool (const char *, const char *);
 
   static minimal_symbol *next_msymbol (minimal_symbol *msym)
   { return msym->hash_next; }
+
+  static const char *name (const char *name)
+  { return name; }
+
+  static bool compare (NameCmp *namecmp,
+		       minimal_symbol *msym,
+		       const char *lookup_name)
+  {
+    const char *symbol_name = MSYMBOL_LINKAGE_NAME (msym);
+    return namecmp (symbol_name, lookup_name);
+  }
 };
 
 struct msymbol_demangled_lookup
 {
-  static const char *msymbol_lookup_name (minimal_symbol *msym)
-  { return MSYMBOL_SEARCH_NAME (msym); }
+  using Name = const lookup_name_info &;
+  using NameCmp = symbol_name_matcher_ftype;
 
   static minimal_symbol *next_msymbol (minimal_symbol *msym)
   { return msym->demangled_hash_next; }
+
+  static const char *name (const lookup_name_info &name)
+  { return name.name ().c_str (); }
+
+  static bool compare (NameCmp *namecmp,
+		       minimal_symbol *msym,
+		       const lookup_name_info &lookup_name)
+  {
+    const char *symbol_name = MSYMBOL_SEARCH_NAME (msym);
+    return namecmp (symbol_name, lookup_name, NULL);
+  }
 };
 
 template <typename LookupTrait>
 static void
-lookup_minimal_symbol_once (const char *name,
+lookup_minimal_symbol_once (typename LookupTrait::Name name,
 			    const char *sfile,
 			    struct objfile *objfile,
 			    struct minimal_symbol **table,
 			    unsigned int hash,
-			    int (*namecmp) (const char *, const char *),
+			    typename LookupTrait::NameCmp *namecmp,
 			    lookup_minimal_symbol_result &res)
 {
   if (symbol_lookup_debug)
     {
       fprintf_unfiltered (gdb_stdlog,
 			  "lookup_minimal_symbol (%s, %s, %s)\n",
-			  name, sfile != NULL ? sfile : "NULL",
+			  LookupTrait::name (name),
+			  sfile != NULL ? sfile : "NULL",
 			  objfile_debug_name (objfile));
     }
 
@@ -186,8 +209,7 @@ lookup_minimal_symbol_once (const char *name,
 
   while (msymbol != NULL)
     {
-      bool match = namecmp (LookupTrait::msymbol_lookup_name (msymbol),
-			    name) == 0;
+      bool match = LookupTrait::compare (namecmp, msymbol, name);
 
       if (match)
 	{
@@ -261,32 +283,18 @@ lookup_minimal_symbol (const char *name, const char *sfile,
 
   unsigned int hash = msymbol_hash (name) % MINIMAL_SYMBOL_HASH_SIZE;
 
-  /* The demangled hashes.  Stored in an array with one entry for each
-     possible language.  The second array holds a
-     boolean-disguised-as-byte, that records whether we've already
-     computed the language's hash.  */
-  std::array<unsigned int, nr_languages> demangled_hashes;
-  std::array<char, nr_languages> demangled_hashes_p{};
-
-  int (*mangled_namecmp) (const char *, const char *);
-  mangled_namecmp = case_sensitivity == case_sensitive_on ? strcmp : strcasecmp;
-
-  const char *modified_name = name;
+  auto mangled_compare_case_on = [] (const char *left, const char *right)
+    { return strcmp (left, right) == 0; };
+  auto mangled_compare_case_off = [] (const char *left, const char *right)
+    { return strcasecmp (left, right) == 0; };
+  auto mangled_compare
+    = (case_sensitivity == case_sensitive_on
+       ? mangled_compare_case_on : mangled_compare_case_off);
 
   if (sfile != NULL)
     sfile = lbasename (sfile);
 
-  /* For C++, canonicalize the input name.  */
-  std::string modified_name_storage;
-  if (current_language->la_language == language_cplus)
-    {
-      std::string cname = cp_canonicalize_string (name);
-      if (!cname.empty ())
-	{
-	  std::swap (modified_name_storage, cname);
-	  modified_name = modified_name_storage.c_str ();
-	}
-    }
+  lookup_name_info lookup_name (name, symbol_name_match_type::FULL);
 
   for (objfile = object_files;
        objfile != NULL && res.found_symbol.minsym == NULL;
@@ -314,33 +322,28 @@ lookup_minimal_symbol (const char *name, const char *sfile,
 	  /* Look over the mangled hash table, and the second over the
 	     demangled hash table.  */
 	lookup_minimal_symbol_once<msymbol_mangled_lookup>
-	  (modified_name, sfile, objfile,
+	  (name, sfile, objfile,
 	   objfile->per_bfd->msymbol_hash,
-	   hash, mangled_namecmp, res);
+	   hash, mangled_compare, res);
 
 	/* If not found, try the demangled hash table.  */
 	if (res.found_symbol.minsym == NULL)
 	  {
 	    for (auto lang : objfile->per_bfd->demangled_hash_languages)
 	      {
-		/* Only compute each language's hash once.  */
-		if (!demangled_hashes_p[lang])
-		  {
-		    demangled_hashes[lang]
-		      = (search_name_hash (lang, name)
-			 % MINIMAL_SYMBOL_HASH_SIZE);
-		    demangled_hashes_p[lang] = true;
-		  }
+		unsigned int hash
+		  = (lookup_name.search_name_hash (lang)
+		     % MINIMAL_SYMBOL_HASH_SIZE);
 
-		unsigned int hash = demangled_hashes[lang];
-
+		symbol_name_matcher_ftype *match
+		  = language_get_symbol_name_matcher (language_def (lang),
+						      lookup_name);
 		struct minimal_symbol **msymbol_demangled_hash
 		  = objfile->per_bfd->msymbol_demangled_hash;
 
 		lookup_minimal_symbol_once<msymbol_demangled_lookup>
-		  (modified_name, sfile, objfile,
-		   msymbol_demangled_hash, hash, strcmp_iw,
-		   res);
+		  (lookup_name, sfile, objfile,
+		   msymbol_demangled_hash, hash, match, res);
 
 		if (res.found_symbol.minsym != NULL)
 		  break;
@@ -371,7 +374,7 @@ lookup_minimal_symbol (const char *name, const char *sfile,
 			      "lookup_minimal_symbol (...) = %s"
 			      " (file-local)\n",
 			      host_address_to_string
-			        (res.found_file_symbol.minsym));
+				(res.found_file_symbol.minsym));
 	}
       return res.found_file_symbol;
     }
@@ -416,35 +419,45 @@ find_minimal_symbol_address (const char *name, CORE_ADDR *addr,
 /* See minsyms.h.  */
 
 void
-iterate_over_minimal_symbols (struct objfile *objf, const char *name,
+iterate_over_minimal_symbols (struct objfile *objf,
+			      const lookup_name_info &lookup_name,
 			      void (*callback) (struct minimal_symbol *,
 						void *),
 			      void *user_data)
 {
-  unsigned int hash;
-  struct minimal_symbol *iter;
-  int (*mangled_cmp) (const char *, const char *);
 
   /* The first pass is over the ordinary hash table.  */
-  hash = msymbol_hash (name) % MINIMAL_SYMBOL_HASH_SIZE;
-  iter = objf->per_bfd->msymbol_hash[hash];
-  mangled_cmp = (case_sensitivity == case_sensitive_on ? strcmp : strcasecmp);
-  while (iter)
     {
-      if (mangled_cmp (MSYMBOL_LINKAGE_NAME (iter), name) == 0)
-	(*callback) (iter, user_data);
-      iter = iter->hash_next;
+      const char *name = lookup_name.name ().c_str ();
+      unsigned int hash = msymbol_hash (name) % MINIMAL_SYMBOL_HASH_SIZE;
+      auto *mangled_cmp
+	= (case_sensitivity == case_sensitive_on
+	   ? strcmp
+	   : strcasecmp);
+
+      for (minimal_symbol *iter = objf->per_bfd->msymbol_hash[hash];
+	   iter != NULL;
+	   iter = iter->hash_next)
+	{
+	  if (mangled_cmp (MSYMBOL_LINKAGE_NAME (iter), name) == 0)
+	    (*callback) (iter, user_data);
+	}
     }
 
   /* The second pass is over the demangled table.  */
 
   for (auto lang : objf->per_bfd->demangled_hash_languages)
     {
-      hash = search_name_hash (lang, name) % MINIMAL_SYMBOL_HASH_SIZE;
-      for (iter = objf->per_bfd->msymbol_demangled_hash[hash];
+      const language_defn *lang_def = language_def (lang);
+      symbol_name_matcher_ftype *name_match
+	= language_get_symbol_name_matcher (lang_def, lookup_name);
+
+      unsigned int hash
+	= lookup_name.search_name_hash (lang) % MINIMAL_SYMBOL_HASH_SIZE;
+      for (minimal_symbol *iter = objf->per_bfd->msymbol_demangled_hash[hash];
 	   iter != NULL;
 	   iter = iter->demangled_hash_next)
-	if (strcmp_iw (MSYMBOL_SEARCH_NAME (iter), name) == 0)
+	if (name_match (MSYMBOL_SEARCH_NAME (iter), lookup_name, NULL))
 	  (*callback) (iter, user_data);
     }
 }

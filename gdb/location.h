@@ -79,6 +79,9 @@ struct explicit_location
   /* The function name.  Malloc'd.  */
   char *function_name;
 
+  /* Whether the function name is fully-qualified or not.  */
+  symbol_name_match_type func_name_match_type;
+
   /* The name of a label.  Malloc'd.  */
   char *label_name;
 

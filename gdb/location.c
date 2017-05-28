@@ -245,7 +245,13 @@ explicit_to_string_internal (int as_linespec,
       if (need_space)
 	buf.putc (space);
       if (!as_linespec)
-	buf.puts ("-function ");
+	{
+	  if (explicit_loc->func_name_match_type
+	      == symbol_name_match_type::FULL)
+	    buf.puts ("-qualified ");
+	  else
+	    buf.puts ("-function ");
+	}
       buf.puts (explicit_loc->function_name);
       need_space = 1;
     }
@@ -753,6 +759,16 @@ string_to_explicit_location (const char **argp,
 	  set_oarg (explicit_location_lex_one_function (argp, language,
 							completion_info));
 	  EL_EXPLICIT (location)->function_name = oarg.release ();
+	  EL_EXPLICIT (location)->func_name_match_type
+	    = symbol_name_match_type::WILD;
+	}
+      else if (strncmp (opt.get (), "-qualified", len) == 0)
+	{
+	  set_oarg (explicit_location_lex_one_function (argp, language,
+							completion_info));
+	  EL_EXPLICIT (location)->function_name = oarg.release ();
+	  EL_EXPLICIT (location)->func_name_match_type
+	    = symbol_name_match_type::FULL;
 	}
       else if (strncmp (opt.get (), "-line", len) == 0)
 	{

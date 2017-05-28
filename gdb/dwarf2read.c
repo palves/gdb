@@ -77,6 +77,8 @@
 #include <sys/types.h>
 #include <algorithm>
 #include "filename-seen-cache.h"
+#include "selftest.h"
+#include "common/preprocessor.h"
 
 typedef struct symbol *symbolp;
 DEF_VEC_P (symbolp);
@@ -178,6 +180,50 @@ DEF_VEC_I (offset_type);
     GDB_INDEX_CU_SET_VALUE((cu_index), (value)); \
   } while (0)
 
+#if WORDS_BIGENDIAN
+
+/* Convert VALUE between big- and little-endian.  */
+static offset_type
+byte_swap (offset_type value)
+{
+  offset_type result;
+
+  result = (value & 0xff) << 24;
+  result |= (value & 0xff00) << 8;
+  result |= (value & 0xff0000) >> 8;
+  result |= (value & 0xff000000) >> 24;
+  return result;
+}
+
+#define MAYBE_SWAP(V)  byte_swap (V)
+
+#else
+#define MAYBE_SWAP(V) (V)
+#endif /* WORDS_BIGENDIAN */
+
+/* An index into a (C++) symbol name component in a symbol name as
+   recorded in the mapped_index's symbol table.  For each C++ symbol
+   in the symbol table, we record one entry for the start of each
+   component in the symbol in a table of name components, and then
+   sort the table, in order to be able to binary search symbol names,
+   ignoring leading namespaces.  For example, for symbol "A::B::C",
+   we'll have an entry that points to "A::B::C", another that points
+   to "B::C", and another for "C".  Note that function symbols in GDB
+   index have no parameter information, just the function/method
+   names.  You can convert a name_component to a "const char *" using
+   the 'mapped_index::symbol_name_at(offset_type)' method.  */
+struct name_component
+{
+  /* Offset in the symbol name where the component starts.  Stored as
+     a (32-bit) offset instead of a pointer to save memory and improve
+     locality on 64-bit architectures.  */
+  offset_type name_offset;
+
+  /* The symbol's index in the symbol and constant pool tables of a
+     mapped_index.  */
+  offset_type idx;
+};
+
 /* A description of the mapped index.  The file format is described in
    a comment by the code that writes the index.  */
 struct mapped_index
@@ -202,6 +248,15 @@ struct mapped_index
 
   /* A pointer to the constant pool.  */
   const char *constant_pool;
+
+  /* The name_component table (a sorted vector).  See name_component's
+     description above.  */
+  std::vector<name_component> name_components;
+
+  /* Convenience method to get at the name of the symbol at IDX in the
+     symbol table.  */
+  const char *symbol_name_at (offset_type idx) const
+  { return this->constant_pool + MAYBE_SWAP (this->symbol_table[idx]); }
 };
 
 typedef struct dwarf2_per_cu_data *dwarf2_per_cu_ptr;
@@ -2131,26 +2186,6 @@ line_header_eq_voidp (const void *item_lhs, const void *item_rhs)
 }
 
 
-#if WORDS_BIGENDIAN
-
-/* Convert VALUE between big- and little-endian.  */
-static offset_type
-byte_swap (offset_type value)
-{
-  offset_type result;
-
-  result = (value & 0xff) << 24;
-  result |= (value & 0xff00) << 8;
-  result |= (value & 0xff0000) >> 8;
-  result |= (value & 0xff000000) >> 24;
-  return result;
-}
-
-#define MAYBE_SWAP(V)  byte_swap (V)
-
-#else
-#define MAYBE_SWAP(V) (V)
-#endif /* WORDS_BIGENDIAN */
 
 /* Read the given attribute value as an address, taking the attribute's
    form into account.  */
@@ -3383,6 +3418,7 @@ dwarf2_read_index (struct objfile *objfile)
   create_addrmap_from_index (objfile, &local_map);
 
   map = XOBNEW (&objfile->objfile_obstack, struct mapped_index);
+  map = new (map) mapped_index ();
   *map = local_map;
 
   dwarf2_per_objfile->index_table = map;
@@ -3817,6 +3853,8 @@ dw2_lookup_symbol (struct objfile *objfile, int block_index,
 
   dw2_setup (objfile);
 
+  lookup_name_info lookup_name (name, symbol_name_match_type::FULL);
+
   index = dwarf2_per_objfile->index_table;
 
   /* index is NULL if OBJF_READNOW.  */
@@ -3843,10 +3881,10 @@ dw2_lookup_symbol (struct objfile *objfile, int block_index,
 	     information (but NAME might contain it).  */
 
 	  if (sym != NULL
-	      && SYMBOL_MATCHES_SEARCH_NAME (sym, name))
+	      && SYMBOL_MATCHES_SEARCH_NAME (sym, lookup_name))
 	    return stab;
 	  if (with_opaque != NULL
-	      && SYMBOL_MATCHES_SEARCH_NAME (with_opaque, name))
+	      && SYMBOL_MATCHES_SEARCH_NAME (with_opaque, lookup_name))
 	    stab_best = stab;
 
 	  /* Keep looking through other CUs.  */
@@ -3991,7 +4029,7 @@ dw2_map_matching_symbols (struct objfile *objfile,
 			  int global,
 			  int (*callback) (struct block *,
 					   struct symbol *, void *),
-			  void *data, symbol_compare_ftype *match,
+			  void *data, symbol_name_match_type match,
 			  symbol_compare_ftype *ordered_compare)
 {
   /* Currently unimplemented; used for Ada.  The function can be called if the
@@ -3999,24 +4037,98 @@ dw2_map_matching_symbols (struct objfile *objfile,
      does not look for non-Ada symbols this function should just return.  */
 }
 
+class gdb_index_symbol_name_matcher
+{
+public:
+  gdb_index_symbol_name_matcher (const lookup_name_info &lookup_name);
+
+  bool matches (const char *symbol_name);
+
+private:
+  const lookup_name_info &m_lookup_name;
+  std::vector<symbol_name_matcher_ftype *> m_symbol_name_matcher_funcs;
+};
+
+gdb_index_symbol_name_matcher::gdb_index_symbol_name_matcher
+  (const lookup_name_info &paramless_lookup_name)
+    : m_lookup_name (paramless_lookup_name)
+{
+  /* Prepare the vector of comparison functions upfront, so avoid
+     doing the same work for each symbol.  Care is taken to avoid
+     comparing with the same function twice if/when multiple languages
+     use the same comparison function.  */
+  auto &funcs = m_symbol_name_matcher_funcs;
+  funcs.reserve (nr_languages);
+
+  for (int i = 0; i < nr_languages; i++)
+    {
+      const language_defn *lang = language_def ((enum language) i);
+      if (lang->la_get_symbol_name_matcher != NULL)
+	{
+	  symbol_name_matcher_ftype *name_match
+	    = lang->la_get_symbol_name_matcher (m_lookup_name);
+
+	  /* Don't insert the same comparison routine twice.  Note
+	     that we do this linear walk instead of a cheaper sorted
+	     insert, or use a set or something like that, because
+	     relative order of function addresses is not stable.  This
+	     is not a problem in practice because the number of
+	     supported languages is low, and the cost here is tiny
+	     compared to the number of searches we'll do afterwards
+	     using this object.  */
+	  if (std::find (funcs.begin (), funcs.end (), name_match)
+	      == funcs.end ())
+	    funcs.push_back (name_match);
+	}
+    }
+  if (std::find (funcs.begin (), funcs.end (), default_symbol_name_matcher)
+      == funcs.end ())
+    funcs.push_back (default_symbol_name_matcher);
+}
+
+bool
+gdb_index_symbol_name_matcher::matches (const char *symbol_name)
+{
+  for (auto name_matches : m_symbol_name_matcher_funcs)
+    if (name_matches (symbol_name, m_lookup_name, NULL))
+      return true;
+
+  return false;
+}
+
+static void
+dw2_expand_marked_cus
+  (mapped_index &index, offset_type idx,
+   struct objfile *objfile,
+   gdb::function_view<expand_symtabs_file_matcher_ftype> file_matcher,
+   gdb::function_view<expand_symtabs_exp_notify_ftype> expansion_notify,
+   search_domain kind);
+
+static void
+dw2_expand_symtabs_matching_symbol
+  (mapped_index &index,
+   const lookup_name_info &lookup_name_in,
+   gdb::function_view<expand_symtabs_symbol_matcher_ftype> symbol_matcher,
+   enum search_domain kind,
+   gdb::function_view<void (offset_type)> on_match);
+
 static void
 dw2_expand_symtabs_matching
   (struct objfile *objfile,
    gdb::function_view<expand_symtabs_file_matcher_ftype> file_matcher,
+   const lookup_name_info &lookup_name,
    gdb::function_view<expand_symtabs_symbol_matcher_ftype> symbol_matcher,
    gdb::function_view<expand_symtabs_exp_notify_ftype> expansion_notify,
    enum search_domain kind)
 {
   int i;
   offset_type iter;
-  struct mapped_index *index;
 
   dw2_setup (objfile);
 
   /* index_table is NULL if OBJF_READNOW.  */
   if (!dwarf2_per_objfile->index_table)
     return;
-  index = dwarf2_per_objfile->index_table;
 
   if (file_matcher != NULL)
     {
@@ -4090,27 +4202,186 @@ dw2_expand_symtabs_matching
 	}
     }
 
-  for (iter = 0; iter < index->symbol_table_slots; ++iter)
+  mapped_index &index = *dwarf2_per_objfile->index_table;
+
+  dw2_expand_symtabs_matching_symbol (index, lookup_name,
+				      symbol_matcher,
+				      kind, [&] (offset_type idx)
     {
-      offset_type idx = 2 * iter;
-      const char *name;
-      offset_type *vec, vec_len, vec_idx;
-      int global_seen = 0;
+      dw2_expand_marked_cus (index, idx, objfile, file_matcher,
+			     expansion_notify, kind);
+    });
+}
 
-      QUIT;
+/* Helper for dw2_expand_symtabs_matching that works with a
+   mapped_index instead of the containing objfile.  This is split to a
+   separate function in order to be able to unit test the
+   name_components matching using a mock mapped_index.  For each
+   symbol name that matches, calls MATCH_CALLBACK, passing it the
+   symbol's index in the mapped_index symbol table.  */
 
-      if (index->symbol_table[idx] == 0 && index->symbol_table[idx + 1] == 0)
+static void
+dw2_expand_symtabs_matching_symbol
+  (mapped_index &index,
+   const lookup_name_info &lookup_name,
+   gdb::function_view<expand_symtabs_symbol_matcher_ftype> symbol_matcher,
+   enum search_domain kind,
+   gdb::function_view<void (offset_type)> match_callback)
+{
+  gdb_index_symbol_name_matcher lookup_name_matcher
+    (lookup_name);
+
+  /* Build the symbol name component sorted vector, if we haven't
+     yet.  */
+  if (index.name_components.empty ())
+    {
+      for (size_t iter = 0; iter < index.symbol_table_slots; ++iter)
+	{
+	  offset_type idx = 2 * iter;
+
+	  if (index.symbol_table[idx] == 0
+	      && index.symbol_table[idx + 1] == 0)
+	    continue;
+
+	  const char *name = index.symbol_name_at (idx);
+
+	  /* Add each name component to the name component table.  */
+	  unsigned int previous_len = 0;
+	  for (unsigned int current_len = cp_find_first_component (name);
+	       name[current_len] != '\0';
+	       current_len += cp_find_first_component (name + current_len))
+	    {
+	      gdb_assert (name[current_len] == ':');
+	      index.name_components.push_back ({previous_len, idx});
+	      /* Skip the '::'.  */
+	      current_len += 2;
+	      previous_len = current_len;
+	    }
+	  index.name_components.push_back ({previous_len, idx});
+	}
+
+      /* Sort name_comp elements by name.   */
+      auto name_comp_compare = [&] (const name_component &left,
+				    const name_component &right)
+	{
+	  const char *left_qualified = index.symbol_name_at (left.idx);
+	  const char *right_qualified = index.symbol_name_at (right.idx);
+
+	  const char *left_name = left_qualified + left.name_offset;
+	  const char *right_name = right_qualified + right.name_offset;
+
+	  return strcmp (left_name, right_name) < 0;
+	};
+
+      std::sort (index.name_components.begin (),
+		 index.name_components.end (),
+		 name_comp_compare);
+    }
+
+  /* Skip to the last component.  */
+  const char *cplus
+    = lookup_name.cplus ().lookup_name ().c_str ();
+  unsigned int len = cp_entire_prefix_len (cplus);
+
+  /* Skip the '::', if any.  */
+  if (len > 0)
+    len += 2;
+
+  cplus += len;
+
+  /* Comparison function object for lower_bound that matches against a
+     given symbol name.  */
+  auto lookup_compare_lower = [&] (const name_component &elem,
+				   const char *name)
+    {
+      const char *elem_qualified = index.symbol_name_at (elem.idx);
+      const char *elem_name = elem_qualified + elem.name_offset;
+      return strcmp (elem_name, name) < 0;
+    };
+
+  /* Comparison function object for upper_bound that matches against a
+     given symbol name.  */
+  auto lookup_compare_upper = [&] (const char *name,
+				   const name_component &elem)
+    {
+      const char *elem_qualified = index.symbol_name_at (elem.idx);
+      const char *elem_name = elem_qualified + elem.name_offset;
+      return strcmp (name, elem_name) < 0;
+    };
+
+  auto begin = index.name_components.begin ();
+  auto end = index.name_components.end ();
+
+  /* Find the lower bound.  */
+  auto lower = [&] ()
+    {
+      if (lookup_name.completion_mode () && cplus[0] == '\0')
+	return begin;
+      else
+	return std::lower_bound (begin, end, cplus, lookup_compare_lower);
+    } ();
+
+  /* Find the upper bound.  */
+  auto upper = [&] ()
+    {
+      if (lookup_name.completion_mode ())
+	{
+	  /* The string frobbing below won't work if the string is
+	     empty.  We don't need it then, anyway -- if we're
+	     completing an empty string, then we want to iterate over
+	     the whole range.  */
+	  if (cplus[0] == '\0')
+	    return end;
+
+	  /* In completion mode, increment the last character because
+	     we want UPPER to point past all symbols names that have
+	     the same prefix.  */
+	  std::string after = cplus;
+
+	  gdb_assert (after.back () != 0xff);
+	  after.back ()++;
+
+	  return std::upper_bound (lower, end, after.c_str (),
+				   lookup_compare_upper);
+	}
+      else
+	return std::upper_bound (lower, end, cplus, lookup_compare_upper);
+    } ();
+
+  /* Now for each symbol name in range, check to see if we have a name
+     match, and if so, call the MATCH_CALLBCACK callback.  */
+  for (;lower != upper; ++lower)
+    {
+      const char *qualified = index.symbol_name_at (lower->idx);
+
+      if (!lookup_name_matcher.matches (qualified)
+	  || (symbol_matcher != NULL && !symbol_matcher (qualified)))
 	continue;
 
-      name = index->constant_pool + MAYBE_SWAP (index->symbol_table[idx]);
+      match_callback (lower->idx);
+    }
+}
 
-      if (!symbol_matcher (name))
-	continue;
+/* Helper for dw2_expand_matching symtabs.  Called on each symbol
+   matched, to expand corresponding CUs that were marked.  IDX is the
+   index of the symbol name that matched.  */
 
-      /* The name was matched, now expand corresponding CUs that were
-	 marked.  */
-      vec = (offset_type *) (index->constant_pool
-			     + MAYBE_SWAP (index->symbol_table[idx + 1]));
+static void
+dw2_expand_marked_cus
+  (mapped_index &index, offset_type idx,
+   struct objfile *objfile,
+   gdb::function_view<expand_symtabs_file_matcher_ftype> file_matcher,
+   gdb::function_view<expand_symtabs_exp_notify_ftype> expansion_notify,
+   search_domain kind)
+{
+  const char *name;
+  offset_type *vec, vec_len, vec_idx;
+  bool global_seen = false;
+
+  /* XXX reindent code below before pushing.  */
+
+      vec = (offset_type *) (index.constant_pool
+			     + MAYBE_SWAP (index.symbol_table[idx + 1]));
       vec_len = MAYBE_SWAP (vec[0]);
       for (vec_idx = 0; vec_idx < vec_len; ++vec_idx)
 	{
@@ -4126,7 +4397,7 @@ dw2_expand_symtabs_matching
 	     and indices >= 7 may elide them for certain symbols
 	     (gold does this).  */
 	  int attrs_valid =
-	    (index->version >= 7
+	    (index.version >= 7
 	     && symbol_kind != GDB_INDEX_SYMBOL_KIND_NONE);
 
 	  /* Work around gold/15646.  */
@@ -4135,7 +4406,7 @@ dw2_expand_symtabs_matching
 	      if (!is_static && global_seen)
 		continue;
 	      if (!is_static)
-		global_seen = 1;
+		global_seen = true;
 	    }
 
 	  /* Only check the symbol's kind if it has one.  */
@@ -4186,7 +4457,6 @@ dw2_expand_symtabs_matching
 		}
 	    }
 	}
-    }
 }
 
 /* A helper for dw2_find_pc_sect_compunit_symtab which finds the most specific
@@ -23186,6 +23456,9 @@ dwarf2_per_objfile_free (struct objfile *objfile, void *d)
 
   if (data->dwz_file && data->dwz_file->dwz_bfd)
     gdb_bfd_unref (data->dwz_file->dwz_bfd);
+
+  if (data->index_table != NULL)
+    data->index_table->~mapped_index ();
 }
 
 
