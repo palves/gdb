@@ -1727,12 +1727,9 @@ evaluate_subexp_standard (struct type *expect_type,
 	error (_("Cannot evaluate function -- may be inlined"));
       if (noside == EVAL_AVOID_SIDE_EFFECTS)
 	{
-	  /* If the return type doesn't look like a function type, call an
-	     error.  This can happen if somebody tries to turn a variable into
-	     a function call.  This is here because people often want to
-	     call, eg, strcmp, which gdb doesn't know is a function.  If
-	     gdb isn't asked for it's opinion (ie. through "whatis"),
-	     it won't offer it.  */
+	  /* If the return type doesn't look like a function type,
+	     call an error.  This can happen if somebody tries to turn
+	     a variable into a function call.  */
 
 	  struct type *ftype = value_type (argvec[0]);
 
