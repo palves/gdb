@@ -346,8 +346,8 @@ push_dummy_code (struct gdbarch *gdbarch,
    determined.  It must be large enough to hold formatted result of
    RAW_FUNCTION_ADDRESS_FORMAT.  */
 
-static const char *
-get_function_name (CORE_ADDR funaddr, char *buf, int buf_size)
+const char *
+get_function_name (CORE_ADDR funaddr, std::string &buf)
 {
   {
     struct symbol *symbol = find_pc_function (funaddr);
@@ -365,13 +365,8 @@ get_function_name (CORE_ADDR funaddr, char *buf, int buf_size)
   }
 
   {
-    char *tmp = xstrprintf (_(RAW_FUNCTION_ADDRESS_FORMAT),
-                            hex_string (funaddr));
-
-    gdb_assert (strlen (tmp) + 1 <= buf_size);
-    strcpy (buf, tmp);
-    xfree (tmp);
-    return buf;
+    buf = hex_string (funaddr);
+    return buf.c_str ();
   }
 }
 
@@ -724,7 +719,6 @@ call_function_by_hand_dummy (struct value *function,
   struct cleanup *terminate_bp_cleanup;
   ptid_t call_thread_ptid;
   struct gdb_exception e;
-  char name_buf[RAW_FUNCTION_ADDRESS_SIZE];
   int stack_temporaries = thread_stack_temporaries_enabled_p (inferior_ptid);
 
   if (TYPE_CODE (ftype) == TYPE_CODE_PTR)
@@ -858,8 +852,8 @@ call_function_by_hand_dummy (struct value *function,
     values_type = default_return_type;
   if (values_type == NULL)
     {
-      const char *name = get_function_name (funaddr,
-					    name_buf, sizeof (name_buf));
+      std::string name_buf;
+      const char *name = get_function_name (funaddr, name_buf);
       error (_("'%s' has unknown return type; "
 	       "cast the call to its declared return type"),
 	     name);
@@ -1202,8 +1196,8 @@ call_function_by_hand_dummy (struct value *function,
 
   if (e.reason < 0)
     {
-      const char *name = get_function_name (funaddr,
-                                            name_buf, sizeof (name_buf));
+      std::string name_buf;
+      const char *name = get_function_name (funaddr, name_buf);
 
       discard_infcall_control_state (inf_status);
 
@@ -1231,8 +1225,8 @@ When the function is done executing, GDB will silently stop."),
 
   if (! target_has_execution)
     {
-      const char *name = get_function_name (funaddr,
-					    name_buf, sizeof (name_buf));
+      std::string name_buf;
+      const char *name = get_function_name (funaddr, name_buf);
 
       /* If we try to restore the inferior status,
 	 we'll crash as the inferior is no longer running.  */
@@ -1251,8 +1245,8 @@ When the function is done executing, GDB will silently stop."),
 
   if (! ptid_equal (call_thread_ptid, inferior_ptid))
     {
-      const char *name = get_function_name (funaddr,
-					    name_buf, sizeof (name_buf));
+      std::string name_buf;
+      const char *name = get_function_name (funaddr, name_buf);
 
       /* We've switched threads.  This can happen if another thread gets a
 	 signal or breakpoint while our thread was running.
@@ -1280,10 +1274,8 @@ When the function is done executing, GDB will silently stop."),
 
     {
       /* Make a copy as NAME may be in an objfile freed by dummy_frame_pop.  */
-      char *name = xstrdup (get_function_name (funaddr,
-					       name_buf, sizeof (name_buf)));
-      make_cleanup (xfree, name);
-
+      std::string name_buf;
+      std::string name = get_function_name (funaddr, name_buf);
 
       if (stopped_by_random_signal)
 	{
@@ -1311,7 +1303,7 @@ GDB has restored the context to what it was before the call.\n\
 To change this behavior use \"set unwindonsignal off\".\n\
 Evaluation of the expression containing the function\n\
 (%s) will be abandoned."),
-		     name);
+		     name.c_str ());
 	    }
 	  else
 	    {
@@ -1330,7 +1322,7 @@ To change this behavior use \"set unwindonsignal on\".\n\
 Evaluation of the expression containing the function\n\
 (%s) will be abandoned.\n\
 When the function is done executing, GDB will silently stop."),
-		     name);
+		     name.c_str ());
 	    }
 	}
 
@@ -1352,7 +1344,7 @@ context to its original state before the call.\n\
 To change this behaviour use \"set unwind-on-terminating-exception off\".\n\
 Evaluation of the expression containing the function (%s)\n\
 will be abandoned."),
-		 name);
+		 name.c_str ());
 	}
       else if (stop_stack_dummy == STOP_NONE)
 	{
@@ -1376,7 +1368,7 @@ The program being debugged stopped while in a function called from GDB.\n\
 Evaluation of the expression containing the function\n\
 (%s) will be abandoned.\n\
 When the function is done executing, GDB will silently stop."),
-		 name);
+		 name.c_str ());
 	}
 
     }

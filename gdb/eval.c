@@ -41,6 +41,9 @@
 #include "objfiles.h"
 #include <ctype.h>
 
+CORE_ADDR find_function_addr (struct value *function, struct type **retval_type);
+const char *get_function_name (CORE_ADDR funaddr, std::string &buf);
+
 /* This is defined in valops.c */
 extern int overload_resolution;
 
@@ -1742,9 +1745,16 @@ evaluate_subexp_standard (struct type *expect_type,
 		return_type = expect_type;
 
 	      if (return_type == NULL)
-		error (_("function has unknown return type; "
-			 "cast the call to its declared return type"));
+		{
+		  CORE_ADDR addr = find_function_addr (argvec[0], NULL);
 
+		  std::string name_buf;
+		  const char *name = get_function_name (addr, name_buf);
+
+		  error (_("'%s' has unknown return type; "
+			   "cast the call to its declared return type"),
+			 name);
+		}
 	      return allocate_value (return_type);
 	    }
 	  else
