@@ -1751,9 +1751,7 @@ evaluate_subexp_standard (struct type *expect_type,
 	      return value_zero (return_type, not_lval);
 	    }
 	  else if (TYPE_CODE (ftype) == TYPE_CODE_FUNC
-		   || TYPE_CODE (ftype) == TYPE_CODE_PTR
-		   || TYPE_CODE (ftype) == TYPE_CODE_METHOD
-		   || TYPE_CODE (ftype) == TYPE_CODE_METHODPTR)
+		   || TYPE_CODE (ftype) == TYPE_CODE_METHOD)
 	    {
 	      struct type *return_type = TYPE_TARGET_TYPE (ftype);
 
