@@ -673,9 +673,12 @@ cleanup_delete_std_terminate_breakpoint (void *ignore)
 /* See infcall.h.  */
 
 struct value *
-call_function_by_hand (struct value *function, int nargs, struct value **args)
+call_function_by_hand (struct value *function,
+		       type *default_return_type,
+		       int nargs, struct value **args)
 {
-  return call_function_by_hand_dummy (function, nargs, args, NULL, NULL);
+  return call_function_by_hand_dummy (function, default_return_type,
+				      nargs, args, NULL, NULL);
 }
 
 /* All this stuff with a dummy frame may seem unnecessarily complicated
@@ -698,6 +701,7 @@ call_function_by_hand (struct value *function, int nargs, struct value **args)
 
 struct value *
 call_function_by_hand_dummy (struct value *function,
+			     type *default_return_type,
 			     int nargs, struct value **args,
 			     dummy_frame_dtor_ftype *dummy_dtor,
 			     void *dummy_dtor_data)
@@ -850,8 +854,16 @@ call_function_by_hand_dummy (struct value *function,
   }
 
   funaddr = find_function_addr (function, &values_type);
-  if (!values_type)
-    values_type = builtin_type (gdbarch)->builtin_int;
+  if (values_type == NULL)
+    values_type = default_return_type;
+  if (values_type == NULL)
+    {
+      const char *name = get_function_name (funaddr,
+					    name_buf, sizeof (name_buf));
+      error (_("'%s' has unknown return type; "
+	       "cast the call to its declared return type"),
+	     name);
+    }
 
   values_type = check_typedef (values_type);
 

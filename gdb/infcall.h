@@ -37,7 +37,9 @@ extern CORE_ADDR find_function_addr (struct value *function,
 
    ARGS is modified to contain coerced values.  */
 
-extern struct value *call_function_by_hand (struct value *function, int nargs,
+extern struct value *call_function_by_hand (struct value *function,
+					    type *default_return_type,
+					    int nargs,
 					    struct value **args);
 
 /* Similar to call_function_by_hand and additional call
@@ -45,7 +47,9 @@ extern struct value *call_function_by_hand (struct value *function, int nargs,
    created inferior call dummy frame.  */
 
 extern struct value *
-  call_function_by_hand_dummy (struct value *function, int nargs,
+  call_function_by_hand_dummy (struct value *function,
+			       type *default_return_type,
+			       int nargs,
 			       struct value **args,
 			       dummy_frame_dtor_ftype *dummy_dtor,
 			       void *dummy_dtor_data);

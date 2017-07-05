@@ -59,18 +59,14 @@ if [runto inner] then {
     # out debugging info for non-aggregate return values of functions
     # even without -g, which should be accepted.
 
-    gdb_test "p top" \
-	"\{(<(text variable|function), no debug info>|short \\(int\\)|short \\(\\))\} \[0-9a-fx]* <\\.?top(\\(int\\)|)>"
-    gdb_test "whatis top" \
-	"(<(text variable|function), no debug info>|short \\(int\\)|short \\(\\))"
-    gdb_test "ptype top" "(short|int) \\((|void|int|<non-float parameter>|<non-float parameter>, <non-float parameter>)\\)"
-    
-    gdb_test "p middle" \
-	"\{(<(text variable|function), no debug info>|short \\(int\\)|short \\(\\))\} \[0-9a-fx]* <\\.?middle(\\(int\\)|)>"
-    gdb_test "whatis middle" \
-	"(<(text variable|function), no debug info>|short \\(int\\)|short \\(\\))"
-    gdb_test "ptype middle" "(short|int) \\((|void|int|<non-float parameter>|<non-float parameter>, <non-float parameter>)\\)"
-    
+    foreach f {"top" "middle"} {
+	gdb_test "p $f" \
+	    " = \{<(text variable|function), no debug info>\} $hex <\\.?${f}>"
+	gdb_test "whatis $f" \
+	    "type = <(text variable|function), no debug info>"
+	gdb_test "ptype $f" "type = <type unknown> \\(\\)"
+    }
+
     gdb_test "p dataglobal" "= 3"
     gdb_test "whatis dataglobal" \
 	"<(data variable|variable), no debug info>|int"
@@ -123,13 +119,13 @@ if [runto inner] then {
     # This test is not as obscure as it might look.  `p getenv ("TERM")'
     # is a real-world example, at least on many systems.
     if [target_info exists gdb,cannot_call_functions] {
-	unsupported "p/c array_index(\"abcdef\",2)"
+	unsupported "p/c (int) array_index(\"abcdef\",2)"
     } else {
 	# We need to up this because this can be really slow on some boards.
 	# (malloc() is called as part of the test).
 	set prev_timeout $timeout
 	set timeout 60
-	gdb_test {p/c array_index("abcdef",2)} " = 99 'c'"
+	gdb_test {p/c (int) array_index("abcdef",2)} " = 99 'c'"
 	set timeout $prev_timeout
     }
     

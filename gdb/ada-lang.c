@@ -10806,14 +10806,8 @@ ada_evaluate_subexp (struct type *expect_type, struct expression *exp,
         {
         case TYPE_CODE_FUNC:
           if (noside == EVAL_AVOID_SIDE_EFFECTS)
-	    {
-	      struct type *rtype = TYPE_TARGET_TYPE (type);
-
-	      if (TYPE_GNU_IFUNC (type))
-		return allocate_value (TYPE_TARGET_TYPE (rtype));
-	      return allocate_value (rtype);
-	    }
-          return call_function_by_hand (argvec[0], nargs, argvec + 1);
+	    return allocate_value (TYPE_TARGET_TYPE (type));
+	  return call_function_by_hand (argvec[0], NULL, nargs, argvec + 1);
 	case TYPE_CODE_INTERNAL_FUNCTION:
 	  if (noside == EVAL_AVOID_SIDE_EFFECTS)
 	    /* We don't know anything about what the internal
