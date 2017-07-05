@@ -64,7 +64,7 @@ if [runto inner] then {
 	    " = \{<(text variable|function), no debug info>\} $hex <\\.?${f}>"
 	gdb_test "whatis $f" \
 	    "type = <(text variable|function), no debug info>"
-	gdb_test "ptype $f" "type = <type unknown> \\(\\)"
+	gdb_test "ptype $f" "type = <unknown return type> \\(\\)"
     }
 
     gdb_test "p dataglobal" "= 3"
