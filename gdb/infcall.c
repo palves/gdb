@@ -346,33 +346,44 @@ push_dummy_code (struct gdbarch *gdbarch,
    FUNADDR in hex if the function name cannot be determined from the
    symbol tables.  */
 
-static const char *
-get_function_name (const char *known_func_name,
-		   CORE_ADDR funaddr, std::string &buf)
+class fetched_function_name
 {
-  if (known_func_name != NULL)
-    return known_func_name;
-
+public:
+  fetched_function_name (const char *known_func_name, CORE_ADDR funaddr)
   {
-    struct symbol *symbol = find_pc_function (funaddr);
+    if (known_func_name != NULL)
+      {
+	m_res = known_func_name;
+	return;
+      }
 
-    if (symbol)
-      return SYMBOL_PRINT_NAME (symbol);
+    /* Try the symbol table.  */
+    symbol *sym = find_pc_function (funaddr);
+    if (sym != NULL)
+      {
+	m_res = SYMBOL_PRINT_NAME (sym);
+	return;
+      }
+
+      /* Try the minimal symbols.  */
+    bound_minimal_symbol msymbol = lookup_minimal_symbol_by_pc (funaddr);
+    if (msymbol.minsym != NULL)
+      {
+	m_res = MSYMBOL_PRINT_NAME (msymbol.minsym);
+	return;
+      }
+
+    m_buf = hex_string (funaddr);
+    m_res = m_buf.c_str ();
   }
 
-  {
-    /* Try the minimal symbols.  */
-    struct bound_minimal_symbol msymbol = lookup_minimal_symbol_by_pc (funaddr);
+  const char *c_str ()
+  { return m_res; }
 
-    if (msymbol.minsym)
-      return MSYMBOL_PRINT_NAME (msymbol.minsym);
-  }
-
-  {
-    buf = hex_string (funaddr);
-    return buf.c_str ();
-  }
-}
+private:
+  const char *m_res;
+  std::string m_buf;
+};
 
 /* All the meta data necessary to extract the call's return value.  */
 
@@ -858,11 +869,10 @@ call_function_by_hand_dummy (struct value *function,
     values_type = default_return_type;
   if (values_type == NULL)
     {
-      std::string name_buf;
-      const char *name = get_function_name (func_name, funaddr, name_buf);
+      fetched_function_name name (func_name, funaddr);
       error (_("'%s' has unknown return type; "
 	       "cast the call to its declared return type"),
-	     name);
+	     name.c_str ());
     }
 
   values_type = check_typedef (values_type);
@@ -1202,8 +1212,7 @@ call_function_by_hand_dummy (struct value *function,
 
   if (e.reason < 0)
     {
-      std::string name_buf;
-      const char *name = get_function_name (func_name, funaddr, name_buf);
+      fetched_function_name name (func_name, funaddr);
 
       discard_infcall_control_state (inf_status);
 
@@ -1219,7 +1228,7 @@ An error occurred while in a function called from GDB.\n\
 Evaluation of the expression containing the function\n\
 (%s) will be abandoned.\n\
 When the function is done executing, GDB will silently stop."),
-		       e.message, name);
+		       e.message, name.c_str ());
 	case RETURN_QUIT:
 	default:
 	  throw_exception (e);
@@ -1231,8 +1240,7 @@ When the function is done executing, GDB will silently stop."),
 
   if (! target_has_execution)
     {
-      std::string name_buf;
-      const char *name = get_function_name (func_name, funaddr, name_buf);
+      fetched_function_name name (func_name, funaddr);
 
       /* If we try to restore the inferior status,
 	 we'll crash as the inferior is no longer running.  */
@@ -1246,13 +1254,12 @@ When the function is done executing, GDB will silently stop."),
 	       "called from GDB.\n"
 	       "Evaluation of the expression containing the function\n"
 	       "(%s) will be abandoned."),
-	     name);
+	     name.c_str ());
     }
 
   if (! ptid_equal (call_thread_ptid, inferior_ptid))
     {
-      std::string name_buf;
-      const char *name = get_function_name (func_name, funaddr, name_buf);
+      fetched_function_name name (func_name, funaddr);
 
       /* We've switched threads.  This can happen if another thread gets a
 	 signal or breakpoint while our thread was running.
@@ -1268,20 +1275,20 @@ making a function call from GDB.\n\
 Evaluation of the expression containing the function\n\
 (%s) will be abandoned.\n\
 When the function is done executing, GDB will silently stop."),
-	       name);
+	       name.c_str ());
       else
 	error (_("\
 The program stopped in another thread while making a function call from GDB.\n\
 Evaluation of the expression containing the function\n\
 (%s) will be abandoned.\n\
 When the function is done executing, GDB will silently stop."),
-	       name);
+	       name.c_str ());
     }
 
     {
+      fetched_function_name name_tmp (func_name, funaddr);
       /* Make a copy as NAME may be in an objfile freed by dummy_frame_pop.  */
-      std::string name_buf;
-      std::string name = get_function_name (func_name, funaddr, name_buf);
+      std::string name = name_tmp.c_str ();;
 
       if (stopped_by_random_signal)
 	{
