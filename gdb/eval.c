@@ -41,8 +41,10 @@
 #include "objfiles.h"
 #include <ctype.h>
 
-CORE_ADDR find_function_addr (struct value *function, struct type **retval_type);
-const char *get_function_name (CORE_ADDR funaddr, std::string &buf);
+struct value *
+value_of_minimal_symbol (enum noside noside,
+			 minimal_symbol *msymbol, struct objfile *objfile);
+
 
 /* This is defined in valops.c */
 extern int overload_resolution;
@@ -700,6 +702,7 @@ evaluate_subexp_standard (struct type *expect_type,
   int save_pos1;
   struct symbol *function = NULL;
   char *function_name = NULL;
+  const char *var_func_name = NULL;
 
   pc = (*pos)++;
   op = exp->elts[pc].opcode;
@@ -769,6 +772,11 @@ evaluate_subexp_standard (struct type *expect_type,
 
 	return ret;
       }
+    case OP_VAR_MIN_VALUE:
+      (*pos) += 3;
+      return value_of_minimal_symbol (noside,
+				      exp->elts[pc + 2].msymbol,
+				      exp->elts[pc + 1].objfile);
 
     case OP_VAR_ENTRY_VALUE:
       (*pos) += 2;
@@ -1524,6 +1532,17 @@ evaluate_subexp_standard (struct type *expect_type,
 	    }
 	  else
 	    {
+	      if (op == OP_VAR_MIN_VALUE)
+		{
+		  symbol *sym = exp->elts[*pos + 2].symbol;
+		  var_func_name = SYMBOL_PRINT_NAME (sym);
+		}
+	      else if (op == OP_VAR_VALUE)
+		{
+		  minimal_symbol *msym = exp->elts[*pos + 2].msymbol;
+		  var_func_name = MSYMBOL_PRINT_NAME (msym);
+		}
+
 	      argvec[0] = evaluate_subexp_with_coercion (exp, pos, noside);
 	      type = value_type (argvec[0]);
 	      if (type && TYPE_CODE (type) == TYPE_CODE_PTR)
@@ -1746,14 +1765,17 @@ evaluate_subexp_standard (struct type *expect_type,
 
 	      if (return_type == NULL)
 		{
-		  CORE_ADDR addr = find_function_addr (argvec[0], NULL);
-
-		  std::string name_buf;
-		  const char *name = get_function_name (addr, name_buf);
-
-		  error (_("'%s' has unknown return type; "
-			   "cast the call to its declared return type"),
-			 name);
+		  if (var_func_name != NULL)
+		    {
+		      error (_("'%s' has unknown return type; "
+			       "cast the call to its declared return type"),
+			     var_func_name);
+		    }
+		  else
+		    {
+		      error (_("function has unknown return type; "
+			       "cast the call to its declared return type"));
+		    }
 		}
 	      return allocate_value (return_type);
 	    }
@@ -1770,7 +1792,8 @@ evaluate_subexp_standard (struct type *expect_type,
 	  return call_xmethod (argvec[0], nargs, argvec + 1);
 	default:
 	  return call_function_by_hand (argvec[0],
-					expect_type, nargs, argvec + 1);
+					expect_type, nargs, argvec + 1,
+					var_func_name);
 	}
       /* pai: FIXME save value from call_function_by_hand, then adjust
 	 pc by adjust_fn_pc if +ve.  */

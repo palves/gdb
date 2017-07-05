@@ -340,15 +340,19 @@ push_dummy_code (struct gdbarch *gdbarch,
 				  regcache);
 }
 
-/* Fetch the name of the function at FUNADDR.
-   This is used in printing an error message for call_function_by_hand.
-   BUF is used to print FUNADDR in hex if the function name cannot be
-   determined.  It must be large enough to hold formatted result of
-   RAW_FUNCTION_ADDRESS_FORMAT.  */
+/* Fetch the name of the function at FUNADDR, if not known yet.  If
+   KNOWN_FUNC_NAME is not NULL, return it.  This is used in printing
+   an error message for call_function_by_hand.  BUF is used to print
+   FUNADDR in hex if the function name cannot be determined from the
+   symbol tables.  */
 
-const char *
-get_function_name (CORE_ADDR funaddr, std::string &buf)
+static const char *
+get_function_name (const char *known_func_name,
+		   CORE_ADDR funaddr, std::string &buf)
 {
+  if (known_func_name != NULL)
+    return known_func_name;
+
   {
     struct symbol *symbol = find_pc_function (funaddr);
 
@@ -670,10 +674,11 @@ cleanup_delete_std_terminate_breakpoint (void *ignore)
 struct value *
 call_function_by_hand (struct value *function,
 		       type *default_return_type,
-		       int nargs, struct value **args)
+		       int nargs, struct value **args,
+		       const char *func_name)
 {
   return call_function_by_hand_dummy (function, default_return_type,
-				      nargs, args, NULL, NULL);
+				      nargs, args, func_name, NULL, NULL);
 }
 
 /* All this stuff with a dummy frame may seem unnecessarily complicated
@@ -698,6 +703,7 @@ struct value *
 call_function_by_hand_dummy (struct value *function,
 			     type *default_return_type,
 			     int nargs, struct value **args,
+			     const char *func_name,
 			     dummy_frame_dtor_ftype *dummy_dtor,
 			     void *dummy_dtor_data)
 {
@@ -853,7 +859,7 @@ call_function_by_hand_dummy (struct value *function,
   if (values_type == NULL)
     {
       std::string name_buf;
-      const char *name = get_function_name (funaddr, name_buf);
+      const char *name = get_function_name (func_name, funaddr, name_buf);
       error (_("'%s' has unknown return type; "
 	       "cast the call to its declared return type"),
 	     name);
@@ -1197,7 +1203,7 @@ call_function_by_hand_dummy (struct value *function,
   if (e.reason < 0)
     {
       std::string name_buf;
-      const char *name = get_function_name (funaddr, name_buf);
+      const char *name = get_function_name (func_name, funaddr, name_buf);
 
       discard_infcall_control_state (inf_status);
 
@@ -1226,7 +1232,7 @@ When the function is done executing, GDB will silently stop."),
   if (! target_has_execution)
     {
       std::string name_buf;
-      const char *name = get_function_name (funaddr, name_buf);
+      const char *name = get_function_name (func_name, funaddr, name_buf);
 
       /* If we try to restore the inferior status,
 	 we'll crash as the inferior is no longer running.  */
@@ -1246,7 +1252,7 @@ When the function is done executing, GDB will silently stop."),
   if (! ptid_equal (call_thread_ptid, inferior_ptid))
     {
       std::string name_buf;
-      const char *name = get_function_name (funaddr, name_buf);
+      const char *name = get_function_name (func_name, funaddr, name_buf);
 
       /* We've switched threads.  This can happen if another thread gets a
 	 signal or breakpoint while our thread was running.
@@ -1275,7 +1281,7 @@ When the function is done executing, GDB will silently stop."),
     {
       /* Make a copy as NAME may be in an objfile freed by dummy_frame_pop.  */
       std::string name_buf;
-      std::string name = get_function_name (funaddr, name_buf);
+      std::string name = get_function_name (func_name, funaddr, name_buf);
 
       if (stopped_by_random_signal)
 	{

@@ -255,6 +255,16 @@ write_exp_elt_sym (struct parser_state *ps, struct symbol *expelt)
 }
 
 void
+write_exp_elt_msym (struct parser_state *ps, minimal_symbol *expelt)
+{
+  union exp_element tmp;
+
+  memset (&tmp, 0, sizeof (union exp_element));
+  tmp.msymbol = expelt;
+  write_exp_elt (ps, &tmp);
+}
+
+void
 write_exp_elt_block (struct parser_state *ps, const struct block *b)
 {
   union exp_element tmp;
@@ -472,14 +482,12 @@ write_exp_bitstring (struct parser_state *ps, struct stoken str)
 /* Add the appropriate elements for a minimal symbol to the end of
    the expression.  */
 
-void
-write_exp_msymbol (struct parser_state *ps,
-		   struct bound_minimal_symbol bound_msym)
+struct value *
+value_of_minimal_symbol (enum noside noside,
+			 minimal_symbol *msymbol, struct objfile *objfile)
 {
-  struct minimal_symbol *msymbol = bound_msym.minsym;
-  struct objfile *objfile = bound_msym.objfile;
+  bound_minimal_symbol bound_msym = {msymbol, objfile};
   struct gdbarch *gdbarch = get_objfile_arch (objfile);
-
   CORE_ADDR addr = BMSYMBOL_VALUE_ADDRESS (bound_msym);
   struct obj_section *section = MSYMBOL_OBJ_SECTION (objfile, msymbol);
   enum minimal_symbol_type type = MSYMBOL_TYPE (msymbol);
@@ -514,51 +522,65 @@ write_exp_msymbol (struct parser_state *ps,
   if (overlay_debugging)
     addr = symbol_overlayed_address (addr, section);
 
-  write_exp_elt_opcode (ps, OP_LONG);
-  /* Let's make the type big enough to hold a 64-bit address.  */
-  write_exp_elt_type (ps, objfile_type (objfile)->builtin_core_addr);
-  write_exp_elt_longcst (ps, (LONGEST) addr);
-  write_exp_elt_opcode (ps, OP_LONG);
-
   if (section && section->the_bfd_section->flags & SEC_THREAD_LOCAL)
     {
-      write_exp_elt_opcode (ps, UNOP_MEMVAL_TLS);
-      write_exp_elt_objfile (ps, objfile);
-      write_exp_elt_type (ps, objfile_type (objfile)->nodebug_tls_symbol);
-      write_exp_elt_opcode (ps, UNOP_MEMVAL_TLS);
-      return;
+      if (noside == EVAL_AVOID_SIDE_EFFECTS)
+	return value_zero (objfile_type (objfile)->nodebug_tls_symbol,
+			   not_lval);
+
+      CORE_ADDR tls_addr = target_translate_tls_address (objfile, addr);
+      return value_at_lazy (objfile_type (objfile)->nodebug_tls_symbol,
+			    tls_addr);
     }
 
-  write_exp_elt_opcode (ps, UNOP_MEMVAL);
+  struct type *the_type;
+
   switch (type)
     {
     case mst_text:
     case mst_file_text:
     case mst_solib_trampoline:
-      write_exp_elt_type (ps, objfile_type (objfile)->nodebug_text_symbol);
+      the_type = objfile_type (objfile)->nodebug_text_symbol;
       break;
 
     case mst_text_gnu_ifunc:
-      write_exp_elt_type (ps, objfile_type (objfile)
-			  ->nodebug_text_gnu_ifunc_symbol);
+      the_type = objfile_type (objfile)->nodebug_text_gnu_ifunc_symbol;
       break;
 
     case mst_data:
     case mst_file_data:
     case mst_bss:
     case mst_file_bss:
-      write_exp_elt_type (ps, objfile_type (objfile)->nodebug_data_symbol);
+      the_type = objfile_type (objfile)->nodebug_data_symbol;
       break;
 
     case mst_slot_got_plt:
-      write_exp_elt_type (ps, objfile_type (objfile)->nodebug_got_plt_symbol);
+      the_type = objfile_type (objfile)->nodebug_got_plt_symbol;
       break;
 
     default:
-      write_exp_elt_type (ps, objfile_type (objfile)->nodebug_unknown_symbol);
+      the_type = objfile_type (objfile)->nodebug_unknown_symbol;
       break;
     }
-  write_exp_elt_opcode (ps, UNOP_MEMVAL);
+
+  if (noside == EVAL_AVOID_SIDE_EFFECTS)
+    return value_zero (the_type, not_lval);
+  else
+    return value_at_lazy (the_type, addr);
+}
+
+
+/* Add the appropriate elements for a minimal symbol to the end of
+   the expression.  */
+
+void
+write_exp_msymbol (struct parser_state *ps,
+		   struct bound_minimal_symbol bound_msym)
+{
+  write_exp_elt_opcode (ps, OP_VAR_MIN_VALUE);
+  write_exp_elt_objfile (ps, bound_msym.objfile);
+  write_exp_elt_msym (ps, bound_msym.minsym);
+  write_exp_elt_opcode (ps, OP_VAR_MIN_VALUE);
 }
 
 /* Mark the current index as the starting location of a structure
@@ -883,6 +905,7 @@ operator_length_standard (const struct expression *expr, int endpos,
     case OP_DOUBLE:
     case OP_DECFLOAT:
     case OP_VAR_VALUE:
+    case OP_VAR_MIN_VALUE:
       oplen = 4;
       break;
 
