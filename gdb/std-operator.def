@@ -126,8 +126,10 @@ OP (OP_DOUBLE)
    use the selected frame.  */
 OP (OP_VAR_VALUE)
 
-/* OP_VAR_MIN_VALUE takes one minsym * in the following element,
-   followed by another OP_VAR_MIN_VALUE, making three exp_elements.  */
+/* OP_VAR_MIN_VALUE takes one struct objfile * in the following
+   element, and one struct minimal_symbol * in the following
+   exp_element, followed by another OP_VAR_MIN_VALUE, making four
+   exp_elements.  */
 OP (OP_VAR_MIN_VALUE)
 
 /* OP_VAR_ENTRY_VALUE takes one struct symbol * in the following element,

@@ -1867,6 +1867,9 @@ operator_check_standard (struct expression *exp, int pos,
 	type = SYMBOL_TYPE (symbol);
       }
       break;
+    case OP_VAR_MIN_VALUE:
+      objfile = elts[pos + 1].objfile;
+      break;
     }
 
   /* Invoke callbacks for TYPE and OBJFILE if they were set as non-NULL.  */
