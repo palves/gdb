@@ -57,7 +57,11 @@ static struct value *evaluate_subexp_for_sizeof (struct expression *, int *,
 static struct value *evaluate_subexp_for_address (struct expression *,
 						  int *, enum noside);
 
-static struct value *evaluate_struct_tuple (struct value *,
+static value *evaluate_subexp_for_cast (expression *exp, int *pos,
+					enum noside noside,
+					struct type *type);
+
+  static struct value *evaluate_struct_tuple (struct value *,
 					    struct expression *, int *,
 					    enum noside, int);
 
@@ -681,6 +685,12 @@ make_params (int num_types, struct type **param_types)
   return type;
 }
 
+static value *
+nosideret (expression *exp)
+{
+  return value_from_longest (builtin_type (exp->gdbarch)->builtin_int, 1);
+}
+
 struct value *
 evaluate_subexp_standard (struct type *expect_type,
 			  struct expression *exp, int *pos,
@@ -713,7 +723,7 @@ evaluate_subexp_standard (struct type *expect_type,
       tem = longest_to_int (exp->elts[pc + 2].longconst);
       (*pos) += 4 + BYTES_TO_EXP_ELEM (tem + 1);
       if (noside == EVAL_SKIP)
-	goto nosideret;
+	return nosideret (exp);
       arg1 = value_aggregate_elt (exp->elts[pc + 1].type,
 				  &exp->elts[pc + 3].string,
 				  expect_type, 0, noside);
@@ -740,7 +750,7 @@ evaluate_subexp_standard (struct type *expect_type,
     case OP_VAR_VALUE:
       (*pos) += 3;
       if (noside == EVAL_SKIP)
-	goto nosideret;
+	return nosideret (exp);
 
       /* JYG: We used to just return value_zero of the symbol type
 	 if we're asked to avoid side effects.  Otherwise we return
@@ -773,15 +783,25 @@ evaluate_subexp_standard (struct type *expect_type,
 	return ret;
       }
     case OP_VAR_MIN_VALUE:
-      (*pos) += 3;
-      return value_of_minimal_symbol (noside,
-				      exp->elts[pc + 2].msymbol,
-				      exp->elts[pc + 1].objfile);
+      {
+	(*pos) += 3;
+
+	minimal_symbol *msymbol = exp->elts[pc + 2].msymbol;
+	value *val = value_of_minimal_symbol (EVAL_NORMAL, msymbol,
+					      exp->elts[pc + 1].objfile);
+
+	type = value_type (val);
+	if (TYPE_CODE (type) == TYPE_CODE_ERROR
+	    && (noside != EVAL_AVOID_SIDE_EFFECTS || pc != 0))
+	  error (_("'%s' has unknown type; cast it to its declared type"),
+		 MSYMBOL_PRINT_NAME (msymbol));
+	return val;
+      }
 
     case OP_VAR_ENTRY_VALUE:
       (*pos) += 2;
       if (noside == EVAL_SKIP)
-	goto nosideret;
+	return nosideret (exp);
 
       {
 	struct symbol *sym = exp->elts[pc + 1].symbol;
@@ -846,7 +866,7 @@ evaluate_subexp_standard (struct type *expect_type,
       tem = longest_to_int (exp->elts[pc + 1].longconst);
       (*pos) += 3 + BYTES_TO_EXP_ELEM (tem + 1);
       if (noside == EVAL_SKIP)
-	goto nosideret;
+	return nosideret (exp);
       type = language_string_char_type (exp->language_defn, exp->gdbarch);
       return value_string (&exp->elts[pc + 2].string, tem, type);
 
@@ -855,9 +875,7 @@ evaluate_subexp_standard (struct type *expect_type,
       tem = longest_to_int (exp->elts[pc + 1].longconst);
       (*pos) += 3 + BYTES_TO_EXP_ELEM (tem + 1);
       if (noside == EVAL_SKIP)
-	{
-	  goto nosideret;
-	}
+	return nosideret (exp);
       return value_nsstring (exp->gdbarch, &exp->elts[pc + 2].string, tem + 1);
 
     case OP_ARRAY:
@@ -997,7 +1015,7 @@ evaluate_subexp_standard (struct type *expect_type,
 	  argvec[tem] = evaluate_subexp_with_coercion (exp, pos, noside);
 	}
       if (noside == EVAL_SKIP)
-	goto nosideret;
+	return nosideret (exp);
       return value_array (tem2, tem3, argvec);
 
     case TERNOP_SLICE:
@@ -1009,7 +1027,7 @@ evaluate_subexp_standard (struct type *expect_type,
 	  = value_as_long (evaluate_subexp (NULL_TYPE, exp, pos, noside));
 
 	if (noside == EVAL_SKIP)
-	  goto nosideret;
+	  return nosideret (exp);
 	return value_slice (array, lowbound, upper - lowbound + 1);
       }
 
@@ -1036,7 +1054,7 @@ evaluate_subexp_standard (struct type *expect_type,
 
 	(*pos) += 3 + BYTES_TO_EXP_ELEM (len + 1);
 	if (noside == EVAL_SKIP)
-	  goto nosideret;
+	  return nosideret (exp);
 
 	if (sel[len] != 0)
 	  sel[len] = 0;		/* Make sure it's terminated.  */
@@ -1278,7 +1296,7 @@ evaluate_subexp_standard (struct type *expect_type,
 	  }
 
 	if (noside == EVAL_SKIP)
-	  goto nosideret;
+	  return nosideret (exp);
 
 	if (noside == EVAL_AVOID_SIDE_EFFECTS)
 	  {
@@ -1572,7 +1590,7 @@ evaluate_subexp_standard (struct type *expect_type,
       argvec[tem] = 0;
 
       if (noside == EVAL_SKIP)
-	goto nosideret;
+	return nosideret (exp);
 
       if (op == OP_ADL_FUNC)
         {
@@ -1858,7 +1876,7 @@ evaluate_subexp_standard (struct type *expect_type,
 	    argvec[tem] = evaluate_subexp_with_coercion (exp, pos, noside);
 	  argvec[tem] = 0;	/* signal end of arglist */
 	  if (noside == EVAL_SKIP)
-	    goto nosideret;
+	    return nosideret (exp);
 	  goto do_call_it;
 
 	default:
@@ -1879,7 +1897,7 @@ evaluate_subexp_standard (struct type *expect_type,
       (*pos) += 3 + BYTES_TO_EXP_ELEM (tem + 1);
       arg1 = evaluate_subexp (NULL_TYPE, exp, pos, noside);
       if (noside == EVAL_SKIP)
-	goto nosideret;
+	return nosideret (exp);
       arg3 = value_struct_elt (&arg1, NULL, &exp->elts[pc + 2].string,
 			       NULL, "structure");
       if (noside == EVAL_AVOID_SIDE_EFFECTS)
@@ -1891,7 +1909,7 @@ evaluate_subexp_standard (struct type *expect_type,
       (*pos) += 3 + BYTES_TO_EXP_ELEM (tem + 1);
       arg1 = evaluate_subexp (NULL_TYPE, exp, pos, noside);
       if (noside == EVAL_SKIP)
-	goto nosideret;
+	return nosideret (exp);
 
       /* Check to see if operator '->' has been overloaded.  If so replace
          arg1 with the value returned by evaluating operator->().  */
@@ -1952,7 +1970,7 @@ evaluate_subexp_standard (struct type *expect_type,
       arg2 = evaluate_subexp (NULL_TYPE, exp, pos, noside);
 
       if (noside == EVAL_SKIP)
-	goto nosideret;
+	return nosideret (exp);
 
       type = check_typedef (value_type (arg2));
       switch (TYPE_CODE (type))
@@ -2001,7 +2019,7 @@ evaluate_subexp_standard (struct type *expect_type,
       arg1 = evaluate_subexp_with_coercion (exp, pos, noside);
       arg2 = evaluate_subexp_with_coercion (exp, pos, noside);
       if (noside == EVAL_SKIP)
-	goto nosideret;
+	return nosideret (exp);
       if (binop_user_defined_p (op, arg1, arg2))
 	return value_x_binop (arg1, arg2, op, OP_NULL, noside);
       else
@@ -2055,7 +2073,7 @@ evaluate_subexp_standard (struct type *expect_type,
       arg1 = evaluate_subexp_with_coercion (exp, pos, noside);
       arg2 = evaluate_subexp_with_coercion (exp, pos, noside);
       if (noside == EVAL_SKIP)
-	goto nosideret;
+	return nosideret (exp);
       if (binop_user_defined_p (op, arg1, arg2))
 	return value_x_binop (arg1, arg2, op, OP_NULL, noside);
       else if (ptrmath_type_p (exp->language_defn, value_type (arg1))
@@ -2074,7 +2092,7 @@ evaluate_subexp_standard (struct type *expect_type,
       arg1 = evaluate_subexp_with_coercion (exp, pos, noside);
       arg2 = evaluate_subexp_with_coercion (exp, pos, noside);
       if (noside == EVAL_SKIP)
-	goto nosideret;
+	return nosideret (exp);
       if (binop_user_defined_p (op, arg1, arg2))
 	return value_x_binop (arg1, arg2, op, OP_NULL, noside);
       else if (ptrmath_type_p (exp->language_defn, value_type (arg1))
@@ -2107,7 +2125,7 @@ evaluate_subexp_standard (struct type *expect_type,
       arg1 = evaluate_subexp (NULL_TYPE, exp, pos, noside);
       arg2 = evaluate_subexp (NULL_TYPE, exp, pos, noside);
       if (noside == EVAL_SKIP)
-	goto nosideret;
+	return nosideret (exp);
       if (binop_user_defined_p (op, arg1, arg2))
 	return value_x_binop (arg1, arg2, op, OP_NULL, noside);
       else
@@ -2150,7 +2168,7 @@ evaluate_subexp_standard (struct type *expect_type,
       arg1 = evaluate_subexp (NULL_TYPE, exp, pos, noside);
       arg2 = evaluate_subexp (NULL_TYPE, exp, pos, noside);
       if (noside == EVAL_SKIP)
-	goto nosideret;
+	return nosideret (exp);
       if (binop_user_defined_p (op, arg1, arg2))
 	return value_x_binop (arg1, arg2, op, OP_NULL, noside);
       else
@@ -2191,9 +2209,7 @@ evaluate_subexp_standard (struct type *expect_type,
 		  continue;
 		}
 	      else
-		{
-		  goto nosideret;
-		}
+		return nosideret (exp);
 	    }
 	  /* FIXME:  EVAL_AVOID_SIDE_EFFECTS handling may not be correct.  */
 	  if (noside == EVAL_AVOID_SIDE_EFFECTS)
@@ -2292,7 +2308,7 @@ evaluate_subexp_standard (struct type *expect_type,
       if (noside == EVAL_SKIP)
 	{
 	  evaluate_subexp (NULL_TYPE, exp, pos, noside);
-	  goto nosideret;
+	  return nosideret (exp);
 	}
 
       oldpos = *pos;
@@ -2319,7 +2335,7 @@ evaluate_subexp_standard (struct type *expect_type,
       if (noside == EVAL_SKIP)
 	{
 	  evaluate_subexp (NULL_TYPE, exp, pos, noside);
-	  goto nosideret;
+	  return nosideret (exp);
 	}
 
       oldpos = *pos;
@@ -2345,7 +2361,7 @@ evaluate_subexp_standard (struct type *expect_type,
       arg1 = evaluate_subexp (NULL_TYPE, exp, pos, noside);
       arg2 = evaluate_subexp (value_type (arg1), exp, pos, noside);
       if (noside == EVAL_SKIP)
-	goto nosideret;
+	return nosideret (exp);
       if (binop_user_defined_p (op, arg1, arg2))
 	{
 	  return value_x_binop (arg1, arg2, op, OP_NULL, noside);
@@ -2362,7 +2378,7 @@ evaluate_subexp_standard (struct type *expect_type,
       arg1 = evaluate_subexp (NULL_TYPE, exp, pos, noside);
       arg2 = evaluate_subexp (value_type (arg1), exp, pos, noside);
       if (noside == EVAL_SKIP)
-	goto nosideret;
+	return nosideret (exp);
       if (binop_user_defined_p (op, arg1, arg2))
 	{
 	  return value_x_binop (arg1, arg2, op, OP_NULL, noside);
@@ -2379,8 +2395,8 @@ evaluate_subexp_standard (struct type *expect_type,
       arg1 = evaluate_subexp (NULL_TYPE, exp, pos, noside);
       arg2 = evaluate_subexp (value_type (arg1), exp, pos, noside);
       if (noside == EVAL_SKIP)
-	goto nosideret;
-      if (binop_user_defined_p (op, arg1, arg2))
+	return nosideret (exp);
+     if (binop_user_defined_p (op, arg1, arg2))
 	{
 	  return value_x_binop (arg1, arg2, op, OP_NULL, noside);
 	}
@@ -2396,7 +2412,7 @@ evaluate_subexp_standard (struct type *expect_type,
       arg1 = evaluate_subexp (NULL_TYPE, exp, pos, noside);
       arg2 = evaluate_subexp (value_type (arg1), exp, pos, noside);
       if (noside == EVAL_SKIP)
-	goto nosideret;
+	return nosideret (exp);
       if (binop_user_defined_p (op, arg1, arg2))
 	{
 	  return value_x_binop (arg1, arg2, op, OP_NULL, noside);
@@ -2413,7 +2429,7 @@ evaluate_subexp_standard (struct type *expect_type,
       arg1 = evaluate_subexp (NULL_TYPE, exp, pos, noside);
       arg2 = evaluate_subexp (value_type (arg1), exp, pos, noside);
       if (noside == EVAL_SKIP)
-	goto nosideret;
+	return nosideret (exp);
       if (binop_user_defined_p (op, arg1, arg2))
 	{
 	  return value_x_binop (arg1, arg2, op, OP_NULL, noside);
@@ -2430,7 +2446,7 @@ evaluate_subexp_standard (struct type *expect_type,
       arg1 = evaluate_subexp (NULL_TYPE, exp, pos, noside);
       arg2 = evaluate_subexp (value_type (arg1), exp, pos, noside);
       if (noside == EVAL_SKIP)
-	goto nosideret;
+	return nosideret (exp);
       if (binop_user_defined_p (op, arg1, arg2))
 	{
 	  return value_x_binop (arg1, arg2, op, OP_NULL, noside);
@@ -2447,7 +2463,7 @@ evaluate_subexp_standard (struct type *expect_type,
       arg1 = evaluate_subexp (NULL_TYPE, exp, pos, noside);
       arg2 = evaluate_subexp (NULL_TYPE, exp, pos, noside);
       if (noside == EVAL_SKIP)
-	goto nosideret;
+	return nosideret (exp);
       type = check_typedef (value_type (arg2));
       if (TYPE_CODE (type) != TYPE_CODE_INT
           && TYPE_CODE (type) != TYPE_CODE_ENUM)
@@ -2467,7 +2483,7 @@ evaluate_subexp_standard (struct type *expect_type,
     case UNOP_PLUS:
       arg1 = evaluate_subexp (NULL_TYPE, exp, pos, noside);
       if (noside == EVAL_SKIP)
-	goto nosideret;
+	return nosideret (exp);
       if (unop_user_defined_p (op, arg1))
 	return value_x_unop (arg1, op, noside);
       else
@@ -2479,7 +2495,7 @@ evaluate_subexp_standard (struct type *expect_type,
     case UNOP_NEG:
       arg1 = evaluate_subexp (NULL_TYPE, exp, pos, noside);
       if (noside == EVAL_SKIP)
-	goto nosideret;
+	return nosideret (exp);
       if (unop_user_defined_p (op, arg1))
 	return value_x_unop (arg1, op, noside);
       else
@@ -2494,7 +2510,7 @@ evaluate_subexp_standard (struct type *expect_type,
 
       arg1 = evaluate_subexp (NULL_TYPE, exp, pos, noside);
       if (noside == EVAL_SKIP)
-	goto nosideret;
+	return nosideret (exp);
       if (unop_user_defined_p (UNOP_COMPLEMENT, arg1))
 	return value_x_unop (arg1, UNOP_COMPLEMENT, noside);
       else
@@ -2506,7 +2522,7 @@ evaluate_subexp_standard (struct type *expect_type,
     case UNOP_LOGICAL_NOT:
       arg1 = evaluate_subexp (NULL_TYPE, exp, pos, noside);
       if (noside == EVAL_SKIP)
-	goto nosideret;
+	return nosideret (exp);
       if (unop_user_defined_p (op, arg1))
 	return value_x_unop (arg1, op, noside);
       else
@@ -2525,7 +2541,7 @@ evaluate_subexp_standard (struct type *expect_type,
 	error (_("Attempt to dereference pointer "
 		 "to member without an object"));
       if (noside == EVAL_SKIP)
-	goto nosideret;
+	return nosideret (exp);
       if (unop_user_defined_p (op, arg1))
 	return value_x_unop (arg1, op, noside);
       else if (noside == EVAL_AVOID_SIDE_EFFECTS)
@@ -2563,7 +2579,7 @@ evaluate_subexp_standard (struct type *expect_type,
       if (noside == EVAL_SKIP)
 	{
 	  evaluate_subexp (NULL_TYPE, exp, pos, EVAL_SKIP);
-	  goto nosideret;
+	  return nosideret (exp);
 	}
       else
 	{
@@ -2577,42 +2593,26 @@ evaluate_subexp_standard (struct type *expect_type,
       if (noside == EVAL_SKIP)
 	{
 	  evaluate_subexp (NULL_TYPE, exp, pos, EVAL_SKIP);
-	  goto nosideret;
+	  return nosideret (exp);
 	}
       return evaluate_subexp_for_sizeof (exp, pos, noside);
 
     case UNOP_CAST:
       (*pos) += 2;
       type = exp->elts[pc + 1].type;
-      arg1 = evaluate_subexp (type, exp, pos, noside);
-      if (noside == EVAL_SKIP)
-	goto nosideret;
-      if (type != value_type (arg1))
-	arg1 = value_cast (type, arg1);
-      return arg1;
+      return evaluate_subexp_for_cast (exp, pos, noside, type);
 
     case UNOP_CAST_TYPE:
       arg1 = evaluate_subexp (NULL, exp, pos, EVAL_AVOID_SIDE_EFFECTS);
       type = value_type (arg1);
-      arg1 = evaluate_subexp (type, exp, pos, noside);
-      if (noside == EVAL_SKIP)
-	goto nosideret;
-      if (type != value_type (arg1))
-	{
-	  /* Handle e.g., "ptype (int) global_with_no_debug_info".  */
-	  if (noside == EVAL_AVOID_SIDE_EFFECTS
-	      && TYPE_CODE (value_type (arg1)) == TYPE_CODE_ERROR)
-	    return value_zero (type, not_lval);
-	  arg1 = value_cast (type, arg1);
-	}
-      return arg1;
+      return evaluate_subexp_for_cast (exp, pos, noside, type);
 
     case UNOP_DYNAMIC_CAST:
       arg1 = evaluate_subexp (NULL, exp, pos, EVAL_AVOID_SIDE_EFFECTS);
       type = value_type (arg1);
       arg1 = evaluate_subexp (type, exp, pos, noside);
       if (noside == EVAL_SKIP)
-	goto nosideret;
+	return nosideret (exp);
       return value_dynamic_cast (type, arg1);
 
     case UNOP_REINTERPRET_CAST:
@@ -2620,14 +2620,14 @@ evaluate_subexp_standard (struct type *expect_type,
       type = value_type (arg1);
       arg1 = evaluate_subexp (type, exp, pos, noside);
       if (noside == EVAL_SKIP)
-	goto nosideret;
+	return nosideret (exp);
       return value_reinterpret_cast (type, arg1);
 
     case UNOP_MEMVAL:
       (*pos) += 2;
       arg1 = evaluate_subexp (expect_type, exp, pos, noside);
       if (noside == EVAL_SKIP)
-	goto nosideret;
+	return nosideret (exp);
       if (noside == EVAL_AVOID_SIDE_EFFECTS)
 	return value_zero (exp->elts[pc + 1].type, lval_memory);
       else
@@ -2639,7 +2639,7 @@ evaluate_subexp_standard (struct type *expect_type,
       type = value_type (arg1);
       arg1 = evaluate_subexp (expect_type, exp, pos, noside);
       if (noside == EVAL_SKIP)
-	goto nosideret;
+	return nosideret (exp);
       if (noside == EVAL_AVOID_SIDE_EFFECTS)
 	return value_zero (type, lval_memory);
       else
@@ -2756,7 +2756,7 @@ evaluate_subexp_standard (struct type *expect_type,
          easier to accommodate expressions that contain types.  */
       (*pos) += 2;
       if (noside == EVAL_SKIP)
-        goto nosideret;
+	return nosideret (exp);
       else if (noside == EVAL_AVOID_SIDE_EFFECTS)
 	return allocate_value (exp->elts[pc + 1].type);
       else
@@ -2767,7 +2767,7 @@ evaluate_subexp_standard (struct type *expect_type,
       if (noside == EVAL_SKIP)
 	{
 	  evaluate_subexp (NULL_TYPE, exp, pos, EVAL_SKIP);
-	  goto nosideret;
+	  return nosideret (exp);
 	}
       else if (noside == EVAL_AVOID_SIDE_EFFECTS)
 	{
@@ -2832,8 +2832,7 @@ evaluate_subexp_standard (struct type *expect_type,
 	       "evaluate that kind of expression"));
     }
 
-nosideret:
-  return value_from_longest (builtin_type (exp->gdbarch)->builtin_int, 1);
+  gdb_assert_not_reached ("missed evaluation?");
 }
 
 /* Evaluate a subexpression of EXP, at index *POS,
@@ -3075,8 +3074,8 @@ evaluate_subexp_for_sizeof (struct expression *exp, int *pos,
 	if (TYPE_CODE (type) == TYPE_CODE_ERROR)
 	  error (_("'%s' has unknown type; cast it to its declared type"),
 		 MSYMBOL_PRINT_NAME (msymbol));
-	else
-	  return value_from_longest (size_type, TYPE_LENGTH (type));
+
+	return value_from_longest (size_type, TYPE_LENGTH (type));
       }
       break;
 
@@ -3125,6 +3124,42 @@ evaluate_subexp_for_sizeof (struct expression *exp, int *pos,
       && (TYPE_IS_REFERENCE (type)))
     type = check_typedef (TYPE_TARGET_TYPE (type));
   return value_from_longest (size_type, (LONGEST) TYPE_LENGTH (type));
+}
+
+static value *
+evaluate_subexp_for_cast (expression *exp, int *pos,
+			  enum noside noside,
+			  struct type *type)
+{
+  int pc = *pos;
+  struct value *arg1;
+
+  /* Don't let minimal symbols be evaluated with evaluate_subexp
+     because that throws an "unknown type" error for no-debug data
+     symbols.  Instead, we want the cast to reinterpret the minsym
+     (that's done by value_cast, since minsyms are lval_memory).  */
+  if (exp->elts[pc].opcode == OP_VAR_MIN_VALUE)
+    {
+      (*pos) += 4;
+      minimal_symbol *msymbol = exp->elts[pc + 2].msymbol;
+      arg1 = value_of_minimal_symbol (EVAL_NORMAL, msymbol,
+				      exp->elts[pc + 1].objfile);
+    }
+  else
+    arg1 = evaluate_subexp (type, exp, pos, noside);
+  if (noside == EVAL_SKIP)
+    return nosideret (exp);
+  if (type != value_type (arg1))
+    {
+#if 0
+      /* Handle e.g., "ptype (int) global_with_no_debug_info".  */
+      if (noside == EVAL_AVOID_SIDE_EFFECTS
+	  && TYPE_CODE (value_type (arg1)) == TYPE_CODE_ERROR)
+	return value_zero (type, not_lval);
+#endif
+      arg1 = value_cast (type, arg1);
+    }
+  return arg1;
 }
 
 /* Parse a type expression in the string [P..P+LENGTH).  */

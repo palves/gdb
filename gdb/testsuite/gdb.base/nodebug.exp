@@ -72,27 +72,30 @@ if [runto inner] then {
     set ptr_arith_re "Cannot perform pointer math on incomplete type \"${data_var_type}\".*"
     set unk_type_re "has unknown type.*to its declared type"
 
+    set dataglobal_unk_re "dataglobal.*$unk_type_re"
+
 	 #exp				#fmt #print						#ptype/whatis
     foreach line {
-	{"dataglobal"			""   "dataglobal.*$unk_type_re"				" = $data_var_type"}
+	{"dataglobal"			""   $dataglobal_unk_re					" = $data_var_type"}
 	{"(int) dataglobal"		""   "= 3"						" = int"}
-	{"sizeof(dataglobal)"		""   $unk_type_re					$unk_type_re}
+	{"sizeof(dataglobal)"		""   $dataglobal_unk_re					$dataglobal_unk_re}
+	{"sizeof(dataglobal + 1)"	""   $dataglobal_unk_re					$dataglobal_unk_re}
 	{"sizeof((int) dataglobal)"	""   " = $decimal"					" = int"}
-	{"dataglobal + 1"		""   $arith_re							$arith_re}
+	{"dataglobal + 1"		""   $dataglobal_unk_re					$dataglobal_unk_re}
 	{"&dataglobal"			""   "\\($data_var_type \\*\\) $hex <dataglobal>"	" = $data_var_type \\*"}
 	{"&dataglobal + 1"		""   $ptr_arith_re					$ptr_arith_re}
 
-	{"dataglobal8"			"/x" "dataglobal.*$unk_type_re"				" = $data_var_type"}
+	{"dataglobal8"			"/x" $dataglobal_unk_re					" = $data_var_type"}
 	{"(uint8_t) dataglobal8"	"/x" " = 0xff"						"uint8_t|unsigned char"}
 
-	{"dataglobal32_1"			"/x" "dataglobal.*$unk_type_re"				" = $data_var_type"}
+	{"dataglobal32_1"		"/x" $dataglobal_unk_re					" = $data_var_type"}
 	{"(uint32_t) dataglobal32_1"	"/x" " = 0x7fffffff"					"uint32_t|unsigned int"}
-	{"dataglobal32_2"			"/x" "dataglobal.*$unk_type_re"			" = $data_var_type"}
+	{"dataglobal32_2"		"/x" $dataglobal_unk_re					" = $data_var_type"}
 	{"(uint32_t) dataglobal32_2"	"/x" " = 0xff"						"uint32_t|unsigned int"}
 
-	{"dataglobal64_1"		"/x" "dataglobal.*$unk_type_re"				" = $data_var_type"}
+	{"dataglobal64_1"		"/x" $dataglobal_unk_re					" = $data_var_type"}
 	{"(uint64_t) dataglobal64_1"	"/x" " = 0x7fffffffffffffff"				"uint64_t|unsigned long"}
-	{"dataglobal64_2"		"/x" "dataglobal.*$unk_type_re"				" = $data_var_type"}
+	{"dataglobal64_2"		"/x" $dataglobal_unk_re					" = $data_var_type"}
 	{"(uint64_t) dataglobal64_2"	"/x" " = 0xff"						"uint64_t|unsigned long"}
     } {
 	set exp [lindex $line 0]
