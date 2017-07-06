@@ -895,7 +895,6 @@ c_type_print_base (struct type *type, struct ui_file *stream,
 
     case TYPE_CODE_FUNC:
     case TYPE_CODE_METHOD:
-    case TYPE_CODE_METHODPTR:
       if (TYPE_TARGET_TYPE (type) == NULL)
 	fputs_filtered (_("<unknown return type>"), stream);
       else
@@ -907,6 +906,7 @@ c_type_print_base (struct type *type, struct ui_file *stream,
     case TYPE_CODE_MEMBERPTR:
     case TYPE_CODE_REF:
     case TYPE_CODE_RVALUE_REF:
+    case TYPE_CODE_METHODPTR:
       c_type_print_base (TYPE_TARGET_TYPE (type),
 			 stream, show, level, flags);
       break;
