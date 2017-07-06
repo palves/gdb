@@ -2598,7 +2598,13 @@ evaluate_subexp_standard (struct type *expect_type,
       if (noside == EVAL_SKIP)
 	goto nosideret;
       if (type != value_type (arg1))
-	arg1 = value_cast (type, arg1);
+	{
+	  /* Handle e.g., "ptype (int) global_with_no_debug_info".  */
+	  if (noside == EVAL_AVOID_SIDE_EFFECTS
+	      && TYPE_CODE (value_type (arg1)) == TYPE_CODE_ERROR)
+	    return value_zero (type, not_lval);
+	  arg1 = value_cast (type, arg1);
+	}
       return arg1;
 
     case UNOP_DYNAMIC_CAST:
@@ -2906,7 +2912,19 @@ evaluate_subexp_for_address (struct expression *exp, int *pos,
 	}
       else
 	return address_of_variable (var, exp->elts[pc + 1].block);
+    case OP_VAR_MIN_VALUE:
+      {
+	(*pos) += 4;
 
+	/* Evaluate it as normal even if EVAL_AVOID_SIDE_EFFECTS was
+	   requested; the result is a lazy memory lval, we're fine.
+	   Lazy evaluation pays off here.  */
+	value *val = value_of_minimal_symbol (EVAL_NORMAL,
+					      exp->elts[pc + 2].msymbol,
+					      exp->elts[pc + 1].objfile);
+	gdb_assert (VALUE_LVAL (val) == lval_memory && value_lazy (val));
+	return value_addr (val);
+      }
     case OP_SCOPE:
       tem = longest_to_int (exp->elts[pc + 2].longconst);
       (*pos) += 5 + BYTES_TO_EXP_ELEM (tem + 1);
@@ -3043,6 +3061,23 @@ evaluate_subexp_for_sizeof (struct expression *exp, int *pos,
 	}
       else
 	(*pos) += 4;
+      break;
+
+    case OP_VAR_MIN_VALUE:
+      {
+	(*pos) += 4;
+
+	minimal_symbol *msymbol = exp->elts[pc + 2].msymbol;
+	value *val = value_of_minimal_symbol (EVAL_NORMAL, msymbol,
+					      exp->elts[pc + 1].objfile);
+
+	type = value_type (val);
+	if (TYPE_CODE (type) == TYPE_CODE_ERROR)
+	  error (_("'%s' has unknown type; cast it to its declared type"),
+		 MSYMBOL_PRINT_NAME (msymbol));
+	else
+	  return value_from_longest (size_type, TYPE_LENGTH (type));
+      }
       break;
 
       /* Deal with the special case if NOSIDE is EVAL_NORMAL and the resulting
