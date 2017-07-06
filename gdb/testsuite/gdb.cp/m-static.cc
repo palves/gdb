@@ -2,8 +2,16 @@
 
 enum region { oriental, egyptian, greek, etruscan, roman };
 
-void keepalive(bool *var) { }
-void keepalive_int (int *var) { }
+struct aggregate
+{
+  int i1;
+  int i2;
+  int i3;
+};
+
+void keepalive (bool *var) { }
+void keepalive (int *var) { }
+void keepalive (aggregate *var) { }
 
 // Test one.
 class gnu_obj_1
@@ -24,9 +32,11 @@ public:
   {
     static int sintvar = 4;
     static bool svar = true;
+    static aggregate savar = { 1, 2, 3 };
 
     keepalive (&svar);
-    keepalive_int (&sintvar);
+    keepalive (&sintvar);
+    keepalive (&savar);
     return key2;
   }
 };

@@ -1665,7 +1665,8 @@ static struct symbol *new_symbol (struct die_info *, struct type *,
 				  struct dwarf2_cu *);
 
 static struct symbol *new_symbol_full (struct die_info *, struct type *,
-				       struct dwarf2_cu *, struct symbol *);
+				       struct dwarf2_cu *, struct symbol *,
+				       bool force_fullname = false);
 
 static void dwarf2_const_value (const struct attribute *, struct symbol *,
 				struct dwarf2_cu *);
@@ -1817,7 +1818,8 @@ static const char *dwarf2_full_name (const char *name,
 				     struct dwarf2_cu *cu);
 
 static const char *dwarf2_physname (const char *name, struct die_info *die,
-				    struct dwarf2_cu *cu);
+				    struct dwarf2_cu *cu,
+				    bool needs_namespace = false);
 
 static struct die_info *dwarf2_extension (struct die_info *die,
 					  struct dwarf2_cu **);
@@ -8567,7 +8569,9 @@ die_needs_namespace (struct die_info *die, struct dwarf2_cu *cu)
 	return 0;
       /* A variable in a lexical block of some kind does not need a
 	 namespace, even though in C++ such variables may be external
-	 and have a mangled name.  */
+	 and have a mangled name.  (We'll install a separate symbol at
+	 file scope for the full demangled name, so that "p
+	 'klass::method()::var'" works.  See gdb.cp/m-static.exp.)  */
       if (die->parent->tag ==  DW_TAG_lexical_block
 	  || die->parent->tag ==  DW_TAG_try_block
 	  || die->parent->tag ==  DW_TAG_catch_block
@@ -8850,7 +8854,8 @@ dwarf2_full_name (const char *name, struct die_info *die, struct dwarf2_cu *cu)
    The output string will be canonicalized (if C++).  */
 
 static const char *
-dwarf2_physname (const char *name, struct die_info *die, struct dwarf2_cu *cu)
+dwarf2_physname (const char *name, struct die_info *die, struct dwarf2_cu *cu,
+		 bool needs_namespace)
 {
   struct objfile *objfile = cu->objfile;
   const char *retval, *mangled = NULL, *canon = NULL;
@@ -8859,7 +8864,7 @@ dwarf2_physname (const char *name, struct die_info *die, struct dwarf2_cu *cu)
 
   /* In this case dwarf2_compute_name is just a shortcut not building anything
      on its own.  */
-  if (!die_needs_namespace (die, cu))
+  if (!needs_namespace && !die_needs_namespace (die, cu))
     return dwarf2_compute_name (name, die, cu, 1);
 
   back_to = make_cleanup (null_cleanup, NULL);
@@ -18886,7 +18891,7 @@ var_decode_location (struct attribute *attr, struct symbol *sym,
 
 static struct symbol *
 new_symbol_full (struct die_info *die, struct type *type, struct dwarf2_cu *cu,
-		 struct symbol *space)
+		 struct symbol *space, bool force_fullname /* = false */)
 {
   struct objfile *objfile = cu->objfile;
   struct gdbarch *gdbarch = get_objfile_arch (objfile);
@@ -18915,7 +18920,7 @@ new_symbol_full (struct die_info *die, struct type *type, struct dwarf2_cu *cu,
 
       /* Cache this symbol's name and the name's demangled form (if any).  */
       SYMBOL_SET_LANGUAGE (sym, cu->language, &objfile->objfile_obstack);
-      linkagename = dwarf2_physname (name, die, cu);
+      linkagename = dwarf2_physname (name, die, cu, force_fullname);
       SYMBOL_SET_NAMES (sym, linkagename, strlen (linkagename), 0, objfile);
 
       /* Fortran does not have mangling standard and the mangling does differ
@@ -19081,8 +19086,23 @@ new_symbol_full (struct die_info *die, struct type *type, struct dwarf2_cu *cu,
 
 		  /* A variable with DW_AT_external is never static,
 		     but it may be block-scoped.  */
-		  list_to_add = (cu->list_in_scope == &file_symbols
-				 ? &global_symbols : cu->list_in_scope);
+		  if (force_fullname)
+		    list_to_add = &global_symbols;
+		  else
+		    {
+		      if (cu->list_in_scope == &file_symbols)
+			list_to_add = &global_symbols;
+		      else
+			{
+			  list_to_add = cu->list_in_scope;
+			  /* Recurse to create a version of this
+			     symbol that has fully qualified name and
+			     is inserted in the global_symbols list,
+			     so that "p 'klass::method()::var'" works.
+			     See gdb.cp/m-static.exp.)  */
+			  new_symbol_full (die, type, cu, NULL, true);
+			}
+		    }
 		}
 	      else
 		list_to_add = cu->list_in_scope;
