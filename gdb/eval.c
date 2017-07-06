@@ -3118,10 +3118,9 @@ evaluate_subexp_for_sizeof (struct expression *exp, int *pos,
 static value *
 evaluate_subexp_for_cast (expression *exp, int *pos,
 			  enum noside noside,
-			  struct type *type)
+			  struct type *to_type)
 {
   int pc = *pos;
-  struct value *arg1;
 
   /* Don't let minimal symbols be evaluated with evaluate_subexp
      because that throws an "unknown type" error for no-debug data
@@ -3130,24 +3129,21 @@ evaluate_subexp_for_cast (expression *exp, int *pos,
   if (exp->elts[pc].opcode == OP_VAR_MIN_VALUE)
     {
       (*pos) += 4;
-      arg1 = value_of_minimal_symbol (exp->elts[pc + 1].objfile,
-				      exp->elts[pc + 2].msymbol);
+      value *val = value_of_minimal_symbol (exp->elts[pc + 1].objfile,
+					    exp->elts[pc + 2].msymbol);
+      if (noside == EVAL_SKIP)
+	return nosideret (exp);
+
+      val = value_cast (to_type, val);
+      value_fetch_lazy (val);
+      VALUE_LVAL (val) = not_lval;
+      return val;
     }
-  else
-    arg1 = evaluate_subexp (type, exp, pos, noside);
+
+  value *val = evaluate_subexp (to_type, exp, pos, noside);
   if (noside == EVAL_SKIP)
     return nosideret (exp);
-  if (type != value_type (arg1))
-    {
-#if 0
-      /* Handle e.g., "ptype (int) global_with_no_debug_info".  */
-      if (noside == EVAL_AVOID_SIDE_EFFECTS
-	  && TYPE_CODE (value_type (arg1)) == TYPE_CODE_ERROR)
-	return value_zero (type, not_lval);
-#endif
-      arg1 = value_cast (type, arg1);
-    }
-  return arg1;
+  return value_cast (to_type, val);
 }
 
 /* Parse a type expression in the string [P..P+LENGTH).  */

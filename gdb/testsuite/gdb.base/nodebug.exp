@@ -70,6 +70,7 @@ if [runto inner] then {
     set data_var_type "<data variable, no debug info>"
     set unk_type_re "has unknown type.*to its declared type"
     set ptr_math_re "Cannot perform pointer math on incomplete type \"$data_var_type\", try casting to a known type, or void \\*\\."
+    set not_mem_re "Attempt to take address of value not located in memory\\."
 
     set dataglobal_unk_re "dataglobal.*$unk_type_re"
 
@@ -83,8 +84,9 @@ if [runto inner] then {
 	{"dataglobal + 1"		""   $dataglobal_unk_re					$dataglobal_unk_re}
 	{"&dataglobal"			""   "\\($data_var_type \\*\\) $hex <dataglobal>"	" = $data_var_type \\*"}
 	{"&dataglobal + 1"		""   $ptr_math_re					$ptr_math_re}
+	{"(int *) &dataglobal + 1"	""   " = \\(int \\*\\) $hex <datalocal>"		"int \\*"}
+	{"&(int) dataglobal + 1"	""   $not_mem_re					$not_mem_re}
 	{"&dataglobal, &dataglobal"	""   "\\($data_var_type \\*\\) $hex <dataglobal>"	" = $data_var_type \\*"}
-
 	{"*dataglobal"			""   $dataglobal_unk_re					$dataglobal_unk_re}
 
 	{"dataglobal8"			"/x" $dataglobal_unk_re					" = $data_var_type"}
