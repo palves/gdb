@@ -68,8 +68,6 @@ if [runto inner] then {
     }
 
     set data_var_type "<data variable, no debug info>"
-    set arith_re "Argument to arithmetic operation not a number or boolean."
-    set ptr_arith_re "Cannot perform pointer math on incomplete type \"${data_var_type}\".*"
     set unk_type_re "has unknown type.*to its declared type"
 
     set dataglobal_unk_re "dataglobal.*$unk_type_re"
@@ -83,7 +81,7 @@ if [runto inner] then {
 	{"sizeof((int) dataglobal)"	""   " = $decimal"					" = int"}
 	{"dataglobal + 1"		""   $dataglobal_unk_re					$dataglobal_unk_re}
 	{"&dataglobal"			""   "\\($data_var_type \\*\\) $hex <dataglobal>"	" = $data_var_type \\*"}
-	{"&dataglobal + 1"		""   $ptr_arith_re					$ptr_arith_re}
+	{"&dataglobal + 1"		""   $dataglobal_unk_re					$dataglobal_unk_re}
 
 	{"dataglobal8"			"/x" $dataglobal_unk_re					" = $data_var_type"}
 	{"(uint8_t) dataglobal8"	"/x" " = 0xff"						"uint8_t|unsigned char"}
@@ -114,20 +112,20 @@ if [runto inner] then {
     setup_xfail "rs6000*-*-aix*"
     setup_xfail "powerpc*-*-aix*"
 
-    gdb_test "p datalocal" $unk_type_re
+    gdb_test "p datalocal" "datalocal.*$unk_type_re"
     gdb_test "p (int) datalocal" "= 4"
 
     setup_xfail "rs6000*-*-aix*"
     setup_xfail "powerpc*-*-aix*"
 
-    gdb_test "whatis datalocal" $data_var_type
+    gdb_test "whatis datalocal" "datalocal.*$data_var_type"
 
     setup_xfail "rs6000*-*-aix*"
     setup_xfail "powerpc*-*-aix*"
 
-    gdb_test "ptype datalocal" $data_var_type
+    gdb_test "ptype datalocal" "datalocal.*$data_var_type"
 
-    gdb_test "p bssglobal" $unk_type_re
+    gdb_test "p bssglobal" "bssglobal.*$unk_type_re"
     gdb_test "p (int) bssglobal" "= 0"
     gdb_test "whatis bssglobal" $data_var_type
     gdb_test "ptype bssglobal" $data_var_type
@@ -135,7 +133,7 @@ if [runto inner] then {
     setup_xfail "rs6000*-*-aix*"
     setup_xfail "powerpc*-*-aix*"
 
-    gdb_test "p bsslocal" $unk_type_re
+    gdb_test "p bsslocal" "bsslocal.*$unk_type_re"
     gdb_test "p (int) bsslocal" "= 0"
 
     setup_xfail "rs6000*-*-aix*"
