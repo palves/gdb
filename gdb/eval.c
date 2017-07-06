@@ -42,8 +42,8 @@
 #include <ctype.h>
 
 struct value *
-value_of_minimal_symbol (enum noside noside,
-			 minimal_symbol *msymbol, struct objfile *objfile);
+value_of_minimal_symbol (struct objfile *objfile,
+			 minimal_symbol *msymbol);
 
 
 /* This is defined in valops.c */
@@ -787,8 +787,8 @@ evaluate_subexp_standard (struct type *expect_type,
 	(*pos) += 3;
 
 	minimal_symbol *msymbol = exp->elts[pc + 2].msymbol;
-	value *val = value_of_minimal_symbol (EVAL_NORMAL, msymbol,
-					      exp->elts[pc + 1].objfile);
+	value *val = value_of_minimal_symbol (exp->elts[pc + 1].objfile,
+					      msymbol);
 
 	type = value_type (val);
 	if (TYPE_CODE (type) == TYPE_CODE_ERROR
@@ -2918,9 +2918,8 @@ evaluate_subexp_for_address (struct expression *exp, int *pos,
 	/* Evaluate it as normal even if EVAL_AVOID_SIDE_EFFECTS was
 	   requested; the result is a lazy memory lval, we're fine.
 	   Lazy evaluation pays off here.  */
-	value *val = value_of_minimal_symbol (EVAL_NORMAL,
-					      exp->elts[pc + 2].msymbol,
-					      exp->elts[pc + 1].objfile);
+	value *val = value_of_minimal_symbol (exp->elts[pc + 1].objfile,
+					      exp->elts[pc + 2].msymbol);
 	gdb_assert (VALUE_LVAL (val) == lval_memory && value_lazy (val));
 	return value_addr (val);
       }
@@ -3067,8 +3066,8 @@ evaluate_subexp_for_sizeof (struct expression *exp, int *pos,
 	(*pos) += 4;
 
 	minimal_symbol *msymbol = exp->elts[pc + 2].msymbol;
-	value *val = value_of_minimal_symbol (EVAL_NORMAL, msymbol,
-					      exp->elts[pc + 1].objfile);
+	value *val = value_of_minimal_symbol (exp->elts[pc + 1].objfile,
+					      msymbol);
 
 	type = value_type (val);
 	if (TYPE_CODE (type) == TYPE_CODE_ERROR)
@@ -3141,9 +3140,8 @@ evaluate_subexp_for_cast (expression *exp, int *pos,
   if (exp->elts[pc].opcode == OP_VAR_MIN_VALUE)
     {
       (*pos) += 4;
-      minimal_symbol *msymbol = exp->elts[pc + 2].msymbol;
-      arg1 = value_of_minimal_symbol (EVAL_NORMAL, msymbol,
-				      exp->elts[pc + 1].objfile);
+      arg1 = value_of_minimal_symbol (exp->elts[pc + 1].objfile,
+				      exp->elts[pc + 2].msymbol);
     }
   else
     arg1 = evaluate_subexp (type, exp, pos, noside);

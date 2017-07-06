@@ -482,9 +482,9 @@ write_exp_bitstring (struct parser_state *ps, struct stoken str)
 /* Add the appropriate elements for a minimal symbol to the end of
    the expression.  */
 
-struct value *
-value_of_minimal_symbol (enum noside noside,
-			 minimal_symbol *msymbol, struct objfile *objfile)
+value *
+value_of_minimal_symbol (struct objfile *objfile,
+			 minimal_symbol *msymbol)
 {
   bound_minimal_symbol bound_msym = {msymbol, objfile};
   struct gdbarch *gdbarch = get_objfile_arch (objfile);
@@ -524,10 +524,6 @@ value_of_minimal_symbol (enum noside noside,
 
   if (section && section->the_bfd_section->flags & SEC_THREAD_LOCAL)
     {
-      if (noside == EVAL_AVOID_SIDE_EFFECTS)
-	return value_zero (objfile_type (objfile)->nodebug_tls_symbol,
-			   not_lval);
-
       CORE_ADDR tls_addr = target_translate_tls_address (objfile, addr);
       return value_at_lazy (objfile_type (objfile)->nodebug_tls_symbol,
 			    tls_addr);
@@ -563,10 +559,7 @@ value_of_minimal_symbol (enum noside noside,
       break;
     }
 
-  if (noside == EVAL_AVOID_SIDE_EFFECTS)
-    return value_zero (the_type, not_lval);
-  else
-    return value_at_lazy (the_type, addr);
+  return value_at_lazy (the_type, addr);
 }
 
 
