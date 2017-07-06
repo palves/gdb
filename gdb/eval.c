@@ -2574,23 +2574,6 @@ evaluate_subexp_standard (struct type *expect_type,
     case UNOP_ADDR:
       /* C++: check for and handle pointer to members.  */
 
-      op = exp->elts[*pos].opcode;
-
-      /* The 'pc == 0' check is here to allow "p &nodebug_global".  We
-	 want any other attempt to use the variable's address to error
-	 out with the "foo has unknown type" error, instead of e.g.,
-	 complaining about invalid pointer arithmetic ("p &global +
-	 1"), etc.  Doing it this way lets us print the variable name
-	 while we still have it.  */
-      if (pc == 0 && op == OP_VAR_MIN_VALUE)
-	{
-	  int pc = *pos;
-	  *pos += 3;
-	  value *val = value_of_minimal_symbol (exp->elts[pc + 1].objfile,
-						exp->elts[pc + 2].msymbol);
-	  return value_addr (val);
-	}
-
       if (noside == EVAL_SKIP)
 	{
 	  evaluate_subexp (NULL_TYPE, exp, pos, EVAL_SKIP);
@@ -2926,6 +2909,10 @@ evaluate_subexp_for_address (struct expression *exp, int *pos,
 	}
       else
 	return address_of_variable (var, exp->elts[pc + 1].block);
+    case OP_VAR_MIN_VALUE:
+      (*pos) += 4;
+      return value_addr (value_of_minimal_symbol (exp->elts[pc + 1].objfile,
+						  exp->elts[pc + 2].msymbol));
     case OP_SCOPE:
       tem = longest_to_int (exp->elts[pc + 2].longconst);
       (*pos) += 5 + BYTES_TO_EXP_ELEM (tem + 1);

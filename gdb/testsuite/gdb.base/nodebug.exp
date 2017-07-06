@@ -69,6 +69,7 @@ if [runto inner] then {
 
     set data_var_type "<data variable, no debug info>"
     set unk_type_re "has unknown type.*to its declared type"
+    set ptr_math_re "Cannot perform pointer math on incomplete type \"$data_var_type\", try casting to a known type, or void \\*\\."
 
     set dataglobal_unk_re "dataglobal.*$unk_type_re"
 
@@ -81,7 +82,10 @@ if [runto inner] then {
 	{"sizeof((int) dataglobal)"	""   " = $decimal"					" = int"}
 	{"dataglobal + 1"		""   $dataglobal_unk_re					$dataglobal_unk_re}
 	{"&dataglobal"			""   "\\($data_var_type \\*\\) $hex <dataglobal>"	" = $data_var_type \\*"}
-	{"&dataglobal + 1"		""   $dataglobal_unk_re					$dataglobal_unk_re}
+	{"&dataglobal + 1"		""   $ptr_math_re					$ptr_math_re}
+	{"&dataglobal, &dataglobal"	""   "\\($data_var_type \\*\\) $hex <dataglobal>"	" = $data_var_type \\*"}
+
+	{"*dataglobal"			""   $dataglobal_unk_re					$dataglobal_unk_re}
 
 	{"dataglobal8"			"/x" $dataglobal_unk_re					" = $data_var_type"}
 	{"(uint8_t) dataglobal8"	"/x" " = 0xff"						"uint8_t|unsigned char"}
@@ -101,7 +105,11 @@ if [runto inner] then {
 	set fmt [subst -nobackslashes -nocommands [lindex $line 1]]
 	set print [subst -nobackslashes -nocommands [lindex $line 2]]
 	set whatis [subst -nobackslashes -nocommands [lindex $line 3]]
-	gdb_test "p $fmt $exp" $print
+	if {$fmt == ""} {
+	    gdb_test "p $exp" $print
+	} else {
+	    gdb_test "p $fmt $exp" $print
+	}
 	gdb_test "whatis $exp" $whatis
 	gdb_test "ptype $exp" $whatis
     }
