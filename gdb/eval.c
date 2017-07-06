@@ -692,6 +692,37 @@ nosideret (expression *exp)
 }
 
 struct value *
+evaluate_var_value (expression *exp, int pc, enum noside noside, symbol *var)
+{
+  /* JYG: We used to just return value_zero of the symbol type if
+     we're asked to avoid side effects.  Otherwise we return
+     value_of_variable (...).  However I'm not sure if
+     value_of_variable () has any side effect.  We need a full value
+     object returned here for whatis_exp () to call evaluate_type ()
+     and then pass the full value to value_rtti_target_type () if we
+     are dealing with a pointer or reference to a base class and print
+     object is on.  */
+
+  struct value *ret = NULL;
+
+  TRY
+    {
+      ret = value_of_variable (var, exp->elts[pc + 1].block);
+    }
+
+  CATCH (except, RETURN_MASK_ERROR)
+    {
+      if (noside != EVAL_AVOID_SIDE_EFFECTS)
+	throw_exception (except);
+
+      ret = value_zero (SYMBOL_TYPE (var), not_lval);
+    }
+  END_CATCH
+
+  return ret;
+}
+
+struct value *
 evaluate_subexp_standard (struct type *expect_type,
 			  struct expression *exp, int *pos,
 			  enum noside noside)
@@ -762,25 +793,14 @@ evaluate_subexp_standard (struct type *expect_type,
 	 or reference to a base class and print object is on.  */
 
       {
-	struct value *ret = NULL;
-
-	TRY
+	symbol *var = exp->elts[pc + 2].symbol;
+	if (TYPE_CODE (SYMBOL_TYPE (var)) == TYPE_CODE_ERROR)
 	  {
-	    ret = value_of_variable (exp->elts[pc + 2].symbol,
-				     exp->elts[pc + 1].block);
+	    error (_("'%s' has unknown type; cast it to its declared type"),
+		   SYMBOL_PRINT_NAME (var));
 	  }
 
-	CATCH (except, RETURN_MASK_ERROR)
-	  {
-	    if (noside == EVAL_AVOID_SIDE_EFFECTS)
-	      ret = value_zero (SYMBOL_TYPE (exp->elts[pc + 2].symbol),
-				not_lval);
-	    else
-	      throw_exception (except);
-	  }
-	END_CATCH
-
-	return ret;
+	return evaluate_var_value (exp, pc, noside, var);
       }
     case OP_VAR_MIN_VALUE:
       {
@@ -3122,20 +3142,27 @@ evaluate_subexp_for_cast (expression *exp, int *pos,
 {
   int pc = *pos;
 
-  /* Don't let minimal symbols be evaluated with evaluate_subexp
-     because that throws an "unknown type" error for no-debug data
-     symbols.  Instead, we want the cast to reinterpret the minsym
-     (that's done by value_cast, since minsyms are lval_memory).  */
-  if (exp->elts[pc].opcode == OP_VAR_MIN_VALUE)
+  /* Don't let symbols be evaluated with evaluate_subexp because that
+     throws an "unknown type" error for no-debug data symbols.
+     Instead, we want the cast to reinterpret the symbol.  */
+  if (exp->elts[pc].opcode == OP_VAR_MIN_VALUE
+      || exp->elts[pc].opcode == OP_VAR_VALUE)
     {
       (*pos) += 4;
-      value *val = value_of_minimal_symbol (exp->elts[pc + 1].objfile,
-					    exp->elts[pc + 2].msymbol);
+
+      value *val;
+      if (exp->elts[pc].opcode == OP_VAR_MIN_VALUE)
+	val = value_of_minimal_symbol (exp->elts[pc + 1].objfile,
+				       exp->elts[pc + 2].msymbol);
+      else
+	val = evaluate_var_value (exp, pc, noside, exp->elts[pc + 2].symbol);
+
       if (noside == EVAL_SKIP)
 	return nosideret (exp);
 
       val = value_cast (to_type, val);
-      value_fetch_lazy (val);
+      if (value_lazy (val))
+	value_fetch_lazy (val);
       VALUE_LVAL (val) = not_lval;
       return val;
     }
