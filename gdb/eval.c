@@ -691,8 +691,9 @@ nosideret (expression *exp)
   return value_from_longest (builtin_type (exp->gdbarch)->builtin_int, 1);
 }
 
-struct value *
-evaluate_var_value (expression *exp, int pc, enum noside noside, symbol *var)
+static value *
+evaluate_var_value (expression *exp, enum noside noside,
+		    const block *blk, symbol *var)
 {
   /* JYG: We used to just return value_zero of the symbol type if
      we're asked to avoid side effects.  Otherwise we return
@@ -707,7 +708,7 @@ evaluate_var_value (expression *exp, int pc, enum noside noside, symbol *var)
 
   TRY
     {
-      ret = value_of_variable (var, exp->elts[pc + 1].block);
+      ret = value_of_variable (var, blk);
     }
 
   CATCH (except, RETURN_MASK_ERROR)
@@ -800,7 +801,7 @@ evaluate_subexp_standard (struct type *expect_type,
 		   SYMBOL_PRINT_NAME (var));
 	  }
 
-	return evaluate_var_value (exp, pc, noside, var);
+	return evaluate_var_value (exp, noside, exp->elts[pc + 1].block, var);
       }
     case OP_VAR_MIN_VALUE:
       {
@@ -3155,15 +3156,20 @@ evaluate_subexp_for_cast (expression *exp, int *pos,
 	val = value_of_minimal_symbol (exp->elts[pc + 1].objfile,
 				       exp->elts[pc + 2].msymbol);
       else
-	val = evaluate_var_value (exp, pc, noside, exp->elts[pc + 2].symbol);
+	val = evaluate_var_value (exp, noside,
+				  exp->elts[pc + 1].block,
+				  exp->elts[pc + 2].symbol);
 
       if (noside == EVAL_SKIP)
 	return nosideret (exp);
 
       val = value_cast (to_type, val);
-      if (value_lazy (val))
-	value_fetch_lazy (val);
-      VALUE_LVAL (val) = not_lval;
+      if (VALUE_LVAL (val) == lval_memory)
+	{
+	  if (value_lazy (val))
+	    value_fetch_lazy (val);
+	  VALUE_LVAL (val) = not_lval;
+	}
       return val;
     }
 
