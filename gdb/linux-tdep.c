@@ -2372,24 +2372,24 @@ linux_infcall_mmap (CORE_ADDR size, unsigned prot)
     {
       ARG_ADDR, ARG_LENGTH, ARG_PROT, ARG_FLAGS, ARG_FD, ARG_OFFSET, ARG_LAST
     };
-  struct value *arg[ARG_LAST];
+  value *args[ARG_LAST];
 
-  arg[ARG_ADDR] = value_from_pointer (builtin_type (gdbarch)->builtin_data_ptr,
+  args[ARG_ADDR] = value_from_pointer (builtin_type (gdbarch)->builtin_data_ptr,
 				      0);
   /* Assuming sizeof (unsigned long) == sizeof (size_t).  */
-  arg[ARG_LENGTH] = value_from_ulongest
+  args[ARG_LENGTH] = value_from_ulongest
 		    (builtin_type (gdbarch)->builtin_unsigned_long, size);
   gdb_assert ((prot & ~(GDB_MMAP_PROT_READ | GDB_MMAP_PROT_WRITE
 			| GDB_MMAP_PROT_EXEC))
 	      == 0);
-  arg[ARG_PROT] = value_from_longest (builtin_type (gdbarch)->builtin_int, prot);
-  arg[ARG_FLAGS] = value_from_longest (builtin_type (gdbarch)->builtin_int,
+  args[ARG_PROT] = value_from_longest (builtin_type (gdbarch)->builtin_int, prot);
+  args[ARG_FLAGS] = value_from_longest (builtin_type (gdbarch)->builtin_int,
 				       GDB_MMAP_MAP_PRIVATE
 				       | GDB_MMAP_MAP_ANONYMOUS);
-  arg[ARG_FD] = value_from_longest (builtin_type (gdbarch)->builtin_int, -1);
-  arg[ARG_OFFSET] = value_from_longest (builtin_type (gdbarch)->builtin_int64,
+  args[ARG_FD] = value_from_longest (builtin_type (gdbarch)->builtin_int, -1);
+  args[ARG_OFFSET] = value_from_longest (builtin_type (gdbarch)->builtin_int64,
 					0);
-  addr_val = call_function_by_hand (mmap_val, NULL, ARG_LAST, arg);
+  addr_val = call_function_by_hand (mmap_val, NULL, args);
   retval = value_as_address (addr_val);
   if (retval == (CORE_ADDR) -1)
     error (_("Failed inferior mmap call for %s bytes, errno is changed."),
@@ -2411,14 +2411,14 @@ linux_infcall_munmap (CORE_ADDR addr, CORE_ADDR size)
     {
       ARG_ADDR, ARG_LENGTH, ARG_LAST
     };
-  struct value *arg[ARG_LAST];
+  value *args[ARG_LAST];
 
-  arg[ARG_ADDR] = value_from_pointer (builtin_type (gdbarch)->builtin_data_ptr,
+  args[ARG_ADDR] = value_from_pointer (builtin_type (gdbarch)->builtin_data_ptr,
 				      addr);
   /* Assuming sizeof (unsigned long) == sizeof (size_t).  */
-  arg[ARG_LENGTH] = value_from_ulongest
-		    (builtin_type (gdbarch)->builtin_unsigned_long, size);
-  retval_val = call_function_by_hand (munmap_val, NULL, ARG_LAST, arg);
+  args[ARG_LENGTH] = (value_from_ulongest
+		      (builtin_type (gdbarch)->builtin_unsigned_long, size));
+  retval_val = call_function_by_hand (munmap_val, NULL, args);
   retval = value_as_long (retval_val);
   if (retval != 0)
     warning (_("Failed inferior munmap call at %s for %s bytes, "

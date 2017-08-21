@@ -828,7 +828,7 @@ eval_call (expression *exp, enum noside noside,
       return call_xmethod (argvec[0], nargs, argvec + 1);
     default:
       return call_function_by_hand (argvec[0], default_return_type,
-				    nargs, argvec + 1);
+				    {argvec + 1, nargs});
     }
 }
 
@@ -1711,12 +1711,12 @@ evaluate_subexp_standard (struct type *expect_type,
 	argvec[3] = value_from_longest (long_type, selector);
 	argvec[4] = 0;
 
-	ret = call_function_by_hand (argvec[0], NULL, 3, argvec + 1);
+	ret = call_function_by_hand (argvec[0], NULL, {argvec + 1, 3});
 	if (gnu_runtime)
 	  {
 	    /* Function objc_msg_lookup returns a pointer.  */
 	    argvec[0] = ret;
-	    ret = call_function_by_hand (argvec[0], NULL, 3, argvec + 1);
+	    ret = call_function_by_hand (argvec[0], NULL, {argvec + 1, 3});
 	  }
 	if (value_as_long (ret) == 0)
 	  error (_("Target does not respond to this message selector."));
@@ -1733,11 +1733,11 @@ evaluate_subexp_standard (struct type *expect_type,
 	argvec[3] = value_from_longest (long_type, selector);
 	argvec[4] = 0;
 
-	ret = call_function_by_hand (argvec[0], NULL, 3, argvec + 1);
+	ret = call_function_by_hand (argvec[0], NULL, {argvec + 1, 3});
 	if (gnu_runtime)
 	  {
 	    argvec[0] = ret;
-	    ret = call_function_by_hand (argvec[0], NULL, 3, argvec + 1);
+	    ret = call_function_by_hand (argvec[0], NULL, {argvec + 1, 3});
 	  }
 
 	/* ret should now be the selector.  */
@@ -1879,10 +1879,10 @@ evaluate_subexp_standard (struct type *expect_type,
 	    deprecated_set_value_type (argvec[0],
 				       lookup_pointer_type (lookup_function_type (value_type (argvec[0]))));
 	    argvec[0]
-	      = call_function_by_hand (argvec[0], NULL, nargs + 2, argvec + 1);
+	      = call_function_by_hand (argvec[0], NULL, {argvec + 1, nargs + 2});
 	  }
 
-	ret = call_function_by_hand (argvec[0], NULL, nargs + 2, argvec + 1);
+	ret = call_function_by_hand (argvec[0], NULL, {argvec + 1, nargs + 2});
 	return ret;
       }
       break;

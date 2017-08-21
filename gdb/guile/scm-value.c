@@ -860,7 +860,7 @@ gdbscm_value_call (SCM self, SCM args)
       struct cleanup *cleanup = make_cleanup_value_free_to_mark (mark);
       struct value *return_value;
 
-      return_value = call_function_by_hand (function, NULL, args_count, vargs);
+      return_value = call_function_by_hand (function, NULL, {vargs, args_count});
       result = vlscm_scm_from_value (return_value);
       do_cleanups (cleanup);
     }

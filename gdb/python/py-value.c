@@ -926,7 +926,7 @@ valpy_call (PyObject *self, PyObject *args, PyObject *keywords)
       struct value *return_value;
 
       return_value = call_function_by_hand (function, NULL,
-					    args_count, vargs);
+					    {vargs, args_count});
       result = value_to_value_object (return_value);
     }
   CATCH (except, RETURN_MASK_ALL)

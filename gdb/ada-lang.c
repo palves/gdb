@@ -10769,7 +10769,7 @@ ada_evaluate_subexp (struct type *expect_type, struct expression *exp,
 		error_call_unknown_return_type (NULL);
 	      return allocate_value (TYPE_TARGET_TYPE (type));
 	    }
-	  return call_function_by_hand (argvec[0], NULL, nargs, argvec + 1);
+	  return call_function_by_hand (argvec[0], NULL, {argvec + 1, nargs});
 	case TYPE_CODE_INTERNAL_FUNCTION:
 	  if (noside == EVAL_AVOID_SIDE_EFFECTS)
 	    /* We don't know anything about what the internal
