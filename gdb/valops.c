@@ -54,20 +54,19 @@ static struct value *search_struct_method (const char *, struct value **,
 					   struct value **,
 					   LONGEST, int *, struct type *);
 
-static int find_oload_champ_namespace (struct value **, int,
+static int find_oload_champ_namespace (gdb::array_view<value *> args,
 				       const char *, const char *,
 				       struct symbol ***,
 				       struct badness_vector **,
 				       const int no_adl);
 
-static
-int find_oload_champ_namespace_loop (struct value **, int,
-				     const char *, const char *,
-				     int, struct symbol ***,
-				     struct badness_vector **, int *,
-				     const int no_adl);
+static int find_oload_champ_namespace_loop (gdb::array_view<value *> args,
+					    const char *, const char *,
+					    int, struct symbol ***,
+					    struct badness_vector **, int *,
+					    const int no_adl);
 
-static int find_oload_champ (struct value **, int, int,
+static int find_oload_champ (gdb::array_view<value *> args, int,
 			     struct fn_field *, VEC (xmethod_worker_ptr) *,
 			     struct symbol **, struct badness_vector **);
 
@@ -2462,7 +2461,7 @@ value_find_oload_method_list (struct value **argp, const char *method,
    resolution is permitted.  */
 
 int
-find_overload_match (struct value **args, int nargs,
+find_overload_match (gdb::array_view<value *> args,
 		     const char *name, enum oload_search_type method,
 		     struct value **objp, struct symbol *fsym,
 		     struct value **valp, struct symbol **symp, 
@@ -2547,12 +2546,12 @@ find_overload_match (struct value **args, int nargs,
 	{
 	  gdb_assert (TYPE_SELF_TYPE (fns_ptr[0].type) != NULL);
 
-	  src_method_oload_champ = find_oload_champ (args, nargs,
+	  src_method_oload_champ = find_oload_champ (args,
 						     num_fns, fns_ptr, NULL,
 						     NULL, &src_method_badness);
 
 	  src_method_match_quality = classify_oload_match
-	    (src_method_badness, nargs,
+	    (src_method_badness, args.size (),
 	     oload_method_static_p (fns_ptr, src_method_oload_champ));
 
 	  make_cleanup (xfree, src_method_badness);
@@ -2560,11 +2559,11 @@ find_overload_match (struct value **args, int nargs,
 
       if (VEC_length (xmethod_worker_ptr, xm_worker_vec) > 0)
 	{
-	  ext_method_oload_champ = find_oload_champ (args, nargs,
+	  ext_method_oload_champ = find_oload_champ (args,
 						     0, NULL, xm_worker_vec,
 						     NULL, &ext_method_badness);
 	  ext_method_match_quality = classify_oload_match (ext_method_badness,
-							   nargs, 0);
+							   args.size (), 0);
 	  make_cleanup (xfree, ext_method_badness);
 	  make_cleanup (free_xmethod_worker_vec, xm_worker_vec);
 	}
@@ -2678,7 +2677,7 @@ find_overload_match (struct value **args, int nargs,
           return 0;
         }
 
-      func_oload_champ = find_oload_champ_namespace (args, nargs,
+      func_oload_champ = find_oload_champ_namespace (args,
                                                      func_name,
                                                      qualified_name,
                                                      &oload_syms,
@@ -2686,7 +2685,8 @@ find_overload_match (struct value **args, int nargs,
                                                      no_adl);
 
       if (func_oload_champ >= 0)
-	func_match_quality = classify_oload_match (func_badness, nargs, 0);
+	func_match_quality = classify_oload_match (func_badness,
+						   args.size (), 0);
 
       make_cleanup (xfree, oload_syms);
       make_cleanup (xfree, func_badness);
@@ -2828,7 +2828,7 @@ find_overload_match (struct value **args, int nargs,
    performned.  */
 
 static int
-find_oload_champ_namespace (struct value **args, int nargs,
+find_oload_champ_namespace (gdb::array_view<value *> args,
 			    const char *func_name,
 			    const char *qualified_name,
 			    struct symbol ***oload_syms,
@@ -2837,7 +2837,7 @@ find_oload_champ_namespace (struct value **args, int nargs,
 {
   int oload_champ;
 
-  find_oload_champ_namespace_loop (args, nargs,
+  find_oload_champ_namespace_loop (args,
 				   func_name,
 				   qualified_name, 0,
 				   oload_syms, oload_champ_bv,
@@ -2857,7 +2857,7 @@ find_oload_champ_namespace (struct value **args, int nargs,
    *OLOAD_CHAMP_BV.  */
 
 static int
-find_oload_champ_namespace_loop (struct value **args, int nargs,
+find_oload_champ_namespace_loop (gdb::array_view<value *> args,
 				 const char *func_name,
 				 const char *qualified_name,
 				 int namespace_len,
@@ -2894,7 +2894,7 @@ find_oload_champ_namespace_loop (struct value **args, int nargs,
     {
       searched_deeper = 1;
 
-      if (find_oload_champ_namespace_loop (args, nargs,
+      if (find_oload_champ_namespace_loop (args,
 					   func_name, qualified_name,
 					   next_namespace_len,
 					   oload_syms, oload_champ_bv,
@@ -2929,16 +2929,16 @@ find_oload_champ_namespace_loop (struct value **args, int nargs,
 
       /* Prepare list of argument types for overload resolution.  */
       arg_types = (struct type **)
-	alloca (nargs * (sizeof (struct type *)));
-      for (ix = 0; ix < nargs; ix++)
+	alloca (args.size () * (sizeof (struct type *)));
+      for (ix = 0; ix < args.size (); ix++)
 	arg_types[ix] = value_type (args[ix]);
-      make_symbol_overload_list_adl (arg_types, nargs, func_name);
+      make_symbol_overload_list_adl (arg_types, args.size (), func_name);
     }
 
   while (new_oload_syms[num_fns])
     ++num_fns;
 
-  new_oload_champ = find_oload_champ (args, nargs, num_fns,
+  new_oload_champ = find_oload_champ (args, num_fns,
 				      NULL, NULL, new_oload_syms,
 				      &new_oload_champ_bv);
 
@@ -2950,7 +2950,7 @@ find_oload_champ_namespace_loop (struct value **args, int nargs,
      it's a bad match.  */
 
   if (new_oload_champ != -1
-      && classify_oload_match (new_oload_champ_bv, nargs, 0) == STANDARD)
+      && classify_oload_match (new_oload_champ_bv, args.size (), 0) == STANDARD)
     {
       *oload_syms = new_oload_syms;
       *oload_champ = new_oload_champ;
@@ -2990,7 +2990,7 @@ find_oload_champ_namespace_loop (struct value **args, int nargs,
    It is the caller's responsibility to free *OLOAD_CHAMP_BV.  */
 
 static int
-find_oload_champ (struct value **args, int nargs,
+find_oload_champ (gdb::array_view<value *> args,
 		  int num_fns, struct fn_field *fns_ptr,
 		  VEC (xmethod_worker_ptr) *xm_worker_vec,
 		  struct symbol **oload_syms,
@@ -3022,17 +3022,18 @@ find_oload_champ (struct value **args, int nargs,
     {
       int jj;
       int static_offset = 0;
-      int nparms;
-      struct type **parm_types;
+      std::vector<type *> parm_types;
       struct xmethod_worker *worker = NULL;
 
       if (xm_worker_vec != NULL)
 	{
 	  worker = VEC_index (xmethod_worker_ptr, xm_worker_vec, ix);
-	  parm_types = get_xmethod_arg_types (worker, &nparms);
+	  parm_types = get_xmethod_arg_types (worker);
 	}
       else
 	{
+	  size_t nparms;
+
 	  if (fns_ptr != NULL)
 	    {
 	      nparms = TYPE_NFIELDS (TYPE_FN_FIELD_TYPE (fns_ptr, ix));
@@ -3041,19 +3042,21 @@ find_oload_champ (struct value **args, int nargs,
 	  else
 	    nparms = TYPE_NFIELDS (SYMBOL_TYPE (oload_syms[ix]));
 
-	  parm_types = XNEWVEC (struct type *, nparms);
+	  parm_types.reserve (nparms);
 	  for (jj = 0; jj < nparms; jj++)
-	    parm_types[jj] = (fns_ptr != NULL
-			      ? (TYPE_FN_FIELD_ARGS (fns_ptr, ix)[jj].type)
-			      : TYPE_FIELD_TYPE (SYMBOL_TYPE (oload_syms[ix]),
-						 jj));
+	    {
+	      type *t = (fns_ptr != NULL
+			 ? (TYPE_FN_FIELD_ARGS (fns_ptr, ix)[jj].type)
+			 : TYPE_FIELD_TYPE (SYMBOL_TYPE (oload_syms[ix]),
+					    jj));
+	      parm_types.push_back (t);
+	    }
 	}
 
       /* Compare parameter types to supplied argument types.  Skip
          THIS for static methods.  */
-      bv = rank_function (parm_types, nparms, 
-			  args + static_offset,
-			  nargs - static_offset);
+      bv = rank_function (parm_types,
+			  args.slice (static_offset));
 
       if (!*oload_champ_bv)
 	{
@@ -3079,24 +3082,23 @@ find_oload_champ (struct value **args, int nargs,
 	  default:
 	    break;
 	  }
-      xfree (parm_types);
       if (overload_debug)
 	{
 	  if (fns_ptr != NULL)
 	    fprintf_filtered (gdb_stderr,
 			      "Overloaded method instance %s, # of parms %d\n",
-			      fns_ptr[ix].physname, nparms);
+			      fns_ptr[ix].physname, (int) parm_types.size ());
 	  else if (xm_worker_vec != NULL)
 	    fprintf_filtered (gdb_stderr,
 			      "Xmethod worker, # of parms %d\n",
-			      nparms);
+			      (int) parm_types.size ());
 	  else
 	    fprintf_filtered (gdb_stderr,
 			      "Overloaded function instance "
 			      "%s # of parms %d\n",
 			      SYMBOL_DEMANGLED_NAME (oload_syms[ix]), 
-			      nparms);
-	  for (jj = 0; jj < nargs - static_offset; jj++)
+			      (int) parm_types.size ());
+	  for (jj = 0; jj < args.size () - static_offset; jj++)
 	    fprintf_filtered (gdb_stderr,
 			      "...Badness @ %d : %d\n", 
 			      jj, bv->rank[jj].rank);

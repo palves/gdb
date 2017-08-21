@@ -796,7 +796,7 @@ eval_call (expression *exp, enum noside noside,
       else if (TYPE_CODE (ftype) == TYPE_CODE_XMETHOD)
 	{
 	  type *return_type
-	    = result_type_of_xmethod (argvec[0], nargs, argvec + 1);
+	    = result_type_of_xmethod (argvec[0], {argvec + 1, nargs});
 
 	  if (return_type == NULL)
 	    error (_("Xmethod is missing return type."));
@@ -825,7 +825,7 @@ eval_call (expression *exp, enum noside noside,
       return call_internal_function (exp->gdbarch, exp->language_defn,
 				     argvec[0], nargs, argvec + 1);
     case TYPE_CODE_XMETHOD:
-      return call_xmethod (argvec[0], nargs, argvec + 1);
+      return call_xmethod (argvec[0], {argvec + 1, nargs});
     default:
       return call_function_by_hand (argvec[0], default_return_type,
 				    {argvec + 1, nargs});
@@ -1098,7 +1098,7 @@ evaluate_funcall (type *expect_type, expression *exp, int *pos,
       func_name = (char *) alloca (name_len + 1);
       strcpy (func_name, &exp->elts[string_pc + 1].string);
 
-      find_overload_match (&argvec[1], nargs, func_name,
+      find_overload_match ({&argvec[1], nargs}, func_name,
 			   NON_METHOD, /* not method */
 			   NULL, NULL, /* pass NULL symbol since
 					  symbol is unknown */
@@ -1134,7 +1134,7 @@ evaluate_funcall (type *expect_type, expression *exp, int *pos,
 	     evaluation.  */
 	  struct value *valp = NULL;
 
-	  (void) find_overload_match (&argvec[1], nargs, tstr,
+	  (void) find_overload_match ({&argvec[1], nargs}, tstr,
 				      METHOD, /* method */
 				      &arg2,  /* the object */
 				      NULL, &valp, NULL,
@@ -1205,7 +1205,7 @@ evaluate_funcall (type *expect_type, expression *exp, int *pos,
 	  if (op == OP_VAR_VALUE)
 	    function = exp->elts[save_pos1+2].symbol;
 
-	  (void) find_overload_match (&argvec[1], nargs,
+	  (void) find_overload_match ({&argvec[1], nargs},
 				      NULL,        /* no need for name */
 				      NON_METHOD,  /* not method */
 				      NULL, function, /* the function */

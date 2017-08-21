@@ -22,6 +22,7 @@
 
 #include "mi/mi-cmds.h" /* For PRINT_NO_VALUES, etc.  */
 #include "common/vec.h"
+#include "common/array-view.h"
 
 struct breakpoint;
 struct command_line;
@@ -243,8 +244,7 @@ extern const struct extension_language_defn *get_breakpoint_cond_ext_lang
 extern int breakpoint_ext_lang_cond_says_stop (struct breakpoint *);
 
 extern struct value *invoke_xmethod (struct xmethod_worker *,
-				     struct value *,
-				     struct value **, int nargs);
+				     value *, gdb::array_view<value *> args);
 
 extern struct xmethod_worker *clone_xmethod_worker (struct xmethod_worker *);
 
@@ -258,10 +258,10 @@ extern void free_xmethod_worker_vec (void *vec);
 extern xmethod_worker_vec *get_matching_xmethod_workers
   (struct type *, const char *);
 
-extern struct type **get_xmethod_arg_types (struct xmethod_worker *, int *);
+extern std::vector<type *> get_xmethod_arg_types (struct xmethod_worker *);
 
 extern struct type *get_xmethod_result_type (struct xmethod_worker *,
 					     struct value *object,
-					     struct value **args, int nargs);
+					     gdb::array_view<value *> args);
 
 #endif /* EXTENSION_H */

@@ -47,6 +47,7 @@
 #include "hashtab.h"
 #include "common/offset-type.h"
 #include "common/enum-flags.h"
+#include "common/array-view.h"
 
 /* Forward declarations for prototypes.  */
 struct field;
@@ -1918,8 +1919,8 @@ extern int compare_ranks (struct rank a, struct rank b);
 
 extern int compare_badness (struct badness_vector *, struct badness_vector *);
 
-extern struct badness_vector *rank_function (struct type **, int,
-					     struct value **, int);
+extern struct badness_vector *rank_function (gdb::array_view<type *> parms,
+					     gdb::array_view<value *> args);
 
 extern struct rank rank_one_type (struct type *, struct type *,
 				  struct value *);

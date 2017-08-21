@@ -24,6 +24,7 @@
 #include "extension.h"
 #include <signal.h>
 #include "cli/cli-script.h"
+#include "common/array-view.h"
 
 /* The return code for some API calls.  */
 
@@ -287,18 +288,16 @@ struct extension_language_ops
      const char *method_name,
      xmethod_worker_vec **dm_vec);
 
-  /* Given a WORKER servicing a particular method, return the types
-     of the arguments the method takes.  The number of arguments is
-     returned in NARGS, and their types are returned in the array
-     ARGTYPES.  */
+  /* Given a WORKER servicing a particular method, return the types of
+     the arguments the method takes.  The number of arguments and
+     their types are returned in the ARG_TYPES vector.  */
   enum ext_lang_rc (*get_xmethod_arg_types)
     (const struct extension_language_defn *extlang,
      struct xmethod_worker *worker,
-     int *nargs,
-     struct type ***arg_types);
+     std::vector<type *> &arg_types);
 
   /* Given a WORKER servicing a particular method, fetch the type of the
-     result of the method.  OBJECT, ARGS, NARGS are the same as for
+     result of the method.  OBJECT and ARGS are the same as for
      invoke_xmethod.  The result type is stored in *RESULT_TYPE.
      For backward compatibility with 7.9, which did not support getting the
      result type, if the get_result_type operation is not provided by WORKER
@@ -306,7 +305,7 @@ struct extension_language_ops
   enum ext_lang_rc (*get_xmethod_result_type)
     (const struct extension_language_defn *extlang,
      struct xmethod_worker *worker,
-     struct value *object, struct value **args, int nargs,
+     struct value *object, gdb::array_view<value *> args,
      struct type **result_type);
 
   /* Invoke the xmethod serviced by WORKER.  The xmethod is invoked
@@ -316,8 +315,7 @@ struct extension_language_ops
     (const struct extension_language_defn *extlang,
      struct xmethod_worker *worker,
      struct value *object,
-     struct value **args,
-     int nargs);
+     gdb::array_view<value *> args);
 };
 
 /* State necessary to restore a signal handler to its previous value.  */

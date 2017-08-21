@@ -474,17 +474,16 @@ extern enum ext_lang_rc gdbpy_get_matching_xmethod_workers
 extern enum ext_lang_rc gdbpy_get_xmethod_arg_types
   (const struct extension_language_defn *extlang,
    struct xmethod_worker *worker,
-   int *nargs,
-   struct type ***arg_types);
+   std::vector<type *> &arg_types);
 extern enum ext_lang_rc gdbpy_get_xmethod_result_type
   (const struct extension_language_defn *extlang,
    struct xmethod_worker *worker,
-   struct value *object, struct value **args, int nargs,
+   struct value *object, gdb::array_view<value *> args,
    struct type **result_type);
 extern struct value *gdbpy_invoke_xmethod
   (const struct extension_language_defn *extlang,
    struct xmethod_worker *worker,
-   struct value *obj, struct value **args, int nargs);
+   struct value *obj, gdb::array_view<value *> args);
 
 PyObject *gdbpy_history (PyObject *self, PyObject *args);
 PyObject *gdbpy_breakpoints (PyObject *, PyObject *);

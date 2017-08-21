@@ -2719,25 +2719,25 @@ value_of_xmethod (struct xmethod_worker *worker)
 /* Return the type of the result of TYPE_CODE_XMETHOD value METHOD.  */
 
 struct type *
-result_type_of_xmethod (struct value *method, int argc, struct value **argv)
+result_type_of_xmethod (struct value *method, gdb::array_view<value *> argv)
 {
   gdb_assert (TYPE_CODE (value_type (method)) == TYPE_CODE_XMETHOD
-	      && method->lval == lval_xcallable && argc > 0);
+	      && method->lval == lval_xcallable && !argv.empty ());
 
   return get_xmethod_result_type (method->location.xm_worker,
-				  argv[0], argv + 1, argc - 1);
+				  argv[0], argv.slice (1));
 }
 
 /* Call the xmethod corresponding to the TYPE_CODE_XMETHOD value METHOD.  */
 
 struct value *
-call_xmethod (struct value *method, int argc, struct value **argv)
+call_xmethod (struct value *method, gdb::array_view<value *> argv)
 {
   gdb_assert (TYPE_CODE (value_type (method)) == TYPE_CODE_XMETHOD
-	      && method->lval == lval_xcallable && argc > 0);
+	      && method->lval == lval_xcallable && !argv.empty ());
 
   return invoke_xmethod (method->location.xm_worker,
-			 argv[0], argv + 1, argc - 1);
+			 argv[0], argv.slice (1));
 }
 
 /* Extract a value as a C number (either long or double).

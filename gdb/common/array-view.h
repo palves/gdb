@@ -169,6 +169,12 @@ public:
   constexpr size_type size () const noexcept { return m_size; }
   constexpr bool empty () const noexcept { return m_size == 0; }
 
+  constexpr array_view<T> slice (size_type start, size_t size) const noexcept
+  { return {m_array + start, size}; }
+
+  constexpr array_view<T> slice (size_type start) const noexcept
+  { return {m_array + start, size () - start}; }
+
 private:
   T *m_array;
   size_type m_size;

@@ -307,7 +307,7 @@ gdbpy_get_matching_xmethod_workers
 enum ext_lang_rc
 gdbpy_get_xmethod_arg_types (const struct extension_language_defn *extlang,
 			     struct xmethod_worker *worker,
-			     int *nargs, struct type ***arg_types)
+			     std::vector<type *> &arg_types)
 {
   /* The gdbpy_enter object needs to be placed first, so that it's the last to
      be destroyed.  */
@@ -318,10 +318,6 @@ gdbpy_get_xmethod_arg_types (const struct extension_language_defn *extlang,
   struct type *obj_type;
   int i = 1, arg_count;
   gdbpy_ref<> list_iter;
-
-  /* Set nargs to -1 so that any premature return from this function returns
-     an invalid/unusable number of arg types.  */
-  *nargs = -1;
 
   gdbpy_ref<> get_arg_types_method
     (PyObject_GetAttrString (py_worker, get_arg_types_method_name));
@@ -362,8 +358,7 @@ gdbpy_get_xmethod_arg_types (const struct extension_language_defn *extlang,
     arg_count = 1;
 
   /* Include the 'this' argument in the size.  */
-  gdb::unique_xmalloc_ptr<struct type *> type_array
-    (XCNEWVEC (struct type *, arg_count + 1));
+  arg_types.resize (arg_count + 1);
   i = 1;
   if (list_iter != NULL)
     {
@@ -390,7 +385,7 @@ gdbpy_get_xmethod_arg_types (const struct extension_language_defn *extlang,
 	      return EXT_LANG_RC_ERROR;
 	    }
 
-	  (type_array.get ())[i] = arg_type;
+	  arg_types[i] = arg_type;
 	  i++;
 	}
     }
@@ -410,7 +405,7 @@ gdbpy_get_xmethod_arg_types (const struct extension_language_defn *extlang,
 	}
       else
 	{
-	  (type_array.get ())[i] = arg_type;
+	  arg_types[i] = arg_type;
 	  i++;
 	}
     }
@@ -419,10 +414,8 @@ gdbpy_get_xmethod_arg_types (const struct extension_language_defn *extlang,
      be a 'const' value.  Hence, create a 'const' variant of the 'this' pointer
      type.  */
   obj_type = type_object_to_type (worker_data->this_type);
-  (type_array.get ())[0] = make_cv_type (1, 0, lookup_pointer_type (obj_type),
-					 NULL);
-  *nargs = i;
-  *arg_types = type_array.release ();
+  arg_types[0] = make_cv_type (1, 0, lookup_pointer_type (obj_type),
+			       NULL);
 
   return EXT_LANG_RC_OK;
 }
@@ -433,7 +426,7 @@ enum ext_lang_rc
 gdbpy_get_xmethod_result_type (const struct extension_language_defn *extlang,
 			       struct xmethod_worker *worker,
 			       struct value *obj,
-			       struct value **args, int nargs,
+			       gdb::array_view<value *> args,
 			       struct type **result_type_ptr)
 {
   struct gdbpy_worker_data *worker_data
@@ -484,7 +477,7 @@ gdbpy_get_xmethod_result_type (const struct extension_language_defn *extlang,
       return EXT_LANG_RC_ERROR;
     }
 
-  gdbpy_ref<> py_arg_tuple (PyTuple_New (nargs + 1));
+  gdbpy_ref<> py_arg_tuple (PyTuple_New (args.size () + 1));
   if (py_arg_tuple == NULL)
     {
       gdbpy_print_stack ();
@@ -495,7 +488,7 @@ gdbpy_get_xmethod_result_type (const struct extension_language_defn *extlang,
      release.  */
   PyTuple_SET_ITEM (py_arg_tuple.get (), 0, py_value_obj.release ());
 
-  for (i = 0; i < nargs; i++)
+  for (i = 0; i < args.size (); i++)
     {
       PyObject *py_value_arg = value_to_value_object (args[i]);
 
@@ -533,7 +526,7 @@ gdbpy_get_xmethod_result_type (const struct extension_language_defn *extlang,
 struct value *
 gdbpy_invoke_xmethod (const struct extension_language_defn *extlang,
 		      struct xmethod_worker *worker,
-		      struct value *obj, struct value **args, int nargs)
+		      struct value *obj, gdb::array_view<value *> args)
 {
   int i;
   struct type *obj_type, *this_type;
@@ -573,7 +566,7 @@ gdbpy_invoke_xmethod (const struct extension_language_defn *extlang,
       error (_("Error while executing Python code."));
     }
 
-  gdbpy_ref<> py_arg_tuple (PyTuple_New (nargs + 1));
+  gdbpy_ref<> py_arg_tuple (PyTuple_New (args.size () + 1));
   if (py_arg_tuple == NULL)
     {
       gdbpy_print_stack ();
@@ -584,7 +577,7 @@ gdbpy_invoke_xmethod (const struct extension_language_defn *extlang,
      release.  */
   PyTuple_SET_ITEM (py_arg_tuple.get (), 0, py_value_obj.release ());
 
-  for (i = 0; i < nargs; i++)
+  for (i = 0; i < args.size (); i++)
     {
       PyObject *py_value_arg = value_to_value_object (args[i]);
 

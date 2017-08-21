@@ -945,17 +945,16 @@ get_matching_xmethod_workers (struct type *type, const char *method_name)
    NARGS.  The type of the 'this' object is returned as the first element of
    array.  */
 
-struct type **
-get_xmethod_arg_types (struct xmethod_worker *worker, int *nargs)
+std::vector<type *>
+get_xmethod_arg_types (struct xmethod_worker *worker)
 {
   enum ext_lang_rc rc;
-  struct type **type_array = NULL;
+  std::vector<type *> type_array;
   const struct extension_language_defn *extlang = worker->extlang;
 
   gdb_assert (extlang->ops->get_xmethod_arg_types != NULL);
 
-  rc = extlang->ops->get_xmethod_arg_types (extlang, worker, nargs,
-					    &type_array);
+  rc = extlang->ops->get_xmethod_arg_types (extlang, worker, type_array);
   if (rc == EXT_LANG_RC_ERROR)
     {
       error (_("Error while looking for arg types of a xmethod worker "
@@ -970,7 +969,7 @@ get_xmethod_arg_types (struct xmethod_worker *worker, int *nargs)
 
 struct type *
 get_xmethod_result_type (struct xmethod_worker *worker,
-			 struct value *object, struct value **args, int nargs)
+			 struct value *object, gdb::array_view<value *> args)
 {
   enum ext_lang_rc rc;
   struct type *result_type;
@@ -979,8 +978,7 @@ get_xmethod_result_type (struct xmethod_worker *worker,
   gdb_assert (extlang->ops->get_xmethod_arg_types != NULL);
 
   rc = extlang->ops->get_xmethod_result_type (extlang, worker,
-					      object, args, nargs,
-					      &result_type);
+					      object, args, &result_type);
   if (rc == EXT_LANG_RC_ERROR)
     {
       error (_("Error while fetching result type of an xmethod worker "
@@ -996,12 +994,12 @@ get_xmethod_result_type (struct xmethod_worker *worker,
 
 struct value *
 invoke_xmethod (struct xmethod_worker *worker, struct value *obj,
-		     struct value **args, int nargs)
+		gdb::array_view<value *> args)
 {
   gdb_assert (worker->extlang->ops->invoke_xmethod != NULL);
 
   return worker->extlang->ops->invoke_xmethod (worker->extlang, worker,
-					       obj, args, nargs);
+					       obj, args);
 }
 
 /* Frees the xmethod worker WORKER.  */
