@@ -28,6 +28,7 @@
 #include "vec.h"
 #include "gdb_vecs.h"
 #include "gdb_obstack.h"
+#include <vector>
 
 /* Opaque declarations.  */
 
@@ -106,12 +107,11 @@ extern gdb::unique_xmalloc_ptr<char> cp_remove_params
 extern gdb::unique_xmalloc_ptr<char> cp_remove_params_if_any
   (const char *demangled_name, bool completion_mode);
 
-extern struct symbol **make_symbol_overload_list (const char *,
-						  const char *);
+extern std::vector<symbol *> make_symbol_overload_list (const char *,
+							const char *);
 
-extern struct symbol **make_symbol_overload_list_adl (struct type **arg_types,
-                                                      int nargs,
-                                                      const char *func_name);
+extern std::vector<symbol *> make_symbol_overload_list_adl
+  (gdb::array_view<type *> arg_types, const char *func_name);
 
 extern struct type *cp_lookup_rtti_type (const char *name,
 					 struct block *block);
