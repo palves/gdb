@@ -700,7 +700,7 @@ gdbpy_apply_val_pretty_printer (const struct extension_language_defn *extlang,
   /* Print the section */
   print_result = print_string_repr (printer.get (), hint.get (), stream,
 				    recurse, options, language, gdbarch);
-  if (print_result != string_repr_error)
+  if (print_result != string_repr_error && recurse == 0)
     print_children (printer.get (), hint.get (), stream, recurse, options,
 		    language, print_result == string_repr_none);
 
