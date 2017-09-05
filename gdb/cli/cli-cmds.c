@@ -883,9 +883,7 @@ list_command (const char *arg, int from_tty)
 	 source line, center the listing around that line.  */
       if (get_first_line_listed () == 0)
 	{
-	  int first;
-
-	  first = std::max (cursal.line - get_lines_to_list () / 2, 1);
+	  int first = std::max (cursal.line - get_lines_to_list () / 2, 1);
 
 	  /* A small special case --- if listing backwards, and we
 	     should list only one line, list the preceding line,
@@ -947,8 +945,6 @@ list_command (const char *arg, int from_tty)
 	  /*  C++  */
 	  return;
 	}
-
-      sal = sals[0];
     }
 
   /* Record whether the BEG arg is all digits.  */
@@ -1021,8 +1017,10 @@ list_command (const char *arg, int from_tty)
 
 	  if (dummy_beg)
 	    {
-	      if (!get_sal_end (location.get (), sal, sals_end, sal_end,
-				end_arg))
+	      symtab_and_line dummy_sal {};
+	      symtab_and_line dummy_sal_end {};
+	      if (!get_sal_end (location.get (), dummy_sal, sals_end,
+				dummy_sal_end, end_arg))
 		return;
 	    }
 	  else
@@ -1032,6 +1030,7 @@ list_command (const char *arg, int from_tty)
 	      std::vector<symtab_and_line> tmp_sals_end;
 	      for (symtab_and_line &sal : sals)
 		{
+		  symtab_and_line sal_end;
 		  if (!get_sal_end (location.get (), sal,
 				    tmp_sals_end, sal_end,
 				    end_arg))
@@ -1044,7 +1043,6 @@ list_command (const char *arg, int from_tty)
 		}
 
 	      gdb_assert (!sals_end.empty ());
-	      sal_end = sals_end[0];
 	    }
 	}
     }
@@ -1062,13 +1060,12 @@ list_command (const char *arg, int from_tty)
      known source files, not that user failed to give a filename.  */
   if (*arg == '*')
     {
-      struct gdbarch *gdbarch;
-
+      const symtab_and_line &sal = sals[0];
       if (sal.symtab == 0)
 	error (_("No source file for address %s."),
 	       paddress (get_current_arch (), sal.pc));
 
-      gdbarch = get_objfile_arch (SYMTAB_OBJFILE (sal.symtab));
+      struct gdbarch *gdbarch = get_objfile_arch (SYMTAB_OBJFILE (sal.symtab));
       sym = find_pc_function (sal.pc);
       if (sym)
 	printf_filtered ("%s is in %s (%s:%d).\n",
