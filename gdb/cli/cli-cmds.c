@@ -862,6 +862,29 @@ edit_command (const char *arg, int from_tty)
   xfree (p);
 }
 
+static bool
+get_sal_end (event_location *location,
+	     const symtab_and_line &default_sal,
+	     symtab_and_line &sal_end, const char *end_arg)
+{
+  std::vector<symtab_and_line> sals_end
+    = decode_line_1 (location, DECODE_LINE_LIST_MODE,
+		     NULL, default_sal.symtab, default_sal.line);
+
+  filter_sals (sals_end);
+  if (sals_end.empty ())
+    return false;
+  if (sals_end.size () > 1)
+    {
+      ambiguous_line_spec (sals_end,
+			   _("Specified last line '%s' is ambiguous:\n"),
+			   end_arg);
+      return false;
+    }
+
+  return true;
+}
+
 static void
 list_command (const char *arg, int from_tty)
 {
@@ -964,30 +987,6 @@ list_command (const char *arg, int from_tty)
 
   std::vector<symtab_and_line> sals_end;
 
-  auto get_sal_end = [] (event_location *location,
-			 const symtab_and_line &sal,
-			 std::vector<symtab_and_line> &sals_end,
-			 symtab_and_line &sal_end,
-			 const char *end_arg)
-    {
-      sals_end = decode_line_1 (location, DECODE_LINE_LIST_MODE,
-				NULL, sal.symtab, sal.line);
-
-      filter_sals (sals_end);
-      if (sals_end.empty ())
-	return false;
-      if (sals_end.size () > 1)
-	{
-	  ambiguous_line_spec (sals_end,
-			       _("Specified last line '%s' is ambiguous:\n"),
-			       end_arg);
-	  return false;
-	}
-
-      sal_end = sals_end[0];
-      return true;
-    };
-
   arg1 = skip_spaces (arg1);
 
   if (*arg1 == ',')
@@ -1017,28 +1016,22 @@ list_command (const char *arg, int from_tty)
 
 	  if (dummy_beg)
 	    {
-	      symtab_and_line dummy_sal {};
-	      symtab_and_line dummy_sal_end {};
-	      if (!get_sal_end (location.get (), dummy_sal, sals_end,
-				dummy_sal_end, end_arg))
+	      if (!get_sal_end (location.get (), {}, sal_end, end_arg))
 		return;
 	    }
 	  else
 	    {
 	      sals_end.reserve (sals.size ());
 
-	      std::vector<symtab_and_line> tmp_sals_end;
 	      for (symtab_and_line &sal : sals)
 		{
 		  symtab_and_line sal_end;
-		  if (!get_sal_end (location.get (), sal,
-				    tmp_sals_end, sal_end,
-				    end_arg))
+		  if (!get_sal_end (location.get (), sal, sal_end, end_arg))
 		    return;
 		  sals_end.push_back (sal_end);
 
 		  if (sal.symtab != sal_end.symtab)
-		    error (_("Specified start and end are in "
+		    error (_("Specified starting and ending lines are in "
 			     "different files."));
 		}
 
