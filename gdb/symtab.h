@@ -1774,7 +1774,11 @@ enum print_source_lines_flag
     PRINT_SOURCE_LINES_NOERROR = (1 << 0),
 
     /* Print the filename in front of the source lines.  */
-    PRINT_SOURCE_LINES_FILENAME = (1 << 1)
+    PRINT_SOURCE_LINES_FILENAME = (1 << 1),
+
+    /* Print an arrow indicating the current source line in front of
+       the source lines.  */
+    PRINT_SOURCE_LINES_CURRENT_LINE = (1 << 2),
   };
 DEF_ENUM_FLAGS_TYPE (enum print_source_lines_flag, print_source_lines_flags);
 

@@ -74,6 +74,9 @@ extern int get_first_line_listed (void);
    as it does not automatically use this value.  */
 extern int get_lines_to_list (void);
 
+extern std::pair<int, int> get_lines_to_list_around_sal
+  (const symtab_and_line &sal);
+
 /* Return the current source file for listing and next line to list.
    NOTE: The returned sal pc and end fields are not valid.  */
 extern struct symtab_and_line get_current_source_symtab_and_line (void);

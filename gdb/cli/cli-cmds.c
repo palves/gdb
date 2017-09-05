@@ -898,6 +898,8 @@ list_command (const char *arg, int from_tty)
   int linenum_beg = 0;
   const char *p;
 
+  print_source_lines_flags print_flags = PRINT_SOURCE_LINES_CURRENT_LINE;
+
   /* Pull in the current default source line if necessary.  */
   if (arg == NULL || ((arg[0] == '+' || arg[0] == '-') && arg[1] == '\0'))
     {
@@ -919,13 +921,15 @@ list_command (const char *arg, int from_tty)
 	    first -= 1;
 
 	  print_source_lines (cursal.symtab, first,
-			      first + get_lines_to_list (), 0);
+			      first + get_lines_to_list (),
+			      print_flags);
 	}
 
       /* "l" or "l +" lists next ten lines.  */
       else if (arg == NULL || arg[0] == '+')
 	print_source_lines (cursal.symtab, cursal.line,
-			    cursal.line + get_lines_to_list (), 0);
+			    cursal.line + get_lines_to_list (),
+			    print_flags);
 
       /* "l -" lists previous ten lines, the ones before the ten just
 	 listed.  */
@@ -937,7 +941,7 @@ list_command (const char *arg, int from_tty)
 	  print_source_lines (cursal.symtab,
 			      std::max (get_first_line_listed ()
 					- get_lines_to_list (), 1),
-			      get_first_line_listed (), 0);
+			      get_first_line_listed (), print_flags);
 	}
 
       return;
@@ -1093,7 +1097,7 @@ list_command (const char *arg, int from_tty)
       const auto &sal_end = sals_end[0];
       print_source_lines (sal_end.symtab,
 			  std::max (sal_end.line - (get_lines_to_list () - 1), 1),
-			  sal_end.line + 1, 0);
+			  sal_end.line + 1, print_flags);
     }
   else if (sals.empty ())
     error (_("No default source file yet.  Do \"help list\"."));
@@ -1102,15 +1106,12 @@ list_command (const char *arg, int from_tty)
       for (int i = 0; i < sals.size (); i++)
 	{
 	  const auto &sal = sals[i];
-	  int first_line = sal.line - get_lines_to_list () / 2;
-	  if (first_line < 1)
-	    first_line = 1;
 	  if (sals.size () > 1)
 	    print_sal_location (sal);
-	  print_source_lines (sal.symtab,
-			      first_line,
-			      first_line + get_lines_to_list (),
-			      0);
+
+	  std::pair<int, int> range = get_lines_to_list_around_sal (sal);
+	  print_source_lines (sal.symtab, range.first, range.second,
+			      print_flags);
 	}
     }
   else
@@ -1130,7 +1131,7 @@ list_command (const char *arg, int from_tty)
 			      (dummy_end
 			       ? sal.line + get_lines_to_list ()
 			       : sal_end.line + 1),
-			      0);
+			      print_flags);
 	}
     }
 }
