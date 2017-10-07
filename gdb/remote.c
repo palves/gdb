@@ -216,7 +216,7 @@ static void remote_async_inferior_event_handler (gdb_client_data);
 
 static void remote_terminal_ours (struct target_ops *self);
 
-static int remote_read_description_p (struct target_ops *target);
+static int remote_read_description_p ();
 
 static void remote_console_output (char *msg);
 
@@ -1820,19 +1820,32 @@ remote_add_inferior (int fake_pid_p, int pid, int attached,
   else
     {
       /* In the traditional debugging scenario, there's a 1-1 match
-	 between program/address spaces.  We simply bind the inferior
-	 to the program space's address space.  */
-      inf = current_inferior ();
+	 between inferior/pspace/aspace.  */
+
+      /* If the inferior is not running yet, we simply use it.
+	 Otherwise, we really create a new one.  */
+      if (current_inferior ()->pid == 0)
+	inf = current_inferior ();
+      else
+	inf = add_inferior_with_spaces ();
       inferior_appeared (inf, pid);
     }
 
   inf->attach_flag = attached;
   inf->fake_pid_p = fake_pid_p;
 
-  /* If no main executable is currently open then attempt to
-     open the file that was executed to create this inferior.  */
-  if (try_open_exec && get_exec_file (0) == NULL)
-    exec_file_locate_attach (pid, 0, 1);
+  {
+    scoped_restore_current_program_space restore_pspace;
+    scoped_restore_current_inferior restore_inferior;
+
+    set_current_program_space (inf->pspace);
+    set_current_inferior (inf);
+
+    /* If no main executable is currently open then attempt to open
+       the file that was executed to create this inferior.  */
+    if (try_open_exec && get_exec_file (0) == NULL)
+      exec_file_locate_attach (pid, 0, 1);
+  }
 
   return inf;
 }
@@ -3892,10 +3905,12 @@ add_current_inferior_and_thread (char *wait_status)
 }
 
 /* Print info about a thread that was found already stopped on
-   connection.  */
+   connection.  If SUPPRESS_SIG0_PRINT is true, then suppress
+   notifying the signal_received observers for GDB_SIGNAL_0
+   signals.  */
 
 static void
-print_one_stopped_thread (struct thread_info *thread)
+print_one_stopped_thread (struct thread_info *thread, bool suppress_sig0_stops)
 {
   struct target_waitstatus *ws = &thread->suspend.waitstatus;
 
@@ -3909,7 +3924,8 @@ print_one_stopped_thread (struct thread_info *thread)
     {
       enum gdb_signal sig = ws->value.sig;
 
-      if (signal_print_state (sig))
+      if ((sig != GDB_SIGNAL_0 || !suppress_sig0_stops)
+	  && signal_print_state (sig))
 	observer_notify_signal_received (sig);
     }
   observer_notify_normal_stop (NULL, 1);
@@ -4000,9 +4016,12 @@ process_initial_stop_replies (int from_tty)
 
       inf->needs_setup = 1;
 
+      thread_info *thread = any_live_thread_of_process (inf->pid);
+      switch_to_thread_no_regs (thread);
+      target_find_description ();
+
       if (non_stop)
 	{
-	  thread = any_live_thread_of_process (inf->pid);
 	  notice_new_inferior (thread->ptid,
 			       thread->state == THREAD_RUNNING,
 			       from_tty);
@@ -4014,7 +4033,8 @@ process_initial_stop_replies (int from_tty)
      the inferiors.  */
   if (!non_stop)
     {
-      stop_all_threads ();
+      if (target_is_non_stop_p ())
+	stop_all_threads ();
 
       /* If all threads of an inferior were already stopped, we
 	 haven't setup the inferior yet.  */
@@ -4027,6 +4047,18 @@ process_initial_stop_replies (int from_tty)
 	    {
 	      thread = any_live_thread_of_process (inf->pid);
 	      switch_to_thread_no_regs (thread);
+
+	      /* If we could not find a description using qXfer, and we know
+		 how to do it some other way, try again.  This is not
+		 supported for non-stop; it could be, but it is tricky if
+		 there are no stopped threads when we connect.  */
+	      if (remote_read_description_p ()
+		  && gdbarch_target_desc (target_gdbarch ()) == NULL)
+		{
+		  target_clear_description ();
+		  target_find_description ();
+		}
+
 	      setup_inferior (0);
 	    }
 	}
@@ -4055,7 +4087,7 @@ process_initial_stop_replies (int from_tty)
 	lowest_stopped = thread;
 
       if (non_stop)
-	print_one_stopped_thread (thread);
+	print_one_stopped_thread (thread, false);
     }
 
   /* In all-stop, we only print the status of one thread, and leave
@@ -4068,7 +4100,10 @@ process_initial_stop_replies (int from_tty)
       if (thread == NULL)
 	thread = first;
 
-      print_one_stopped_thread (thread);
+      /* Note we suppress "thread stopped" output (i.e., stopped for
+	 no reason other than the debugger wanted it to stop) on the
+	 CLI to preserve GDB's traditional behavior.  */
+      print_one_stopped_thread (thread, !current_uiout->is_mi_like_p ());
     }
 
   /* For "info program".  */
@@ -4084,7 +4119,6 @@ remote_start_remote (int from_tty, struct target_ops *target, int extended_p)
 {
   struct remote_state *rs = get_remote_state ();
   struct packet_config *noack_config;
-  char *wait_status = NULL;
 
   /* Signal other parts that we're going through the initial setup,
      and so things may not be stable yet.  E.g., we don't try to
@@ -4222,13 +4256,14 @@ remote_start_remote (int from_tty, struct target_ops *target, int extended_p)
 
   if (!target_is_non_stop_p ())
     {
+      char *wait_status = NULL;
+
       if (rs->buf[0] == 'W' || rs->buf[0] == 'X')
 	{
 	  if (!extended_p)
 	    error (_("The target is not running (try extended-remote?)"));
 
-	  /* We're connected, but not running.  Drop out before we
-	     call start_remote.  */
+	  /* We're connected, but not running.  Drop out.  */
 	  rs->starting_up = 0;
 	  return;
 	}
@@ -4279,32 +4314,16 @@ remote_start_remote (int from_tty, struct target_ops *target, int extended_p)
 	 to manage `inserted' flag in bp loc in a correct state.
 	 breakpoint_init_inferior, called from init_wait_for_inferior, set
 	 `inserted' flag to 0, while before breakpoint_re_set, called from
-	 start_remote, set `inserted' flag to 1.  In the initialization of
+	 notice_new_inferior, set `inserted' flag to 1.  In the initialization of
 	 inferior, breakpoint_init_inferior should be called first, and then
 	 breakpoint_re_set can be called.  If this order is broken, state of
 	 `inserted' flag is wrong, and cause some problems on breakpoint
 	 manipulation.  */
       init_wait_for_inferior ();
 
-      get_offsets ();		/* Get text, data & bss offsets.  */
-
-      /* If we could not find a description using qXfer, and we know
-	 how to do it some other way, try again.  This is not
-	 supported for non-stop; it could be, but it is tricky if
-	 there are no stopped threads when we connect.  */
-      if (remote_read_description_p (target)
-	  && gdbarch_target_desc (target_gdbarch ()) == NULL)
-	{
-	  target_clear_description ();
-	  target_find_description ();
-	}
-
-      /* Use the previously fetched status.  */
-      gdb_assert (wait_status != NULL);
-      strcpy (rs->buf, wait_status);
-      rs->cached_wait_status = 1;
-
-      start_remote (from_tty); /* Initialize gdb process mechanisms.  */
+      struct notif_event *reply
+	=  remote_notif_parse (&notif_client_stop, wait_status);
+      push_stop_reply ((struct stop_reply *) reply);
     }
   else
     {
@@ -4342,27 +4361,17 @@ remote_start_remote (int from_tty, struct target_ops *target, int extended_p)
 	  return;
 	}
 
-      /* In non-stop mode, any cached wait status will be stored in
-	 the stop reply queue.  */
-      gdb_assert (wait_status == NULL);
-
       /* Report all signals during attach/startup.  */
       remote_pass_signals (target, 0, NULL);
-
-      /* If there are already stopped threads, mark them stopped and
-	 report their stops before giving the prompt to the user.  */
-      process_initial_stop_replies (from_tty);
-
-      if (target_can_async_p ())
-	target_async (1);
     }
 
-  /* If we connected to a live target, do some additional setup.  */
-  if (target_has_execution)
-    {
-      if (symfile_objfile) 	/* No use without a symbol-file.  */
-	remote_check_symbols ();
-    }
+  /* If there are already stopped threads (which is always true in
+     all-stop mode), mark them stopped and report their stops before
+     giving the prompt to the user.  */
+  process_initial_stop_replies (from_tty);
+
+  if (target_is_non_stop_p () && target_can_async_p ())
+    target_async (1);
 
   /* Possibly the target has been engaged in a trace run started
      previously; find out where things are at.  */
@@ -11296,7 +11305,7 @@ register_remote_g_packet_guess (struct gdbarch *gdbarch, int bytes,
    and architecture, 0 otherwise.  */
 
 static int
-remote_read_description_p (struct target_ops *target)
+remote_read_description_p ()
 {
   struct remote_g_packet_data *data
     = ((struct remote_g_packet_data *)

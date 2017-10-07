@@ -1,0 +1,101 @@
+# Copyright 2017 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
+
+# Test that connecting to a gdbserver that is debugging multiple
+# inferiors works.
+
+# The test starts multiple inferiors, therefore non-extended remote is
+# not supported.
+if [target_info exists use_gdb_stub] {
+    unsupported "using gdb stub"
+    return
+}
+
+set gdbserver_reconnect_p 1
+if { [info proc gdb_reconnect] == "" } {
+    return 0
+}
+
+standard_testfile
+
+if {[prepare_for_testing "failed to prepare" $testfile $srcfile debug]} {
+    return -1
+}
+
+if ![runto_main] then {
+    fail "can't run to main"
+    return 0
+}
+
+# Add and start inferior number NUM.
+
+proc add_and_start_inferior {num} {
+    global binfile
+
+    # Start another inferior.
+    gdb_test "add-inferior" "Added inferior $num.*" \
+	"add empty inferior $num"
+    gdb_test "inferior $num" "Switching to inferior $num.*" \
+	"switch to inferior $num"
+    gdb_test "file ${binfile}" ".*" "load file in inferior $num"
+
+    with_test_prefix "start inferior $num" {
+	if {![runto_main]} {
+	    fail "can't run to main"
+	    return 0
+	}
+    }
+    return 1
+}
+
+for {set i 2} {$i <= 3} {incr i} {
+    if ![add_and_start_inferior $i] {
+	untested "failed to spawn inferior"
+	return -1
+    }
+}
+
+# Disconnect and reconnect.
+
+gdb_test "disconnect" "Ending remote debugging\\."
+
+set res [gdb_reconnect]
+if {![gdb_assert { [lindex $res 0] == 0 } "reconnect"]} {
+    return 0
+}
+
+set any "\[^\r\n\]*"
+set ws "\[ \t\]\+"
+
+# We'll end up with 5 inferiors.  Inferior 3 was the current inferior
+# and is reused for the first inferior process found, and then
+# inferiors 4 and 5 are created for the other two processes.
+# Inferiors 1 and 2 are left unbound.
+gdb_test "info inferiors" \
+    [multi_line \
+	 "${ws}1${ws}<null>${ws}/${any}/reconnect-multi${ws}" \
+	 "${ws}2${ws}<null>${ws}/${any}/reconnect-multi${ws}" \
+	 "\\\* 3${ws}process ${any}${ws}/${any}/reconnect-multi${ws}" \
+	 "${ws}4${ws}process ${any}${ws}target:/${any}/reconnect-multi${ws}" \
+	 "${ws}5${ws}process ${any}${ws}target:/${any}/reconnect-multi${ws}" \
+	]
+
+# Just a sanity check that "info threads" also works.
+gdb_test "info threads" \
+    [multi_line \
+	 "\\\* 3\.1${ws}Thread ${any}main${any}" \
+	 "${ws}4\.1${ws}Thread ${any}main${any}" \
+	 "${ws}5\.1${ws}Thread ${any}main${any}" \
+	]
