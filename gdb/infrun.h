@@ -72,8 +72,6 @@ enum exec_direction_kind
 /* The current execution direction.  */
 extern enum exec_direction_kind execution_direction;
 
-extern void start_remote (int from_tty);
-
 /* Clear out all variables saying what to do when inferior is
    continued or stepped.  First do this, then set the ones you want,
    then call `proceed'.  STEP indicates whether we're preparing for a

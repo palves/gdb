@@ -3211,40 +3211,6 @@ proceed (CORE_ADDR addr, enum gdb_signal siggnal)
 }
 
 
-/* Start remote-debugging of a machine over a serial link.  */
-
-void
-start_remote (int from_tty)
-{
-  struct inferior *inferior;
-
-  inferior = current_inferior ();
-  inferior->control.stop_soon = STOP_QUIETLY_REMOTE;
-
-  /* Always go on waiting for the target, regardless of the mode.  */
-  /* FIXME: cagney/1999-09-23: At present it isn't possible to
-     indicate to wait_for_inferior that a target should timeout if
-     nothing is returned (instead of just blocking).  Because of this,
-     targets expecting an immediate response need to, internally, set
-     things up so that the target_wait() is forced to eventually
-     timeout.  */
-  /* FIXME: cagney/1999-09-24: It isn't possible for target_open() to
-     differentiate to its caller what the state of the target is after
-     the initial open has been performed.  Here we're assuming that
-     the target has stopped.  It should be possible to eventually have
-     target_open() return to the caller an indication that the target
-     is currently running and GDB state should be set to the same as
-     for an async run.  */
-  wait_for_inferior ();
-
-  /* Now that the inferior has stopped, do any bookkeeping like
-     loading shared libraries.  We want to do this before normal_stop,
-     so that the displayed frame is up to date.  */
-  post_create_inferior (&current_target, from_tty);
-
-  normal_stop ();
-}
-
 /* Initialize static vars when a new inferior begins.  */
 
 void
@@ -5706,7 +5672,7 @@ handle_signal_stop (struct execution_control_state *ecs)
 	}
     }
 
-  /* This is originated from start_remote().  */
+  /* This is originated from notice_new_inferior() .  */
   stop_soon = get_inferior_stop_soon (ecs->ptid);
   if (stop_soon == STOP_QUIETLY_REMOTE)
     {
