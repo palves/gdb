@@ -4989,15 +4989,12 @@ handle_inferior_event_1 (struct execution_control_state *ecs)
 	    }
 	}
 
-      /* If we are skipping through a shell, or through shared library
-	 loading that we aren't interested in, resume the program.  If
-	 we're running the program normally, also resume.  */
-      if (stop_soon == STOP_QUIETLY || stop_soon == NO_STOP_QUIETLY)
+      /* If we're running the program normally, resume.  */
+      if (stop_soon == NO_STOP_QUIETLY)
 	{
 	  /* Loading of shared libraries might have changed breakpoint
 	     addresses.  Make sure new breakpoints are inserted.  */
-	  if (stop_soon == NO_STOP_QUIETLY)
-	    insert_breakpoints ();
+	  insert_breakpoints ();
 	  resume (GDB_SIGNAL_0);
 	  prepare_to_wait (ecs);
 	  return;
@@ -5709,10 +5706,9 @@ handle_signal_stop (struct execution_control_state *ecs)
 	}
     }
 
-  /* This is originated from start_remote(), start_inferior() and
-     shared libraries hook functions.  */
+  /* This is originated from start_remote().  */
   stop_soon = get_inferior_stop_soon (ecs->ptid);
-  if (stop_soon == STOP_QUIETLY || stop_soon == STOP_QUIETLY_REMOTE)
+  if (stop_soon == STOP_QUIETLY_REMOTE)
     {
       if (!ptid_equal (ecs->ptid, inferior_ptid))
 	context_switch (ecs->ptid);

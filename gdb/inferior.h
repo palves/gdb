@@ -226,9 +226,7 @@ enum step_over_calls_kind
   };
 
 /* Anything but NO_STOP_QUIETLY means we expect a trap and the caller
-   will handle it themselves.  STOP_QUIETLY is used when running in
-   the shell before the child program has been exec'd and when running
-   through shared library loading.  STOP_QUIETLY_REMOTE is used when
+   will handle it themselves.  STOP_QUIETLY_REMOTE is used when
    setting up a remote connection; it is like STOP_QUIETLY_NO_SIGSTOP
    except that there is no need to hide a signal.  */
 
@@ -253,7 +251,6 @@ enum step_over_calls_kind
 enum stop_kind
   {
     NO_STOP_QUIETLY = 0,
-    STOP_QUIETLY,
     STOP_QUIETLY_REMOTE,
     STOP_QUIETLY_NO_SIGSTOP
   };
