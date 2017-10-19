@@ -1052,21 +1052,27 @@ print_thread_info_1 (struct ui_out *uiout, const char *requested_threads,
 	   accommodate the largest entry.  */
 	size_t target_id_col_width = 17;
 
-	for (thread_info *tp : all_threads ())
-	  {
-	    if (!should_print_thread (requested_threads, default_inf_num,
-				      global_ids, pid, tp))
-	      continue;
+	/* We'll be switching threads temporarily.  */
+	{
+	  /* XXX: should probably merge with the same scoped restore
+	     further below.  */
+	  scoped_restore_current_thread restore_thread;
+	  for (thread_info *tp : all_threads ())
+	    {
+	      if (!should_print_thread (requested_threads, default_inf_num,
+					global_ids, pid, tp))
+		continue;
 
-	    if (!uiout->is_mi_like_p ())
-	      {
-		target_id_col_width
-		  = std::max (target_id_col_width,
-			      thread_target_id_str (tp).size ());
-	      }
+	      if (!uiout->is_mi_like_p ())
+		{
+		  target_id_col_width
+		    = std::max (target_id_col_width,
+				thread_target_id_str (tp).size ());
+		}
 
-	    ++n_threads;
-	  }
+	      ++n_threads;
+	    }
+	}
 
 	if (n_threads == 0)
 	  {
