@@ -9214,7 +9214,9 @@ remote_target::putpkt_binary (const char *buf, int cnt)
 	  std::string str
 	    = escape_buffer (buf2, std::min (len, REMOTE_DEBUG_MAX_CHAR));
 
-	  fprintf_unfiltered (gdb_stdlog, "Sending packet: %s", str.c_str ());
+	  fprintf_unfiltered (gdb_stdlog, "Sending packet: %s: %s",
+			      rs->remote_desc->name,
+			      str.c_str ());
 
 	  if (len > REMOTE_DEBUG_MAX_CHAR)
 	    fprintf_unfiltered (gdb_stdlog, "[%d bytes omitted]",
@@ -9299,7 +9301,8 @@ remote_target::putpkt_binary (const char *buf, int cnt)
 			std::string str = escape_buffer (rs->buf, val);
 
 			fprintf_unfiltered (gdb_stdlog,
-					    "  Notification received: %s\n",
+					    "  Notification received on %s: %s\n",
+					    rs->remote_desc->name,
 					    str.c_str ());
 		      }
 		    handle_notification (rs->notif_state, rs->buf);
