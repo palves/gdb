@@ -2946,6 +2946,8 @@ schedlock_applies (struct thread_info *tp)
 					    execution_direction)));
 }
 
+extern void switch_to_inferior_no_thread (inferior *inf);
+
 /* Basic routine for continuing the program in various fashions.
 
    ADDR is the address to resume at, or -1 for resume where stopped.
@@ -3173,17 +3175,19 @@ proceed (CORE_ADDR addr, enum gdb_signal siggnal)
       }
   }
 
-  for (inferior *inf : inferiors ())
-    {
-      void switch_to_inferior_no_thread (inferior *inf);
+  {
+    scoped_restore_current_thread restore_thread;
 
-      if (inf->pid != 0
-	  && inf->process_target () != NULL)
-	{
-	  switch_to_inferior_no_thread (inf);
-	  target_commit_resume ();
-	}
-    }
+    for (inferior *inf : inferiors ())
+      {
+	if (inf->pid != 0
+	    && inf->process_target () != NULL)
+	  {
+	    switch_to_inferior_no_thread (inf);
+	    target_commit_resume ();
+	  }
+      }
+  }
 
   finish_state.release ();
 
@@ -3640,14 +3644,18 @@ do_target_wait (ptid_t wait_ptid, execution_control_state *ecs, int options)
 
   auto do_wait = [&] (inferior *inf)
   {
-    set_current_inferior (inf);
-    switch_to_no_thread ();
-    set_current_program_space (inf->pspace);
+    switch_to_inferior_no_thread (inf);
 
     ecs->ptid = do_target_wait_1 (inf, wait_ptid, &ecs->ws, options);
     ecs->target = inf->process_target ();
     return (ecs->ws.kind != TARGET_WAITKIND_IGNORE);
   };
+
+  /* Needed in all-stop+target-non-stop mode, because we end up here
+     spuriously after the target is all stopped and we've already
+     reported the stop the user, polling for events.  Maybe there's a
+     better way to avoid this?  */
+  scoped_restore_current_thread restore_thread;
 
   int inf_num = selected->num;
   for (inferior *inf = selected; inf != NULL; inf = inf->next)
@@ -4582,6 +4590,7 @@ stop_all_threads (void)
 					    "infrun:   %s executing, "
 					    "need stop\n",
 					    target_pid_to_str (t->ptid));
+		      switch_to_thread_no_regs (t);
 		      target_stop (t->ptid);
 		      t->stop_requested = 1;
 		    }
