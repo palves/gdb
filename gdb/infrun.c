@@ -5370,11 +5370,14 @@ Cannot fill $_exitsignal with the correct signal number.\n"));
 
 	  ecs->event_thread->suspend.stop_signal = GDB_SIGNAL_0;
 
+	  target_ops *targ = ecs->event_thread->inf->process_target ();
+
 	  should_resume = follow_fork ();
 
+	  /* Note that one of these may be an invalid pointer,
+	     depending on detach_fork.  */
 	  thread_info *parent = ecs->event_thread;
-	  thread_info *child = find_thread_ptid (parent->inf->process_target (),
-						 ecs->ws.value.related_pid);
+	  thread_info *child = find_thread_ptid (targ, ecs->ws.value.related_pid);
 
 	  /* At this point, the parent is marked running, and the
 	     child is marked stopped.  */
