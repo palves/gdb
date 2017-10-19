@@ -469,7 +469,7 @@ delete_thread_1 (thread_info *thr, bool silent)
   if (tpprev)
     tpprev->next = tp->next;
   else
-    thr->inf->thread_list = tp->next;
+    tp->inf->thread_list = tp->next;
 
   delete tp;
 }
