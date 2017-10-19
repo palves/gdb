@@ -125,6 +125,8 @@ class tracefile_target : public target_ops
   bool has_stack () override;
   bool has_registers () override;
   bool thread_alive (thread_info *thread) override;
+
+  struct gdbarch *thread_architecture (ptid_t ptid) override;
 };
 
 extern void tracefile_fetch_registers (struct regcache *regcache, int regno);
