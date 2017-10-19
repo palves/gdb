@@ -22,9 +22,14 @@
 #include "py-ref.h"
 
 static gdbpy_ref<>
-create_continue_event_object (void)
+create_continue_event_object (ptid_t ptid)
 {
-  return create_thread_event_object (&continue_event_object_type);
+  thread_info *thr = find_thread_ptid (current_inferior ()->process_target (),
+				       ptid);
+  PyObject *thread = (thr != NULL
+		      ? (PyObject *) thread_to_thread_object (thr)
+		      : Py_None);
+  return create_thread_event_object (&continue_event_object_type, thread);
 }
 
 /* Callback function which notifies observers when a continue event occurs.
@@ -37,7 +42,7 @@ emit_continue_event (ptid_t ptid)
   if (evregpy_no_listeners_p (gdb_py_events.cont))
     return 0;
 
-  gdbpy_ref<> event (create_continue_event_object ());
+  gdbpy_ref<> event (create_continue_event_object (ptid));
   if (event != NULL)
     return evpy_emit_event (event.get (), gdb_py_events.cont);
   return -1;
