@@ -132,8 +132,6 @@ procfs_open_1 (struct target_ops *ops, const char *arg, int from_tty)
   nto_procfs_node = ND_LOCAL_NODE;
   nodestr = (arg != NULL) ? xstrdup (arg) : NULL;
 
-  init_thread_list ();
-
   if (nodestr)
     {
       nto_procfs_node = netmgr_strtond (nodestr, &endstr);

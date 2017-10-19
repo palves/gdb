@@ -681,9 +681,6 @@ gdbsim_target::gdbsim_create_inferior (const char *exec_file,
       built_argv.reset (arg_buf);
     }
 
-  if (!have_inferiors ())
-    init_thread_list ();
-
   if (sim_create_inferior (sim_data->gdbsim_desc, exec_bfd,
 			   built_argv.get (), env)
       != SIM_RC_OK)

@@ -266,6 +266,11 @@ detach_inferior (inferior *inf)
 void
 inferior_appeared (struct inferior *inf, int pid)
 {
+  /* If this is the first inferior with threads, reset the global
+     thread id.  */
+  if (!have_inferiors ())
+    init_thread_list ();
+
   inf->pid = pid;
   inf->has_exit_code = 0;
   inf->exit_code = 0;
