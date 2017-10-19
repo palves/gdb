@@ -3644,7 +3644,7 @@ do_target_wait_1 (inferior *inf, ptid_t ptid,
   return event_ptid;
 }
 
-static void
+static bool
 do_target_wait (ptid_t wait_ptid, execution_control_state *ecs, int options)
 {
   inferior *inf;
@@ -3653,9 +3653,9 @@ do_target_wait (ptid_t wait_ptid, execution_control_state *ecs, int options)
 
   auto inferior_matches = [&wait_ptid] (inferior *inf)
     {
-      return (// inf->resumed
+      return (threads_are_executing (inf->process_target ())
 	      // && inf->pid != 0 &&
-	      ptid_t (inf->pid).matches (wait_ptid));
+	      && ptid_t (inf->pid).matches (wait_ptid));
     };
 
   /* First see how many events we have.  Count only resumed threads
@@ -3665,7 +3665,10 @@ do_target_wait (ptid_t wait_ptid, execution_control_state *ecs, int options)
       num_inferiors++;
 
   if (num_inferiors == 0)
-    return;
+    {
+      ecs->ws.kind = TARGET_WAITKIND_IGNORE;
+      return false;
+    }
 
   /* Now randomly pick a thread out of those that have had events.  */
   random_selector = (int)
@@ -3697,15 +3700,17 @@ do_target_wait (ptid_t wait_ptid, execution_control_state *ecs, int options)
   for (; inf != NULL; inf = inf->next)
     if (inferior_matches (inf))
       if (do_wait (inf))
-	return;
+	return true;
 
   for (inf = inferior_list;
        inf != NULL && inf->num < inf_num;
        inf = inf->next)
     if (inferior_matches (inf))
       if (do_wait (inf))
-	return;
+	return true;
 
+  ecs->ws.kind = TARGET_WAITKIND_IGNORE;
+  return false;
 }
 
 /* Prepare and stabilize the inferior for detaching it.  E.g.,
@@ -3992,8 +3997,12 @@ fetch_inferior_event (void *client_data)
   scoped_restore save_exec_dir
     = make_scoped_restore (&execution_direction, target_execution_direction ());
 
-  do_target_wait (minus_one_ptid, ecs,
-		  target_can_async_p () ? TARGET_WNOHANG : 0);
+  if (!do_target_wait (minus_one_ptid, ecs,
+		       /* XXX push this down?*/ target_can_async_p () ? TARGET_WNOHANG : 0))
+    {
+      do_cleanups (old_chain);
+      return;
+    }
 
   if (debug_infrun)
     print_target_wait_results (minus_one_ptid, ecs->ptid, &ecs->ws);
@@ -4137,9 +4146,7 @@ nullify_last_target_wait_ptid (void)
 static void
 context_switch (execution_control_state *ecs)
 {
-  if (debug_infrun
-      && ecs->ptid != inferior_ptid
-      && ecs->event_thread != inferior_thread ())
+  if (debug_infrun && ecs->ptid != inferior_ptid)
     {
       fprintf_unfiltered (gdb_stdlog, "infrun: Switching context from %s ",
 			  target_pid_to_str (inferior_ptid));
