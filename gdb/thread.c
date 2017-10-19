@@ -778,7 +778,7 @@ any_live_thread_of_process (inferior *inf)
   gdb_assert (inf != NULL && inf->pid != 0);
 
   /* Prefer the current thread if it's not executing.  */
-  if (current_inferior () == inf)
+  if (current_inferior () == inf && inferior_ptid != null_ptid)
     {
       /* If the current thread is dead, forget it.  If it's not
 	 executing, use it.  Otherwise, still choose it (below), but
