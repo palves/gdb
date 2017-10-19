@@ -1,0 +1,134 @@
+# Copyright 2017 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Test multi-exec / multi-process features that work for all configurations,
+# even ones that cannot run multiple processes simultaneously.
+
+load_lib gdbserver-support.exp
+
+set testfile "multi-arch-exec"
+
+standard_testfile
+
+# The plain remote target can't do multiple inferiors.
+if {[target_info gdb_protocol] != ""} {
+    return
+}
+
+if { [prepare_for_testing "failed to prepare" ${binfile} "${srcfile}" \
+	  {debug pthreads}] } {
+    return
+}
+
+proc connect_target_extended_remote {binfile} {
+    set res [gdbserver_start "--multi" ""]
+    set gdbserver_gdbport [lindex $res 1]
+    gdb_target_cmd "extended-remote" $gdbserver_gdbport
+}
+
+# Add and start inferior number NUM.
+proc add_inferior {num target binfile} {
+    # Start another inferior.
+    gdb_test "add-inferior -no-connection" "Added inferior $num.*" \
+	"add empty inferior $num"
+    gdb_test "inferior $num" "Switching to inferior $num.*" \
+	"switch to inferior $num"
+    gdb_test "file ${binfile}" ".*" "load file in inferior $num"
+    gdb_test_no_output "set remote exec-file ${binfile}" \
+	"set remote-exec file in inferior $num"
+
+    if {$target == "extended-remote"} {
+	connect_target_extended_remote $binfile
+    }
+    if ![runto "all_started"] then {
+	fail "couldn't run to all_started"
+	return -1
+    }
+    delete_breakpoints
+}
+
+proc do_test {} {
+    global binfile
+    clean_restart ${binfile}
+
+    # Make sure we're disconnected in case we're testing with an
+    # extended-remote board, therefore already connected.
+#    with_test_prefix "preparation" {
+#	gdb_test "disconnect" ".*"
+#   }
+
+    gdb_test_no_output "maint set target-non-stop on"
+    
+    if ![runto all_started] then {
+	fail "couldn't run to all_started"
+	return -1
+    }
+
+    delete_breakpoints
+
+    add_inferior 2 "extended-remote" $binfile
+    add_inferior 3 "native" $binfile
+    add_inferior 4 "extended-remote" $binfile
+
+    gdb_test_no_output "set schedule-multiple on"
+
+    gdb_test "info inferiors" ".*"
+    gdb_test "info threads" ".*"
+
+    proc set_break {inf} {
+	gdb_test "break function${inf} thread ${inf}.1" \
+	"Breakpoint .* function${inf}\\..*"
+    }
+
+    proc test_continue {inf} {
+	delete_breakpoints
+
+	verbose -log "got here XXX"
+
+	set next_inf [expr $inf + 1]
+	if {$next_inf > 4} {
+	    set next_inf 1
+	}
+	
+	gdb_test "inferior $inf" ".*"
+	set_break $next_inf
+#	gdb_test "set debug infrun 1"
+#	gdb_test "set debug remote 1"
+#	gdb_test "set debug lin-lwp 1"
+	gdb_test "continue" "hit Breakpoint .* function${next_inf}.*"
+    }
+
+    test_continue 1
+    test_continue 2
+    return
+    test_continue 3
+    test_continue 4
+    return
+
+    # A location for this breakpoint should be found in the new
+    # post-exec image too.
+    gdb_breakpoint main
+
+    gdb_test "thread $selected_thread" "Switching to thread $selected_thread .*"
+
+    gdb_test_no_output "set follow-exec-mode $mode"
+
+    # Test that GDB updates the target description / arch successfuly
+    # after the exec.
+    gdb_test "continue" "Breakpoint 2, main.*" "continue across exec that changes architecture"
+}
+
+do_test
+verbose -log "quitting!! XXXXXXXXXX"
