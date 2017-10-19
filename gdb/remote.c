@@ -184,7 +184,7 @@ public:
 
   void stop (ptid_t) override;
 
-  void interrupt (ptid_t) override;
+  void interrupt () override;
 
   void pass_ctrlc () override;
 
@@ -5373,7 +5373,7 @@ remote_serial_quit_handler (void)
       /* All-stop protocol, and blocked waiting for stop reply.  Send
 	 an interrupt request.  */
       else if (!target_terminal::is_ours () && rs->waiting_for_stop_reply)
-	target_interrupt (inferior_ptid);
+	target_interrupt ();
       else
 	rs->got_ctrlc_during_io = 1;
     }
@@ -6654,7 +6654,7 @@ remote_target::stop (ptid_t ptid)
 /* Implement the to_interrupt function for the remote targets.  */
 
 void
-remote_target::interrupt (ptid_t ptid)
+remote_target::interrupt ()
 {
   struct remote_state *rs = get_remote_state ();
 
@@ -6685,7 +6685,7 @@ remote_target::pass_ctrlc ()
   else if (rs->ctrlc_pending_p)
     interrupt_query ();
   else
-    target_interrupt (inferior_ptid);
+    target_interrupt ();
 }
 
 /* Ask the user what to do when an interrupt is received.  */

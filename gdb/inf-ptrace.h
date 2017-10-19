@@ -61,7 +61,7 @@ struct inf_ptrace_target : public inf_child_target
 
   const char *pid_to_str (ptid_t) override;
 
-  void interrupt (ptid_t) override;
+  void interrupt () override;
 
   enum target_xfer_status xfer_partial (enum target_object object,
 					const char *annex,

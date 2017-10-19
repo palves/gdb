@@ -3134,7 +3134,7 @@ interrupt_target_1 (bool all_threads)
 	stop_current_target_threads_ns (inferior_ptid);
     }
   else
-    target_interrupt (all_threads ? minus_one_ptid : inferior_ptid);
+    target_interrupt ();
 }
 
 /* interrupt [-a]

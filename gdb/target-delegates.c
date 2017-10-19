@@ -71,7 +71,7 @@ struct dummy_target : public target_ops
   const char *thread_name (thread_info *arg0) override;
   thread_info *thread_handle_to_thread_info (const gdb_byte *arg0, int arg1, inferior *arg2) override;
   void stop (ptid_t arg0) override;
-  void interrupt (ptid_t arg0) override;
+  void interrupt () override;
   void pass_ctrlc () override;
   void rcmd (const char *arg0, struct ui_file *arg1) override;
   char *pid_to_exec_file (int arg0) override;
@@ -238,7 +238,7 @@ struct debug_target : public target_ops
   const char *thread_name (thread_info *arg0) override;
   thread_info *thread_handle_to_thread_info (const gdb_byte *arg0, int arg1, inferior *arg2) override;
   void stop (ptid_t arg0) override;
-  void interrupt (ptid_t arg0) override;
+  void interrupt () override;
   void pass_ctrlc () override;
   void rcmd (const char *arg0, struct ui_file *arg1) override;
   char *pid_to_exec_file (int arg0) override;
@@ -1889,23 +1889,22 @@ debug_target::stop (ptid_t arg0)
 }
 
 void
-target_ops::interrupt (ptid_t arg0)
+target_ops::interrupt ()
 {
-  this->beneath ()->interrupt (arg0);
+  this->beneath ()->interrupt ();
 }
 
 void
-dummy_target::interrupt (ptid_t arg0)
+dummy_target::interrupt ()
 {
 }
 
 void
-debug_target::interrupt (ptid_t arg0)
+debug_target::interrupt ()
 {
   fprintf_unfiltered (gdb_stdlog, "-> %s->interrupt (...)\n", this->beneath ()->shortname ());
-  this->beneath ()->interrupt (arg0);
+  this->beneath ()->interrupt ();
   fprintf_unfiltered (gdb_stdlog, "<- %s->interrupt (", this->beneath ()->shortname ());
-  target_debug_print_ptid_t (arg0);
   fputs_unfiltered (")\n", gdb_stdlog);
 }
 

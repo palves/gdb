@@ -303,7 +303,7 @@ inf_ptrace_target::kill ()
 /* Interrupt the inferior.  */
 
 void
-inf_ptrace_target::interrupt (ptid_t ptid)
+inf_ptrace_target::interrupt ()
 {
   /* Send a SIGINT to the process group.  This acts just like the user
      typed a ^C on the controlling terminal.  Note that using a

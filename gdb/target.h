@@ -676,7 +676,7 @@ public:
       TARGET_DEFAULT_RETURN (NULL);
     virtual void stop (ptid_t)
       TARGET_DEFAULT_IGNORE ();
-    virtual void interrupt (ptid_t)
+    virtual void interrupt ()
       TARGET_DEFAULT_IGNORE ();
     virtual void pass_ctrlc ()
       TARGET_DEFAULT_FUNC (default_target_pass_ctrlc);
@@ -1702,7 +1702,7 @@ extern void target_stop (ptid_t ptid);
    inferior's controlling terminal.  (For instance, under Unix, this
    should act like SIGINT).  This function is asynchronous.  */
 
-extern void target_interrupt (ptid_t ptid);
+extern void target_interrupt ();
 
 /* Pass a ^C, as determined to have been pressed by checking the quit
    flag, to the target.  Normally calls target_interrupt, but remote
