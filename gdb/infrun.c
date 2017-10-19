@@ -3982,7 +3982,10 @@ fetch_inferior_event (void *client_data)
   for (inferior *inf : inferiors ())
     {
       if (inf->process_target () == ecs->target)
-	switch_to_inferior_no_thread (inf);
+	{
+	  switch_to_inferior_no_thread (inf);
+	  break;
+	}
     }
 
   if (debug_infrun)
