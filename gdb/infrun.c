@@ -2856,10 +2856,11 @@ clear_proceed_status (int step)
   if (!non_stop && inferior_ptid != null_ptid)
     {
       ptid_t resume_ptid = user_visible_resume_ptid (step);
+      target_ops *resume_target = inferior_thread ()->inf->process_target ();
 
       /* In all-stop mode, delete the per-thread status of all threads
 	 we're about to resume, implicitly and explicitly.  */
-      for (thread_info *tp : all_non_exited_threads (resume_ptid))
+      for (thread_info *tp : all_non_exited_threads (resume_target, resume_ptid))
 	clear_proceed_status_thread (tp);
     }
 
@@ -3061,19 +3062,14 @@ proceed (CORE_ADDR addr, enum gdb_signal siggnal)
      threads.  */
   if (!non_stop && !schedlock_applies (cur_thr))
     {
-      for (thread_info *tp : all_non_exited_threads (resume_ptid))
+      target_ops *resume_target = tp->inf->process_target ();
+
+      for (thread_info *tp : all_non_exited_threads (resume_target,
+						     resume_ptid))
 	{
 	  /* Ignore the current thread here.  It's handled
 	     afterwards.  */
 	  if (tp == cur_thr)
-	    continue;
-
-	  /* If resuming a process, only consider the process thread's
-	     inferior.  This avoids ptid matching processes of
-	     different targets.  */
-	  /* XXX: split loop in resume-inferior vs resume-all
-	     branches.  */
-	  if (resume_ptid.is_pid () && tp->inf != current->inf)
 	    continue;
 
 	  if (!thread_still_needs_step_over (tp))
@@ -3122,12 +3118,9 @@ proceed (CORE_ADDR addr, enum gdb_signal siggnal)
       {
 	/* In all-stop, but the target is always in non-stop mode.
 	   Start all other threads that are implicitly resumed too.  */
-	for (thread_info *tp : all_non_exited_threads (resume_ptid))
+	for (thread_info *tp : all_non_exited_threads (resume_target,
+						       resume_ptid))
 	  {
-	  /* Ignore threads of processes we're not resuming.  XXX */
-	  if (resume_ptid.is_pid () && tp->inf != tp->inf)
-	    continue;
-
 	  if (tp->resumed)
 	    {
 	      if (debug_infrun)
@@ -4783,19 +4776,22 @@ handle_no_resumed (struct execution_control_state *ecs)
      the synchronous command show "no unwaited-for " to the user.  */
   update_thread_list ();
 
-  for (thread_info *thread : all_non_exited_threads ())
+  for (inferior *inf : all_inferiors (ecs->target))
     {
-      if (thread->executing
-	  || thread->suspend.waitstatus_pending_p)
+      for (thread_info *thread : inf->non_exited_threads ())
 	{
-	  /* There were no unwaited-for children left in the target at
-	     some point, but there are now.  Just ignore.  */
-	  if (debug_infrun)
-	    fprintf_unfiltered (gdb_stdlog,
-				"infrun: TARGET_WAITKIND_NO_RESUMED "
-				"(ignoring: found resumed)\n");
-	  prepare_to_wait (ecs);
-	  return 1;
+	  if (thread->executing
+	      || thread->suspend.waitstatus_pending_p)
+	    {
+	      /* There were no unwaited-for children left in the target at
+		 some point, but there are now.  Just ignore.  */
+	      if (debug_infrun)
+		fprintf_unfiltered (gdb_stdlog,
+				    "infrun: TARGET_WAITKIND_NO_RESUMED "
+				    "(ignoring: found resumed)\n");
+	      prepare_to_wait (ecs);
+	      return true;
+	    }
 	}
     }
 
@@ -4805,7 +4801,7 @@ handle_no_resumed (struct execution_control_state *ecs)
      a process exit event shortly.  */
   for (inferior *inf : all_inferiors ())
     {
-      if (inf->pid == 0)
+      if (inf->process_target () != ecs->target)
 	continue;
 
       thread_info *thread = any_live_thread_of_inferior (inf);
