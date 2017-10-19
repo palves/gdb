@@ -377,6 +377,10 @@ public:
   int remove_exec_catchpoint (int) override;
   enum exec_direction_kind execution_direction () override;
 
+  struct remote_state *get_remote_state ();
+
+  std::unique_ptr<struct remote_state> m_remote_state;
+
 protected:
   char *append_pending_thread_resumptions (char *p, char *endp,
 					   ptid_t ptid);
@@ -630,6 +634,8 @@ struct readahead_cache
 
 struct remote_state
 {
+  remote_state ();
+
   /* A buffer to use for incoming packets, and its current size.  The
      buffer is grown dynamically for larger incoming packets.
      Outgoing packets may also be constructed in this buffer.
@@ -794,36 +800,21 @@ struct remote_thread_info : public private_thread_info
   int vcont_resumed = 0;
 };
 
-/* This data could be associated with a target, but we do not always
-   have access to the current target when we need it, so for now it is
-   static.  This will be fine for as long as only one target is in use
-   at a time.  */
-static struct remote_state *remote_state;
-
-static struct remote_state *
-get_remote_state_raw (void)
-{
-  return remote_state;
-}
-
 /* Allocate a new struct remote_state with xmalloc, initialize it, and
    return it.  */
 
-static struct remote_state *
-new_remote_state (void)
+remote_state::remote_state ()
 {
-  struct remote_state *result = XCNEW (struct remote_state);
+  memset ((void *) this, 0, sizeof *this);
 
   /* The default buffer size is unimportant; it will be expanded
      whenever a larger buffer is needed. */
-  result->buf_size = 400;
-  result->buf = (char *) xmalloc (result->buf_size);
-  result->remote_traceframe_number = -1;
-  result->last_sent_signal = GDB_SIGNAL_0;
-  result->last_resume_exec_dir = EXEC_FORWARD;
-  result->fs_pid = -1;
-
-  return result;
+  this->buf_size = 400;
+  this->buf = (char *) xmalloc (this->buf_size);
+  this->remote_traceframe_number = -1;
+  this->last_sent_signal = GDB_SIGNAL_0;
+  this->last_resume_exec_dir = EXEC_FORWARD;
+  this->fs_pid = -1;
 }
 
 /* Description of the remote protocol for a given architecture.  */
@@ -972,17 +963,30 @@ get_remote_arch_state (struct gdbarch *gdbarch)
 
 /* Fetch the global remote target state.  */
 
-static struct remote_state *
-get_remote_state (void)
+remote_state *
+remote_target::get_remote_state ()
 {
   /* Make sure that the remote architecture state has been
      initialized, because doing so might reallocate rs->buf.  Any
      function which calls getpkt also needs to be mindful of changes
      to rs->buf, but this call limits the number of places which run
      into trouble.  */
-  get_remote_arch_state (target_gdbarch ());
+  remote_arch_state *rsa = get_remote_arch_state (target_gdbarch ());
 
-  return get_remote_state_raw ();
+  if (m_remote_state == NULL)
+    m_remote_state.reset (new remote_state ());
+
+  remote_state *rs = m_remote_state.get ();
+
+  /* Make sure that the packet buffer is plenty big enough for
+     this architecture.  */
+  if (rs->buf_size < rsa->remote_packet_size)
+    {
+      rs->buf_size = 2 * rsa->remote_packet_size;
+      rs->buf = (char *) xrealloc (rs->buf, rs->buf_size);
+    }
+
+  return rs;
 }
 
 /* Cleanup routine for the remote module's pspace data.  */
@@ -1127,7 +1131,6 @@ remote_register_number_and_offset (struct gdbarch *gdbarch, int regnum,
 static void *
 init_remote_state (struct gdbarch *gdbarch)
 {
-  struct remote_state *rs = get_remote_state_raw ();
   struct remote_arch_state *rsa;
 
   rsa = GDBARCH_OBSTACK_ZALLOC (gdbarch, struct remote_arch_state);
@@ -1163,15 +1166,27 @@ init_remote_state (struct gdbarch *gdbarch)
   if (rsa->sizeof_g_packet > ((rsa->remote_packet_size - 32) / 2))
     rsa->remote_packet_size = (rsa->sizeof_g_packet * 2 + 32);
 
-  /* Make sure that the packet buffer is plenty big enough for
-     this architecture.  */
-  if (rs->buf_size < rsa->remote_packet_size)
-    {
-      rs->buf_size = 2 * rsa->remote_packet_size;
-      rs->buf = (char *) xrealloc (rs->buf, rs->buf_size);
-    }
-
   return rsa;
+}
+
+static remote_state *
+maybe_get_remote_state ()
+{
+  target_ops *target = current_inferior ()->process_target ();
+  if (target == NULL)
+    return NULL;
+  remote_target *remote = dynamic_cast<remote_target *> (target);
+  if (remote == NULL)
+    return NULL;
+  return remote->get_remote_state ();
+}
+
+static remote_state *
+get_remote_state ()
+{
+  remote_state *rs = maybe_get_remote_state ();
+  gdb_assert (rs != NULL);
+  return rs;
 }
 
 /* Return the current allowed size of a remote packet.  This is
@@ -2565,6 +2580,12 @@ remote_thread_always_alive (ptid_t ptid)
 bool
 remote_target::thread_alive (thread_info *thread)
 {
+  /* XXX FIXME:, most of the functions in this file should be methods
+     of remote_target to having to switch inferior, to make
+     get_remote_state work.  */
+  scoped_restore_current_inferior restore_inferior;
+  set_current_inferior (thread->inf);
+
   struct remote_state *rs = get_remote_state ();
   char *p, *endp;
 
@@ -5260,7 +5281,7 @@ remote_unpush_and_throw (void)
 void
 remote_target::open_1 (const char *name, int from_tty, int extended_p)
 {
-  struct remote_state *rs = get_remote_state ();
+  struct remote_state *rs = maybe_get_remote_state ();
 
   if (name == 0)
     error (_("To open a remote debug connection, you need to specify what\n"
@@ -5274,7 +5295,7 @@ remote_target::open_1 (const char *name, int from_tty, int extended_p)
   /* If we're connected to a running target, target_preopen will kill it.
      Ask this question first, before target_preopen has a chance to kill
      anything.  */
-  if (rs->remote_desc != NULL && !have_inferiors ())
+  if (rs != NULL && rs->remote_desc != NULL && !have_inferiors ())
     {
       if (from_tty
 	  && !query (_("Already connected to a remote target.  Disconnect? ")))
@@ -5285,17 +5306,29 @@ remote_target::open_1 (const char *name, int from_tty, int extended_p)
   target_preopen (from_tty);
 
   /* Make sure we send the passed signals list the next time we resume.  */
-  xfree (rs->last_pass_packet);
-  rs->last_pass_packet = NULL;
+  if (rs != NULL)
+    {
+      xfree (rs->last_pass_packet);
+      rs->last_pass_packet = NULL;
+    }
 
   /* Make sure we send the program signals list the next time we
      resume.  */
-  xfree (rs->last_program_signals_packet);
-  rs->last_program_signals_packet = NULL;
+  if (rs != NULL)
+    {
+      xfree (rs->last_program_signals_packet);
+      rs->last_program_signals_packet = NULL;
+    }
 
   remote_fileio_reset ();
   reopen_exec_file ();
   reread_symbols ();
+
+  std::unique_ptr<remote_target> target_up
+    (extended_p ? new extended_remote_target () : new remote_target ());
+  remote_target *target = target_up.get ();
+
+  rs = target->get_remote_state ();
 
   rs->remote_desc = remote_serial_open (name);
   if (!rs->remote_desc)
@@ -5329,9 +5362,8 @@ remote_target::open_1 (const char *name, int from_tty, int extended_p)
       puts_filtered ("\n");
     }
 
-  remote_target *target
-    = extended_p ? new extended_remote_target () : new remote_target ();
   push_target (target);		/* Switch to using remote target now.  */
+  target_up.release ();
 
   /* Register extra event sources in the event loop.  */
   remote_async_inferior_event_token
@@ -10008,6 +10040,7 @@ Remote replied unexpectedly while setting startup-with-shell: %s"),
       extended_remote_restart ();
     }
 
+#if 0
   if (!have_inferiors ())
     {
       /* Clean up from the last time we ran, before we mark the target
@@ -10016,6 +10049,7 @@ Remote replied unexpectedly while setting startup-with-shell: %s"),
       init_thread_list ();
       init_wait_for_inferior ();
     }
+#endif
 
   /* vRun's success return is a stop reply.  */
   stop_reply = run_worked ? rs->buf : NULL;
@@ -13974,9 +14008,9 @@ show_remote_cmd (const char *args, int from_tty)
 static void
 remote_new_objfile (struct objfile *objfile)
 {
-  struct remote_state *rs = get_remote_state ();
+  struct remote_state *rs = maybe_get_remote_state ();
 
-  if (rs->remote_desc != 0)		/* Have a remote connection.  */
+  if (rs != NULL && rs->remote_desc != 0)		/* Have a remote connection.  */
     remote_check_symbols ();
 }
 
@@ -14080,11 +14114,6 @@ _initialize_remote (void)
   remote_pspace_data
     = register_program_space_data_with_cleanup (NULL,
 						remote_pspace_data_cleanup);
-
-  /* Initialize the per-target state.  At the moment there is only one
-     of these, not one per target.  Only one target is active at a
-     time.  */
-  remote_state = new_remote_state ();
 
   add_target (remote_target_info, remote_target::open);
   add_target (extended_remote_target_info, extended_remote_target::open);
