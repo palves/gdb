@@ -296,12 +296,14 @@ init_thread_list (void)
 
   ALL_THREADS_SAFE (tp, tmp)
     {
+      inferior *inf = tp->inf;
+
       if (tp->deletable ())
 	delete tp;
       else
 	set_thread_exited (tp, 1);
 
-      tp->inf->thread_list = NULL;
+      inf->thread_list = NULL;
     }
 }
 
