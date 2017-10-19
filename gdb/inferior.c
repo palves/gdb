@@ -435,6 +435,26 @@ print_selected_inferior (struct ui_out *uiout)
 		  inf->num, inferior_pid_to_str (inf->pid), filename);
 }
 
+class proc_target_str_maker
+{
+public:
+  const char * operator () (target_ops *proc_target)
+  {
+    if (proc_target != NULL)
+      {
+	m_storage
+	  = (std::to_string (proc_target->connection_number)
+	     + " (" + proc_target->info ().longname) + ")";
+      }
+    else
+      m_storage.clear ();
+    return m_storage.c_str ();
+  }
+
+private:
+  std::string m_storage;
+};
+
 /* Prints the list of inferiors and their details on UIOUT.  This is a
    version of 'info_inferior_command' suitable for use from MI.
 
@@ -470,6 +490,9 @@ print_inferior (struct ui_out *uiout, const char *requested_inferiors)
   uiout->table_header (17, ui_left, "exec", "Executable");
 
   uiout->table_body ();
+
+  proc_target_str_maker tstr;
+
   for (inferior *inf : all_inferiors ())
     {
       if (!number_is_in_list (requested_inferiors, inf->num))
@@ -484,16 +507,7 @@ print_inferior (struct ui_out *uiout, const char *requested_inferiors)
 
       uiout->field_int ("number", inf->num);
 
-      target_ops *proc_target = inf->process_target ();
-      if (proc_target != NULL)
-	{
-	  std::string conn
-	    = (std::to_string (proc_target->connection_number)
-	       + ": " + proc_target->info ().longname);
-	  uiout->field_string ("connection-id", conn.c_str ());
-	}
-      else
-	uiout->field_string ("connection-id", "");
+      uiout->field_string ("connection-id", tstr (inf->process_target ()));
 
       uiout->field_string ("target-id", inferior_pid_to_str (inf->pid));
 
@@ -741,7 +755,7 @@ add_inferior_command (const char *args, int from_tty)
 		    error (_("No argument to -copies"));
 		  copies = parse_and_eval_long (*argv);
 		}
-	      else if (strcmp (*argv, "-new-connection") == 0)
+	      else if (strcmp (*argv, "-no-connection") == 0)
 		{
 		  new_connection = true;
 		}
@@ -752,28 +766,40 @@ add_inferior_command (const char *args, int from_tty)
 		    error (_("No argument to -exec"));
 		  exec.reset (tilde_expand (*argv));
 		}
+	      else if (*argv[0] == '-')
+		error (_("unknown option: %s"), *argv);
 	    }
 	  else
 	    error (_("Invalid argument"));
 	}
     }
 
-  scoped_restore_current_pspace_and_thread restore_pspace_thread;
+  target_ops *proc_target = current_inferior ()->process_target ();
 
-  (void) new_connection;
+  scoped_restore_current_pspace_and_thread restore_pspace_thread;
 
   for (i = 0; i < copies; ++i)
     {
       struct inferior *inf = add_inferior_with_spaces ();
 
-      printf_filtered (_("Added inferior %d\n"), inf->num);
+      /* Switch over temporarily, while reading executable and
+	 symbols.  */
+      switch_to_inferior_no_thread (inf);
+
+      /* Reuse the current target for new inferior.  */
+      if (!new_connection && proc_target != NULL)
+	{
+	  push_target (proc_target);
+	  printf_filtered (_("Added inferior %d on target %d (%s)\n"),
+			   inf->num,
+			   proc_target->connection_number,
+			   proc_target->info ().longname);
+	}
+      else
+	printf_filtered (_("Added inferior %d\n"), inf->num);
 
       if (exec != NULL)
 	{
-	  /* Switch over temporarily, while reading executable and
-	     symbols.  */
-	  switch_to_inferior_no_thread (inf);
-
 	  exec_file_attach (exec.get (), from_tty);
 	  symbol_file_add_main (exec.get (), add_flags);
 	}
