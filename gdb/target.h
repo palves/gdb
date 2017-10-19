@@ -1272,7 +1272,7 @@ public:
 
 private:
   enum strata m_top {};
-  std::array<target_ops *, (int) debug_stratum> m_stack {};
+  target_ops *m_stack[(int) debug_stratum + 1] {};
 };
 
 extern void set_native_target (target_ops *prototype);
