@@ -1128,6 +1128,9 @@ print_thread_info_1 (struct ui_out *uiout, const char *requested_threads,
 	if (show_global_ids || uiout->is_mi_like_p ())
 	  uiout->field_int ("id", tp->global_num);
 
+	/* Switch to the thread (and inferior / target).  */
+	switch_to_thread (tp);
+
 	/* For the CLI, we stuff everything into the target-id field.
 	   This is a gross hack to make the output come out looking
 	   correct.  The underlying problem here is that ui-out has no
@@ -1159,9 +1162,8 @@ print_thread_info_1 (struct ui_out *uiout, const char *requested_threads,
 	  uiout->text ("(running)\n");
 	else
 	  {
-	    /* The switch below puts us at the top of the stack (leaf
+	    /* The switch above put us at the top of the stack (leaf
 	       frame).  */
-	    switch_to_thread (tp);
 	    print_stack_frame (get_selected_frame (NULL),
 			       /* For MI output, print frame level.  */
 			       uiout->is_mi_like_p (),
