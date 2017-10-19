@@ -34,8 +34,6 @@ core-file, and process, if any), as well as the symbol file name.)";
 
 std::set<target_ops *> process_targets;
 
-std::string uiout_field_connection (target_ops *proc_target);
-
 /* Prints the list of inferiors and their details on UIOUT.  This is a
    version of 'info_inferior_command' suitable for use from MI.
 
@@ -89,8 +87,13 @@ print_connection (struct ui_out *uiout, const char *requested_inferiors)
 
       uiout->field_int ("number", t->connection_number);
 
-      uiout->field_string ("description",
-			   uiout_field_connection (t).c_str ());
+      if (t->connection_string () != NULL)
+	{
+	  uiout->field_fmt ("description", "%s %s",
+			    t->shortname (), t->connection_string ());
+	}
+      else
+	uiout->field_string ("description", t->shortname ());
 
       uiout->text ("\n");
     }
