@@ -3282,7 +3282,21 @@ target_interrupt (ptid_t ptid)
 void
 target_pass_ctrlc (void)
 {
-  target_stack->pass_ctrlc ();
+  for (inferior *inf : inferiors ())
+    {
+      target_ops *proc_target = inf->process_target ();
+
+      if (proc_target != NULL
+	  && proc_target->threads_executing)
+	{
+	  scoped_restore_current_thread restore_thread;
+	  thread_info *thr = any_live_thread_of_process (inf);
+	  gdb_assert (thr != NULL);
+	  switch_to_thread_no_regs (thr);
+	  target_stack->pass_ctrlc ();
+	  return;
+	}
+    }
 }
 
 /* See target.h.  */
