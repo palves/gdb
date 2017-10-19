@@ -484,12 +484,16 @@ print_inferior (struct ui_out *uiout, const char *requested_inferiors)
 
       uiout->field_int ("number", inf->num);
 
-      // XXX
       target_ops *proc_target = inf->process_target ();
-      const char *connection = (proc_target != NULL
-				? proc_target->info ().longname
-				: "");
-      uiout->field_string ("connection-id", connection);
+      if (proc_target != NULL)
+	{
+	  std::string conn
+	    = (std::to_string (proc_target->connection_number)
+	       + ": " + proc_target->info ().longname);
+	  uiout->field_string ("connection-id", conn.c_str ());
+	}
+      else
+	uiout->field_string ("connection-id", "");
 
       uiout->field_string ("target-id", inferior_pid_to_str (inf->pid));
 

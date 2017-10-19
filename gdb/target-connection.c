@@ -22,25 +22,17 @@
 #include "target.h"
 #include "gdbcmd.h"
 #include "cli/cli-utils.h"
+#include "inferior.h"
+#include <set>
 
-static std::vector<target_connection *> target_connections;
-
-target_connection *current_target_connection;
-
-static int highest_target_connection_num;
+int highest_target_connection_num;
 
 static const char targ_desc[] =
   R"(Names of targets and files being debugged.
 Shows the entire stack of targets currently in use (including the exec-file,
 core-file, and process, if any), as well as the symbol file name.)";
 
-target_ops *make_dummy_target ();
-
-target_connection::target_connection ()
-{
-  this->num = highest_target_connection_num++;
-  this->top_target = NULL;
-}
+std::set<target_ops *> process_targets;
 
 /* Prints the list of inferiors and their details on UIOUT.  This is a
    version of 'info_inferior_command' suitable for use from MI.
@@ -52,9 +44,7 @@ target_connection::target_connection ()
 static void
 print_connection (struct ui_out *uiout, const char *requested_inferiors)
 {
-  struct target_connection *inf;
-  int inf_count = 0;
-
+#if 0
   /* Compute number of inferiors we will print.  */
   for (target_connection *con : target_connections)
     {
@@ -69,29 +59,34 @@ print_connection (struct ui_out *uiout, const char *requested_inferiors)
       uiout->message ("No connections.\n");
       return;
     }
+#endif
 
-  ui_out_emit_table table_emitter (uiout, 3, inf_count,
+  ui_out_emit_table table_emitter (uiout, 3, process_targets.size (),
 				   "connections");
+
   uiout->table_header (1, ui_left, "current", "");
   uiout->table_header (4, ui_left, "number", "Num");
   uiout->table_header (17, ui_left, "description", "Description");
 
   uiout->table_body ();
-  for (target_connection *inf : target_connections)
+
+  for (target_ops *t : process_targets)
     {
+#if 0
       if (!number_is_in_list (requested_inferiors, inf->num))
 	continue;
+#endif
 
       ui_out_emit_tuple tuple_emitter (uiout, NULL);
 
-      if (inf == current_target_connection)
+      if (current_inferior ()->process_target () == t)
 	uiout->field_string ("current", "*");
       else
 	uiout->field_skip ("current");
 
-      uiout->field_int ("number", inf->num);
+      uiout->field_int ("number", t->connection_number);
 
-      uiout->field_string ("description", inf->top_target->longname ());
+      uiout->field_string ("description", t->longname ());
 
       uiout->text ("\n");
     }
@@ -106,8 +101,6 @@ info_connections_command (const char *args, int from_tty)
 static void
 add_connection_command (const char *args, int from_tty)
 {
-  target_connection *tc = new target_connection ();
-  target_connections.push_back (tc);
 }
 
 static void
@@ -116,11 +109,8 @@ connection_command (const char *args, int from_tty)
 }
 
 void
-initialize_target_connections ()
+_initialize_target_connections ()
 {
-  current_target_connection = new target_connection ();
-  target_connections.push_back (current_target_connection);
-
   add_info ("connections", info_connections_command, targ_desc);
 
   add_com ("add-connection", no_class, add_connection_command,

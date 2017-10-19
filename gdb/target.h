@@ -444,6 +444,8 @@ struct target_ops
      may have spawned new threads we haven't heard of yet.  */
     bool threads_executing = false;
 
+    int connection_number;
+
     /* Free resources associated with the target.  Note that singleton
        targets, like e.g., native targets, are global objects, not
        heap allocated, and are thus only deleted on GDB exit.  The

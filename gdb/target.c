@@ -50,6 +50,7 @@
 #include "terminal.h"
 #include <algorithm>
 #include <unordered_map>
+#include <set>
 
 static void generic_tls_error (void) ATTRIBUTE_NORETURN;
 
@@ -575,18 +576,45 @@ target_stack::push (target_ops *t)
     m_top = stratum;
 }
 
+extern std::set<target_ops *> process_targets;
+extern int highest_target_connection_num;;
+
 /* See target.h.  */
 
 void
 push_target (struct target_ops *t)
 {
+  if (t->to_stratum == process_stratum)
+    {
+      if (process_targets.insert (t).second)
+	{
+	  t->connection_number = ++highest_target_connection_num;
+	}
+    }
+
   current_inferior ()->push_target (t);
 }
 
 int
 unpush_target (struct target_ops *t)
 {
-  return current_inferior ()->unpush_target (t);
+  if (current_inferior ()->unpush_target (t))
+    {
+      if (t->to_stratum == process_stratum)
+	{
+	  /* If no other inferior is using this target, then drop it
+	     from the connection list.  */
+	  for (inferior *inf : inferiors ())
+	    {
+	      if (t == inf->process_target ())
+		return true;
+	    }
+	  process_targets.erase (t);
+	  t->connection_number = 0;
+	}
+      return true;
+    }
+  return false;
 }
 
 /* See target.h.  */
