@@ -3170,15 +3170,15 @@ proceed (CORE_ADDR addr, enum gdb_signal siggnal)
 }
 
 
+static void wait_for_inferior (inferior *inf);
+
 /* Start remote-debugging of a machine over a serial link.  */
 
 void
 start_remote (int from_tty)
 {
-  struct inferior *inferior;
-
-  inferior = current_inferior ();
-  inferior->control.stop_soon = STOP_QUIETLY_REMOTE;
+  inferior *inf = current_inferior ();
+  inf->control.stop_soon = STOP_QUIETLY_REMOTE;
 
   /* Always go on waiting for the target, regardless of the mode.  */
   /* FIXME: cagney/1999-09-23: At present it isn't possible to
@@ -3194,7 +3194,7 @@ start_remote (int from_tty)
      target_open() return to the caller an indication that the target
      is currently running and GDB state should be set to the same as
      for an async run.  */
-  wait_for_inferior ();
+  wait_for_inferior (inf);
 
   /* Now that the inferior has stopped, do any bookkeeping like
      loading shared libraries.  We want to do this before normal_stop,
@@ -3660,8 +3660,8 @@ prepare_for_detach (void)
    When this function actually returns it means the inferior
    should be left stopped and GDB should read more commands.  */
 
-void
-wait_for_inferior (void)
+static void
+wait_for_inferior (inferior *inf)
 {
   struct cleanup *old_cleanups;
 
@@ -3677,7 +3677,7 @@ wait_for_inferior (void)
      knowledge of the executing state to the frontend/user running
      state.  */
   scoped_finish_thread_state finish_state
-    (current_inferior ()->process_target (), minus_one_ptid);
+    (inf->process_target (), minus_one_ptid);
 
   while (1)
     {
@@ -3694,7 +3694,8 @@ wait_for_inferior (void)
 	 don't get any event.  */
       target_dcache_invalidate ();
 
-      do_target_wait (minus_one_ptid, ecs, 0);
+      ecs->ptid = do_target_wait_1 (inf, minus_one_ptid, &ecs->ws, 0);
+      ecs->target = inf->process_target ();
 
       if (debug_infrun)
 	print_target_wait_results (minus_one_ptid, ecs->ptid, &ecs->ws);

@@ -93,8 +93,6 @@ extern void proceed (CORE_ADDR, enum gdb_signal);
    resumed.  */
 extern ptid_t user_visible_resume_ptid (int step);
 
-extern void wait_for_inferior (void);
-
 /* Return control to GDB when the inferior stops for real.  Print
    appropriate messages, remove breakpoints, give terminal our modes,
    and run the stop hook.  Returns true if the stop hook proceeded the
