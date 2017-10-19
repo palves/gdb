@@ -420,6 +420,7 @@ private:
 
   void remove_new_fork_children (threads_listing_context *context);
   void kill_new_fork_children (int pid, remote_state *rs);
+  void discard_pending_stop_replies (struct inferior *inf);
 
   friend class vcont_builder;
 };
@@ -6935,8 +6936,8 @@ remove_stop_reply_for_inferior (QUEUE (stop_reply_p) *q,
 
 /* Discard all pending stop replies of inferior INF.  */
 
-static void
-discard_pending_stop_replies (struct inferior *inf)
+void
+remote_target::discard_pending_stop_replies (struct inferior *inf)
 {
   struct queue_iter_param param;
   struct stop_reply *reply;
@@ -9756,6 +9757,10 @@ void
 remote_target::mourn_inferior ()
 {
   struct remote_state *rs = get_remote_state ();
+
+  /* We're no longer interested in notification events of an inferior
+     when it exits.  */
+  discard_pending_stop_replies (current_inferior ());
 
   /* In 'target remote' mode with one inferior, we close the connection.  */
   if (!rs->extended && number_of_live_inferiors () <= 1)
@@ -14129,9 +14134,6 @@ _initialize_remote (void)
 
   /* Hook into new objfile notification.  */
   observer_attach_new_objfile (remote_new_objfile);
-  /* We're no longer interested in notification events of an inferior
-     when it exits.  */
-  observer_attach_inferior_exit (discard_pending_stop_replies);
 
 #if 0
   init_remote_threadtests ();
