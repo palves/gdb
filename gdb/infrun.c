@@ -5216,8 +5216,7 @@ handle_inferior_event_1 (struct execution_control_state *ecs)
 	}
       else
 	{
-	  struct regcache *regcache = get_thread_regcache (ecs->event_thread);
-	  struct gdbarch *gdbarch = get_regcache_arch (regcache);
+	  struct gdbarch *gdbarch = target_gdbarch ();
 
 	  if (gdbarch_gdb_signal_to_target_p (gdbarch))
 	    {
