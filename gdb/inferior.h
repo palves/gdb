@@ -165,7 +165,7 @@ extern void registers_info (char *, int);
 
 extern void continue_1 (int all_threads);
 
-extern void interrupt_target_1 (int all_threads);
+extern void interrupt_target_1 (bool all_threads);
 
 extern void delete_longjmp_breakpoint_cleanup (void *arg);
 
