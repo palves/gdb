@@ -3626,6 +3626,9 @@ remote_target::update_thread_list ()
 	 target.  */
       ALL_THREADS_SAFE (tp, tmp)
 	{
+	  if (tp->inf->process_target () != this)
+	    continue;
+
 	  for (i = 0;
 	       VEC_iterate (thread_item_t, context.items, i, item);
 	       ++i)
