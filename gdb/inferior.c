@@ -465,7 +465,7 @@ print_inferior (struct ui_out *uiout, const char *requested_inferiors)
   ui_out_emit_table table_emitter (uiout, 5, inf_count, "inferiors");
   uiout->table_header (1, ui_left, "current", "");
   uiout->table_header (4, ui_left, "number", "Num");
-  uiout->table_header (17, ui_left, "connection-id", "Connection ID");
+  uiout->table_header (23, ui_left, "connection-id", "Connection ID");
   uiout->table_header (17, ui_left, "target-id", "Description");
   uiout->table_header (17, ui_left, "exec", "Executable");
 
@@ -485,7 +485,11 @@ print_inferior (struct ui_out *uiout, const char *requested_inferiors)
       uiout->field_int ("number", inf->num);
 
       // XXX
-      uiout->field_int ("connection-id", 0);
+      target_ops *proc_target = inf->process_target ();
+      const char *connection = (proc_target != NULL
+				? proc_target->info ().longname
+				: "");
+      uiout->field_string ("connection-id", connection);
 
       uiout->field_string ("target-id", inferior_pid_to_str (inf->pid));
 
