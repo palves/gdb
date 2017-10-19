@@ -135,8 +135,6 @@ extern void specify_exec_file_hook (void (*hook) (const char *filename));
 
 #define core_bfd (current_program_space->cbfd)
 
-extern struct target_ops *the_core_target;
-
 /* Whether to open exec and core files read-only or read-write.  */
 
 extern int write_files;

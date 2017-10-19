@@ -89,8 +89,6 @@ public:
   int info_proc (const char *, enum info_proc_what) override;
 };
 
-struct target_ops *the_core_target;
-
 /* Fill in core_ops with its defined operations and properties.  */
 
 core_target::core_target ()
@@ -308,6 +306,34 @@ add_to_thread_list (bfd *abfd, asection *asect, void *reg_sect_arg)
     inferior_ptid = ptid;			/* Yes, make it current.  */
 }
 
+static void
+maybe_say_no_core_file_now (int from_tty)
+{
+  if (from_tty)
+    printf_filtered (_("No core file now.\n"));
+}
+
+/* Backward compatability with old way of specifying core files.  */
+
+void
+core_file_command (const char *filename, int from_tty)
+{
+  dont_repeat ();		/* Either way, seems bogus.  */
+
+  if (filename == NULL)
+    {
+      target_ops *proc_target = current_inferior ()->process_target ();
+      if (proc_target != NULL
+	  && dynamic_cast<core_target *> (proc_target) != NULL)
+	target_detach (current_inferior (), from_tty);
+      else
+	maybe_say_no_core_file_now (from_tty);
+      gdb_assert (core_bfd == NULL);
+    }
+  else
+    core_target_open (filename, from_tty);
+}
+
 /* See gdbcore.h.  */
 
 void
@@ -509,8 +535,7 @@ core_target::detach (inferior *inf, int from_tty)
 {
   unpush_target (this);
   reinit_frame_cache ();
-  if (from_tty)
-    printf_filtered (_("No core file now.\n"));
+  maybe_say_no_core_file_now (from_tty);
 }
 
 /* Try to retrieve registers from a section in core_bfd, and supply
