@@ -330,7 +330,11 @@ public:
 
   target_ops *process_target ()
   { return m_stack.at (process_stratum); }
-  
+
+  /* Whether this inferior was resumed.  If not, then we don't wait
+     for run control events out of this inferior.  */
+  bool resumed = false;
+
   /* State of GDB control of inferior process execution.
      See `struct inferior_control_state'.  */
   inferior_control_state control {NO_STOP_QUIETLY};

@@ -982,6 +982,8 @@ set_resumed (target_ops *targ, ptid_t ptid, bool resumed)
   for_each_thread_that_matches (targ, ptid, [&] (thread_info *tp)
     {
       tp->resumed = resumed;
+      if (resumed)
+	tp->inf->resumed = true;
     });
 }
 
