@@ -480,6 +480,12 @@ tracefile_target::get_trace_status (struct trace_status *ts)
   return -1;
 }
 
+struct gdbarch *
+tracefile_target::thread_architecture (ptid_t ptid)
+{
+  return default_thread_architecture (this, ptid);
+}
+
 tracefile_target::tracefile_target ()
 {
   this->to_stratum = process_stratum;
