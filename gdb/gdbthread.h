@@ -490,7 +490,7 @@ extern thread_info *next_thread (thread_info *thr);
 
 /* Traverse all threads.  Careful with "break;".  */
 #define ALL_THREADS(T)						\
-  for (tp = first_thread (); tp != NULL; next_thread (tp))
+  for (tp = first_thread (); tp != NULL; tp = next_thread (tp))
 
 #define ALL_THREADS_INF(INF, T)					\
   for ((T) = (INF)->thread_list; (T) != NULL; (T) = (T)->next)
