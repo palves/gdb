@@ -3214,6 +3214,15 @@ proceed (CORE_ADDR addr, enum gdb_signal siggnal)
 	for_each_non_exited_thread (resume_target, resume_ptid,
 				    [current, ecs] (thread_info *tp)
         {
+	  if (!tp->has_execution ())
+	    {
+	      if (debug_infrun)
+		fprintf_unfiltered (gdb_stdlog,
+				    "infrun: proceed: [%s] target has no execution\n",
+				    target_pid_to_str (tp->ptid));
+	      return;
+	    }
+
 	  if (tp->resumed)
 	    {
 	      if (debug_infrun)

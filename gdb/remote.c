@@ -214,7 +214,7 @@ public:
   bool has_memory ()  override { return default_child_has_memory (); }
   bool has_stack ()  override { return default_child_has_stack (); }
   bool has_registers ()  override { return default_child_has_registers (); }
-  bool has_execution (ptid_t ptid)  override { return default_child_has_execution (ptid); }
+  bool has_execution (inferior *inf)  override { return default_child_has_execution (inf); }
 
   bool can_execute_reverse () override;
 
@@ -5616,7 +5616,7 @@ remote_target::remote_detach_1 (const char *args, int from_tty)
   remote_detach_pid (pid);
 
   /* Exit only if this is the only active inferior.  */
-  if (from_tty && !rs->extended && number_of_live_inferiors () == 1)
+  if (from_tty && !rs->extended && number_of_live_inferiors (this) == 1)
     puts_filtered (_("Ending remote debugging.\n"));
 
   struct thread_info *tp = find_thread_ptid (this, inferior_ptid);
@@ -9807,7 +9807,7 @@ remote_target::kill ()
      inferior, then we will tell gdbserver to exit and unpush the
      target.  */
   if (res == -1 && !remote_multi_process_p (rs)
-      && number_of_live_inferiors () == 1)
+      && number_of_live_inferiors (this) == 1)
     {
       remote_kill_k ();
 
@@ -9892,7 +9892,7 @@ remote_target::mourn_inferior ()
   discard_pending_stop_replies (current_inferior ());
 
   /* In 'target remote' mode with one inferior, we close the connection.  */
-  if (!rs->extended && number_of_live_inferiors () <= 1)
+  if (!rs->extended && number_of_live_inferiors (this) <= 1)
     {
       unpush_target (this);
 

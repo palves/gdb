@@ -73,7 +73,7 @@ struct inf_child_target
   bool has_memory () override;
   bool has_stack () override;
   bool has_registers () override;
-  bool has_execution (ptid_t) override;
+  bool has_execution (inferior *inf) override;
 
   int fileio_open (struct inferior *inf, const char *filename,
 		   int flags, int mode, int warn_if_slow,

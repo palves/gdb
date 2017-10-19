@@ -218,6 +218,8 @@ public:
 
   void set_running (bool running);
 
+  bool has_execution ();
+
   struct thread_info *next = NULL;
   ptid_t ptid;			/* "Actual process id";
 				    In fact, this may be overloaded with 
