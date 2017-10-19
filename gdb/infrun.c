@@ -3163,7 +3163,17 @@ proceed (CORE_ADDR addr, enum gdb_signal siggnal)
       }
   }
 
-  target_commit_resume ();
+  for (inferior *inf : inferiors ())
+    {
+      void switch_to_inferior_no_thread (inferior *inf);
+
+      if (inf->pid != 0
+	  && inf->process_target () != NULL)
+	{
+	  switch_to_inferior_no_thread (inf);
+	  target_commit_resume ();
+	}
+    }
 
   finish_state.release ();
 
