@@ -83,6 +83,11 @@ public:
 
   const char *thread_name (struct thread_info *) override;
 
+  struct gdbarch *thread_architecture (ptid_t ptid) override
+  {
+    return default_thread_architecture (this, ptid);
+  }
+
   bool has_memory () override;
   bool has_stack () override;
   bool has_registers () override;
