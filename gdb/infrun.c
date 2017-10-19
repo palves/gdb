@@ -2380,6 +2380,7 @@ resume_1 (enum gdb_signal sig)
 			      currently_stepping (tp));
 	}
 
+      // tp->inf->process_target ()->threads_executing = true;
       tp->resumed = 1;
 
       /* FIXME: What should we do if we are supposed to resume this
