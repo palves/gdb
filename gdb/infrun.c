@@ -2385,7 +2385,10 @@ resume_1 (enum gdb_signal sig)
 			      currently_stepping (tp));
 	}
 
-      // tp->inf->process_target ()->threads_executing = true;
+      /* Should this flag be "any thread is resumed" instead?  Sync
+	 this with update_threads_executing and
+	 breakpoints_should_be_inserted_now.  */
+      tp->inf->process_target ()->threads_executing = true;
       tp->resumed = 1;
 
       /* FIXME: What should we do if we are supposed to resume this
