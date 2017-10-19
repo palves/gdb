@@ -448,6 +448,8 @@ public:
      may have spawned new threads we haven't heard of yet.  */
   bool threads_executing = false;
 
+  int connection_number;
+
   public:
      /* To the target under this one, in INF.  */
     target_ops *beneath (inferior *inf =  current_inferior ()) const;
@@ -1254,20 +1256,6 @@ public:
     virtual void done_generating_core ()
       TARGET_DEFAULT_IGNORE ();
   };
-
-struct target_connection
-{
-  target_connection ();
-
-  int num;
-
-  /* The ops structure for our "current" target process.  This should
-     never be NULL.  If there is no target, it points to the
-     dummy_target.  */
-  target_ops *top_target;
-};
-
-extern target_connection *current_target_connection;
 
 class a_target_stack
 {
