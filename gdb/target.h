@@ -442,6 +442,8 @@ public:
      may have spawned new threads we haven't heard of yet.  */
   bool threads_executing = false;
 
+  int connection_number;
+
   public:
      /* To the target under this one, in INF.  */
     target_ops *beneath (inferior *inf =  current_inferior ()) const;

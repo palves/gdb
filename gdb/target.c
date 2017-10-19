@@ -49,6 +49,7 @@
 #include "byte-vector.h"
 #include "terminal.h"
 #include <unordered_map>
+#include <set>
 
 static void info_target_command (const char *, int);
 
@@ -652,16 +653,43 @@ a_target_stack::push (struct target_ops *t)
     m_top = t->to_stratum;
 }
 
+extern std::set<target_ops *> process_targets;
+extern int highest_target_connection_num;;
+
 void
 push_target (struct target_ops *t)
 {
+  if (t->to_stratum == process_stratum)
+    {
+      if (process_targets.insert (t).second)
+	{
+	  t->connection_number = ++highest_target_connection_num;
+	}
+    }
+
   current_inferior ()->push_target (t);
 }
 
 int
 unpush_target (struct target_ops *t)
 {
-  return current_inferior ()->unpush_target (t);
+  if (current_inferior ()->unpush_target (t))
+    {
+      if (t->to_stratum == process_stratum)
+	{
+	  /* If no other inferior is using this target, then drop it
+	     from the connection list.  */
+	  for (inferior *inf : inferiors ())
+	    {
+	      if (t == inf->process_target ())
+		return true;
+	    }
+	  process_targets.erase (t);
+	  t->connection_number = 0;
+	}
+      return true;
+    }
+  return false;
 }
 
 /* Remove a target_ops vector from the stack, wherever it may be.
