@@ -1253,10 +1253,24 @@ struct target_connection
 
 extern target_connection *current_target_connection;
 
+class a_target_stack
+{
+public:
+  void push_target (struct target_ops *);
+  int unpush_target (struct target_ops *);
+
+  target_ops *top () { return m_target_stack; }
+
+private:
+  target_ops *m_target_stack = NULL;
+  //  std::array<target_ops *, (int) debug_stratum> m_stack {};
+};
+
+extern target_ops *current_target_stack ();
+
 /* The ops structure for our "current" target process.  This should
    never be NULL.  If there is no target, it points to the dummy_target.  */
-#define target_stack current_target_connection->top_target
-
+#define target_stack current_target_stack ()
 
 /* Define easy words for doing these operations on our current target.  */
 

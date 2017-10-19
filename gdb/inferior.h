@@ -327,6 +327,8 @@ public:
   /* The highest thread number this inferior ever had.  */
   int highest_thread_num = 0;
 
+  a_target_stack m_stack;
+
   /* State of GDB control of inferior process execution.
      See `struct inferior_control_state'.  */
   inferior_control_state control {NO_STOP_QUIETLY};

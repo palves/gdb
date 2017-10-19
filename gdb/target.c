@@ -118,8 +118,6 @@ static struct target_ops *the_debug_target;
 /* The target structure we are currently using to talk to a process
    or file or whatever "inferior" we have.  */
 
-#define target_stack current_target_connection->top_target
-
 /* Command list for target.  */
 
 static struct cmd_list_element *targetlist = NULL;
@@ -527,6 +525,12 @@ default_execution_direction (struct target_ops *self)
 to_execution_direction must be implemented for reverse async");
 }
 
+target_ops *
+current_target_stack ()
+{
+  return current_inferior ()->m_stack.top ();
+}
+
 /* Push a new target type into the stack of the existing target accessors,
    possibly superseding some of the existing accessors.
 
@@ -535,12 +539,12 @@ to_execution_direction must be implemented for reverse async");
    checking them.  */
 
 void
-push_target (struct target_ops *t)
+a_target_stack::push_target (struct target_ops *t)
 {
   struct target_ops **cur;
 
   /* Find the proper stratum to install this target in.  */
-  for (cur = &target_stack; (*cur) != NULL; cur = &(*cur)->beneath)
+  for (cur = &m_target_stack; (*cur) != NULL; cur = &(*cur)->beneath)
     {
       if ((int) (t->to_stratum) >= (int) (*cur)->to_stratum)
 	break;
@@ -565,11 +569,23 @@ push_target (struct target_ops *t)
   (*cur) = t;
 }
 
+void
+push_target (struct target_ops *t)
+{
+  current_inferior ()->m_stack.push_target (t);
+}
+
+int
+unpush_target (struct target_ops *t)
+{
+  return current_inferior ()->m_stack.unpush_target (t);
+}
+
 /* Remove a target_ops vector from the stack, wherever it may be.
    Return how many times it was removed (0 or 1).  */
 
 int
-unpush_target (struct target_ops *t)
+a_target_stack::unpush_target (struct target_ops *t)
 {
   struct target_ops **cur;
   struct target_ops *tmp;
@@ -581,7 +597,7 @@ unpush_target (struct target_ops *t)
   /* Look for the specified target.  Note that we assume that a target
      can only occur once in the target stack.  */
 
-  for (cur = &target_stack; (*cur) != NULL; cur = &(*cur)->beneath)
+  for (cur = &m_target_stack; (*cur) != NULL; cur = &(*cur)->beneath)
     {
       if ((*cur) == t)
 	break;
@@ -3989,13 +4005,9 @@ set_write_memory_permission (char *args, int from_tty,
   update_observer_mode ();
 }
 
-void initialize_target_connections ();
-
 void
-initialize_targets (void)
+_initialize_target (void)
 {
-  initialize_target_connections ();
-
   the_debug_target = new debug_target ();
 
   add_info ("target", info_target_command, targ_desc);

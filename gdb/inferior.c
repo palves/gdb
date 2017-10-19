@@ -83,6 +83,8 @@ inferior::~inferior ()
   xfree (inf->priv);
 }
 
+target_ops *make_dummy_target ();
+
 inferior::inferior (int pid_)
   : num (++highest_inferior_num),
     pid (pid_),
@@ -90,6 +92,8 @@ inferior::inferior (int pid_)
     registry_data ()
 {
   inferior_alloc_data (this);
+
+  m_stack.push_target (make_dummy_target ());
 }
 
 struct inferior *
@@ -992,7 +996,8 @@ initialize_inferiors (void)
   current_inferior_->aspace = current_program_space->aspace;
   /* The architecture will be initialized shortly, by
      initialize_current_architecture.  */
-
+  current_inferior_->m_stack.push_target (make_dummy_target ());
+  
   add_info ("inferiors", info_inferiors_command, 
 	    _("IDs of specified inferiors (all inferiors if no argument)."));
 
