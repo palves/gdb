@@ -508,7 +508,7 @@ post_create_inferior (struct target_ops *target, int from_tty)
 static void
 kill_if_already_running (int from_tty)
 {
-  if (current_inferior ()->process_target () != NULL)
+  if (! ptid_equal (inferior_ptid, null_ptid) && target_has_execution)
     {
       /* Bail out before killing the program if we will not be able to
 	 restart it.  */
