@@ -475,9 +475,9 @@ extern struct thread_info *any_thread_of_process (int pid);
    current thread.  */
 extern thread_info *any_thread_of_inferior (inferior *inf);
 
-/* Returns any non-exited thread of process PID, giving preference to
+/* Returns any non-exited thread of inferior INF, giving preference to
    the current thread, and to not executing threads.  */
-extern struct thread_info *any_live_thread_of_process (int pid);
+extern struct thread_info *any_live_thread_of_process (inferior *inf);
 
 /* Change the ptid of thread OLD_PTID to NEW_PTID.  */
 void thread_change_ptid (target_ops *targ, ptid_t old_ptid, ptid_t new_ptid);

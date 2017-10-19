@@ -4265,7 +4265,7 @@ remote_target::process_initial_stop_replies (int from_tty)
 
       if (non_stop)
 	{
-	  thread = any_live_thread_of_process (inf->pid);
+	  thread = any_live_thread_of_process (inf);
 	  notice_new_inferior (thread, thread->state == THREAD_RUNNING,
 			       from_tty);
 	}
@@ -4289,7 +4289,7 @@ remote_target::process_initial_stop_replies (int from_tty)
 
 	  if (inf->needs_setup)
 	    {
-	      thread = any_live_thread_of_process (inf->pid);
+	      thread = any_live_thread_of_process (inf);
 	      switch_to_thread_no_regs (thread);
 	      setup_inferior (0);
 	    }

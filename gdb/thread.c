@@ -758,16 +758,16 @@ any_thread_of_process (int pid)
 }
 
 struct thread_info *
-any_live_thread_of_process (int pid)
+any_live_thread_of_process (inferior *inf)
 {
   struct thread_info *curr_tp = NULL;
   struct thread_info *tp;
   struct thread_info *tp_executing = NULL;
 
-  gdb_assert (pid != 0);
+  gdb_assert (inf != NULL && inf->pid != 0);
 
   /* Prefer the current thread if it's not executing.  */
-  if (ptid_get_pid (inferior_ptid) == pid)
+  if (current_inferior () == inf)
     {
       /* If the current thread is dead, forget it.  If it's not
 	 executing, use it.  Otherwise, still choose it (below), but
@@ -779,14 +779,16 @@ any_live_thread_of_process (int pid)
 	return curr_tp;
     }
 
-  ALL_NON_EXITED_THREADS (tp)
-    if (ptid_get_pid (tp->ptid) == pid)
-      {
-	if (!tp->executing)
-	  return tp;
+  for (thread_info *tp : inf->threads ())
+    {
+      if (tp->state == THREAD_EXITED)
+	continue;
 
-	tp_executing = tp;
-      }
+      if (!tp->executing)
+	return tp;
+
+      tp_executing = tp;
+    }
 
   /* If both the current thread and all live threads are executing,
      prefer the current thread.  */
