@@ -422,6 +422,21 @@ private:
   void remove_new_fork_children (threads_listing_context *context);
   void kill_new_fork_children (int pid, remote_state *rs);
   void discard_pending_stop_replies (struct inferior *inf);
+  int stop_reply_queue_length ();
+
+  void check_pending_events_prevent_wildcard_vcont
+  (int *may_global_wildcard_vcont);
+
+  struct stop_reply *remote_notif_remove_queued_reply (ptid_t ptid);
+  struct stop_reply *queued_stop_reply (ptid_t ptid);
+  int peek_stop_reply (ptid_t ptid);
+
+  void remote_stop_ns (ptid_t ptid);
+  void remote_interrupt_as ();
+  void remote_interrupt_ns ();
+
+public:
+  void push_stop_reply (struct stop_reply *new_event);
 
   friend class vcont_builder;
 };
@@ -544,9 +559,7 @@ static void remote_check_symbols (void);
 struct stop_reply;
 static void stop_reply_xfree (struct stop_reply *);
 static void remote_parse_stop_reply (char *, struct stop_reply *);
-static void push_stop_reply (struct stop_reply *);
 static void discard_pending_stop_replies_in_queue (struct remote_state *);
-static int peek_stop_reply (ptid_t ptid);
 
 static void remote_async_inferior_event_handler (gdb_client_data);
 
@@ -555,8 +568,6 @@ static int remote_read_description_p (struct target_ops *target);
 static void remote_console_output (char *msg);
 
 static void remote_btrace_reset (void);
-
-static int stop_reply_queue_length (void);
 
 static void readahead_cache_invalidate (void);
 
@@ -633,6 +644,12 @@ struct readahead_cache
   ULONGEST hit_count;
   ULONGEST miss_count;
 };
+
+struct stop_reply;
+typedef struct stop_reply *stop_reply_p;
+
+DECLARE_QUEUE_P (stop_reply_p);
+DEFINE_QUEUE_P (stop_reply_p);
 
 /* Description of the remote protocol state for the currently
    connected target.  This is per-target state, and independent of the
@@ -767,6 +784,28 @@ struct remote_state
      request/reply nature of the RSP.  We only cache data for a single
      file descriptor at a time.  */
   struct readahead_cache readahead_cache;
+
+  /* The list of already fetched and acknowledged stop events.  This
+     queue is used for notification Stop, and other notifications
+     don't need queue for their events, because the notification
+     events of Stop can't be consumed immediately, so that events
+     should be queued first, and be consumed by remote_wait_{ns,as}
+     one per time.  Other notifications can consume their events
+     immediately, so queue is not needed for them.  */
+  QUEUE (stop_reply_p) *stop_reply_queue;
+
+  /* Asynchronous signal handle registered as event loop source for
+     when we have pending events ready to be passed to the core.  */
+  struct async_event_handler *remote_async_inferior_event_token;
+
+  /* FIXME: cagney/1999-09-23: Even though getpkt was called with
+     ``forever'' still use the normal timeout mechanism.  This is
+     currently used by the ASYNC code to guarentee that target reads
+     during the initial connect always time-out.  Once getpkt has been
+     modified to return a timeout indication and, in turn
+     remote_wait()/wait_for_inferior() have gained a timeout parameter
+     this can go away.  */
+  int wait_forever_enabled_p = 1;
 };
 
 /* Private data that we'll store in (struct thread_info)->private.  */
@@ -830,6 +869,8 @@ remote_state::remote_state ()
   this->last_sent_signal = GDB_SIGNAL_0;
   this->last_resume_exec_dir = EXEC_FORWARD;
   this->fs_pid = -1;
+
+  this->stop_reply_queue = QUEUE_alloc (stop_reply_p, stop_reply_xfree);
 }
 
 /* Description of the remote protocol for a given architecture.  */
@@ -1250,15 +1291,6 @@ packet_reg_from_pnum (struct gdbarch *gdbarch, struct remote_arch_state *rsa,
   return NULL;
 }
 
-/* FIXME: cagney/1999-09-23: Even though getpkt was called with
-   ``forever'' still use the normal timeout mechanism.  This is
-   currently used by the ASYNC code to guarentee that target reads
-   during the initial connect always time-out.  Once getpkt has been
-   modified to return a timeout indication and, in turn
-   remote_wait()/wait_for_inferior() have gained a timeout parameter
-   this can go away.  */
-static int wait_forever_enabled_p = 1;
-
 /* Allow the user to specify what sequence to send to the remote
    when he requests a program interruption: Although ^C is usually
    what remote systems expect (this is the default, here), it is
@@ -1478,6 +1510,7 @@ show_memory_packet_size (struct memory_packet_config *config)
 		     get_memory_packet_size (config));
 }
 
+/* XXX: needs to be per-remote-target.  */
 static struct memory_packet_config memory_write_packet_config =
 {
   "memory-write-packet-size",
@@ -1501,6 +1534,7 @@ get_memory_write_packet_size (void)
   return get_memory_packet_size (&memory_write_packet_config);
 }
 
+/* XXX: needs to be per-remote-target.  */
 static struct memory_packet_config memory_read_packet_config =
 {
   "memory-read-packet-size",
@@ -1867,6 +1901,9 @@ enum {
   PACKET_MAX
 };
 
+/* XXX: needs to be per-remote-target.  Ignoring this for now,
+   assuming all remote targets are the same server (thus all support
+   the same packets).  */
 static struct packet_config remote_protocol_packets[PACKET_MAX];
 
 /* Returns the packet's corresponding "set remote foo-packet" command
@@ -2061,12 +2098,6 @@ remote_target::remove_exec_catchpoint (int pid)
 {
   return 0;
 }
-
-
-/* Asynchronous signal handle registered as event loop source for
-   when we have pending events ready to be passed to the core.  */
-
-static struct async_event_handler *remote_async_inferior_event_token;
 
 
 
@@ -3932,8 +3963,8 @@ remote_target::close ()
      everything of this target.  */
   discard_pending_stop_replies_in_queue (rs);
 
-  if (remote_async_inferior_event_token)
-    delete_async_event_handler (&remote_async_inferior_event_token);
+  if (rs->remote_async_inferior_event_token)
+    delete_async_event_handler (&rs->remote_async_inferior_event_token);
 
   remote_notif_state_xfree (rs->notif_state);
 
@@ -4654,8 +4685,8 @@ remote_target::start_remote (int from_tty, int extended_p)
 	  /* remote_notif_get_pending_replies acks this one, and gets
 	     the rest out.  */
 	  rs->notif_state->pending_event[notif_client_stop.id]
-	    = remote_notif_parse (notif, rs->buf);
-	  remote_notif_get_pending_events (notif);
+	    = remote_notif_parse (this, notif, rs->buf);
+	  remote_notif_get_pending_events (this, notif);
 	}
 
       if (thread_count (this) == 0)
@@ -5371,7 +5402,7 @@ remote_target::open_1 (const char *name, int from_tty, int extended_p)
 
   /* See FIXME above.  */
   if (!target_async_permitted)
-    wait_forever_enabled_p = 1;
+    rs->wait_forever_enabled_p = 1;
 
   /* If we're connected to a running target, target_preopen will kill it.
      Ask this question first, before target_preopen has a chance to kill
@@ -5447,10 +5478,10 @@ remote_target::open_1 (const char *name, int from_tty, int extended_p)
   target_up.release ();
 
   /* Register extra event sources in the event loop.  */
-  remote_async_inferior_event_token
+  rs->remote_async_inferior_event_token
     = create_async_event_handler (remote_async_inferior_event_handler,
-				  NULL);
-  rs->notif_state = remote_notif_state_allocate ();
+				  target);
+  rs->notif_state = remote_notif_state_allocate (target);
 
   /* Reset the target state; these things will be queried either by
      remote_query_supported or as they are needed.  */
@@ -5487,7 +5518,7 @@ remote_target::open_1 (const char *name, int from_tty, int extended_p)
 	 around this.  Eventually a mechanism that allows
 	 wait_for_inferior() to expect/get timeouts will be
 	 implemented.  */
-      wait_forever_enabled_p = 0;
+      rs->wait_forever_enabled_p = 0;
     }
 
   /* First delete any symbols previously loaded from shared libraries.  */
@@ -5524,7 +5555,7 @@ remote_target::open_1 (const char *name, int from_tty, int extended_p)
 	if (rs->remote_desc != NULL)
 	  remote_unpush_target ();
 	if (target_async_permitted)
-	  wait_forever_enabled_p = 1;
+	  rs->wait_forever_enabled_p = 1;
 	throw_exception (ex);
       }
     END_CATCH
@@ -5533,7 +5564,7 @@ remote_target::open_1 (const char *name, int from_tty, int extended_p)
   remote_btrace_reset ();
 
   if (target_async_permitted)
-    wait_forever_enabled_p = 1;
+    rs->wait_forever_enabled_p = 1;
 }
 
 /* Detach the specified process.  */
@@ -5789,7 +5820,7 @@ extended_remote_target::attach (const char *args, int from_tty)
       if (target_can_async_p ())
 	{
 	  struct notif_event *reply
-	    =  remote_notif_parse (&notif_client_stop, wait_status);
+	    =  remote_notif_parse (this, &notif_client_stop, wait_status);
 
 	  push_stop_reply ((struct stop_reply *) reply);
 
@@ -6193,8 +6224,6 @@ remote_target::resume (ptid_t ptid, int step, enum gdb_signal siggnal)
     rs->waiting_for_stop_reply = 1;
 }
 
-static void check_pending_events_prevent_wildcard_vcont
-  (int *may_global_wildcard_vcont);
 static int is_pending_fork_parent_thread (struct thread_info *thread);
 
 /* Private per-inferior info for target remote processes.  */
@@ -6483,8 +6512,8 @@ remote_target::commit_resume ()
    thread, all threads of a remote process, or all threads of all
    processes.  */
 
-static void
-remote_stop_ns (ptid_t ptid)
+void
+remote_target::remote_stop_ns (ptid_t ptid)
 {
   struct remote_state *rs = get_remote_state ();
   char *p = rs->buf;
@@ -6534,8 +6563,8 @@ remote_stop_ns (ptid_t ptid)
    interrupt the remote target.  It is undefined which thread of which
    process reports the interrupt.  */
 
-static void
-remote_interrupt_as (void)
+void
+remote_target::remote_interrupt_as ()
 {
   struct remote_state *rs = get_remote_state ();
 
@@ -6556,8 +6585,8 @@ remote_interrupt_as (void)
    reports the interrupt.  Throws an error if the packet is not
    supported by the server.  */
 
-static void
-remote_interrupt_ns (void)
+void
+remote_target::remote_interrupt_ns ()
 {
   struct remote_state *rs = get_remote_state ();
   char *p = rs->buf;
@@ -6740,17 +6769,6 @@ typedef struct stop_reply
   int core;
 } *stop_reply_p;
 
-DECLARE_QUEUE_P (stop_reply_p);
-DEFINE_QUEUE_P (stop_reply_p);
-/* The list of already fetched and acknowledged stop events.  This
-   queue is used for notification Stop, and other notifications
-   don't need queue for their events, because the notification events
-   of Stop can't be consumed immediately, so that events should be
-   queued first, and be consumed by remote_wait_{ns,as} one per
-   time.  Other notifications can consume their events immediately,
-   so queue is not needed for them.  */
-static QUEUE (stop_reply_p) *stop_reply_queue;
-
 static void
 stop_reply_xfree (struct stop_reply *r)
 {
@@ -6759,21 +6777,24 @@ stop_reply_xfree (struct stop_reply *r)
 
 /* Return the length of the stop reply queue.  */
 
-static int
-stop_reply_queue_length (void)
+int
+remote_target::stop_reply_queue_length ()
 {
-  return QUEUE_length (stop_reply_p, stop_reply_queue);
+  remote_state *rs = get_remote_state ();
+  return QUEUE_length (stop_reply_p, rs->stop_reply_queue);
 }
 
 static void
-remote_notif_stop_parse (struct notif_client *self, char *buf,
+remote_notif_stop_parse (remote_target *target,
+			 struct notif_client *self, char *buf,
 			 struct notif_event *event)
 {
   remote_parse_stop_reply (buf, (struct stop_reply *) event);
 }
 
 static void
-remote_notif_stop_ack (struct notif_client *self, char *buf,
+remote_notif_stop_ack (remote_target *target,
+		       struct notif_client *self, char *buf,
 		       struct notif_event *event)
 {
   struct stop_reply *stop_reply = (struct stop_reply *) event;
@@ -6782,21 +6803,24 @@ remote_notif_stop_ack (struct notif_client *self, char *buf,
   putpkt (self->ack_command);
 
   if (stop_reply->ws.kind == TARGET_WAITKIND_IGNORE)
+    {
       /* We got an unknown stop reply.  */
       error (_("Unknown stop reply"));
+    }
 
-  push_stop_reply (stop_reply);
+  target->push_stop_reply (stop_reply);
 }
 
 static int
-remote_notif_stop_can_get_pending_events (struct notif_client *self)
+remote_notif_stop_can_get_pending_events (remote_target *target,
+					  struct notif_client *self)
 {
   /* We can't get pending events in remote_notif_process for
      notification stop, and we have to do this in remote_wait_ns
      instead.  If we fetch all queued events from stub, remote stub
      may exit and we have no chance to process them back in
      remote_wait_ns.  */
-  mark_async_event_handler (remote_async_inferior_event_token);
+  mark_async_event_handler (target->get_remote_state ()->remote_async_inferior_event_token);
   return 0;
 }
 
@@ -6938,12 +6962,18 @@ remote_target::remove_new_fork_children (threads_listing_context *context)
   /* Check for any pending fork events (not reported or processed yet)
      in process PID and remove those fork child threads from the
      CONTEXT list as well.  */
-  remote_notif_get_pending_events (notif);
+  remote_notif_get_pending_events (this, notif);
   param.input = context;
   param.output = NULL;
-  QUEUE_iterate (stop_reply_p, stop_reply_queue,
+  QUEUE_iterate (stop_reply_p, get_remote_state ()->stop_reply_queue,
 		 remove_child_of_pending_fork, &param);
 }
+
+struct check_pending_event_prevents_wildcard_vcont_callback_data
+{
+  remote_target *target;
+  int *may_global_wildcard_vcont;
+};
 
 /* Check whether EVENT would prevent a global or process wildcard
    vCont action.  */
@@ -6956,7 +6986,7 @@ check_pending_event_prevents_wildcard_vcont_callback
    void *data)
 {
   struct inferior *inf;
-  int *may_global_wildcard_vcont = (int *) data;
+  auto *cb_data = (check_pending_event_prevents_wildcard_vcont_callback_data *) data;
 
   if (event->ws.kind == TARGET_WAITKIND_NO_RESUMED
       || event->ws.kind == TARGET_WAITKIND_NO_HISTORY)
@@ -6964,14 +6994,14 @@ check_pending_event_prevents_wildcard_vcont_callback
 
   if (event->ws.kind == TARGET_WAITKIND_FORKED
       || event->ws.kind == TARGET_WAITKIND_VFORKED)
-    *may_global_wildcard_vcont = 0;
+    *cb_data->may_global_wildcard_vcont = 0;
 
-  inf = find_inferior_ptid (NULL/*XXX*/, event->ptid);
+  inf = find_inferior_ptid (cb_data->target, event->ptid);
 
   /* This may be the first time we heard about this process.
      Regardless, we must not do a global wildcard resume, otherwise
      we'd resume this process too.  */
-  *may_global_wildcard_vcont = 0;
+  *cb_data->may_global_wildcard_vcont = 0;
   if (inf != NULL)
     inf->priv->may_wildcard_vcont = 0;
 
@@ -6984,15 +7014,18 @@ check_pending_event_prevents_wildcard_vcont_callback
    and clear the event inferior's may_wildcard_vcont flag if we can't
    do a process-wide wildcard resume (vCont;c:pPID.-1).  */
 
-static void
-check_pending_events_prevent_wildcard_vcont (int *may_global_wildcard)
+void
+remote_target::check_pending_events_prevent_wildcard_vcont
+  (int *may_global_wildcard)
 {
   struct notif_client *notif = &notif_client_stop;
+  check_pending_event_prevents_wildcard_vcont_callback_data cb_data
+    {this, may_global_wildcard};
 
-  remote_notif_get_pending_events (notif);
-  QUEUE_iterate (stop_reply_p, stop_reply_queue,
+  remote_notif_get_pending_events (this, notif);
+  QUEUE_iterate (stop_reply_p, get_remote_state ()->stop_reply_queue,
 		 check_pending_event_prevents_wildcard_vcont_callback,
-		 may_global_wildcard);
+		 &cb_data);
 }
 
 /* Remove stop replies in the queue if its pid is equal to the given
@@ -7044,7 +7077,7 @@ remote_target::discard_pending_stop_replies (struct inferior *inf)
   param.output = NULL;
   /* Discard the stop replies we have already pulled with
      vStopped.  */
-  QUEUE_iterate (stop_reply_p, stop_reply_queue,
+  QUEUE_iterate (stop_reply_p, rs->stop_reply_queue,
 		 remove_stop_reply_for_inferior, &param);
 }
 
@@ -7080,7 +7113,7 @@ discard_pending_stop_replies_in_queue (struct remote_state *rs)
   param.output = NULL;
   /* Discard the stop replies we have already pulled with
      vStopped.  */
-  QUEUE_iterate (stop_reply_p, stop_reply_queue,
+  QUEUE_iterate (stop_reply_p, rs->stop_reply_queue,
 		 remove_stop_reply_of_remote_state, &param);
 }
 
@@ -7108,15 +7141,15 @@ remote_notif_remove_once_on_match (QUEUE (stop_reply_p) *q,
 /* Remove the first reply in 'stop_reply_queue' which matches
    PTID.  */
 
-static struct stop_reply *
-remote_notif_remove_queued_reply (ptid_t ptid)
+struct stop_reply *
+remote_target::remote_notif_remove_queued_reply (ptid_t ptid)
 {
   struct queue_iter_param param;
 
   param.input = &ptid;
   param.output = NULL;
 
-  QUEUE_iterate (stop_reply_p, stop_reply_queue,
+  QUEUE_iterate (stop_reply_p, get_remote_state ()->stop_reply_queue,
 		 remote_notif_remove_once_on_match, &param);
   if (notif_debug)
     fprintf_unfiltered (gdb_stdlog,
@@ -7131,14 +7164,17 @@ remote_notif_remove_queued_reply (ptid_t ptid)
    found.  If there are still queued events left to process, tell the
    event loop to get back to target_wait soon.  */
 
-static struct stop_reply *
-queued_stop_reply (ptid_t ptid)
+struct stop_reply *
+remote_target::queued_stop_reply (ptid_t ptid)
 {
   struct stop_reply *r = remote_notif_remove_queued_reply (ptid);
 
-  if (!QUEUE_is_empty (stop_reply_p, stop_reply_queue))
-    /* There's still at least an event left.  */
-    mark_async_event_handler (remote_async_inferior_event_token);
+  if (!QUEUE_is_empty (stop_reply_p, get_remote_state ()->stop_reply_queue))
+    {
+      remote_state *rs = get_remote_state ();
+      /* There's still at least an event left.  */
+      mark_async_event_handler (rs->remote_async_inferior_event_token);
+    }
 
   return r;
 }
@@ -7147,19 +7183,20 @@ queued_stop_reply (ptid_t ptid)
    know that we now have at least one queued event left to pass to the
    core side, tell the event loop to get back to target_wait soon.  */
 
-static void
-push_stop_reply (struct stop_reply *new_event)
+void
+remote_target::push_stop_reply (struct stop_reply *new_event)
 {
-  QUEUE_enque (stop_reply_p, stop_reply_queue, new_event);
+  remote_state *rs = get_remote_state ();
+  QUEUE_enque (stop_reply_p, rs->stop_reply_queue, new_event);
 
   if (notif_debug)
     fprintf_unfiltered (gdb_stdlog,
 			"notif: push 'Stop' %s to queue %d\n",
 			target_pid_to_str (new_event->ptid),
 			QUEUE_length (stop_reply_p,
-				      stop_reply_queue));
+				      rs->stop_reply_queue));
 
-  mark_async_event_handler (remote_async_inferior_event_token);
+  mark_async_event_handler (rs->remote_async_inferior_event_token);
 }
 
 static int
@@ -7176,10 +7213,11 @@ stop_reply_match_ptid_and_ws (QUEUE (stop_reply_p) *q,
 
 /* Returns true if we have a stop reply for PTID.  */
 
-static int
-peek_stop_reply (ptid_t ptid)
+int
+remote_target::peek_stop_reply (ptid_t ptid)
 {
-  return !QUEUE_iterate (stop_reply_p, stop_reply_queue,
+  remote_state *rs = get_remote_state ();
+  return !QUEUE_iterate (stop_reply_p, rs->stop_reply_queue,
 			 stop_reply_match_ptid_and_ws, &ptid);
 }
 
@@ -7592,7 +7630,7 @@ Packet: '%s'\n"),
 */
 
 void
-remote_notif_get_pending_events (struct notif_client *nc)
+remote_notif_get_pending_events (remote_target *target, struct notif_client *nc)
 {
   struct remote_state *rs = get_remote_state ();
 
@@ -7604,7 +7642,7 @@ remote_notif_get_pending_events (struct notif_client *nc)
 			    nc->name);
 
       /* acknowledge */
-      nc->ack (nc, rs->buf, rs->notif_state->pending_event[nc->id]);
+      nc->ack (target, nc, rs->buf, rs->notif_state->pending_event[nc->id]);
       rs->notif_state->pending_event[nc->id] = NULL;
 
       while (1)
@@ -7613,7 +7651,7 @@ remote_notif_get_pending_events (struct notif_client *nc)
 	  if (strcmp (rs->buf, "OK") == 0)
 	    break;
 	  else
-	    remote_notif_ack (nc, rs->buf);
+	    remote_notif_ack (target, nc, rs->buf);
 	}
     }
   else
@@ -7717,7 +7755,7 @@ remote_target::wait_ns (ptid_t ptid, struct target_waitstatus *status, int optio
       /* Acknowledge a pending stop reply that may have arrived in the
 	 mean time.  */
       if (rs->notif_state->pending_event[notif_client_stop.id] != NULL)
-	remote_notif_get_pending_events (&notif_client_stop);
+	remote_notif_get_pending_events (this, &notif_client_stop);
 
       /* If indeed we noticed a stop reply, we're done.  */
       stop_reply = queued_stop_reply (ptid);
@@ -7766,7 +7804,7 @@ remote_target::wait_as (ptid_t ptid, target_waitstatus *status, int options)
       int ret;
       int is_notif;
       int forever = ((options & TARGET_WNOHANG) == 0
-		     && wait_forever_enabled_p);
+		     && rs->wait_forever_enabled_p);
 
       if (!rs->waiting_for_stop_reply)
 	{
@@ -7828,7 +7866,8 @@ remote_target::wait_as (ptid_t ptid, target_waitstatus *status, int options)
 	rs->waiting_for_stop_reply = 0;
 
 	stop_reply
-	  = (struct stop_reply *) remote_notif_parse (&notif_client_stop,
+	  = (struct stop_reply *) remote_notif_parse (this,
+						      &notif_client_stop,
 						      rs->buf);
 
 	event_ptid = process_stop_reply (stop_reply, status);
@@ -7900,10 +7939,12 @@ remote_target::wait (ptid_t ptid, struct target_waitstatus *status, int options)
 
   if (target_is_async_p ())
     {
+      remote_state *rs = get_remote_state ();
+
       /* If there are are events left in the queue tell the event loop
 	 to return here.  */
-      if (!QUEUE_is_empty (stop_reply_p, stop_reply_queue))
-	mark_async_event_handler (remote_async_inferior_event_token);
+      if (!QUEUE_is_empty (stop_reply_p, rs->stop_reply_queue))
+	mark_async_event_handler (rs->remote_async_inferior_event_token);
     }
 
   return event_ptid;
@@ -9718,10 +9759,10 @@ remote_target::kill_new_fork_children (int pid, remote_state *rs)
 
   /* Check for any pending fork events (not reported or processed yet)
      in process PID and kill those fork child threads as well.  */
-  remote_notif_get_pending_events (notif);
+  remote_notif_get_pending_events (this, notif);
   param.input = &pid;
   param.output = NULL;
-  QUEUE_iterate (stop_reply_p, stop_reply_queue,
+  QUEUE_iterate (stop_reply_p, rs->stop_reply_queue,
 		 kill_child_of_pending_fork, &param);
 }
 
@@ -14047,7 +14088,7 @@ remote_async_serial_handler (struct serial *scb, void *context)
 static void
 remote_async_inferior_event_handler (gdb_client_data data)
 {
-  inferior_event_handler (INF_REG_EVENT, NULL);
+  inferior_event_handler (INF_REG_EVENT, data);
 }
 
 void
@@ -14061,8 +14102,8 @@ remote_target::async (int enable)
 
       /* If there are pending events in the stop reply queue tell the
 	 event loop to process them.  */
-      if (!QUEUE_is_empty (stop_reply_p, stop_reply_queue))
-	mark_async_event_handler (remote_async_inferior_event_token);
+      if (!QUEUE_is_empty (stop_reply_p, rs->stop_reply_queue))
+	mark_async_event_handler (rs->remote_async_inferior_event_token);
       /* For simplicity, below we clear the pending events token
 	 without remembering whether it is marked, so here we always
 	 mark it.  If there's actually no pending notification to
@@ -14077,7 +14118,7 @@ remote_target::async (int enable)
       /* If the core is disabling async, it doesn't want to be
 	 disturbed with target events.  Clear all async event sources
 	 too.  */
-      clear_async_event_handler (remote_async_inferior_event_token);
+      clear_async_event_handler (rs->remote_async_inferior_event_token);
       if (target_is_non_stop_p ())
 	clear_async_event_handler (rs->notif_state->get_pending_events_token);
     }
@@ -14270,7 +14311,6 @@ _initialize_remote (void)
   init_remote_threadtests ();
 #endif
 
-  stop_reply_queue = QUEUE_alloc (stop_reply_p, stop_reply_xfree);
   /* set/show remote ...  */
 
   add_prefix_cmd ("remote", class_maintenance, set_remote_cmd, _("\

@@ -22,6 +22,7 @@
 #include "remote-notif.h"
 
 struct target_desc;
+struct remote_target;
 
 /* Read a packet from the remote machine, with error checking, and
    store it in *BUF.  Resize *BUF using xrealloc if necessary to hold
@@ -53,5 +54,5 @@ extern int remote_register_number_and_offset (struct gdbarch *gdbarch,
 					      int regnum, int *pnum,
 					      int *poffset);
 
-extern void remote_notif_get_pending_events (struct notif_client *np);
+extern void remote_notif_get_pending_events (remote_target *target, struct notif_client *np);
 #endif
