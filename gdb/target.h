@@ -1239,10 +1239,24 @@ struct target_ops
       TARGET_DEFAULT_IGNORE ();
   };
 
+struct target_connection
+{
+  target_connection ();
+
+  int num;
+
+  /* The ops structure for our "current" target process.  This should
+     never be NULL.  If there is no target, it points to the
+     dummy_target.  */
+  target_ops *top_target;
+};
+
+extern target_connection *current_target_connection;
+
 /* The ops structure for our "current" target process.  This should
    never be NULL.  If there is no target, it points to the dummy_target.  */
+#define target_stack current_target_connection->top_target
 
-extern struct target_ops *target_stack;
 
 /* Define easy words for doing these operations on our current target.  */
 

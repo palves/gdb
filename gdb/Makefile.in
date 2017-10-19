@@ -1215,6 +1215,7 @@ SFILES = \
 	symmisc.c \
 	symtab.c \
 	target.c \
+	target-connection.c \
 	target-dcache.c \
 	target-descriptions.c \
 	target-memory.c \
@@ -1837,6 +1838,7 @@ COMMON_OBS = $(DEPFILES) $(CONFIG_OBS) $(YYOBJ) \
 	symmisc.o \
 	symtab.o \
 	target.o \
+	target-connection.o \
 	target-dcache.o \
 	target-descriptions.o \
 	target-memory.o \

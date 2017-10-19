@@ -118,7 +118,7 @@ static struct target_ops *the_debug_target;
 /* The target structure we are currently using to talk to a process
    or file or whatever "inferior" we have.  */
 
-struct target_ops *target_stack;
+#define target_stack current_target_connection->top_target
 
 /* Command list for target.  */
 
@@ -157,6 +157,7 @@ static unsigned int targetdebug = 0;
 static void
 set_targetdebug  (char *args, int from_tty, struct cmd_list_element *c)
 {
+  /* XXX go through all connections?  */
   if (targetdebug)
     push_target (the_debug_target);
   else
@@ -3213,6 +3214,13 @@ dummy_make_corefile_notes (struct target_ops *self,
 
 #include "target-delegates.c"
 
+target_ops *
+make_dummy_target ()
+{
+  target_ops *t = new dummy_target ();
+  t->beneath = NULL;
+  return t;
+}
 
 dummy_target::dummy_target ()
 {
@@ -3981,12 +3989,12 @@ set_write_memory_permission (char *args, int from_tty,
   update_observer_mode ();
 }
 
+void initialize_target_connections ();
 
 void
 initialize_targets (void)
 {
-  the_dummy_target = new dummy_target ();
-  push_target (the_dummy_target);
+  initialize_target_connections ();
 
   the_debug_target = new debug_target ();
 
