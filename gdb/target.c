@@ -82,9 +82,6 @@ static int default_verify_memory (struct target_ops *self,
 				  const gdb_byte *data,
 				  CORE_ADDR memaddr, ULONGEST size);
 
-static struct address_space *default_thread_address_space
-     (struct target_ops *self, ptid_t ptid);
-
 static void tcomplain (void) ATTRIBUTE_NORETURN;
 
 static struct target_ops *find_default_run_target (const char *);
@@ -1024,7 +1021,7 @@ memory_xfer_partial_1 (struct target_ops *ops, enum target_object object,
     return TARGET_XFER_E_IO;
 
   if (!ptid_equal (inferior_ptid, null_ptid))
-    inf = find_inferior_ptid (inferior_ptid);
+    inf = current_inferior ();
   else
     inf = NULL;
 
@@ -1946,7 +1943,7 @@ dispose_inferior (struct inferior *inf)
   struct thread_info *thread = any_thread_of_process (inf->pid);
   if (thread != NULL)
     {
-      switch_to_thread (thread->ptid);
+      switch_to_thread (thread);
 
       /* Core inferiors actually should be detached, not killed.  */
       if (target_has_execution)
@@ -1994,8 +1991,8 @@ target_detach (const char *args, int from_tty)
     ;
   else
     /* If we're in breakpoints-always-inserted mode, have to remove
-       them before detaching.  */
-    remove_breakpoints_pid (ptid_get_pid (inferior_ptid));
+       breakpoints before detaching.  */
+    remove_breakpoints_inf (current_inferior ());
 
   prepare_for_detach ();
 
@@ -2056,15 +2053,17 @@ target_thread_handle_to_thread_info (const gdb_byte *thread_handle,
 void
 target_resume (ptid_t ptid, int step, enum gdb_signal signal)
 {
+  target_ops *curr_target = current_inferior ()->process_target ();
+
   target_dcache_invalidate ();
 
   target_stack->resume (ptid, step, signal);
 
-  registers_changed_ptid (ptid);
+  registers_changed_ptid (curr_target, ptid);
   /* We only set the internal executing state here.  The user/frontend
      running state is set at a higher level.  */
-  set_executing (ptid, 1);
-  clear_inline_frame_state (ptid);
+  set_executing (curr_target, ptid, 1);
+  clear_inline_frame_state (curr_target, ptid);
 }
 
 /* If true, target_commit_resume is a nop.  */
@@ -2474,37 +2473,6 @@ target_get_osdata (const char *type)
 
   return target_read_stralloc (t, TARGET_OBJECT_OSDATA, type);
 }
-
-static struct address_space *
-default_thread_address_space (struct target_ops *self, ptid_t ptid)
-{
-  struct inferior *inf;
-
-  /* Fall-back to the "main" address space of the inferior.  */
-  inf = find_inferior_ptid (ptid);
-
-  if (inf == NULL || inf->aspace == NULL)
-    internal_error (__FILE__, __LINE__,
-		    _("Can't determine the current "
-		      "address space of thread %s\n"),
-		    target_pid_to_str (ptid));
-
-  return inf->aspace;
-}
-
-/* Determine the current address space of thread PTID.  */
-
-struct address_space *
-target_thread_address_space (ptid_t ptid)
-{
-  struct address_space *aspace;
-
-  aspace = target_stack->thread_address_space (ptid);
-  gdb_assert (aspace != NULL);
-
-  return aspace;
-}
-
 
 target_ops *
 target_ops::beneath (inferior *inf) const
@@ -3054,7 +3022,7 @@ default_watchpoint_addr_within_range (struct target_ops *target,
 static struct gdbarch *
 default_thread_architecture (struct target_ops *ops, ptid_t ptid)
 {
-  inferior *inf = find_inferior_ptid (ptid);
+  inferior *inf = find_inferior_ptid (ops, ptid);
   gdb_assert (inf != NULL);
   return inf->gdbarch;
 }
@@ -3121,9 +3089,8 @@ target_announce_detach (int from_tty)
 void
 generic_mourn_inferior (void)
 {
-  ptid_t ptid;
+  inferior *inf = current_inferior ();
 
-  ptid = inferior_ptid;
   inferior_ptid = null_ptid;
 
   /* Mark breakpoints uninserted in case something tries to delete a
@@ -3131,11 +3098,8 @@ generic_mourn_inferior (void)
      fail, since the inferior is long gone).  */
   mark_breakpoints_out ();
 
-  if (!ptid_equal (ptid, null_ptid))
-    {
-      int pid = ptid_get_pid (ptid);
-      exit_inferior (pid);
-    }
+  if (inf->pid != 0)
+    exit_inferior (inf);
 
   /* Note this wipes step-resume breakpoints, so needs to be done
      after exit_inferior, which ends up referencing the step-resume
@@ -3236,37 +3200,10 @@ target_close (struct target_ops *targ)
     fprintf_unfiltered (gdb_stdlog, "target_close ()\n");
 }
 
-thread_info **
-target_thread_list_p (inferior *inf)
-{
-  return inf->top_target ()->get_thread_list_p (inf);
-}
-
-thread_info *
-target_thread_list (inferior *inf)
-{
-  thread_info **list_p = inf->top_target ()->get_thread_list_p (inf);
-  if (list_p == NULL)
-    return NULL;
-  return *list_p;
-}
-
-thread_info **
-target_thread_list_p ()
-{
-  return target_thread_list_p (current_inferior ());
-}
-
-thread_info *
-target_thread_list ()
-{
-  return target_thread_list (current_inferior ());
-}
-
 int
-target_thread_alive (ptid_t ptid)
+target_thread_alive (thread_info *thread)
 {
-  return target_stack->thread_alive (ptid);
+  return target_stack->thread_alive (thread);
 }
 
 void
@@ -3418,9 +3355,9 @@ target_store_registers (struct regcache *regcache, int regno)
 }
 
 int
-target_core_of_thread (ptid_t ptid)
+target_core_of_thread (thread_info *thread)
 {
-  return target_stack->core_of_thread (ptid);
+  return target_stack->core_of_thread (thread);
 }
 
 int
@@ -3591,9 +3528,9 @@ target_delete_record (void)
 /* See target.h.  */
 
 enum record_method
-target_record_method (ptid_t ptid)
+target_record_method (thread_info *thread)
 {
-  return target_stack->record_method (ptid);
+  return target_stack->record_method (thread);
 }
 
 /* See target.h.  */

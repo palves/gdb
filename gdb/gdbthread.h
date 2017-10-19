@@ -26,13 +26,14 @@ struct symtab;
 #include "breakpoint.h"
 #include "frame.h"
 #include "ui-out.h"
-#include "inferior.h"
 #include "btrace.h"
 #include "common/vec.h"
 #include "target/waitstatus.h"
 #include "cli/cli-utils.h"
 #include "common/refcounted-object.h"
 #include "common-gdbthread.h"
+
+struct inferior;
 
 /* Frontend view of the thread state.  Possible extensions: stepping,
    finishing, until(ling),...  */
@@ -42,6 +43,17 @@ enum thread_state
   THREAD_RUNNING,
   THREAD_EXITED,
 };
+
+/* STEP_OVER_ALL means step over all subroutine calls.
+   STEP_OVER_UNDEBUGGABLE means step over calls to undebuggable functions.
+   STEP_OVER_NONE means don't step over any subroutine calls.  */
+
+enum step_over_calls_kind
+  {
+    STEP_OVER_NONE,
+    STEP_OVER_ALL,
+    STEP_OVER_UNDEBUGGABLE
+  };
 
 /* Inferior thread specific part of `struct infcall_control_state'.
 
@@ -202,12 +214,9 @@ public:
   explicit thread_info (inferior *inf, ptid_t ptid);
   ~thread_info ();
 
-  bool deletable () const
-  {
-    /* If this is the current thread, or there's code out there that
-       relies on it existing (refcount > 0) we can't delete yet.  */
-    return (refcount () == 0 && !ptid_equal (ptid, inferior_ptid));
-  }
+  bool deletable () const;
+
+  void set_running (bool running);
 
   struct thread_info *next = NULL;
   ptid_t ptid;			/* "Actual process id";
@@ -262,7 +271,7 @@ public:
      from saying that there is an active target and we are stopped at
      a breakpoint, for instance.  This is a real indicator whether the
      thread is off and running.  */
-  int executing = 0;
+  bool executing = false;
 
   /* Non-zero if this thread is resumed from infrun's perspective.
      Note that a thread can be marked both as not-executing and
@@ -356,7 +365,7 @@ public:
 
   /* Flag which indicates that the stack temporaries should be stored while
      evaluating expressions.  */
-  int stack_temporaries_enabled = 0;
+  bool stack_temporaries_enabled = false;
 
   /* Values that are stored as temporaries on stack while evaluating
      expressions.  */
@@ -376,23 +385,23 @@ extern void init_thread_list (void);
    that a new thread is found, and return the pointer to
    the new thread.  Caller my use this pointer to 
    initialize the private thread data.  */
-extern struct thread_info *add_thread (ptid_t ptid);
+extern thread_info *add_thread (target_ops *targ, ptid_t ptid);
 
-/* Same as add_thread, but does not print a message
-   about new thread.  */
-extern struct thread_info *add_thread_silent (ptid_t ptid);
+/* Same as add_thread, but does not print a message about new
+   thread.  */
+extern thread_info *add_thread_silent (target_ops *targ, ptid_t ptid);
 
 /* Same as add_thread, and sets the private info.  */
-extern struct thread_info *add_thread_with_info (ptid_t ptid,
-						 struct private_thread_info *);
+extern thread_info *add_thread_with_info (target_ops *targ, ptid_t ptid,
+					  private_thread_info *);
 
 /* Delete an existing thread list entry.  */
-extern void delete_thread (ptid_t);
+extern void delete_thread (thread_info *thread);
 
 /* Delete an existing thread list entry, and be quiet about it.  Used
    after the process this thread having belonged to having already
    exited, for example.  */
-extern void delete_thread_silent (ptid_t);
+extern void delete_thread_silent (thread_info *thread);
 
 /* Delete a step_resume_breakpoint from the thread database.  */
 extern void delete_step_resume_breakpoint (struct thread_info *);
@@ -421,7 +430,7 @@ extern ptid_t global_thread_id_to_ptid (int num);
 /* Translate a 'pid' (which may be overloaded with extra thread
    information) into the global integer thread id (GDB's homegrown id,
    not the system's).  */
-extern int ptid_to_global_thread_id (ptid_t ptid);
+// extern int ptid_to_global_thread_id (ptid_t ptid);
 
 /* Returns whether to show inferior-qualified thread IDs, or plain
    thread numbers.  Inferior-qualified IDs are shown whenever we have
@@ -434,16 +443,17 @@ extern int show_inferior_qualified_tids (void);
    circular static buffer, NUMCELLS deep.  */
 const char *print_thread_id (struct thread_info *thr);
 
-/* Boolean test for an already-known pid (which may be overloaded with
-   extra thread information).  */
-extern int in_thread_list (ptid_t ptid);
+/* Boolean test for an already-known ptid.  */
+extern bool in_thread_list (target_ops *targ, ptid_t ptid);
 
 /* Boolean test for an already-known global thread id (GDB's homegrown
    global id, not the system's).  */
 extern int valid_global_thread_id (int global_id);
 
+extern thread_info *find_thread_ptid (inferior *inf, ptid_t ptid);
+
 /* Search function to lookup a thread by 'pid'.  */
-extern struct thread_info *find_thread_ptid (ptid_t ptid);
+extern thread_info *find_thread_ptid (target_ops *targ, ptid_t ptid);
 
 /* Find thread by GDB global thread ID.  */
 struct thread_info *find_thread_global_id (int global_id);
@@ -452,9 +462,8 @@ struct thread_info *find_thread_global_id (int global_id);
 struct thread_info *find_thread_by_handle (struct value *thread_handle,
 					   struct inferior *inf);
 
-/* Finds the first thread of the inferior given by PID.  If PID is -1,
-   returns the first thread in the list.  */
-struct thread_info *first_thread_of_process (int pid);
+/* Finds the first thread of the specified inferior.  */
+extern thread_info *first_thread_of_inferior (inferior *inf);
 
 /* Returns any thread of process PID, giving preference to the current
    thread.  */
@@ -469,47 +478,198 @@ extern thread_info *any_thread_of_inferior (inferior *inf);
 extern struct thread_info *any_live_thread_of_process (int pid);
 
 /* Change the ptid of thread OLD_PTID to NEW_PTID.  */
-void thread_change_ptid (ptid_t old_ptid, ptid_t new_ptid);
+void thread_change_ptid (target_ops *targ, ptid_t old_ptid, ptid_t new_ptid);
 
 /* Iterator function to call a user-provided callback function
    once for each known thread.  */
 typedef int (*thread_callback_func) (struct thread_info *, void *);
 extern struct thread_info *iterate_over_threads (thread_callback_func, void *);
 
-/* Traverse all threads.  */
-#define ALL_THREADS(T)				\
-  for (T = target_thread_list (); T; T = T->next)	\
+extern thread_info *first_thread ();
+extern thread_info *next_thread (thread_info *thr);
+
+/* Traverse all threads.  Careful with "break;".  */
+#define ALL_THREADS(T)						\
+  for (tp = first_thread (); tp != NULL; next_thread (tp))
+
+#define ALL_THREADS_INF(INF, T)					\
+  for ((T) = (INF)->thread_list; (T) != NULL; (T) = (T)->next)
 
 /* Traverse over all threads, sorted by inferior.  */
 #define ALL_THREADS_BY_INFERIOR(inf, tp) \
-  ALL_INFERIORS (inf) \
-    ALL_THREADS (tp) \
-      if (inf == tp->inf)
+  ALL_INFERIORS (inf)						\
+    for (tp = inf->thread_list; tp != NULL; tp = tp->next)
 
-#define ALL_NON_EXITED_THREADS_TARGET(INF, T)			\
-  for (T = target_thread_list (INF); T; T = T->next)		\
+#define ALL_NON_EXITED_THREADS_INF(INF, T)			\
+  for (T = (INF)->thread_list; T; T = T->next)			\
     if ((T)->state != THREAD_EXITED)
+
+struct inf_threads_iterator
+{
+  explicit inf_threads_iterator (thread_info *head)
+    : m_thr (head)
+  {}
+
+  inf_threads_iterator& operator++ ()
+  {
+    m_thr = m_thr->next;
+    return *this;
+  }
+
+  thread_info *operator *()
+  { return m_thr; }
+
+  bool operator!= (const inf_threads_iterator &other)
+  { return (m_thr != other.m_thr); }
+
+  thread_info *m_thr;
+};
+
+struct inf_thread_list
+{
+  inf_thread_list (thread_info *head)
+    : m_head (head)
+  {}
+
+  inf_threads_iterator begin ()
+  { return inf_threads_iterator (m_head); }
+  inf_threads_iterator end ()
+  { return inf_threads_iterator (NULL); }
+
+private:
+  thread_info *m_head;
+};
+
+#if 0
+
+struct inferiors_iterator
+{
+public:
+  struct end_tag_t {};
+  constexpr end_tag_t end_tag;
+
+  inferiors_iterator ()
+    : m_inf (inferior_list)
+  {}
+
+  inf_threads_iterator (end_tag_t)
+    : m_inf (NULL)
+  {}
+
+  inferior *operator* ()
+  { return m_inf; }
+
+  bool operator== (const inferiors_iterator &rhs)
+  { return m_inf == rhs; }
+  
+  inferiors_iterator& operator++ ()
+  {
+    inf = inf->next;
+    return *this;
+  }
+
+private:
+  inferior *m_inf;
+};
+
+class non_exited_threads_iterator
+{
+public:
+  non_exited_threads_iterator (thread_info *&thr)
+    : m_inf (inferior_list),
+      m_thr (thr)
+  {
+    m_thr = m_inf != NULL : m_inf->thread_list : NULL;
+    if (m_inf != NULL
+	&& (m_inf->pid == 0
+	    || m_thr->state == THREAD_EXITED))
+      advance ();
+  }
+
+  thread_info *operator* ()
+  { return m_thr; }
+  
+
+  non_exited_threads_iterator& operator++ ()
+  {
+    advance ();
+    return *this;
+  }
+
+private:
+  void skip_inf ()
+  {
+    while (m_inf != NULL && m_inf->pid == 0)
+      m_inf = m_inf->next;
+  }
+
+  void skip_thr ()
+  {
+    while (m_thr != NULL && m_thr->state == THREAD_EXITED)
+      m_thr = m_thr->next;
+  }
+
+  void advance ()
+  {
+    while (1)
+      {
+	if (m_inf == NULL && m_thr == NULL)
+	  break;
+	else if (m_thr != NULL)
+	  {
+	    m_thr = m_thr->next;
+	    skip_thr ();
+	  }
+	else
+	  {
+	    m_inf = m_inf->next;
+	    skip_inf ();
+	    if (m_inf != NULL)
+	      m_thr = m_inf->thread_list;
+	  }
+      }
+  }
+
+private:
+  inferiors *m_inf;
+  thread_info *&m_thr;
+};
+
+extern thread_info *first_non_exited_thread ();
+extern thread_info *next_non_exited_thread (thread_info *thr);
+
+#define ALL_NON_EXITED_THREADS(T)					\
+  for (T = first_non_exited_thread (); T; T = next_non_exited_thread (T))
+
+#endif
 
 /* Traverse all threads, except those that have THREAD_EXITED
    state.  */
 
-#define ALL_NON_EXITED_THREADS(T)				\
-  for (T = target_thread_list (); T; T = T->next)			\
-    if ((T)->state != THREAD_EXITED)
+#define ALL_NON_EXITED_THREADS(T)					\
+  for (struct inferior *anet_inf = inferior_list;				\
+       anet_inf != NULL;						\
+       anet_inf = anet_inf->next)					\
+    if (anet_inf->pid != 0)						\
+      ALL_NON_EXITED_THREADS_INF (anet_inf, T)
 
 /* Traverse all threads, including those that have THREAD_EXITED
    state.  Allows deleting the currently iterated thread.  */
-#define ALL_THREADS_SAFE(T, TMP)		\
-  for ((T) = target_thread_list ();		\
-       (T) != NULL ? ((TMP) = (T)->next, 1): 0;	\
-       (T) = (TMP))
+#define ALL_THREADS_SAFE(T, TMP)					\
+  for (inferior *ats_inf = inferior_list;				\
+       ats_inf != NULL;							\
+       ats_inf = ats_inf->next)						\
+    for ((T) = ats_inf->thread_list;					\
+	 (T) != NULL ? ((TMP) = (T)->next, 1): 0;			\
+	 (T) = (TMP))
 
 extern int thread_count (void);
 
 /* Switch from one thread to another.  Also sets the STOP_PC
    global.  */
-extern void switch_to_thread (ptid_t ptid);
 extern void switch_to_thread (thread_info *thr);
+
+extern void switch_to_no_thread ();
 
 /* Switch from one thread to another.  Does not read registers and
    sets STOP_PC to -1.  */
@@ -518,18 +678,18 @@ extern void switch_to_thread_no_regs (struct thread_info *thread);
 /* Marks or clears thread(s) PTID as resumed.  If PTID is
    MINUS_ONE_PTID, applies to all threads.  If ptid_is_pid(PTID) is
    true, applies to all threads of the process pointed at by PTID.  */
-extern void set_resumed (ptid_t ptid, int resumed);
+extern void set_resumed (target_ops *targ, ptid_t ptid, bool resumed);
 
 /* Marks thread PTID is running, or stopped. 
    If PTID is minus_one_ptid, marks all threads.  */
-extern void set_running (ptid_t ptid, int running);
+extern void set_running (target_ops *targ, ptid_t ptid, bool running);
 
 /* Marks or clears thread(s) PTID as having been requested to stop.
    If PTID is MINUS_ONE_PTID, applies to all threads.  If
    ptid_is_pid(PTID) is true, applies to all threads of the process
    pointed at by PTID.  If STOP, then the THREAD_STOP_REQUESTED
    observer is called with PTID as argument.  */
-extern void set_stop_requested (ptid_t ptid, int stop);
+extern void set_stop_requested (target_ops *targ, ptid_t ptid, bool stop);
 
 /* NOTE: Since the thread state is not a boolean, most times, you do
    not want to check it with negation.  If you really want to check if
@@ -546,6 +706,7 @@ extern void set_stop_requested (ptid_t ptid, int stop);
    The latter also returns true on exited threads, most likelly not
    what you want.  */
 
+#if 0
 /* Reports if in the frontend's perpective, thread PTID is running.  */
 extern int is_running (ptid_t ptid);
 
@@ -555,6 +716,7 @@ extern int is_exited (ptid_t ptid);
 
 /* In the frontend's perpective, is this thread stopped?  */
 extern int is_stopped (ptid_t ptid);
+#endif
 
 /* Marks thread PTID as executing, or not.  If PTID is minus_one_ptid,
    marks all threads.
@@ -562,10 +724,7 @@ extern int is_stopped (ptid_t ptid);
    Note that this is different from the running state.  See the
    description of state and executing fields of struct
    thread_info.  */
-extern void set_executing (ptid_t ptid, int executing);
-
-/* Reports if thread PTID is executing.  */
-extern int is_executing (ptid_t ptid);
+extern void set_executing (target_ops *targ, ptid_t ptid, bool executing);
 
 /* True if any (known or unknown) thread is or may be executing.  */
 extern int threads_are_executing (void);
@@ -580,12 +739,32 @@ extern int threads_are_executing (void);
    If PTID is minus_one_ptid, go over all threads.
 
    Notifications are only emitted if the thread state did change.  */
-extern void finish_thread_state (ptid_t ptid);
+extern void finish_thread_state (target_ops *targ, ptid_t ptid);
 
-/* Same as FINISH_THREAD_STATE, but with an interface suitable to be
-   registered as a cleanup.  PTID_P points to the ptid_t that is
-   passed to FINISH_THREAD_STATE.  */
-extern void finish_thread_state_cleanup (void *ptid_p);
+class scoped_finish_thread_state
+{
+public:
+  scoped_finish_thread_state (target_ops *target, ptid_t ptid)
+    : m_target (target), m_ptid (ptid)
+  {
+    gdb_assert (m_target != NULL);
+  }
+
+  ~scoped_finish_thread_state ()
+  {
+    if (m_target != NULL)
+      finish_thread_state (m_target, m_ptid);
+  }
+
+  void release ()
+  {
+    m_target = NULL;
+  }
+
+private:
+  target_ops *m_target;
+  ptid_t m_ptid;
+};
 
 /* Commands with a prefix of `thread'.  */
 extern struct cmd_list_element *thread_cmd_list;
@@ -643,15 +822,23 @@ extern void delete_exited_threads (void);
 
 int pc_in_thread_step_range (CORE_ADDR pc, struct thread_info *thread);
 
-extern struct cleanup *enable_thread_stack_temporaries (ptid_t ptid);
+struct thread_stack_temporaries_enabler
+{
+  explicit thread_stack_temporaries_enabler (thread_info *thr);
+  ~thread_stack_temporaries_enabler ();
 
-extern int thread_stack_temporaries_enabled_p (ptid_t ptid);
+private:
+  thread_info *m_thr;
+};
 
-extern void push_thread_stack_temporary (ptid_t ptid, struct value *v);
+extern bool thread_stack_temporaries_enabled_p (thread_info *tp);
 
-extern struct value *get_last_thread_stack_temporary (ptid_t);
+extern void push_thread_stack_temporary (thread_info *tp, struct value *v);
 
-extern int value_in_thread_stack_temporaries (struct value *, ptid_t);
+extern value *get_last_thread_stack_temporary (thread_info *tp);
+
+extern bool value_in_thread_stack_temporaries (struct value *,
+					       thread_info *thr);
 
 /* Add TP to the end of its inferior's pending step-over chain.  */
 
@@ -681,7 +868,7 @@ extern void validate_registers_access (void);
 
 /* Check whether it makes sense to access a register of PTID at this point.
    Returns true if registers may be accessed; false otherwise.  */
-extern bool can_access_registers_ptid (ptid_t ptid);
+extern bool can_access_registers_thread (thread_info *thread);
 
 /* Returns whether to show which thread hit the breakpoint, received a
    signal, etc. and ended up causing a user-visible stop.  This is

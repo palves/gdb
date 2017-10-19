@@ -29,9 +29,12 @@ struct gdbarch;
 struct address_space;
 
 extern struct regcache *get_current_regcache (void);
-extern struct regcache *get_thread_regcache (ptid_t ptid);
-extern struct regcache *get_thread_arch_regcache (ptid_t, struct gdbarch *);
-extern struct regcache *get_thread_arch_aspace_regcache (ptid_t,
+extern struct regcache *get_thread_regcache (target_ops *target, ptid_t ptid);
+extern struct regcache *get_thread_regcache (thread_info *thread);
+extern struct regcache *get_thread_arch_regcache (target_ops *target,
+						  ptid_t, struct gdbarch *);
+extern struct regcache *get_thread_arch_aspace_regcache (target_ops *target,
+							 ptid_t,
 							 struct gdbarch *,
 							 struct address_space *);
 
@@ -240,8 +243,8 @@ typedef struct cached_reg
 class regcache
 {
 public:
-  regcache (gdbarch *gdbarch, address_space *aspace_)
-    : regcache (gdbarch, aspace_, true)
+  regcache (target_ops *target, gdbarch *gdbarch, address_space *aspace_)
+    : regcache (target, gdbarch, aspace_, true)
   {}
 
   struct readonly_t {};
@@ -263,6 +266,11 @@ public:
   address_space *aspace () const
   {
     return m_aspace;
+  }
+
+  target_ops *target () const
+  {
+    return m_target;
   }
 
   void save (regcache_cooked_read_ftype *cooked_read, void *src);
@@ -344,7 +352,8 @@ public:
 
   static void regcache_thread_ptid_changed (ptid_t old_ptid, ptid_t new_ptid);
 protected:
-  regcache (gdbarch *gdbarch, address_space *aspace_, bool readonly_p_);
+  regcache (target_ops *target, gdbarch *gdbarch,
+	    address_space *aspace, bool readonly_p);
 
   static std::forward_list<regcache *> current_regcache;
 
@@ -383,13 +392,15 @@ private:
   /* If this is a read-write cache, which thread's registers is
      it connected to?  */
   ptid_t m_ptid;
+  target_ops *m_target;
 
   friend struct regcache *
-  get_thread_arch_aspace_regcache (ptid_t ptid, struct gdbarch *gdbarch,
+  get_thread_arch_aspace_regcache (target_ops *target, ptid_t ptid,
+				   struct gdbarch *gdbarch,
 				   struct address_space *aspace);
 
   friend void
-  registers_changed_ptid (ptid_t ptid);
+  registers_changed_ptid (target_ops *target, ptid_t ptid);
 
   friend void
   regcache_cpy (struct regcache *dst, struct regcache *src);
@@ -404,6 +415,7 @@ extern struct regcache *regcache_dup (struct regcache *regcache);
 extern void regcache_cpy (struct regcache *dest, struct regcache *src);
 
 extern void registers_changed (void);
-extern void registers_changed_ptid (ptid_t);
+extern void registers_changed_ptid (target_ops *target, ptid_t ptid);
+extern void registers_changed_thread (thread_info *thread);
 
 #endif /* REGCACHE_H */

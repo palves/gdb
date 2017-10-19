@@ -1020,9 +1020,11 @@ do_frame_register_read (void *src, int regnum, gdb_byte *buf)
 std::unique_ptr<struct regcache>
 frame_save_as_regcache (struct frame_info *this_frame)
 {
+  thread_info *thread = inferior_thread ();
+  target_ops *target = thread->inf->process_target ();
   struct address_space *aspace = get_frame_address_space (this_frame);
   std::unique_ptr<struct regcache> regcache
-    (new struct regcache (get_frame_arch (this_frame), aspace));
+    (new struct regcache (target, get_frame_arch (this_frame), aspace));
 
   regcache_save (regcache.get (), do_frame_register_read, this_frame);
   return regcache;
@@ -1037,7 +1039,7 @@ frame_pop (struct frame_info *this_frame)
     {
       /* Popping a dummy frame involves restoring more than just registers.
 	 dummy_frame_pop does all the work.  */
-      dummy_frame_pop (get_frame_id (this_frame), inferior_ptid);
+      dummy_frame_pop (get_frame_id (this_frame), inferior_thread ());
       return;
     }
 
@@ -1616,15 +1618,16 @@ has_stack_frames (void)
   if (get_traceframe_number () < 0)
     {
       /* No current inferior, no frame.  */
-      if (ptid_equal (inferior_ptid, null_ptid))
+      if (inferior_ptid == null_ptid)
 	return 0;
 
+      thread_info *tp = inferior_thread ();
       /* Don't try to read from a dead thread.  */
-      if (is_exited (inferior_ptid))
+      if (tp->state == THREAD_EXITED)
 	return 0;
 
       /* ... or from a spinning thread.  */
-      if (is_executing (inferior_ptid))
+      if (tp->executing)
 	return 0;
     }
 
@@ -2502,7 +2505,7 @@ find_frame_sal (frame_info *frame)
       if (next_frame)
 	sym = get_frame_function (next_frame);
       else
-	sym = inline_skipped_symbol (inferior_ptid);
+	sym = inline_skipped_symbol (inferior_thread ());
 
       /* If frame is inline, it certainly has symbols.  */
       gdb_assert (sym);

@@ -1205,7 +1205,8 @@ jit_frame_sniffer (const struct frame_unwind *self,
 
   *cache = XCNEW (struct jit_unwind_private);
   priv_data = (struct jit_unwind_private *) *cache;
-  priv_data->regcache = new regcache (gdbarch, aspace);
+  target_ops *target = current_inferior ()->process_target ();
+  priv_data->regcache = new regcache (target, gdbarch, aspace);
   priv_data->this_frame = this_frame;
 
   callbacks.priv_data = priv_data;

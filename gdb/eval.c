@@ -41,6 +41,7 @@
 #include "objfiles.h"
 #include "typeprint.h"
 #include <ctype.h>
+#include "common/gdb_optional.h"
 
 /* This is defined in valops.c */
 extern int overload_resolution;
@@ -69,26 +70,23 @@ struct value *
 evaluate_subexp (struct type *expect_type, struct expression *exp,
 		 int *pos, enum noside noside)
 {
-  struct cleanup *cleanups;
   struct value *retval;
-  int cleanup_temps = 0;
+
+  gdb::optional<thread_stack_temporaries_enabler>
+    enable_thread_stack_temporaries;
 
   if (*pos == 0 && target_has_execution
       && exp->language_defn->la_language == language_cplus
-      && !thread_stack_temporaries_enabled_p (inferior_ptid))
-    {
-      cleanups = enable_thread_stack_temporaries (inferior_ptid);
-      cleanup_temps = 1;
-    }
+      && !thread_stack_temporaries_enabled_p (inferior_thread ()))
+    enable_thread_stack_temporaries.emplace (inferior_thread ());
 
   retval = (*exp->language_defn->la_exp_desc->evaluate_exp)
     (expect_type, exp, pos, noside);
 
-  if (cleanup_temps)
+  if (enable_thread_stack_temporaries)
     {
-      if (value_in_thread_stack_temporaries (retval, inferior_ptid))
+      if (value_in_thread_stack_temporaries (retval, inferior_thread ()))
 	retval = value_non_lval (retval);
-      do_cleanups (cleanups);
     }
 
   return retval;

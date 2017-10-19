@@ -242,13 +242,13 @@ mi_cmd_exec_jump (const char *args, char **argv, int argc)
 static void
 proceed_thread (struct thread_info *thread, int pid)
 {
-  if (!is_stopped (thread->ptid))
+  if (thread->state != THREAD_STOPPED)
     return;
 
   if (pid != 0 && ptid_get_pid (thread->ptid) != pid)
     return;
 
-  switch_to_thread (thread->ptid);
+  switch_to_thread (thread);
   clear_proceed_status (0);
   proceed ((CORE_ADDR) -1, GDB_SIGNAL_DEFAULT);
 }
@@ -344,7 +344,7 @@ interrupt_thread_callback (struct thread_info *thread, void *arg)
 {
   int pid = *(int *)arg;
 
-  if (!is_running (thread->ptid))
+  if (thread->state != THREAD_RUNNING)
     return 0;
 
   if (ptid_get_pid (thread->ptid) != pid)
@@ -416,13 +416,13 @@ run_one_inferior (struct inferior *inf, void *arg)
 	  if (!tp)
 	    error (_("Inferior has no threads."));
 
-	  switch_to_thread (tp->ptid);
+	  switch_to_thread (tp);
 	}
     }
   else
     {
       set_current_inferior (inf);
-      switch_to_thread (null_ptid);
+      switch_to_no_thread ();
       set_current_program_space (inf->pspace);
     }
   mi_execute_cli_command (run_cmd, async_p,
@@ -491,7 +491,7 @@ find_thread_of_process (struct thread_info *ti, void *p)
 {
   int pid = *(int *)p;
 
-  if (ptid_get_pid (ti->ptid) == pid && !is_exited (ti->ptid))
+  if (ptid_get_pid (ti->ptid) == pid && ti->state != THREAD_EXITED)
     return 1;
 
   return 0;
@@ -539,7 +539,7 @@ mi_cmd_target_detach (const char *command, char **argv, int argc)
       if (!tp)
 	error (_("Thread group is empty"));
 
-      switch_to_thread (tp->ptid);
+      switch_to_thread (tp);
     }
 
   detach_command (NULL, 0);
@@ -629,7 +629,7 @@ collect_cores (struct thread_info *ti, void *xdata)
 
   if (ptid_get_pid (ti->ptid) == data->pid)
     {
-      int core = target_core_of_thread (ti->ptid);
+      int core = target_core_of_thread (ti);
 
       if (core != -1)
 	data->cores.insert (core);
@@ -1835,7 +1835,10 @@ mi_cmd_remove_inferior (const char *command, char **argv, int argc)
       set_current_inferior (new_inferior);
       if (new_inferior->pid != 0)
 	tp = any_thread_of_process (new_inferior->pid);
-      switch_to_thread (tp ? tp->ptid : null_ptid);
+      if (tp != NULL)
+	switch_to_thread (tp);
+      else
+	switch_to_no_thread ();
       set_current_program_space (new_inferior->pspace);
     }
 
@@ -2124,21 +2127,24 @@ mi_cmd_execute (struct mi_parse *parse)
 	 thread.  */
       if (inf->pid != 0)
 	tp = any_live_thread_of_process (inf->pid);
-      switch_to_thread (tp ? tp->ptid : null_ptid);
+      if (tp != NULL)
+	switch_to_thread (tp);
+      else
+	switch_to_no_thread ();
       set_current_program_space (inf->pspace);
     }
 
   if (parse->thread != -1)
     {
-      struct thread_info *tp = find_thread_global_id (parse->thread);
+      thread_info *tp = find_thread_global_id (parse->thread);
 
-      if (!tp)
+      if (tp == NULL)
 	error (_("Invalid thread id: %d"), parse->thread);
 
-      if (is_exited (tp->ptid))
+      if (tp->state == THREAD_EXITED)
 	error (_("Thread id: %d has terminated"), parse->thread);
 
-      switch_to_thread (tp->ptid);
+      switch_to_thread (tp);
     }
 
   if (parse->frame != -1)

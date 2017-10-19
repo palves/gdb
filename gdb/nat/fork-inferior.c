@@ -469,7 +469,7 @@ fork_inferior (const char *exec_file_arg, const std::string &allargs,
 /* See nat/fork-inferior.h.  */
 
 ptid_t
-startup_inferior (pid_t pid, int ntraps,
+startup_inferior (target_ops *proc_target, pid_t pid, int ntraps,
 		  struct target_waitstatus *last_waitstatus,
 		  ptid_t *last_ptid)
 {
@@ -521,7 +521,7 @@ startup_inferior (pid_t pid, int ntraps,
 	  case TARGET_WAITKIND_SYSCALL_ENTRY:
 	  case TARGET_WAITKIND_SYSCALL_RETURN:
 	    /* Ignore gracefully during startup of the inferior.  */
-	    switch_to_thread (event_ptid);
+	    switch_to_thread (proc_target, event_ptid);
 	    break;
 
 	  case TARGET_WAITKIND_SIGNALLED:
@@ -546,12 +546,12 @@ startup_inferior (pid_t pid, int ntraps,
 	    /* Handle EXEC signals as if they were SIGTRAP signals.  */
 	    xfree (ws.value.execd_pathname);
 	    resume_signal = GDB_SIGNAL_TRAP;
-	    switch_to_thread (event_ptid);
+	    switch_to_thread (proc_target, event_ptid);
 	    break;
 
 	  case TARGET_WAITKIND_STOPPED:
 	    resume_signal = ws.value.sig;
-	    switch_to_thread (event_ptid);
+	    switch_to_thread (proc_target, event_ptid);
 	    break;
 	}
 

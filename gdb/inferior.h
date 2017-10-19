@@ -52,6 +52,7 @@ struct inferior;
 #include "common/refcounted-object.h"
 
 #include "common-inferior.h"
+#include "gdbthread.h"
 
 struct infcall_suspend_state;
 struct infcall_control_state;
@@ -170,7 +171,7 @@ extern void delete_longjmp_breakpoint_cleanup (void *arg);
 
 extern void detach_command (const char *, int);
 
-extern void notice_new_inferior (ptid_t, int, int);
+extern void notice_new_inferior (thread_info *, int, int);
 
 extern struct value *get_return_value (struct value *function,
 				       struct type *value_type);
@@ -213,17 +214,6 @@ extern enum stop_stack_kind stop_stack_dummy;
    inferior process.  */
 
 extern int stopped_by_random_signal;
-
-/* STEP_OVER_ALL means step over all subroutine calls.
-   STEP_OVER_UNDEBUGGABLE means step over calls to undebuggable functions.
-   STEP_OVER_NONE means don't step over any subroutine calls.  */
-
-enum step_over_calls_kind
-  {
-    STEP_OVER_NONE,
-    STEP_OVER_ALL,
-    STEP_OVER_UNDEBUGGABLE
-  };
 
 /* Anything but NO_STOP_QUIETLY means we expect a trap and the caller
    will handle it themselves.  STOP_QUIETLY is used when running in
@@ -314,6 +304,12 @@ public:
   /* Pointer to next inferior in singly-linked list of inferiors.  */
   struct inferior *next = NULL;
 
+  thread_info *thread_list = NULL;
+
+  /* An adapter to make range-for usable.  */
+  inf_thread_list threads ()
+  { return inf_thread_list (this->thread_list); }
+
   /* Convenient handle (GDB inferior id).  Unique across all
      inferiors.  */
   int num = 0;
@@ -332,6 +328,9 @@ public:
   target_ops *top_target ()
   { return m_stack.top (); }
 
+  target_ops *process_target ()
+  { return m_stack.at (process_stratum); }
+  
   /* State of GDB control of inferior process execution.
      See `struct inferior_control_state'.  */
   inferior_control_state control {NO_STOP_QUIETLY};
@@ -445,6 +444,43 @@ public:
 
 DECLARE_REGISTRY (inferior);
 
+
+struct inferiors_iterator
+{
+  explicit inferiors_iterator (inferior *head)
+    : m_inf (head)
+  {}
+
+  inferiors_iterator& operator++ ()
+  {
+    m_inf = m_inf->next;
+    return *this;
+  }
+
+  inferior *operator *()
+  { return m_inf; }
+
+  bool operator!= (const inferiors_iterator &other)
+  { return m_inf != other.m_inf; }
+
+  inferior *m_inf;
+};
+
+struct inferiors_list
+{
+  inferiors_list (inferior *head)
+    : m_head (head)
+  {}
+
+  inferiors_iterator begin ()
+  { return inferiors_iterator (m_head); }
+  inferiors_iterator end ()
+  { return inferiors_iterator (NULL); }
+
+private:
+  inferior *m_head;
+};
+
 /* Add an inferior to the inferior list, print a message that a new
    inferior is found, and return the pointer to the new inferior.
    Caller may use this pointer to initialize the private inferior
@@ -457,12 +493,13 @@ extern struct inferior *add_inferior_silent (int pid);
 
 extern void delete_inferior (struct inferior *todel);
 
-/* Delete an existing inferior list entry, due to inferior detaching.  */
-extern void detach_inferior (int pid);
+/* Delete an existing inferior list entry, due to inferior
+   detaching.  */
+void detach_inferior (inferior *inf);
 
-extern void exit_inferior (int pid);
+extern void exit_inferior (inferior *inf);
 
-extern void exit_inferior_silent (int pid);
+extern void exit_inferior_silent (inferior *inf);
 
 extern void exit_inferior_num_silent (int num);
 
@@ -487,10 +524,10 @@ extern int in_inferior_list (int pid);
 extern int valid_gdb_inferior_id (int num);
 
 /* Search function to lookup an inferior by target 'pid'.  */
-extern struct inferior *find_inferior_pid (int pid);
+extern struct inferior *find_inferior_pid (target_ops *targ, int pid);
 
 /* Search function to lookup an inferior whose pid is equal to 'ptid.pid'. */
-extern struct inferior *find_inferior_ptid (ptid_t ptid);
+extern struct inferior *find_inferior_ptid (target_ops *targ, ptid_t ptid);
 
 /* Search function to lookup an inferior by GDB 'num'.  */
 extern struct inferior *find_inferior_id (int num);
@@ -555,6 +592,11 @@ private:
     if ((I)->pid != 0)
 
 extern struct inferior *inferior_list;
+
+static inline inferiors_list inferiors ()
+{
+  return inferiors_list (inferior_list);
+}
 
 /* Prune away automatically added inferiors that aren't required
    anymore.  */

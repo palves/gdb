@@ -57,15 +57,13 @@ public:
   void kill () override;
 
   void mourn_inferior () override;
-  bool thread_alive (ptid_t ptid) override;
+  bool thread_alive (thread_info *thread) override;
 
   void update_thread_list () override;
 
   const char *pid_to_str (ptid_t) override;
 
   const char *thread_name (struct thread_info *) override;
-
-  struct address_space *thread_address_space (ptid_t) override;
 
   bool stopped_by_watchpoint () override;
 
@@ -99,7 +97,7 @@ public:
 
   bool supports_disable_randomization () override;
 
-  int core_of_thread (ptid_t ptid) override;
+  int core_of_thread (thread_info *thread) override;
 
   bool filesystem_is_local () override;
 

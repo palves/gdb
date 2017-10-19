@@ -29,6 +29,7 @@
 #include "observer.h"
 #include "gdbthread.h"
 #include "thread-fsm.h"
+#include "inferior.h"
 
 cli_interp_base::cli_interp_base (const char *name)
   : interp (name)
@@ -258,7 +259,8 @@ cli_on_user_selected_context_changed (user_selected_what selection)
   if (cli_suppress_notification.user_selected_context)
     return;
 
-  tp = find_thread_ptid (inferior_ptid);
+  tp = find_thread_ptid (current_inferior ()->process_target (),
+			 inferior_ptid);
 
   SWITCH_THRU_ALL_UIS ()
     {
