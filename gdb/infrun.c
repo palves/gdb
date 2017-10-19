@@ -3068,6 +3068,14 @@ proceed (CORE_ADDR addr, enum gdb_signal siggnal)
 	  if (tp == cur_thr)
 	    continue;
 
+	  /* If resuming a process, only consider the process thread's
+	     inferior.  This avoids ptid matching processes of
+	     different targets.  */
+	  /* XXX: split loop in resume-inferior vs resume-all
+	     branches.  */
+	  if (resume_ptid.is_pid () && tp->inf != current->inf)
+	    continue;
+
 	  if (!thread_still_needs_step_over (tp))
 	    continue;
 
@@ -3114,8 +3122,12 @@ proceed (CORE_ADDR addr, enum gdb_signal siggnal)
       {
 	/* In all-stop, but the target is always in non-stop mode.
 	   Start all other threads that are implicitly resumed too.  */
-      for (thread_info *tp : all_non_exited_threads (resume_ptid))
-        {
+	for (thread_info *tp : all_non_exited_threads (resume_ptid))
+	  {
+	  /* Ignore threads of processes we're not resuming.  XXX */
+	  if (resume_ptid.is_pid () && tp->inf != tp->inf)
+	    continue;
+
 	  if (tp->resumed)
 	    {
 	      if (debug_infrun)
@@ -3575,9 +3587,9 @@ do_target_wait (ptid_t wait_ptid, execution_control_state *ecs, int options)
 
   auto inferior_matches = [&wait_ptid] (inferior *inf)
     {
-      return (inf->resumed
-	      /* && inf->pid != 0 */
-	      && ptid_t (inf->pid).matches (wait_ptid));
+      return (// inf->resumed
+	      // && inf->pid != 0 &&
+	      ptid_t (inf->pid).matches (wait_ptid));
     };
 
   /* First see how many events we have.  Count only resumed threads
