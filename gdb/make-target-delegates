@@ -66,6 +66,9 @@ $METHOD = ($INTRO_PART . $VIRTUAL_PART . "(?<return_type>" . $RETURN_PART . ")"
 # Reference $1 must refer to the function argument.
 $TARGET_DEBUG_PRINTER = qr,\s*TARGET_DEBUG_PRINTER\s*\(([^)]*)\)\s*,;
 
+# Match the TARGET_CUSTOM_DELEGATOR attribute for a method.
+$TARGET_CUSTOM_DELEGATOR = qr,TARGET_CUSTOM_DELEGATOR,;
+
 sub trim($) {
     my ($result) = @_;
 
@@ -332,6 +335,7 @@ print "\n";
 @tdefaults = ();
 @styles = ();
 @argtypes_array = ();
+@custom_delegators = ();
 
 foreach $current_line (@lines) {
     next unless $current_line =~ m/$METHOD/;
@@ -382,8 +386,11 @@ for $name (@delegators) {
     my $return_type = $return_types{$name};
     my $style = $styles{$name};
     my @argtypes = @{$argtypes_array{$name}};
+    my $custom_delegator = $custom_delegator{$name};
 
-    write_delegator ($name, $return_type, @argtypes);
+    if (!$custom_delegator) {
+	write_delegator ($name, $return_type, @argtypes);
+    }
 
     write_tdefault ($tdefault, $style, $name, $return_type, @argtypes);
 

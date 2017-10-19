@@ -419,6 +419,8 @@ typedef void async_callback_ftype (enum inferior_event_type event_type,
 #define TARGET_DEFAULT_RETURN(ARG)
 #define TARGET_DEFAULT_FUNC(ARG)
 
+#define TARGET_CUSTOM_DELEGATOR
+
 struct target_info
 {
     /* Name this target type.  */
@@ -644,7 +646,8 @@ struct target_ops
       TARGET_DEFAULT_IGNORE ();
 
     virtual bool thread_alive (thread_info *thread)
-      TARGET_DEFAULT_RETURN (false);
+      TARGET_DEFAULT_RETURN (false) TARGET_CUSTOM_DELEGATOR;
+
     virtual void update_thread_list ()
       TARGET_DEFAULT_IGNORE ();
     virtual const char *pid_to_str (ptid_t)

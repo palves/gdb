@@ -3200,7 +3200,13 @@ target_close (struct target_ops *targ)
 int
 target_thread_alive (thread_info *thread)
 {
-  return target_stack->thread_alive (thread);
+  return thread->inf->top_target ()->thread_alive (thread);
+}
+
+bool
+target_ops::thread_alive (thread_info *thread)
+{
+  return beneath (thread->inf)->thread_alive (thread);
 }
 
 void

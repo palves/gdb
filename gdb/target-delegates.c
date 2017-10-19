@@ -1710,13 +1710,13 @@ debug_target::program_signals (int arg0, unsigned char * arg1)
   target_debug_print_signals (arg1);
   fputs_unfiltered (")\n", gdb_stdlog);
 }
-
+#if 0
 bool
 target_ops::thread_alive (thread_info *arg0)
 {
   return this->beneath ()->thread_alive (arg0);
 }
-
+#endif
 bool
 dummy_target::thread_alive (thread_info *arg0)
 {
