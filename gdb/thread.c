@@ -50,7 +50,6 @@
 
 /* Prototypes for local functions.  */
 
-struct thread_info *thread_list = NULL;
 static int highest_thread_num;
 
 /* True if any thread is, or may be executing.  We need to track this
@@ -226,6 +225,8 @@ init_thread_list (void)
 
   highest_thread_num = 0;
 
+  thread_info *thread_list = target_thread_list ();
+
   if (!thread_list)
     return;
 
@@ -248,6 +249,7 @@ init_thread_list (void)
 static struct thread_info *
 new_thread (struct inferior *inf, ptid_t ptid)
 {
+  thread_info *&thread_list = *target_thread_list_p ();
   thread_info *tp = new thread_info (inf, ptid);
 
   if (thread_list == NULL)
@@ -449,6 +451,7 @@ thread_step_over_chain_remove (struct thread_info *tp)
 static void
 delete_thread_1 (ptid_t ptid, int silent)
 {
+  thread_info *&thread_list = *target_thread_list_p ();
   struct thread_info *tp, *tpprev;
 
   tpprev = NULL;
@@ -495,6 +498,7 @@ delete_thread_silent (ptid_t ptid)
 struct thread_info *
 find_thread_global_id (int global_id)
 {
+  thread_info *thread_list = target_thread_list ();
   struct thread_info *tp;
 
   for (tp = thread_list; tp; tp = tp->next)
@@ -507,6 +511,7 @@ find_thread_global_id (int global_id)
 static struct thread_info *
 find_thread_id (struct inferior *inf, int thr_num)
 {
+  thread_info *thread_list = target_thread_list ();
   struct thread_info *tp;
 
   for (tp = thread_list; tp; tp = tp->next)
@@ -521,6 +526,7 @@ find_thread_id (struct inferior *inf, int thr_num)
 struct thread_info *
 find_thread_ptid (ptid_t ptid)
 {
+  thread_info *thread_list = target_thread_list ();
   struct thread_info *tp;
 
   for (tp = thread_list; tp; tp = tp->next)
@@ -559,6 +565,7 @@ struct thread_info *
 iterate_over_threads (int (*callback) (struct thread_info *, void *),
 		      void *data)
 {
+  thread_info *thread_list = target_thread_list ();
   struct thread_info *tp, *next;
 
   for (tp = thread_list; tp; tp = next)
@@ -574,6 +581,7 @@ iterate_over_threads (int (*callback) (struct thread_info *, void *),
 int
 thread_count (void)
 {
+  thread_info *thread_list = target_thread_list ();
   int result = 0;
   struct thread_info *tp;
 
@@ -600,6 +608,7 @@ live_threads_count (void)
 int
 valid_global_thread_id (int global_id)
 {
+  thread_info *thread_list = target_thread_list ();
   struct thread_info *tp;
 
   for (tp = thread_list; tp; tp = tp->next)
@@ -612,6 +621,7 @@ valid_global_thread_id (int global_id)
 int
 ptid_to_global_thread_id (ptid_t ptid)
 {
+  thread_info *thread_list = target_thread_list ();
   struct thread_info *tp;
 
   for (tp = thread_list; tp; tp = tp->next)
@@ -635,6 +645,7 @@ global_thread_id_to_ptid (int global_id)
 int
 in_thread_list (ptid_t ptid)
 {
+  thread_info *thread_list = target_thread_list ();
   struct thread_info *tp;
 
   for (tp = thread_list; tp; tp = tp->next)
@@ -650,6 +661,7 @@ in_thread_list (ptid_t ptid)
 struct thread_info *
 first_thread_of_process (int pid)
 {
+  thread_info *thread_list = target_thread_list ();
   struct thread_info *tp, *ret = NULL;
 
   for (tp = thread_list; tp; tp = tp->next)
@@ -882,6 +894,7 @@ thread_change_ptid (ptid_t old_ptid, ptid_t new_ptid)
 void
 set_resumed (ptid_t ptid, int resumed)
 {
+  thread_info *thread_list = target_thread_list ();
   struct thread_info *tp;
   int all = ptid == minus_one_ptid;
 
@@ -926,6 +939,7 @@ set_running_thread (struct thread_info *tp, int running)
 void
 set_running (ptid_t ptid, int running)
 {
+  thread_info *thread_list = target_thread_list ();
   struct thread_info *tp;
   int all = ptid == minus_one_ptid;
   int any_started = 0;
@@ -998,6 +1012,7 @@ is_executing (ptid_t ptid)
 void
 set_executing (ptid_t ptid, int executing)
 {
+  thread_info *thread_list = target_thread_list ();
   struct thread_info *tp;
   int all = ptid == minus_one_ptid;
 
@@ -1034,6 +1049,7 @@ threads_are_executing (void)
 void
 set_stop_requested (ptid_t ptid, int stop)
 {
+  thread_info *thread_list = target_thread_list ();
   struct thread_info *tp;
   int all = ptid == minus_one_ptid;
 
@@ -1062,6 +1078,7 @@ finish_thread_state (ptid_t ptid)
   struct thread_info *tp;
   int all;
   int any_started = 0;
+  thread_info *thread_list = target_thread_list ();
 
   all = ptid == minus_one_ptid;
 
@@ -1206,6 +1223,7 @@ print_thread_info_1 (struct ui_out *uiout, char *requested_threads,
   const char *extra_info, *name, *target_id;
   struct inferior *inf;
   int default_inf_num = current_inferior ()->num;
+  thread_info *thread_list = target_thread_list ();
 
   update_thread_list ();
   current_ptid = inferior_ptid;
@@ -1883,6 +1901,7 @@ thread_find_command (const char *arg, int from_tty)
   struct thread_info *tp;
   const char *tmp;
   unsigned long match = 0;
+  thread_info *thread_list = target_thread_list ();
 
   if (arg == NULL || *arg == '\0')
     error (_("Command requires an argument."));

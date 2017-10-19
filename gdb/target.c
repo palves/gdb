@@ -3236,6 +3236,21 @@ target_close (struct target_ops *targ)
     fprintf_unfiltered (gdb_stdlog, "target_close ()\n");
 }
 
+thread_info **
+target_thread_list_p (void)
+{
+  return target_stack->get_thread_list_p ();
+}
+
+thread_info *
+target_thread_list (void)
+{
+  thread_info **list_p = target_thread_list_p ();
+  if (list_p == NULL)
+    return NULL;
+  return *list_p;
+}
+
 int
 target_thread_alive (ptid_t ptid)
 {

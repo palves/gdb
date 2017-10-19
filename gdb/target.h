@@ -639,6 +639,8 @@ struct target_ops
 				  unsigned char * TARGET_DEBUG_PRINTER (target_debug_print_signals))
       TARGET_DEFAULT_IGNORE ();
 
+    virtual thread_info **get_thread_list_p ()
+      TARGET_DEFAULT_RETURN (NULL);
     virtual bool thread_alive (ptid_t ptid)
       TARGET_DEFAULT_RETURN (false);
     virtual void update_thread_list ()
@@ -1684,6 +1686,10 @@ extern void target_pass_signals (int nsig, unsigned char *pass_signals);
    pending signals not reported to GDB).  */
 
 extern void target_program_signals (int nsig, unsigned char *program_signals);
+
+extern thread_info **target_thread_list_p ();
+
+extern thread_info *target_thread_list ();
 
 /* Check to see if a thread is still alive.  */
 
