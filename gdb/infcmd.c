@@ -3013,29 +3013,49 @@ disconnect_command (const char *args, int from_tty)
     deprecated_detach_hook ();
 }
 
-void 
-interrupt_target_1 (int all_threads)
-{
-  ptid_t ptid;
+void switch_to_inferior_no_thread (inferior *inf);
 
-  if (all_threads)
-    ptid = minus_one_ptid;
-  else
-    ptid = inferior_ptid;
+static void
+stop_current_target_threads_ns (ptid_t ptid)
+{
+  target_stop (minus_one_ptid);
+
+  /* Tag the thread as having been explicitly requested to stop,
+     so other parts of gdb know not to resume this thread
+     automatically, if it was stopped due to an internal event.
+     Limit this to non-stop mode, as when debugging a
+     multi-threaded application in all-stop mode, we will only get
+     one stop event --- it's undefined which thread will report
+     the event.  */
+  if (non_stop)
+    set_stop_requested (current_inferior ()->process_target (),
+			ptid, 1);
+}
+
+
+void
+interrupt_target_1 (bool all_threads)
+{
+  ptid_t ptid = all_threads ? minus_one_ptid : inferior_ptid;
 
   if (non_stop)
-    target_stop (ptid);
+    {
+      if (all_threads)
+	{
+	  scoped_restore_current_thread restore_thread;
+
+	  for (inferior *inf : inferiors ())
+	    {
+	      switch_to_inferior_no_thread (inf);
+	      stop_current_target_threads_ns (ptid);
+	    }
+	}
+      else
+	stop_current_target_threads_ns (ptid);
+    }
   else
     target_interrupt ();
 
-  /* Tag the thread as having been explicitly requested to stop, so
-     other parts of gdb know not to resume this thread automatically,
-     if it was stopped due to an internal event.  Limit this to
-     non-stop mode, as when debugging a multi-threaded application in
-     all-stop mode, we will only get one stop event --- it's undefined
-     which thread will report the event.  */
-  if (non_stop)
-    set_stop_requested (current_inferior ()->process_target (), ptid, 1);
 }
 
 /* interrupt [-a]
