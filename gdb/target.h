@@ -432,10 +432,14 @@ struct target_info
   const char *doc;
 };
 
+struct inferior;
+extern inferior *current_inferior ();
+
 struct target_ops
   {
   public:
-    target_ops *beneath () const; /* To the target under this one.  */
+     /* To the target under this one, in INF.  */
+    target_ops *beneath (inferior *inf =  current_inferior ()) const;
 
     virtual ~target_ops () {}
 
@@ -639,7 +643,7 @@ struct target_ops
 				  unsigned char * TARGET_DEBUG_PRINTER (target_debug_print_signals))
       TARGET_DEFAULT_IGNORE ();
 
-    virtual thread_info **get_thread_list_p ()
+    virtual thread_info **get_thread_list_p (inferior *inf)
       TARGET_DEFAULT_RETURN (NULL);
     virtual bool thread_alive (ptid_t ptid)
       TARGET_DEFAULT_RETURN (false);
@@ -1690,8 +1694,8 @@ extern void target_program_signals (int nsig, unsigned char *program_signals);
 extern thread_info **target_thread_list_p ();
 extern thread_info *target_thread_list ();
 
-extern thread_info **target_thread_list_p (target_ops *targ);
-extern thread_info *target_thread_list (target_ops *targ);
+extern thread_info **target_thread_list_p (inferior *inf);
+extern thread_info *target_thread_list (inferior *inf);
 
 /* Check to see if a thread is still alive.  */
 
@@ -2395,7 +2399,8 @@ extern void noprocess (void) ATTRIBUTE_NORETURN;
 
 extern void target_require_runnable (void);
 
-extern struct target_ops *find_target_beneath (const struct target_ops *);
+extern target_ops *find_target_beneath (const target_ops *,
+					inferior *inf = current_inferior ());
 
 /* Find the target at STRATUM.  If no target is at that stratum,
    return NULL.  */

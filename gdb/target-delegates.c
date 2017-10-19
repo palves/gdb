@@ -64,7 +64,7 @@ struct dummy_target : public target_ops
   void mourn_inferior () override;
   void pass_signals (int arg0, unsigned char * arg1) override;
   void program_signals (int arg0, unsigned char * arg1) override;
-  thread_info **get_thread_list_p () override;
+  thread_info **get_thread_list_p (inferior *arg0) override;
   bool thread_alive (ptid_t arg0) override;
   void update_thread_list () override;
   const char *pid_to_str (ptid_t arg0) override;
@@ -233,7 +233,7 @@ struct debug_target : public target_ops
   void mourn_inferior () override;
   void pass_signals (int arg0, unsigned char * arg1) override;
   void program_signals (int arg0, unsigned char * arg1) override;
-  thread_info **get_thread_list_p () override;
+  thread_info **get_thread_list_p (inferior *arg0) override;
   bool thread_alive (ptid_t arg0) override;
   void update_thread_list () override;
   const char *pid_to_str (ptid_t arg0) override;
@@ -1716,24 +1716,25 @@ debug_target::program_signals (int arg0, unsigned char * arg1)
 }
 
 thread_info **
-target_ops::get_thread_list_p ()
+target_ops::get_thread_list_p (inferior *arg0)
 {
-  return this->beneath ()->get_thread_list_p ();
+  return this->beneath ()->get_thread_list_p (arg0);
 }
 
 thread_info **
-dummy_target::get_thread_list_p ()
+dummy_target::get_thread_list_p (inferior *arg0)
 {
   return NULL;
 }
 
 thread_info **
-debug_target::get_thread_list_p ()
+debug_target::get_thread_list_p (inferior *arg0)
 {
   thread_info ** result;
   fprintf_unfiltered (gdb_stdlog, "-> %s->get_thread_list_p (...)\n", this->beneath ()->shortname ());
-  result = this->beneath ()->get_thread_list_p ();
+  result = this->beneath ()->get_thread_list_p (arg0);
   fprintf_unfiltered (gdb_stdlog, "<- %s->get_thread_list_p (", this->beneath ()->shortname ());
+  target_debug_print_inferior_p (arg0);
   fputs_unfiltered (") = ", gdb_stdlog);
   target_debug_print_thread_info_pp (result);
   fputs_unfiltered ("\n", gdb_stdlog);

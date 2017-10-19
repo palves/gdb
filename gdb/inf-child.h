@@ -33,7 +33,7 @@ struct inf_child_target
 
   const target_info &info () const override;
 
-  thread_info **get_thread_list_p () override
+  thread_info **get_thread_list_p (inferior *inf) override
   { return &thread_list; }
 
   void close () override;

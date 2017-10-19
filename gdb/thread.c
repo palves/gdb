@@ -683,7 +683,7 @@ any_thread_of_inferior (inferior *inf)
   if (inf == current_inferior ())
     return inferior_thread ();
 
-  ALL_NON_EXITED_THREADS_TARGET (inf->top_target (), tp)
+  ALL_NON_EXITED_THREADS_TARGET (inf, tp)
     if (ptid_get_pid (tp->ptid) == inf->pid)
       return tp;
 

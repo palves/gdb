@@ -2507,9 +2507,9 @@ target_thread_address_space (ptid_t ptid)
 
 
 target_ops *
-target_ops::beneath () const
+target_ops::beneath (inferior *inf) const
 {
-  return find_target_beneath (this);
+  return find_target_beneath (this, inf);
 }
 
 void
@@ -3074,9 +3074,9 @@ a_target_stack::find_target_beneath (const target_ops *t)
 }
 
 struct target_ops *
-find_target_beneath (const target_ops *t)
+find_target_beneath (const target_ops *t, inferior *inf)
 {
-  return current_inferior ()->m_stack.find_target_beneath (t);
+  return inf->m_stack.find_target_beneath (t);
 }
 
 /* See target.h.  */
@@ -3237,15 +3237,15 @@ target_close (struct target_ops *targ)
 }
 
 thread_info **
-target_thread_list_p (target_ops *targ)
+target_thread_list_p (inferior *inf)
 {
-  return targ->get_thread_list_p ();
+  return inf->top_target ()->get_thread_list_p (inf);
 }
 
 thread_info *
-target_thread_list (target_ops *targ)
+target_thread_list (inferior *inf)
 {
-  thread_info **list_p = targ->get_thread_list_p ();
+  thread_info **list_p = inf->top_target ()->get_thread_list_p (inf);
   if (list_p == NULL)
     return NULL;
   return *list_p;
@@ -3254,13 +3254,13 @@ target_thread_list (target_ops *targ)
 thread_info **
 target_thread_list_p ()
 {
-  return target_thread_list_p (target_stack);
+  return target_thread_list_p (current_inferior ());
 }
 
 thread_info *
 target_thread_list ()
 {
-  return target_thread_list (target_stack);
+  return target_thread_list (current_inferior ());
 }
 
 int
