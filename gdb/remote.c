@@ -76,6 +76,8 @@
 #include "environ.h"
 #include "common/byte-vector.h"
 
+struct threads_listing_context;
+
 static constexpr char remote_doc[] = N_(
 R"(Use a remote computer via a serial line, using a gdb-specific protocol.
 Specify the serial device it is connected to
@@ -415,6 +417,11 @@ private:
 
   thread_info *remote_add_thread (ptid_t ptid, bool running, bool executing);
 
+  void remote_btrace_maybe_reopen ();
+
+  void remove_new_fork_children (threads_listing_context *context);
+  void kill_new_fork_children (int pid, remote_state *rs);
+
   friend class vcont_builder;
 };
 
@@ -540,9 +547,6 @@ static void push_stop_reply (struct stop_reply *);
 static void discard_pending_stop_replies_in_queue (struct remote_state *);
 static int peek_stop_reply (ptid_t ptid);
 
-struct threads_listing_context;
-static void remove_new_fork_children (struct threads_listing_context *);
-
 static void remote_async_inferior_event_handler (gdb_client_data);
 
 static int remote_read_description_p (struct target_ops *target);
@@ -550,8 +554,6 @@ static int remote_read_description_p (struct target_ops *target);
 static void remote_console_output (char *msg);
 
 static void remote_btrace_reset (void);
-
-static void remote_btrace_maybe_reopen (void);
 
 static int stop_reply_queue_length (void);
 
@@ -4324,14 +4326,8 @@ remote_target::process_initial_stop_replies (int from_tty)
 
   /* "Notice" the new inferiors before anything related to
      registers/memory.  */
-  ALL_INFERIORS (inf)
+  ALL_NON_EXITED_INFERIORS_TARGET (inf, this)
     {
-      if (inf->pid == 0)
-	continue;
-
-      if (inf->process_target () != this)
-	continue;
-
       inf->needs_setup = 1;
 
       if (non_stop)
@@ -4351,13 +4347,8 @@ remote_target::process_initial_stop_replies (int from_tty)
 
       /* If all threads of an inferior were already stopped, we
 	 haven't setup the inferior yet.  */
-      ALL_INFERIORS (inf)
+      ALL_NON_EXITED_INFERIORS_TARGET (inf, this)
 	{
-	  if (inf->pid == 0)
-	    continue;
-	  if (inf->process_target () != this)
-	    continue;
-
 	  if (inf->needs_setup)
 	    {
 	      thread = any_live_thread_of_process (inf);
@@ -4370,11 +4361,8 @@ remote_target::process_initial_stop_replies (int from_tty)
   /* Now go over all threads that are stopped, and print their current
      frame.  If all-stop, then if there's a signalled thread, pick
      that as current.  */
-  ALL_NON_EXITED_THREADS (thread)
+  ALL_NON_EXITED_THREADS_TARGET (thread, this)
     {
-      if (thread->inf->process_target () != this)
-	continue;
-
       if (first == NULL)
 	first = thread;
 
@@ -5989,7 +5977,7 @@ remote_target::append_pending_thread_resumptions (char *p, char *endp,
 {
   struct thread_info *thread;
 
-  ALL_NON_EXITED_THREADS (thread)
+  ALL_NON_EXITED_THREADS_TARGET (thread, this)
     if (ptid_match (thread->ptid, ptid)
 	&& !ptid_equal (inferior_ptid, thread->ptid)
 	&& thread->suspend.stop_signal != GDB_SIGNAL_0)
@@ -6024,7 +6012,7 @@ remote_resume_with_hc (struct target_ops *ops,
   else
     set_continue_thread (ptid);
 
-  ALL_NON_EXITED_THREADS (thread)
+  ALL_NON_EXITED_THREADS_TARGET (thread, ops)
     resume_clear_thread_private_info (thread);
 
   buf = rs->buf;
@@ -6383,7 +6371,7 @@ remote_target::commit_resume ()
   may_global_wildcard_vcont = 1;
 
   /* And assume every process is individually wildcard-able too.  */
-  ALL_NON_EXITED_INFERIORS (inf)
+  ALL_NON_EXITED_INFERIORS_TARGET (inf, this)
     {
       if (inf->priv == NULL)
 	inf->priv = XNEW (struct private_inferior);
@@ -6394,7 +6382,7 @@ remote_target::commit_resume ()
      disable process and global wildcard resumes appropriately.  */
   check_pending_events_prevent_wildcard_vcont (&may_global_wildcard_vcont);
 
-  ALL_NON_EXITED_THREADS (tp)
+  ALL_NON_EXITED_THREADS_TARGET (tp, this)
     {
       /* If a thread of a process is not meant to be resumed, then we
 	 can't wildcard that process.  */
@@ -6424,7 +6412,7 @@ remote_target::commit_resume ()
   vcont_builder.restart ();
 
   /* Threads first.  */
-  ALL_NON_EXITED_THREADS (tp)
+  ALL_NON_EXITED_THREADS_TARGET (tp, this)
     {
       struct private_thread_info *remote_thr = tp->priv;
 
@@ -6453,7 +6441,7 @@ remote_target::commit_resume ()
      supposed to be resumed.  */
   any_process_wildcard = 0;
 
-  ALL_NON_EXITED_INFERIORS (inf)
+  ALL_NON_EXITED_INFERIORS_TARGET (inf, this)
     {
       if (inf->priv->may_wildcard_vcont)
 	{
@@ -6474,7 +6462,7 @@ remote_target::commit_resume ()
 	}
       else
 	{
-	  ALL_NON_EXITED_INFERIORS (inf)
+	  ALL_NON_EXITED_INFERIORS_TARGET (inf, this)
 	    {
 	      if (inf->priv->may_wildcard_vcont)
 		{
@@ -6926,8 +6914,8 @@ remove_child_of_pending_fork (QUEUE (stop_reply_p) *q,
    and have not yet called follow_fork, which will set up the
    host-side data structures for the new process.  */
 
-static void
-remove_new_fork_children (struct threads_listing_context *context)
+void
+remote_target::remove_new_fork_children (threads_listing_context *context)
 {
   struct thread_info * thread;
   int pid = -1;
@@ -6936,7 +6924,7 @@ remove_new_fork_children (struct threads_listing_context *context)
 
   /* For any threads stopped at a fork event, remove the corresponding
      fork child threads from the CONTEXT list.  */
-  ALL_NON_EXITED_THREADS (thread)
+  ALL_NON_EXITED_THREADS_TARGET (thread, this)
     {
       struct target_waitstatus *ws = thread_pending_fork_status (thread);
 
@@ -9702,8 +9690,8 @@ kill_child_of_pending_fork (QUEUE (stop_reply_p) *q,
 /* Kill any new fork children of process PID that haven't been
    processed by follow_fork.  */
 
-static void
-kill_new_fork_children (int pid, struct remote_state *rs)
+void
+remote_target::kill_new_fork_children (int pid, remote_state *rs)
 {
   struct thread_info *thread;
   struct notif_client *notif = &notif_client_stop;
@@ -9711,7 +9699,7 @@ kill_new_fork_children (int pid, struct remote_state *rs)
 
   /* Kill the fork child threads of any threads in process PID
      that are stopped at a fork event.  */
-  ALL_NON_EXITED_THREADS (thread)
+  ALL_NON_EXITED_THREADS_TARGET (thread, this)
     {
       struct target_waitstatus *ws = &thread->pending_follow;
 
@@ -13696,8 +13684,8 @@ btrace_read_config (struct btrace_config *conf)
 
 /* Maybe reopen target btrace.  */
 
-static void
-remote_btrace_maybe_reopen (void)
+void
+remote_target::remote_btrace_maybe_reopen (void)
 {
   struct remote_state *rs = get_remote_state ();
   struct thread_info *tp;
@@ -13706,7 +13694,7 @@ remote_btrace_maybe_reopen (void)
 
   scoped_restore_current_thread restore_thread;
 
-  ALL_NON_EXITED_THREADS (tp)
+  ALL_NON_EXITED_THREADS_TARGET (tp, this)
     {
       set_general_thread (tp->ptid);
 

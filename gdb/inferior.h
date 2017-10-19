@@ -595,6 +595,10 @@ private:
   ALL_INFERIORS (I)		    \
     if ((I)->pid != 0)
 
+#define ALL_NON_EXITED_INFERIORS_TARGET(I, TARGET)		\
+  ALL_INFERIORS (I)						\
+    if ((I)->pid != 0 && (I)->process_target () == (TARGET))
+
 extern struct inferior *inferior_list;
 
 static inline inferiors_list inferiors ()

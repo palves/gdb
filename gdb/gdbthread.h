@@ -653,6 +653,13 @@ extern thread_info *next_non_exited_thread (thread_info *thr);
     if (anet_inf->pid != 0)						\
       ALL_NON_EXITED_THREADS_INF (anet_inf, T)
 
+#define ALL_NON_EXITED_THREADS_TARGET(THR, TARGET)				\
+  for (struct inferior *anet_inf = inferior_list;			\
+       anet_inf != NULL;						\
+       anet_inf = anet_inf->next)					\
+    if (anet_inf->pid != 0 && anet_inf->process_target () == TARGET)	\
+      ALL_NON_EXITED_THREADS_INF (anet_inf, THR)
+
 /* Traverse all threads, including those that have THREAD_EXITED
    state.  Allows deleting the currently iterated thread.  */
 #define ALL_THREADS_SAFE(T, TMP)					\
