@@ -3023,31 +3023,24 @@ disconnect_command (const char *args, int from_tty)
     deprecated_detach_hook ();
 }
 
-void switch_to_inferior_no_thread (inferior *inf);
-
 static void
 stop_current_target_threads_ns (ptid_t ptid)
 {
-  target_stop (minus_one_ptid);
+  target_stop (ptid);
 
-  /* Tag the thread as having been explicitly requested to stop,
-     so other parts of gdb know not to resume this thread
-     automatically, if it was stopped due to an internal event.
-     Limit this to non-stop mode, as when debugging a
-     multi-threaded application in all-stop mode, we will only get
-     one stop event --- it's undefined which thread will report
-     the event.  */
-  if (non_stop)
-    set_stop_requested (current_inferior ()->process_target (),
-			ptid, 1);
+  /* Tag the thread as having been explicitly requested to stop, so
+     other parts of gdb know not to resume this thread automatically,
+     if it was stopped due to an internal event.  Limit this to
+     non-stop mode, as when debugging a multi-threaded application in
+     all-stop mode, we will only get one stop event --- it's undefined
+     which thread will report the event.  */
+  set_stop_requested (current_inferior ()->process_target (),
+		      ptid, 1);
 }
-
 
 void
 interrupt_target_1 (bool all_threads)
 {
-  ptid_t ptid = all_threads ? minus_one_ptid : inferior_ptid;
-
   if (non_stop)
     {
       if (all_threads)
@@ -3057,15 +3050,14 @@ interrupt_target_1 (bool all_threads)
 	  for (inferior *inf : inferiors ())
 	    {
 	      switch_to_inferior_no_thread (inf);
-	      stop_current_target_threads_ns (ptid);
+	      stop_current_target_threads_ns (minus_one_ptid);
 	    }
 	}
       else
-	stop_current_target_threads_ns (ptid);
+	stop_current_target_threads_ns (inferior_ptid);
     }
   else
     target_interrupt ();
-
 }
 
 /* interrupt [-a]
