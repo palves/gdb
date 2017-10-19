@@ -453,11 +453,14 @@ public:
     virtual const target_info &info () const = 0;
 
     /* Name this target type.  */
-    const char *shortname ()
+    const char *shortname () const
     { return info ().shortname; }
 
-    const char *longname ()
+    const char *longname () const
     { return info ().longname; }
+
+    virtual const char *connection_string () const
+    { return NULL; }
 
     virtual void close ();
 
