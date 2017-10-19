@@ -2419,6 +2419,7 @@ resume (enum gdb_signal sig)
 			      currently_stepping (tp));
 	}
 
+      // tp->inf->process_target ()->threads_executing = true;
       tp->resumed = 1;
 
       /* FIXME: What should we do if we are supposed to resume this
@@ -3542,7 +3543,8 @@ random_pending_event_thread (inferior *inf, ptid_t waiton_ptid)
   ALL_NON_EXITED_THREADS (event_tp)
     if (thread_matches (event_tp))
       if (random_selector-- == 0)
-	break;
+	goto out;
+ out:
 
   return event_tp;
 }
