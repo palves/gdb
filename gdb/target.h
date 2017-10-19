@@ -1276,7 +1276,7 @@ public:
 
 private:
   enum strata m_top {};
-  std::array<target_ops *, (int) debug_stratum> m_stack {};
+  target_ops *m_stack[(int) debug_stratum + 1] {};
 };
 
 extern target_ops *current_target_stack ();
