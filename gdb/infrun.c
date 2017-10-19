@@ -7288,7 +7288,8 @@ switch_back_to_stepped_thread (struct execution_control_state *ecs)
 	  /* Ignore threads of processes the caller is not
 	     resuming.  XXX */
 	  if (!sched_multi
-	      && ptid_get_pid (tp->ptid) != ptid_get_pid (ecs->ptid))
+	      && (tp->inf->process_target () != ecs->target
+		  || tp->inf->pid != ecs->ptid.pid ()))
 	    continue;
 
 	  /* When stepping over a breakpoint, we lock all threads
