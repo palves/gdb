@@ -2844,7 +2844,7 @@ _initialize_record_full (void)
   record_full_first.type = record_full_end;
 
   add_target (record_full_target_info, record_full_target::open);
-  // add_deprecated_target_alias (the_record_full_target, "record");
+  add_deprecated_target_alias (record_full_target_info, "record");
   add_target (record_full_core_target_info, record_full_core_target::open);
 
   add_prefix_cmd ("full", class_obscure, cmd_record_full_start,
