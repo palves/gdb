@@ -945,7 +945,7 @@ handle_vfork_child_exec_or_exit (int exec)
 	    maybe_restore_thread.emplace ();
 
 	  /* We're letting loose of the parent.  */
-	  tp = any_live_thread_of_process (inf->vfork_parent->pid);
+	  tp = any_live_thread_of_process (inf->vfork_parent);
 	  switch_to_thread (tp);
 
 	  /* We're about to detach from the parent, which implicitly
@@ -4882,7 +4882,7 @@ handle_no_resumed (struct execution_control_state *ecs)
       if (inf->process_target () != ecs->target)
 	continue;
 
-      thread_info *thread = any_live_thread_of_process (inf->pid);
+      thread_info *thread = any_live_thread_of_process (inf);
       if (thread == NULL)
 	{
 	  if (debug_infrun)

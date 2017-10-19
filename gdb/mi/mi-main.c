@@ -2126,7 +2126,7 @@ mi_cmd_execute (struct mi_parse *parse)
 	 provide --thread if it wishes to operate on a specific
 	 thread.  */
       if (inf->pid != 0)
-	tp = any_live_thread_of_process (inf->pid);
+	tp = any_live_thread_of_process (inf);
       if (tp != NULL)
 	switch_to_thread (tp);
       else

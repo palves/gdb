@@ -28,7 +28,7 @@ switch_to_program_space_and_thread (program_space *pspace)
 
   if (inf != NULL && inf->pid != 0)
     {
-      thread_info *tp = any_live_thread_of_process (inf->pid);
+      thread_info *tp = any_live_thread_of_process (inf);
 
       if (tp != NULL)
 	{

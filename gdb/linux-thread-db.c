@@ -1388,7 +1388,7 @@ thread_db_target::update_thread_list ()
       if (info == NULL)
 	continue;
 
-      thread = any_live_thread_of_process (inf->pid);
+      thread = any_live_thread_of_process (inf);
       if (thread == NULL || thread->executing)
 	continue;
 
