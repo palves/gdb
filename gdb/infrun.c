@@ -8302,8 +8302,12 @@ normal_stop (void)
 
   gdb::optional<scoped_finish_thread_state> maybe_finish_thread_state;
   if (finish_ptid != null_ptid)
-    maybe_finish_thread_state.emplace (current_inferior ()->process_target (),
-				       finish_ptid);
+    {
+      maybe_finish_thread_state.emplace
+	(user_visible_resume_target (finish_ptid,
+				     current_inferior ()),
+	 finish_ptid);
+    }
 
   /* As we're presenting a stop, and potentially removing breakpoints,
      update the thread list so we can tell whether there are threads
