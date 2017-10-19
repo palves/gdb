@@ -55,6 +55,11 @@ public:
 
   void prepare_to_store (regcache *regs) override {}
   void store_registers (regcache *regs, int regno) override {}
+
+  struct gdbarch *thread_architecture (ptid_t ptid) override
+  {
+    return default_thread_architecture (this, ptid);
+  }
 };
 
 /* Test gdbarch methods register_to_value and value_to_register.  */
