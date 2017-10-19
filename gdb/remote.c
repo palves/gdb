@@ -4449,6 +4449,9 @@ remote_target::process_initial_stop_replies (int from_tty)
      registers/memory.  */
   for (inferior *inf : all_non_exited_inferiors ())
     {
+      if (inf->process_target () != this)
+	continue;
+
       inf->needs_setup = 1;
 
       if (non_stop)
@@ -4470,6 +4473,9 @@ remote_target::process_initial_stop_replies (int from_tty)
 	 haven't setup the inferior yet.  */
       for (inferior *inf : all_non_exited_inferiors ())
 	{
+	  if (inf->process_target () != this)
+	    continue;
+
 	  if (inf->needs_setup)
 	    {
 	      thread_info *thread = any_live_thread_of_inferior (inf);
@@ -4484,6 +4490,9 @@ remote_target::process_initial_stop_replies (int from_tty)
      that as current.  */
   for (thread_info *thread : all_non_exited_threads ())
     {
+      if (thread->inf->process_target () != this)
+	continue;
+
       if (first == NULL)
 	first = thread;
 
