@@ -1705,6 +1705,7 @@ show_memory_packet_size (struct memory_packet_config *config)
     }
 }
 
+/* XXX: needs to be per-remote-target.  */
 static struct memory_packet_config memory_write_packet_config =
 {
   "memory-write-packet-size",
@@ -1761,6 +1762,7 @@ remote_target::get_memory_write_packet_size ()
   return get_memory_packet_size (&memory_write_packet_config);
 }
 
+/* XXX: needs to be per-remote-target.  */
 static struct memory_packet_config memory_read_packet_config =
 {
   "memory-read-packet-size",
@@ -2107,6 +2109,9 @@ enum {
   PACKET_MAX
 };
 
+/* XXX: needs to be per-remote-target.  Ignoring this for now,
+   assuming all remote targets are the same server (thus all support
+   the same packets).  */
 static struct packet_config remote_protocol_packets[PACKET_MAX];
 
 /* Returns the packet's corresponding "set remote foo-packet" command
