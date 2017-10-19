@@ -655,18 +655,18 @@ all_inferiors_safe ()
 */
 
 inline all_inferiors_range
-all_inferiors ()
+all_inferiors (target_ops *proc_target = nullptr)
 {
-  return {};
+  return all_inferiors_range (proc_target);
 }
 
 /* Return a range that can be used to walk over all inferiors with PID
    not zero, with range-for.  */
 
 inline all_non_exited_inferiors_range
-all_non_exited_inferiors ()
+all_non_exited_inferiors (target_ops *proc_target = nullptr)
 {
-  return {};
+  return non_exited_inferiors_range (proc_target);
 }
 
 /* Prune away automatically added inferiors that aren't required

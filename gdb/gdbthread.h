@@ -528,19 +528,20 @@ all_threads ()
 /* Likewise, but accept a filter PTID.  */
 
 inline all_matching_threads_range
-all_threads (ptid_t filter_ptid)
+all_threads (target_ops *proc_target, ptid_t filter_ptid)
 {
-  return all_matching_threads_range (filter_ptid);
+  return all_matching_threads_range (proc_target, filter_ptid);
 }
 
 /* Return a range that can be used to walk over all non-exited threads
    of all inferiors, with range-for.  FILTER_PTID can be used to
    filter out thread that don't match.  */
 
-inline all_non_exited_threads_range
-all_non_exited_threads (ptid_t filter_ptid = minus_one_ptid)
+inline non_exited_threads_range
+non_exited_threads (target_ops *proc_target = nullptr,
+		    ptid_t filter_ptid = minus_one_ptid)
 {
-  return all_non_exited_threads_range (filter_ptid);
+  return all_non_exited_threads_range (proc_target, filter_ptid);
 }
 
 /* Return a range that can be used to walk over all threads of all
@@ -556,7 +557,7 @@ all_non_exited_threads (ptid_t filter_ptid = minus_one_ptid)
 inline all_threads_safe_range
 all_threads_safe ()
 {
-  return all_threads_safe_range ();
+  return {};
 }
 
 extern int thread_count (target_ops *proc_target);
