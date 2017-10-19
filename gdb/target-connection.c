@@ -62,9 +62,7 @@ print_connection (struct ui_out *uiout, char *requested_inferiors)
       return;
     }
   
-  old_chain = make_cleanup_ui_out_table_begin_end (uiout, 3,
-						   process_targets.size (),
-						   "connections");
+  ui_out_emit_table table_emitter (uiout, 3, process_targets.size (), "connections");
   uiout->table_header (1, ui_left, "current", "");
   uiout->table_header (4, ui_left, "number", "Num");
   uiout->table_header (17, ui_left, "description", "Description");
@@ -73,7 +71,6 @@ print_connection (struct ui_out *uiout, char *requested_inferiors)
 
   for (auto it : process_targets)
     {
-      struct cleanup *chain2;
       target_ops *t = it.second;
 
 #if 0
@@ -81,7 +78,7 @@ print_connection (struct ui_out *uiout, char *requested_inferiors)
 	continue;
 #endif
 
-      chain2 = make_cleanup_ui_out_tuple_begin_end (uiout, NULL);
+      ui_out_emit_tuple tuple_emitter (uiout, NULL);
 
       if (current_inferior ()->process_target () == t)
 	uiout->field_string ("current", "*");
@@ -99,10 +96,7 @@ print_connection (struct ui_out *uiout, char *requested_inferiors)
 	uiout->field_string ("description", t->shortname ());
 
       uiout->text ("\n");
-      do_cleanups (chain2);
     }
-
-  do_cleanups (old_chain);
 }
 
 static void
