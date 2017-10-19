@@ -77,27 +77,24 @@ find_last_fork (void)
 
 /* Add a fork to the internal fork list.  */
 
-struct fork_info *
-add_fork (pid_t pid)
+static struct fork_info *
+new_fork (pid_t pid)
 {
   struct fork_info *fp;
 
-  if (fork_list == NULL && pid != ptid_get_pid (inferior_ptid))
-    {
-      /* Special case -- if this is the first fork in the list
-	 (the list is hitherto empty), and if this new fork is
-	 NOT the current inferior_ptid, then add inferior_ptid
-	 first, as a special zeroeth fork id.  */
-      highest_fork_num = -1;
-      add_fork (ptid_get_pid (inferior_ptid));	/* safe recursion */
-    }
-
   fp = XCNEW (struct fork_info);
   fp->ptid = ptid_build (pid, pid, 0);
-  fp->num = ++highest_fork_num;
+  return fp;
+}
 
+static void
+append_fork (struct fork_info *fp)
+{
   if (fork_list == NULL)
-    fork_list = fp;
+    {
+      fork_list = fp;
+      highest_fork_num = 0;
+    }
   else
     {
       struct fork_info *last = find_last_fork ();
@@ -105,7 +102,13 @@ add_fork (pid_t pid)
       last->next = fp;
     }
 
-  return fp;
+  fp->num = ++highest_fork_num;
+}
+
+void
+add_fork (pid_t pid)
+{
+  append_fork (new_fork (pid));
 }
 
 static void
@@ -734,6 +737,17 @@ checkpoint_command (char *args, int from_tty)
 
   if (!fp)
     error (_("Failed to find new fork"));
+
+  if (fork_list->next == NULL)
+    {
+      /* Special case -- if this is the first fork in the list (the
+	 list was hitherto empty), then add inferior_ptid first, as a
+	 special zeroeth fork id.  */
+      fork_info *fp = new_fork (ptid_get_pid (inferior_ptid));
+      fp->next = fork_list;
+      fork_list = fp;
+    }
+
   fork_save_infrun_state (fp, 1);
   fp->parent_ptid = last_target_ptid;
 }
