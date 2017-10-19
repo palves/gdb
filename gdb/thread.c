@@ -510,18 +510,18 @@ thread_step_over_chain_remove (struct thread_info *tp)
   step_over_chain_remove (&step_over_queue_head, tp);
 }
 
-/* Delete thread PTID.  If SILENT, don't notify the observer of this
+/* Delete thread TP.  If SILENT, don't notify the observer of this
    exit.  */
+
 static void
-delete_thread_1 (target_ops *targ, ptid_t ptid, int silent)
+delete_thread_1 (thread_info *thr, bool silent)
 {
   struct thread_info *tp, *tpprev;
 
   tpprev = NULL;
 
-  inferior *inf = find_inferior_ptid (targ, ptid);
-  for (tp = inf->thread_list; tp; tpprev = tp, tp = tp->next)
-    if (tp->ptid == ptid)
+  for (tp = thr->inf->thread_list; tp; tpprev = tp, tp = tp->next)
+    if (tp == thr)
       break;
 
   if (!tp)
@@ -538,7 +538,7 @@ delete_thread_1 (target_ops *targ, ptid_t ptid, int silent)
   if (tpprev)
     tpprev->next = tp->next;
   else
-    inf->thread_list = tp->next;
+    tp->inf->thread_list = tp->next;
 
   delete tp;
 }
@@ -558,15 +558,13 @@ delete_thread (target_ops *targ, ptid_t ptid)
 void
 delete_thread (thread_info *thread)
 {
-  delete_thread_1 (thread->inf->process_target (),
-		   thread->ptid, 0 /* not silent */);
+  delete_thread_1 (thread, false /* not silent */);
 }
 
 void
 delete_thread_silent (thread_info *thread)
 {
-  delete_thread_1 (thread->inf->process_target (),
-		   thread->ptid, 1 /* silent */);
+  delete_thread_1 (thread, true /* silent */);
 }
 
 struct thread_info *
