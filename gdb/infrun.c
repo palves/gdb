@@ -2266,6 +2266,14 @@ user_visible_resume_ptid (int step)
   return resume_ptid;
 }
 
+static target_ops *
+user_visible_resume_target (ptid_t resume_ptid, inferior *cur_inf)
+{
+  return (resume_ptid == minus_one_ptid
+	  ? NULL
+	  : cur_inf->process_target ());
+}
+
 /* Return a ptid representing the set of threads that we will resume,
    in the perspective of the target, assuming run control handling
    does not require leaving some threads stopped (e.g., stepping past
@@ -2856,7 +2864,8 @@ clear_proceed_status (int step)
   if (!non_stop && inferior_ptid != null_ptid)
     {
       ptid_t resume_ptid = user_visible_resume_ptid (step);
-      target_ops *resume_target = inferior_thread ()->inf->process_target ();
+      target_ops *resume_target = user_visible_resume_target (resume_ptid,
+							      current_inferior ());
 
       /* In all-stop mode, delete the per-thread status of all threads
 	 we're about to resume, implicitly and explicitly.  */
@@ -3013,12 +3022,13 @@ proceed (CORE_ADDR addr, enum gdb_signal siggnal)
     cur_thr->suspend.stop_signal = siggnal;
 
   resume_ptid = user_visible_resume_ptid (cur_thr->control.stepping_command);
+  target_ops *resume_target = user_visible_resume_target (resume_ptid,
+							  current_inferior ());
 
   /* If an exception is thrown from this point on, make sure to
      propagate GDB's knowledge of the executing state to the
      frontend/user running state.  */
-  scoped_finish_thread_state finish_state (tp->inf->process_target (),
-					   resume_ptid);
+  scoped_finish_thread_state finish_state (resume_target, resume_ptid);
 
   /* Even if RESUME_PTID is a wildcard, and we end up resuming fewer
      threads (e.g., we might need to set threads stepping over
@@ -3027,7 +3037,7 @@ proceed (CORE_ADDR addr, enum gdb_signal siggnal)
      inferior function, as in that case we pretend the inferior
      doesn't run at all.  */
   if (!cur_thr->control.in_infcall)
-    set_running (cur_thr->inf->process_target (), resume_ptid, 1);
+    set_running (resume_target, resume_ptid, 1);
 
   if (debug_infrun)
     fprintf_unfiltered (gdb_stdlog,

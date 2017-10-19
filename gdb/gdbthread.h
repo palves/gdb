@@ -623,19 +623,19 @@ public:
   scoped_finish_thread_state (target_ops *target, ptid_t ptid)
     : m_target (target), m_ptid (ptid)
   {
-    gdb_assert (m_target != NULL);
+    gdb_assert (m_ptid != null_ptid);
   }
 
   ~scoped_finish_thread_state ()
   {
-    if (m_target != NULL)
+    if (m_ptid != null_ptid)
       finish_thread_state (m_target, m_ptid);
   }
 
   /* Disengage.  */
   void release ()
   {
-    m_target = NULL;
+    m_ptid = null_ptid;
   }
 
   DISABLE_COPY_AND_ASSIGN (scoped_finish_thread_state);
