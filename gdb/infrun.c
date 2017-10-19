@@ -4707,7 +4707,7 @@ stop_all_threads (void)
 	  int need_wait = 0;
 	  struct thread_info *t;
 
-	  //	  update_thread_list ();
+	  update_thread_list ();
 
 	  /* Go through all threads looking for threads that we need
 	     to tell the target to stop.  */
