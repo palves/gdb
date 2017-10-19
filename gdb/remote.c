@@ -1492,9 +1492,12 @@ show_memory_packet_size (struct memory_packet_config *config)
   if (config->fixed_p)
     printf_filtered (_("Packets are fixed at %ld bytes.\n"),
 		     get_memory_packet_size (config));
-  else
+  else if (maybe_get_remote_state () != NULL)
     printf_filtered (_("Packets are limited to %ld bytes.\n"),
 		     get_memory_packet_size (config));
+  else
+    puts_filtered ("The actual limit will be further reduced "
+		   "dependent on the target.\n");
 }
 
 /* XXX: needs to be per-remote-target.  */
