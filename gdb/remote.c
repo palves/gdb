@@ -6504,6 +6504,8 @@ remote_target::commit_resume ()
     }
 
   vcont_builder.flush ();
+
+  target_async (1);
 }
 
 
