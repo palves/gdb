@@ -4016,7 +4016,7 @@ fetch_inferior_event (void *client_data)
 
   /* Get executed before make_cleanup_restore_current_thread above to apply
      still for the thread which has thrown the exception.  */
-  make_bpstat_clear_actions_cleanup ();
+  struct cleanup *ts_old_chain = make_bpstat_clear_actions_cleanup ();
 
   make_cleanup (delete_just_stopped_threads_infrun_breakpoints_cleanup, NULL);
 
@@ -4070,6 +4070,8 @@ fetch_inferior_event (void *client_data)
 	    }
 	}
     }
+
+  discard_cleanups (ts_old_chain);
 
   /* No error, don't finish the thread states yet.  */
   finish_state.release ();
