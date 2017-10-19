@@ -4161,7 +4161,16 @@ fetch_inferior_event (void *client_data)
 		}
 	    }
 
-	  if (!non_stop && cmd_done)
+	  /* If we got a TARGET_WAITKIND_NO_RESUMED event, then the
+	     previously selected thread is gone.  We have two choices
+	     - switch to no thread selected, or restore the previously
+	     selected thread (now exited).  We chose the later, just
+	     because that's what GDB used to do.  After this, "info
+	     threads" says "The current thread <Thread ID 2> has
+	     terminated." instead of "No thread selected.".  */
+	  if (!non_stop
+	      && cmd_done
+	      && ecs->ws.kind != TARGET_WAITKIND_NO_RESUMED)
 	    restore_thread.dont_restore ();
 	}
     }
@@ -4892,6 +4901,9 @@ stop_all_threads (void)
 static int
 handle_no_resumed (struct execution_control_state *ecs)
 {
+  struct inferior *inf;
+  struct thread_info *thread;
+
   if (target_can_async_p ())
     {
       struct ui *ui;
@@ -4954,25 +4966,19 @@ handle_no_resumed (struct execution_control_state *ecs)
      the synchronous command show "no unwaited-for " to the user.  */
   update_thread_list ();
 
-  for (inferior *inf : inferiors ())
+  ALL_NON_EXITED_THREADS_TARGET (thread, ecs->target)
     {
-      if (inf->process_target () != ecs->target)
-	continue;
-
-      for (thread_info *thread : inf->threads ())
+      if (thread->executing
+	  || thread->suspend.waitstatus_pending_p)
 	{
-	  if (thread->executing
-	      || thread->suspend.waitstatus_pending_p)
-	    {
-	      /* There were no unwaited-for children left in the target at
-		 some point, but there are now.  Just ignore.  */
-	      if (debug_infrun)
-		fprintf_unfiltered (gdb_stdlog,
-				    "infrun: TARGET_WAITKIND_NO_RESUMED "
-				    "(ignoring: found resumed)\n");
-	      prepare_to_wait (ecs);
-	      return true;
-	    }
+	  /* There were no unwaited-for children left in the target at
+	     some point, but there are now.  Just ignore.  */
+	  if (debug_infrun)
+	    fprintf_unfiltered (gdb_stdlog,
+				"infrun: TARGET_WAITKIND_NO_RESUMED "
+				"(ignoring: found resumed)\n");
+	  prepare_to_wait (ecs);
+	  return 1;
 	}
     }
 
@@ -4980,15 +4986,9 @@ handle_no_resumed (struct execution_control_state *ecs)
      process exited meanwhile (thus updating the thread list results
      in an empty thread list).  In this case we know we'll be getting
      a process exit event shortly.  */
-  for (inferior *inf : inferiors ())
+  ALL_NON_EXITED_INFERIORS_TARGET (inf, ecs->target)
     {
-      if (inf->pid == 0)
-	continue;
-
-      if (inf->process_target () != ecs->target)
-	continue;
-
-      thread_info *thread = any_live_thread_of_process (inf);
+      thread = any_live_thread_of_process (inf);
       if (thread == NULL)
 	{
 	  if (debug_infrun)
