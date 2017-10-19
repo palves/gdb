@@ -3159,6 +3159,8 @@ proceed (CORE_ADDR addr, enum gdb_signal siggnal)
       for_each_non_exited_thread (resume_target, resume_ptid,
 				  [current] (thread_info *tp)
 	{
+	  switch_to_thread_no_regs (tp);
+
 	  /* Ignore the current thread here.  It's handled
 	     afterwards.  */
 	  if (tp == current)
@@ -3176,6 +3178,8 @@ proceed (CORE_ADDR addr, enum gdb_signal siggnal)
 
 	  thread_step_over_chain_enqueue (tp);
 	});
+
+      switch_to_thread (current);
     }
 
   /* Enqueue the current thread last, so that we move all other
@@ -3215,6 +3219,8 @@ proceed (CORE_ADDR addr, enum gdb_signal siggnal)
 	for_each_non_exited_thread (resume_target, resume_ptid,
 				    [current, ecs] (thread_info *tp)
         {
+	  switch_to_thread_no_regs (tp);
+
 	  if (!tp->has_execution ())
 	    {
 	      if (debug_infrun)
@@ -3254,6 +3260,8 @@ proceed (CORE_ADDR addr, enum gdb_signal siggnal)
 	  if (!ecs->wait_some_more)
 	    error (_("Command aborted."));
 	});
+
+	switch_to_thread (current);
       }
     else if (!tp->resumed && !thread_is_in_step_over_chain (tp))
       {
@@ -5608,6 +5616,8 @@ restart_threads (struct thread_info *event_thread)
 
   ALL_NON_EXITED_THREADS (tp)
     {
+      switch_to_thread_no_regs (tp);
+
       if (tp == event_thread)
 	{
 	  if (debug_infrun)
@@ -7271,8 +7281,10 @@ switch_back_to_stepped_thread (struct execution_control_state *ecs)
 
       ALL_NON_EXITED_THREADS (tp)
         {
+	  switch_to_thread_no_regs (tp);
+
 	  /* Ignore threads of processes the caller is not
-	     resuming.  */
+	     resuming.  XXX */
 	  if (!sched_multi
 	      && ptid_get_pid (tp->ptid) != ptid_get_pid (ecs->ptid))
 	    continue;
@@ -7322,6 +7334,8 @@ switch_back_to_stepped_thread (struct execution_control_state *ecs)
 	      return 1;
 	    }
 	}
+
+      switch_to_thread (ecs->event_thread);
     }
 
   return 0;
