@@ -1208,9 +1208,15 @@ follow_exec (ptid_t ptid, char *exec_file_target)
       target_follow_exec (inf, exec_file_target);
 
       inferior *org_inferior = current_inferior ();
-      set_current_inferior (inf);
-      set_current_program_space (inf->pspace);
+      switch_to_inferior_no_thread (inf);
       push_target (org_inferior->process_target ());
+
+      thread_info *thr = add_thread (inf->process_target (), ptid);
+      /* Avoid reading registers until after updating the target
+	 description.  Fixes bf93d7ba99 -- we can't defer adding the
+	 thread because that breaks try_open_exec_file which deep
+	 inside ends up calling inferior_thread().  */
+      switch_to_thread_no_regs (thr);
     }
   else
     {
@@ -1241,11 +1247,6 @@ follow_exec (ptid_t ptid, char *exec_file_target)
      the new one 64-bit), and before anything involving memory or
      registers.  */
   target_find_description ();
-
-  /* The add_thread call ends up reading registers, so do it after updating the
-     target description.  */
-  if (follow_exec_mode_string == follow_exec_mode_new)
-    add_thread (inf->process_target (), ptid);
 
   solib_create_inferior_hook (0);
 
