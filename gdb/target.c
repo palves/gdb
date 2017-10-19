@@ -86,9 +86,6 @@ static void tcomplain (void) ATTRIBUTE_NORETURN;
 
 static struct target_ops *find_default_run_target (const char *);
 
-static struct gdbarch *default_thread_architecture (struct target_ops *ops,
-						    ptid_t ptid);
-
 static int dummy_find_memory_regions (struct target_ops *self,
 				      find_memory_region_ftype ignore1,
 				      void *ignore2);
@@ -3019,8 +3016,8 @@ default_watchpoint_addr_within_range (struct target_ops *target,
   return addr >= start && addr < start + length;
 }
 
-static struct gdbarch *
-default_thread_architecture (struct target_ops *ops, ptid_t ptid)
+struct gdbarch *
+default_thread_architecture (target_ops *ops, ptid_t ptid)
 {
   inferior *inf = find_inferior_ptid (ops, ptid);
   gdb_assert (inf != NULL);

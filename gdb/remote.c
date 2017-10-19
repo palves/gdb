@@ -280,6 +280,11 @@ public:
 
   bool can_run_breakpoint_commands () override;
 
+  struct gdbarch *thread_architecture (ptid_t ptid) override
+  {
+    return default_thread_architecture (this, ptid);
+  }
+
   void trace_init () override;
 
   void download_tracepoint (struct bp_location *location) override;
