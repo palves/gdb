@@ -1376,6 +1376,7 @@ thread_db_target::wait (ptid_t ptid, struct target_waitstatus *ourstatus,
     case TARGET_WAITKIND_EXITED:
     case TARGET_WAITKIND_THREAD_EXITED:
     case TARGET_WAITKIND_SIGNALLED:
+    case TARGET_WAITKIND_NO_RESUMED:
       return ptid;
     }
 
