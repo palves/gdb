@@ -655,7 +655,7 @@ struct target_ops
     virtual const char *extra_thread_info (thread_info *)
       TARGET_DEFAULT_RETURN (NULL);
     virtual const char *thread_name (thread_info *)
-      TARGET_DEFAULT_RETURN (NULL);
+      TARGET_DEFAULT_RETURN (NULL) TARGET_CUSTOM_DELEGATOR;
     virtual thread_info *thread_handle_to_thread_info (const gdb_byte *,
 						       int,
 						       inferior *inf)

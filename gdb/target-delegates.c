@@ -1809,11 +1809,13 @@ debug_target::extra_thread_info (thread_info *arg0)
   return result;
 }
 
+#if 0
 const char *
 target_ops::thread_name (thread_info *arg0)
 {
   return this->beneath ()->thread_name (arg0);
 }
+#endif
 
 const char *
 dummy_target::thread_name (thread_info *arg0)

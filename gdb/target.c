@@ -2034,9 +2034,15 @@ target_pid_to_str (ptid_t ptid)
 }
 
 const char *
-target_thread_name (struct thread_info *info)
+target_thread_name (struct thread_info *thread)
 {
-  return target_stack->thread_name (info);
+  return thread->inf->top_target ()->thread_name (thread);
+}
+
+const char *
+target_ops::thread_name (thread_info *thread)
+{
+  return beneath (thread->inf)->thread_name (thread);
 }
 
 struct thread_info *
