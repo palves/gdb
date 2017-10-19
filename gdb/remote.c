@@ -3797,6 +3797,9 @@ remote_target::update_thread_list ()
 	 target.  */
       for (thread_info *tp : all_threads_safe ())
 	{
+	  if (tp->inf->process_target () != this)
+	    continue;
+
 	  if (!context.contains_thread (tp->ptid))
 	    {
 	      /* Not found.  */
