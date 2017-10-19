@@ -14146,13 +14146,12 @@ static void
 set_range_stepping (const char *ignore_args, int from_tty,
 		    struct cmd_list_element *c)
 {
-  struct remote_state *rs = get_remote_state ();
-
-  /* Whene enabling, check whether range stepping is actually
-     supported by the target, and warn if not.  */
+  /* When enabling, check whether range stepping is actually supported
+     by the target, and warn if not.  */
   if (use_range_stepping)
     {
-      if (rs->remote_desc != NULL)
+      remote_state *rs = maybe_get_remote_state ();
+      if (rs != NULL)
 	{
 	  if (packet_support (PACKET_vCont) == PACKET_SUPPORT_UNKNOWN)
 	    remote_vcont_probe (rs);
