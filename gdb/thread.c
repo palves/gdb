@@ -541,6 +541,8 @@ struct thread_info *
 find_thread_ptid (target_ops *targ, ptid_t ptid)
 {
   inferior *inf = find_inferior_ptid (targ, ptid);
+  if (inf == NULL)
+    return NULL;
   return find_thread_ptid (inf, ptid);
 }
 

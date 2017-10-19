@@ -3573,9 +3573,9 @@ do_target_wait (ptid_t wait_ptid, execution_control_state *ecs, int options)
   for (inferior *inf : non_exited_inferiors ())
     if (ptid_t (inf->pid).matches (wait_ptid))
       {
-	thread_info *thr = any_thread_of_inferior (inf);
-
-	switch_to_thread (thr);
+	set_current_inferior (inf);
+	switch_to_no_thread ();
+	set_current_program_space (inf->pspace);
 
 	ecs->ptid = do_target_wait_1 (inf, wait_ptid, &ecs->ws, options);
 	ecs->target = inf->process_target ();
