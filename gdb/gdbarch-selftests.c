@@ -30,46 +30,31 @@ namespace selftests {
 /* A mock process_stratum target_ops that doesn't read/write registers
    anywhere.  */
 
-static constexpr target_info remote_target_info = {
+static constexpr target_info mock_target_info = {
   "test",
   N_("gdbarch unit tests target"),
   N_("You should never see this"),
 };
 
-class test_target_ops : public target_ops
+
+class test_target : public target_ops
 {
 public:
-  test_target_ops ()
+  test_target ()
     : target_ops {}
   {
     to_stratum = process_stratum;
   }
 
   const target_info &info () const override
-  { return remote_target_info; }
+  { return mock_target_info; }
 
-  bool has_registers () override
-  {
-    return true;
-  }
+  bool has_registers () override { return true; }
+  bool has_stack () override { return true; }
+  bool has_memory () override { return true; }
 
-  bool has_stack () override
-  {
-    return true;
-  }
-
-  bool has_memory () override
-  {
-    return true;
-  }
-
-  void prepare_to_store (regcache *regs) override
-  {
-  }
-
-  void store_registers (regcache *regs, int regno) override
-  {
-  }
+  void prepare_to_store (regcache *regs) override {}
+  void store_registers (regcache *regs, int regno) override {}
 };
 
 /* Test gdbarch methods register_to_value and value_to_register.  */
@@ -112,15 +97,11 @@ register_to_value_test (struct gdbarch *gdbarch)
       builtin->builtin_char32,
     };
 
-  /* Error out if debugging something, because we're going to push the
-     test target, which would pop any existing target.  */
-  if (target_stack->to_stratum >= process_stratum)
-   error (_("target already pushed"));
 
   /* Create a mock environment.  An inferior with a thread, with a
      process_stratum target pushed.  */
 
-  test_target_ops mock_target;
+  test_target mock_target;
   ptid_t mock_ptid (1, 1);
   inferior mock_inferior (mock_ptid.pid ());
   address_space mock_aspace {};
@@ -144,15 +125,6 @@ register_to_value_test (struct gdbarch *gdbarch)
   /* Push the process_stratum target so we can mock accessing
      registers.  */
   push_target (&mock_target);
-
-  /* Pop it again on exit (return/exception).  */
-  struct on_exit
-  {
-    ~on_exit ()
-    {
-      pop_all_targets_at_and_above (process_stratum);
-    }
-  } pop_targets;
 
   /* Switch to the mock thread.  */
   scoped_restore restore_inferior_ptid
