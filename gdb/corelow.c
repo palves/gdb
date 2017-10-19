@@ -408,7 +408,7 @@ core_target::open (const char *arg, int from_tty)
      post_create_inferior throws (can happen easilly if you're loading
      a core file with the wrong exec), we aren't left with threads
      from the previous inferior.  */
-  init_thread_list ();
+  // init_thread_list ();
 
   inferior_ptid = null_ptid;
 
