@@ -528,7 +528,7 @@ print_selected_inferior (struct ui_out *uiout)
 		  inf->num, inferior_pid_to_str (inf->pid), filename);
 }
 
-std::string
+static std::string
 uiout_field_connection (target_ops *proc_target)
 {
   if (proc_target == NULL)
