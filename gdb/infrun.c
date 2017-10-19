@@ -3580,8 +3580,8 @@ do_target_wait (ptid_t wait_ptid, execution_control_state *ecs, int options)
 
   auto inferior_matches = [&wait_ptid] (inferior *inf)
     {
-      return (threads_are_executing (inf->process_target ())
-	      // && inf->pid != 0 &&
+      return (inf->process_target () != NULL
+	      && threads_are_executing (inf->process_target ())
 	      && ptid_t (inf->pid).matches (wait_ptid));
     };
 
