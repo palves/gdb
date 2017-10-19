@@ -5766,9 +5766,8 @@ handle_signal_stop (struct execution_control_state *ecs)
     {
       struct regcache *regcache = get_thread_regcache (ecs->event_thread);
       struct gdbarch *reg_gdbarch = regcache->arch ();
-      scoped_restore save_inferior_ptid = make_scoped_restore (&inferior_ptid);
 
-      inferior_ptid = ecs->ptid;
+      switch_to_thread (ecs->event_thread);
 
       fprintf_unfiltered (gdb_stdlog, "infrun: stop_pc = %s\n",
 			  paddress (reg_gdbarch,
