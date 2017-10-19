@@ -1376,7 +1376,18 @@ scoped_restore_current_thread::restore ()
 scoped_restore_current_thread::~scoped_restore_current_thread ()
 {
   if (!m_dont_restore)
-    restore ();
+    {
+      TRY
+	{
+	  restore ();
+	}
+      CATCH (ex, RETURN_MASK_ALL)
+	{
+	  /* We're in a dtor, there's really nothing else we can do
+	     but swallow the exception.  */
+	}
+      END_CATCH
+    }
 
   if (m_thread != NULL)
     m_thread->decref ();
