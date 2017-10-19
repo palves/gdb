@@ -48,7 +48,7 @@
 #include <algorithm>
 #include "byte-vector.h"
 #include <unordered_map>
-#include <set>
+#include <map>
 
 static void info_target_command (char *, int);
 
@@ -537,7 +537,7 @@ a_target_stack::push_target (struct target_ops *t)
     m_top = t->to_stratum;
 }
 
-extern std::set<target_ops *> process_targets;
+extern std::map<int, target_ops *> process_targets;
 extern int highest_target_connection_num;;
 
 void
@@ -545,9 +545,13 @@ push_target (struct target_ops *t)
 {
   if (t->to_stratum == process_stratum)
     {
-      if (process_targets.insert (t).second)
+      if (t->connection_number == 0)
 	{
 	  t->connection_number = ++highest_target_connection_num;
+	  /* XXX: this can throw.  Can we move this whole block until
+	     after we've pushed the target in the inferior's
+	     stack?  */
+	  process_targets[t->connection_number] = t;
 	}
     }
 
@@ -568,7 +572,7 @@ unpush_target (struct target_ops *t)
 	      if (t == inf->process_target ())
 		return true;
 	    }
-	  process_targets.erase (t);
+	  process_targets.erase (t->connection_number);
 	  t->connection_number = 0;
 	}
       return true;
