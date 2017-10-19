@@ -1052,6 +1052,8 @@ static int record_full_resume_step = 0;
    TARGET_WAITKIND_IGNORE.  */
 static int record_full_resumed = 0;
 
+static ptid_t record_full_resume_ptid = null_ptid;
+
 /* The execution direction of the last resume we got.  This is
    necessary for async mode.  Vis (order is not strictly accurate):
 
@@ -1077,6 +1079,7 @@ record_full_target::resume (ptid_t ptid, int step, enum gdb_signal signal)
   record_full_resume_step = step;
   record_full_resumed = 1;
   record_full_execution_dir = ::execution_direction;
+  record_full_resume_ptid = inferior_ptid;
 
   if (!RECORD_FULL_IS_REPLAY)
     {
@@ -1234,6 +1237,8 @@ record_full_wait_1 (struct target_ops *ops,
 		     interested in the event.  */
 
 		  registers_changed ();
+		  switch_to_thread (current_inferior ()->process_target (),
+				    ret);
 		  regcache = get_current_regcache ();
 		  tmp_pc = regcache_read_pc (regcache);
 		  const struct address_space *aspace = regcache->aspace ();
@@ -1299,6 +1304,8 @@ record_full_wait_1 (struct target_ops *ops,
     }
   else
     {
+      switch_to_thread (current_inferior ()->process_target (),
+			record_full_resume_ptid);
       struct regcache *regcache = get_current_regcache ();
       struct gdbarch *gdbarch = regcache->arch ();
       const struct address_space *aspace = regcache->aspace ();
