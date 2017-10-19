@@ -2898,7 +2898,7 @@ target_fileio_pwrite (int fd, const gdb_byte *write_buf, int len,
   fileio_fh_t *fh = fileio_fd_to_fh (fd);
   int ret = -1;
 
-  if (is_closed_fileio_fh (fh->fd))
+  if (fh->t == NULL || is_closed_fileio_fh (fh->fd))
     *target_errno = EBADF;
   else
     ret = fh->t->fileio_pwrite (fh->fd, write_buf,
@@ -2922,7 +2922,7 @@ target_fileio_pread (int fd, gdb_byte *read_buf, int len,
   fileio_fh_t *fh = fileio_fd_to_fh (fd);
   int ret = -1;
 
-  if (is_closed_fileio_fh (fh->fd))
+  if (fh->t == NULL || is_closed_fileio_fh (fh->fd))
     *target_errno = EBADF;
   else
     ret = fh->t->fileio_pread (fh->fd, read_buf,
@@ -2945,7 +2945,7 @@ target_fileio_fstat (int fd, struct stat *sb, int *target_errno)
   fileio_fh_t *fh = fileio_fd_to_fh (fd);
   int ret = -1;
 
-  if (is_closed_fileio_fh (fh->fd))
+  if (fh->t == NULL || is_closed_fileio_fh (fh->fd))
     *target_errno = EBADF;
   else
     ret = fh->t->fileio_fstat (fh->fd, sb, target_errno);
@@ -2969,7 +2969,10 @@ target_fileio_close (int fd, int *target_errno)
     *target_errno = EBADF;
   else
     {
-      ret = fh->t->fileio_close (fh->fd, target_errno);
+      if (fh->t != NULL)
+	ret = fh->t->fileio_close (fh->fd, target_errno);
+      else
+	ret = 0;
       release_fileio_fd (fd, fh);
     }
 
@@ -3341,12 +3344,28 @@ debug_target::info () const
 
 
 
+/* XXX need to invalidate open handles when we close/destroy the
+   target.  We used to end up in remote.c and calling remote_desc(),
+   which would only work because we never deleted the remote
+   target.  */
+
+static void
+invalidate_fileio_fh (target_ops *targ)
+{
+  fileio_fh_t *fh;
+  for (int fd = 0; VEC_iterate (fileio_fh_t, fileio_fhandles, fd, fh); fd++)
+    if (fh->t == targ)
+      fh->t = NULL;
+}
+
 void
 target_close (struct target_ops *targ)
 {
   gdb_assert (!target_is_pushed (targ));
 
   targ->close ();
+
+  invalidate_fileio_fh (targ);
 
   if (targetdebug)
     fprintf_unfiltered (gdb_stdlog, "target_close ()\n");
