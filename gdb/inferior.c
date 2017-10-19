@@ -131,34 +131,10 @@ add_inferior (int pid)
   return inf;
 }
 
-struct delete_thread_of_inferior_arg
-{
-  int pid;
-  int silent;
-};
-
-static int
-delete_thread_of_inferior (struct thread_info *tp, void *data)
-{
-  struct delete_thread_of_inferior_arg *arg
-    = (struct delete_thread_of_inferior_arg *) data;
-
-  if (ptid_get_pid (tp->ptid) == arg->pid)
-    {
-      if (arg->silent)
-	delete_thread_silent (tp);
-      else
-	delete_thread (tp);
-    }
-
-  return 0;
-}
-
 void
 delete_inferior (struct inferior *todel)
 {
   struct inferior *inf, *infprev;
-  struct delete_thread_of_inferior_arg arg;
 
   infprev = NULL;
 
@@ -169,10 +145,13 @@ delete_inferior (struct inferior *todel)
   if (!inf)
     return;
 
-  arg.pid = inf->pid;
-  arg.silent = 1;
-
-  iterate_over_threads (delete_thread_of_inferior, &arg);
+  for (inf_threads_iterator it (inf->thread_list), end (NULL);
+       it != end;)
+    {
+      thread_info *tp = *it;
+      ++it;
+      delete_thread_silent (tp);
+    }
 
   if (infprev)
     infprev->next = inf->next;
@@ -195,7 +174,6 @@ static void
 exit_inferior_1 (struct inferior *inftoex, int silent)
 {
   struct inferior *inf;
-  struct delete_thread_of_inferior_arg arg;
 
   for (inf = inferior_list; inf; inf = inf->next)
     if (inf == inftoex)
@@ -204,10 +182,17 @@ exit_inferior_1 (struct inferior *inftoex, int silent)
   if (!inf)
     return;
 
-  arg.pid = inf->pid;
-  arg.silent = silent;
+  for (inf_threads_iterator it (inf->thread_list), end (NULL);
+       it != end;)
+    {
+      thread_info *tp = *it;
+      ++it;
 
-  iterate_over_threads (delete_thread_of_inferior, &arg);
+      if (silent)
+	delete_thread_silent (tp);
+      else
+	delete_thread (tp);
+    }
 
   observer_notify_inferior_exit (inf);
 
