@@ -70,11 +70,6 @@ register_to_value_test (struct gdbarch *gdbarch)
       builtin->builtin_char32,
     };
 
-  /* Error out if debugging something, because we're going to push the
-     test target, which would pop any existing target.  */
-  if (current_top_target ()->stratum () >= process_stratum)
-   error (_("target already pushed"));
-
   /* Create a mock environment.  An inferior with a thread, with a
      process_stratum target pushed.  */
 
@@ -102,15 +97,6 @@ register_to_value_test (struct gdbarch *gdbarch)
   /* Push the process_stratum target so we can mock accessing
      registers.  */
   push_target (&mock_target);
-
-  /* Pop it again on exit (return/exception).  */
-  struct on_exit
-  {
-    ~on_exit ()
-    {
-      pop_all_targets_at_and_above (process_stratum);
-    }
-  } pop_targets;
 
   /* Switch to the mock thread.  */
   scoped_restore restore_inferior_ptid
