@@ -956,7 +956,7 @@ for_each_thread_that_matches (target_ops *targ, ptid_t ptid, Func &&func)
   if (all || ptid.is_pid ())
     {
       for (inferior *inf : inferiors ())
-	if (inf->process_target () == targ)
+	if (targ == NULL || inf->process_target () == targ)
 	  for (thread_info *tp : inf->threads ())
 	    if (all || tp->ptid.pid () == ptid.pid ())
 	      func (tp);

@@ -2278,6 +2278,14 @@ user_visible_resume_ptid (int step)
   return resume_ptid;
 }
 
+static target_ops *
+user_visible_resume_target (ptid_t resume_ptid, inferior *cur_inf)
+{
+  return (resume_ptid == minus_one_ptid
+	  ? NULL
+	  : cur_inf->process_target ());
+}
+
 /* Return a ptid representing the set of threads that we will resume,
    in the perspective of the target, assuming run control handling
    does not require leaving some threads stopped (e.g., stepping past
@@ -2854,13 +2862,22 @@ static void
 for_each_thread_that_matches (target_ops *targ, ptid_t ptid, Func &&func)
 {
   bool all = ptid == minus_one_ptid;
-  
-  if (all || ptid.is_pid ())
+
+  if (all)
     {
+      for (inferior *inf : inferiors ())
+	if (targ == NULL || targ == inf->process_target ())
+	  for (thread_info *tp : inf->threads ())
+	    func (tp);
+    }
+  else if (ptid.is_pid ())
+    {
+      gdb_assert (targ != NULL);
+
       for (inferior *inf : inferiors ())
 	if (inf->process_target () == targ)
 	  for (thread_info *tp : inf->threads ())
-	    if (all || tp->ptid.pid () == ptid.pid ())
+	    if (tp->ptid.pid () == ptid.pid ())
 	      func (tp);
     }
   else
@@ -2901,12 +2918,14 @@ clear_proceed_status (int step)
   if (!non_stop && inferior_ptid != null_ptid)
     {
       ptid_t resume_ptid = user_visible_resume_ptid (step);
+      target_ops *resume_target = user_visible_resume_target (resume_ptid,
+							      current_inferior ());
 
       /* In all-stop mode, delete the per-thread status of all threads
 	 we're about to resume, implicitly and explicitly.  */
 
-      for_each_non_exited_thread (inferior_thread ()->inf->process_target (),
-				  resume_ptid, [] (thread_info *tp)
+      for_each_non_exited_thread (resume_target, resume_ptid,
+				  [] (thread_info *tp)
 	{
 	  clear_proceed_status_thread (tp);
 	});
@@ -3066,12 +3085,13 @@ proceed (CORE_ADDR addr, enum gdb_signal siggnal)
     tp->suspend.stop_signal = siggnal;
 
   resume_ptid = user_visible_resume_ptid (tp->control.stepping_command);
+  target_ops *resume_target = user_visible_resume_target (resume_ptid,
+							  current_inferior ());
 
   /* If an exception is thrown from this point on, make sure to
      propagate GDB's knowledge of the executing state to the
      frontend/user running state.  */
-  scoped_finish_thread_state finish_state (tp->inf->process_target (),
-					   resume_ptid);
+  scoped_finish_thread_state finish_state (resume_target, resume_ptid);
 
   /* Even if RESUME_PTID is a wildcard, and we end up resuming fewer
      threads (e.g., we might need to set threads stepping over
@@ -3080,7 +3100,7 @@ proceed (CORE_ADDR addr, enum gdb_signal siggnal)
      inferior function, as in that case we pretend the inferior
      doesn't run at all.  */
   if (!tp->control.in_infcall)
-    set_running (tp->inf->process_target (), resume_ptid, 1);
+    set_running (resume_target, resume_ptid, 1);
 
   if (debug_infrun)
     fprintf_unfiltered (gdb_stdlog,
@@ -3117,8 +3137,7 @@ proceed (CORE_ADDR addr, enum gdb_signal siggnal)
     {
       struct thread_info *current = tp;
 
-      for_each_non_exited_thread (current->inf->process_target (),
-				  resume_ptid,
+      for_each_non_exited_thread (resume_target, resume_ptid,
 				  [current] (thread_info *tp)
 	{
 	  /* Ignore the current thread here.  It's handled
@@ -3174,8 +3193,7 @@ proceed (CORE_ADDR addr, enum gdb_signal siggnal)
 
 	/* In all-stop, but the target is always in non-stop mode.
 	   Start all other threads that are implicitly resumed too.  */
-	for_each_non_exited_thread (current->inf->process_target (),
-				    resume_ptid,
+	for_each_non_exited_thread (resume_target, resume_ptid,
 				    [current, ecs] (thread_info *tp)
         {
 	  if (tp->resumed)
