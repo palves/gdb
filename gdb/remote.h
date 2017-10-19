@@ -30,7 +30,8 @@ struct remote_target;
    rather than timing out; this is used (in synchronous mode) to wait
    for a target that is is executing user code to stop.  */
 
-extern void getpkt (char **buf, long *sizeof_buf, int forever);
+extern void getpkt (remote_target *remote,
+		    char **buf, long *sizeof_buf, int forever);
 
 /* Send a packet to the remote machine, with error checking.  The data
    of the packet is in BUF.  The string in BUF can be at most PBUFSIZ
@@ -38,7 +39,7 @@ extern void getpkt (char **buf, long *sizeof_buf, int forever);
    we are debugging (remote_debug) and want to print the sent packet
    as a string.  */
 
-extern int putpkt (const char *buf);
+extern int putpkt (remote_target *remote, const char *buf);
 
 void register_remote_g_packet_guess (struct gdbarch *gdbarch, int bytes,
 				     const struct target_desc *tdesc);
