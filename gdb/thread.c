@@ -1873,6 +1873,9 @@ update_threads_executing (void)
 {
   target_ops *targ = current_inferior ()->process_target ();
 
+  if (targ == NULL)
+    return;
+
   targ->threads_executing = false;
 
   for (inferior *inf : all_inferiors ())
