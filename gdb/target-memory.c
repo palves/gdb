@@ -402,7 +402,7 @@ target_write_memory_blocks (VEC(memory_write_request_s) *requests,
     {
       LONGEST len;
 
-      len = target_write_with_progress (current_target.beneath,
+      len = target_write_with_progress (target_stack,
 					TARGET_OBJECT_MEMORY, NULL,
 					r->data, r->begin, r->end - r->begin,
 					progress_cb, r->baton);
@@ -425,7 +425,7 @@ target_write_memory_blocks (VEC(memory_write_request_s) *requests,
 	{
 	  LONGEST len;
 
-	  len = target_write_with_progress (&current_target,
+	  len = target_write_with_progress (target_stack,
 					    TARGET_OBJECT_FLASH, NULL,
 					    r->data, r->begin,
 					    r->end - r->begin,

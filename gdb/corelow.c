@@ -50,6 +50,58 @@
 #define O_LARGEFILE 0
 #endif
 
+class core_target : public target_ops
+{
+public:
+  core_target ();
+
+  const char *shortname () override
+  { return "core"; }
+
+  const char *longname () override
+  { return _("Local core dump file"); }
+
+  const char *doc () override
+  {
+    return _("\
+Use a core file as a target.  Specify the filename of the core file.");
+  }
+
+  void open (const char *, int) override;
+  void close () override;
+  void detach (const char *, int) override;
+  void fetch_registers (struct regcache *, int) override;
+
+  enum target_xfer_status xfer_partial (enum target_object object,
+					const char *annex,
+					gdb_byte *readbuf,
+					const gdb_byte *writebuf,
+					ULONGEST offset, ULONGEST len,
+					ULONGEST *xfered_len) override;
+  void files_info () override;
+
+  int thread_alive (ptid_t ptid) override;
+  const struct target_desc *read_description () override;
+
+  const char *pid_to_str (ptid_t) override;
+
+  const char *thread_name (struct thread_info *) override;
+
+  int has_memory () override;
+  int has_stack () override;
+  int has_registers () override;
+  int info_proc (const char *, enum info_proc_what) override;
+};
+
+struct target_ops *the_core_target;
+
+/* Fill in core_ops with its defined operations and properties.  */
+
+core_target::core_target ()
+{
+  this->to_stratum = process_stratum;
+}
+
 /* List of all available core_fns.  On gdb startup, each core file
    register reader calls deprecated_add_core_fns() to register
    information on each core format it is prepared to read.  */
@@ -74,21 +126,13 @@ static struct gdbarch *core_gdbarch = NULL;
    unix child targets.  */
 static struct target_section_table *core_data;
 
-static void core_files_info (struct target_ops *);
-
 static struct core_fns *sniff_core_bfd (bfd *);
 
 static int gdb_check_format (bfd *);
 
-static void core_close (struct target_ops *self);
-
 static void core_close_cleanup (void *ignore);
 
 static void add_to_thread_list (bfd *, asection *, void *);
-
-static void init_core_ops (void);
-
-static struct target_ops core_ops;
 
 /* An arbitrary identifier for the core inferior.  */
 #define CORELOW_PID 1
@@ -185,7 +229,7 @@ gdb_check_format (bfd *abfd)
    stack spaces as empty.  */
 
 static void
-core_close (struct target_ops *self)
+core_close ()
 {
   if (core_bfd)
     {
@@ -216,7 +260,13 @@ core_close (struct target_ops *self)
 static void
 core_close_cleanup (void *ignore)
 {
-  core_close (NULL);
+  core_close ();
+}
+
+void
+core_target::close ()
+{
+  core_close ();
 }
 
 /* Look for sections whose names start with `.reg/' so that we can
@@ -266,8 +316,8 @@ add_to_thread_list (bfd *abfd, asection *asect, void *reg_sect_arg)
 
 /* This routine opens and sets up the core file bfd.  */
 
-static void
-core_open (const char *arg, int from_tty)
+void
+core_target::open (const char *arg, int from_tty)
 {
   const char *p;
   int siggy;
@@ -320,7 +370,7 @@ core_open (const char *arg, int from_tty)
   /* Looks semi-reasonable.  Toss the old core file and work on the
      new.  */
 
-  unpush_target (&core_ops);
+  unpush_target (this);
   core_bfd = temp_bfd.release ();
   old_chain = make_cleanup (core_close_cleanup, 0 /*ignore*/);
 
@@ -347,7 +397,7 @@ core_open (const char *arg, int from_tty)
   if (!exec_bfd)
     set_gdbarch_from_file (core_bfd);
 
-  push_target (&core_ops);
+  push_target (this);
   discard_cleanups (old_chain);
 
   /* Do this before acknowledging the inferior, so if
@@ -392,7 +442,7 @@ core_open (const char *arg, int from_tty)
 	switch_to_thread (thread->ptid);
     }
 
-  post_create_inferior (&core_ops, from_tty);
+  post_create_inferior (this, from_tty);
 
   /* Now go through the target stack looking for threads since there
      may be a thread_stratum target loaded on top of target core by
@@ -464,12 +514,12 @@ core_open (const char *arg, int from_tty)
     }
 }
 
-static void
-core_detach (struct target_ops *ops, const char *args, int from_tty)
+void
+core_target::detach (const char *args, int from_tty)
 {
   if (args)
     error (_("Too many arguments"));
-  unpush_target (ops);
+  unpush_target (this);
   reinit_frame_cache ();
   if (from_tty)
     printf_filtered (_("No core file now.\n"));
@@ -588,9 +638,8 @@ get_core_registers_cb (const char *sect_name, int size,
 
 /* We just get all the registers, so we don't use regno.  */
 
-static void
-get_core_registers (struct target_ops *ops,
-		    struct regcache *regcache, int regno)
+void
+core_target::fetch_registers (struct regcache *regcache, int regno)
 {
   int i;
   struct gdbarch *gdbarch;
@@ -622,8 +671,8 @@ get_core_registers (struct target_ops *ops,
       regcache_raw_supply (regcache, i, NULL);
 }
 
-static void
-core_files_info (struct target_ops *t)
+void
+core_target::files_info ()
 {
   print_section_info (core_data, core_bfd);
 }
@@ -658,11 +707,10 @@ add_to_spuid_list (bfd *abfd, asection *asect, void *list_p)
   list->pos += 4;
 }
 
-static enum target_xfer_status
-core_xfer_partial (struct target_ops *ops, enum target_object object,
-		   const char *annex, gdb_byte *readbuf,
-		   const gdb_byte *writebuf, ULONGEST offset,
-		   ULONGEST len, ULONGEST *xfered_len)
+enum target_xfer_status
+core_target::xfer_partial (enum target_object object, const char *annex,
+			   gdb_byte *readbuf, const gdb_byte *writebuf,
+			   ULONGEST offset, ULONGEST len, ULONGEST *xfered_len)
 {
   switch (object)
     {
@@ -864,35 +912,13 @@ core_xfer_partial (struct target_ops *ops, enum target_object object,
       return TARGET_XFER_E_IO;
 
     default:
-      return ops->beneath->to_xfer_partial (ops->beneath, object,
-					    annex, readbuf,
-					    writebuf, offset, len,
-					    xfered_len);
+      return this->beneath->xfer_partial (object, annex, readbuf,
+					  writebuf, offset, len,
+					  xfered_len);
     }
 }
 
 
-/* If mourn is being called in all the right places, this could be say
-   `gdb internal error' (since generic_mourn calls
-   breakpoint_init_inferior).  */
-
-static int
-ignore (struct target_ops *ops, struct gdbarch *gdbarch,
-	struct bp_target_info *bp_tgt)
-{
-  return 0;
-}
-
-/* Implement the to_remove_breakpoint method.  */
-
-static int
-core_remove_breakpoint (struct target_ops *ops, struct gdbarch *gdbarch,
-			struct bp_target_info *bp_tgt,
-			enum remove_bp_reason reason)
-{
-  return 0;
-}
-
 
 /* Okay, let's be honest: threads gleaned from a core file aren't
    exactly lively, are they?  On the other hand, if we don't claim
@@ -900,8 +926,8 @@ core_remove_breakpoint (struct target_ops *ops, struct gdbarch *gdbarch,
    to appear in an "info thread" command, which is quite a useful
    behaviour.
  */
-static int
-core_thread_alive (struct target_ops *ops, ptid_t ptid)
+int
+core_target::thread_alive (ptid_t ptid)
 {
   return 1;
 }
@@ -911,24 +937,23 @@ core_thread_alive (struct target_ops *ops, ptid_t ptid)
    wrapper could be avoided if targets got a chance to specialize
    core_ops.  */
 
-static const struct target_desc *
-core_read_description (struct target_ops *target)
+const struct target_desc *
+core_target::read_description ()
 {
   if (core_gdbarch && gdbarch_core_read_description_p (core_gdbarch))
     {
       const struct target_desc *result;
 
-      result = gdbarch_core_read_description (core_gdbarch, 
-					      target, core_bfd);
+      result = gdbarch_core_read_description (core_gdbarch, this, core_bfd);
       if (result != NULL)
 	return result;
     }
 
-  return target->beneath->to_read_description (target->beneath);
+  return this->beneath->read_description ();
 }
 
-static const char *
-core_pid_to_str (struct target_ops *ops, ptid_t ptid)
+const char *
+core_target::pid_to_str (ptid_t ptid)
 {
   static char buf[64];
   struct inferior *inf;
@@ -959,8 +984,8 @@ core_pid_to_str (struct target_ops *ops, ptid_t ptid)
   return buf;
 }
 
-static const char *
-core_thread_name (struct target_ops *self, struct thread_info *thr)
+const char *
+core_target::thread_name (struct thread_info *thr)
 {
   if (core_gdbarch
       && gdbarch_core_thread_name_p (core_gdbarch))
@@ -968,29 +993,28 @@ core_thread_name (struct target_ops *self, struct thread_info *thr)
   return NULL;
 }
 
-static int
-core_has_memory (struct target_ops *ops)
+int
+core_target::has_memory ()
 {
   return (core_bfd != NULL);
 }
 
-static int
-core_has_stack (struct target_ops *ops)
+int
+core_target::has_stack ()
 {
   return (core_bfd != NULL);
 }
 
-static int
-core_has_registers (struct target_ops *ops)
+int
+core_target::has_registers ()
 {
   return (core_bfd != NULL);
 }
 
 /* Implement the to_info_proc method.  */
 
-static void
-core_info_proc (struct target_ops *ops, const char *args,
-		enum info_proc_what request)
+int
+core_target::info_proc (const char *args, enum info_proc_what request)
 {
   struct gdbarch *gdbarch = get_current_arch ();
 
@@ -998,47 +1022,18 @@ core_info_proc (struct target_ops *ops, const char *args,
      method on gdbarch, not 'info_proc'.  */
   if (gdbarch_core_info_proc_p (gdbarch))
     gdbarch_core_info_proc (gdbarch, args, request);
-}
 
-/* Fill in core_ops with its defined operations and properties.  */
-
-static void
-init_core_ops (void)
-{
-  core_ops.to_shortname = "core";
-  core_ops.to_longname = "Local core dump file";
-  core_ops.to_doc =
-    "Use a core file as a target.  Specify the filename of the core file.";
-  core_ops.to_open = core_open;
-  core_ops.to_close = core_close;
-  core_ops.to_detach = core_detach;
-  core_ops.to_fetch_registers = get_core_registers;
-  core_ops.to_xfer_partial = core_xfer_partial;
-  core_ops.to_files_info = core_files_info;
-  core_ops.to_insert_breakpoint = ignore;
-  core_ops.to_remove_breakpoint = core_remove_breakpoint;
-  core_ops.to_thread_alive = core_thread_alive;
-  core_ops.to_read_description = core_read_description;
-  core_ops.to_pid_to_str = core_pid_to_str;
-  core_ops.to_thread_name = core_thread_name;
-  core_ops.to_stratum = process_stratum;
-  core_ops.to_has_memory = core_has_memory;
-  core_ops.to_has_stack = core_has_stack;
-  core_ops.to_has_registers = core_has_registers;
-  core_ops.to_info_proc = core_info_proc;
-  core_ops.to_magic = OPS_MAGIC;
-
-  if (core_target)
-    internal_error (__FILE__, __LINE__, 
-		    _("init_core_ops: core target already exists (\"%s\")."),
-		    core_target->to_longname);
-  core_target = &core_ops;
+  return 1;
 }
 
 void
 _initialize_corelow (void)
 {
-  init_core_ops ();
+  if (the_core_target != NULL)
+    internal_error (__FILE__, __LINE__,
+		    _("init_core_ops: core target already exists (\"%s\")."),
+		    the_core_target->longname ());
+  the_core_target = new class core_target ();
 
-  add_target_with_completer (&core_ops, filename_completer);
+  add_target_with_completer (the_core_target, filename_completer);
 }

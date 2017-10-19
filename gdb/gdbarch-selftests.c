@@ -30,49 +30,51 @@ namespace selftests {
 /* A mock process_stratum target_ops that doesn't read/write registers
    anywhere.  */
 
-static int
-test_target_has_registers (target_ops *self)
-{
-  return 1;
-}
-
-static int
-test_target_has_stack (target_ops *self)
-{
-  return 1;
-}
-
-static int
-test_target_has_memory (target_ops *self)
-{
-  return 1;
-}
-
-static void
-test_target_prepare_to_store (target_ops *self, regcache *regs)
-{
-}
-
-static void
-test_target_store_registers (target_ops *self, regcache *regs, int regno)
-{
-}
-
 class test_target_ops : public target_ops
 {
 public:
   test_target_ops ()
     : target_ops {}
   {
-    to_magic = OPS_MAGIC;
     to_stratum = process_stratum;
-    to_has_memory = test_target_has_memory;
-    to_has_stack = test_target_has_stack;
-    to_has_registers = test_target_has_registers;
-    to_prepare_to_store = test_target_prepare_to_store;
-    to_store_registers = test_target_store_registers;
+  }
 
-    complete_target_initialization (this);
+  const char *shortname () override
+  {
+    return NULL;
+  }
+
+  const char *longname () override
+  {
+    return NULL;
+  }
+
+  const char *doc () override
+  {
+    return NULL;
+  }
+
+  int has_registers () override
+  {
+    return 1;
+  }
+
+  int has_stack () override
+  {
+    return 1;
+  }
+
+  int has_memory () override
+  {
+    return 1;
+  }
+
+  void prepare_to_store (regcache *regs) override
+  {
+  }
+
+  void store_registers (regcache *regs, int regno) override
+  {
   }
 };
 
@@ -118,8 +120,8 @@ register_to_value_test (struct gdbarch *gdbarch)
 
   /* Error out if debugging something, because we're going to push the
      test target, which would pop any existing target.  */
-  if (current_target.to_stratum >= process_stratum)
-    error (_("target already pushed"));
+  if (target_stack->to_stratum >= process_stratum)
+   error (_("target already pushed"));
 
   /* Create a mock environment.  An inferior with a thread, with a
      process_stratum target pushed.  */

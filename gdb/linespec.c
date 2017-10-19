@@ -4324,7 +4324,7 @@ minsym_found (struct linespec_state *self, struct objfile *objfile,
       /* The minimal symbol might point to a function descriptor;
 	 resolve it to the actual code address instead.  */
       pc = gdbarch_convert_from_func_ptr_addr (gdbarch, sal.pc,
-					       &current_target);
+					       target_stack);
       if (pc != sal.pc)
 	sal = find_pc_sect_line (pc, NULL, 0);
 
@@ -4341,7 +4341,7 @@ minsym_found (struct linespec_state *self, struct objfile *objfile,
 		 stay correct from the last find_pc_sect_line above.  */
 	      sal.pc = MSYMBOL_VALUE_ADDRESS (objfile, msymbol);
 	      sal.pc = gdbarch_convert_from_func_ptr_addr (gdbarch, sal.pc,
-							   &current_target);
+							   target_stack);
 	      if (gdbarch_skip_entrypoint_p (gdbarch))
 		sal.pc = gdbarch_skip_entrypoint (gdbarch, sal.pc);
 	    }
@@ -4441,7 +4441,7 @@ add_minsym (struct minimal_symbol *minsym, void *d)
 			       NULL, 0);
       sal.section = MSYMBOL_OBJ_SECTION (info->objfile, minsym);
       pc
-	= gdbarch_convert_from_func_ptr_addr (gdbarch, sal.pc, &current_target);
+	= gdbarch_convert_from_func_ptr_addr (gdbarch, sal.pc, target_stack);
       if (pc != sal.pc)
 	sal = find_pc_sect_line (pc, NULL, 0);
 
@@ -4465,7 +4465,7 @@ add_minsym (struct minimal_symbol *minsym, void *d)
 	    struct gdbarch *gdbarch = get_objfile_arch (info->objfile);
 	    CORE_ADDR addr = gdbarch_convert_from_func_ptr_addr
 			       (gdbarch, BMSYMBOL_VALUE_ADDRESS (mo),
-				&current_target);
+				target_stack);
 
 	    if (addr == BMSYMBOL_VALUE_ADDRESS (mo))
 	      return;
