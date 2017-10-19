@@ -3096,6 +3096,8 @@ proceed (CORE_ADDR addr, enum gdb_signal siggnal)
       for (thread_info *tp : all_non_exited_threads (resume_target,
 						     resume_ptid))
 	{
+	  switch_to_thread_no_regs (thr);
+
 	  /* Ignore the current thread here.  It's handled
 	     afterwards.  */
 	  if (tp == cur_thr)
@@ -3113,6 +3115,8 @@ proceed (CORE_ADDR addr, enum gdb_signal siggnal)
 
 	  thread_step_over_chain_enqueue (tp);
 	}
+
+      switch_to_thread (tp);
     }
 
   /* Enqueue the current thread last, so that we move all other
@@ -3147,13 +3151,17 @@ proceed (CORE_ADDR addr, enum gdb_signal siggnal)
       {
 	/* In all-stop, but the target is always in non-stop mode.
 	   Start all other threads that are implicitly resumed too.  */
-	for (thread_info *tp : all_non_exited_threads (resume_target, resume_ptid))
+	for (thread_info *tp : all_non_exited_threads (resume_target,
+						       resume_ptid))
 	  {
+	    switch_to_thread_no_regs (tp);
+
 	    if (!tp->has_execution ())
 	      {
 		if (debug_infrun)
 		  fprintf_unfiltered (gdb_stdlog,
-				      "infrun: proceed: [%s] target has no execution\n",
+				      "infrun: proceed: [%s] target has "
+				      "no execution\n",
 				      target_pid_to_str (tp->ptid));
 		return;
 	      }
@@ -3188,6 +3196,8 @@ proceed (CORE_ADDR addr, enum gdb_signal siggnal)
 	  if (!ecs->wait_some_more)
 	    error (_("Command aborted."));
 	}
+
+	switch_to_thread (tp);
       }
     else if (!cur_thr->resumed && !thread_is_in_step_over_chain (cur_thr))
       {
@@ -5533,6 +5543,8 @@ restart_threads (struct thread_info *event_thread)
 
   for (thread_info *tp : all_non_exited_threads ())
     {
+      switch_to_thread_no_regs (tp);
+
       if (tp == event_thread)
 	{
 	  if (debug_infrun)
@@ -7226,8 +7238,10 @@ switch_back_to_stepped_thread (struct execution_control_state *ecs)
 
       for (thread_info *tp : all_non_exited_threads ())
         {
+	  switch_to_thread_no_regs (tp);
+
 	  /* Ignore threads of processes the caller is not
-	     resuming.  */
+	     resuming.  XXX */
 	  if (!sched_multi
 	      && tp->ptid.pid () != ecs->ptid.pid ())
 	    continue;
@@ -7277,6 +7291,8 @@ switch_back_to_stepped_thread (struct execution_control_state *ecs)
 	      return 1;
 	    }
 	}
+
+      switch_to_thread (ecs->event_thread);
     }
 
   return 0;
