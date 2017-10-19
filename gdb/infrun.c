@@ -2948,6 +2948,22 @@ schedlock_applies (struct thread_info *tp)
 
 extern void switch_to_inferior_no_thread (inferior *inf);
 
+static void
+commit_resume_all_targets ()
+{
+  scoped_restore_current_thread restore_thread;
+
+  for (inferior *inf : inferiors ())
+    {
+      if (inf->pid != 0
+	  && inf->process_target () != NULL)
+	{
+	  switch_to_inferior_no_thread (inf);
+	  target_commit_resume ();
+	}
+    }
+}
+
 /* Basic routine for continuing the program in various fashions.
 
    ADDR is the address to resume at, or -1 for resume where stopped.
@@ -3175,19 +3191,7 @@ proceed (CORE_ADDR addr, enum gdb_signal siggnal)
       }
   }
 
-  {
-    scoped_restore_current_thread restore_thread;
-
-    for (inferior *inf : inferiors ())
-      {
-	if (inf->pid != 0
-	    && inf->process_target () != NULL)
-	  {
-	    switch_to_inferior_no_thread (inf);
-	    target_commit_resume ();
-	  }
-      }
-  }
+  commit_resume_all_targets ();
 
   finish_state.release ();
 
