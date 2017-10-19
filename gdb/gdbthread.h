@@ -495,11 +495,6 @@ extern thread_info *next_thread (thread_info *thr);
 #define ALL_THREADS_INF(INF, T)					\
   for ((T) = (INF)->thread_list; (T) != NULL; (T) = (T)->next)
 
-/* Traverse over all threads, sorted by inferior.  */
-#define ALL_THREADS_BY_INFERIOR(inf, tp) \
-  ALL_INFERIORS (inf)						\
-    for (tp = inf->thread_list; tp != NULL; tp = tp->next)
-
 #define ALL_NON_EXITED_THREADS_INF(INF, T)			\
   for (T = (INF)->thread_list; T; T = T->next)			\
     if ((T)->state != THREAD_EXITED)
@@ -540,135 +535,99 @@ private:
   thread_info *m_head;
 };
 
-#if 0
-
-struct inferiors_iterator
+class inferiors_threads_iterator
 {
 public:
-  struct end_tag_t {};
-  constexpr end_tag_t end_tag;
+  explicit inferiors_threads_iterator (thread_info *&thr);
 
-  inferiors_iterator ()
-    : m_inf (inferior_list)
-  {}
+  thread_info *operator* () { return m_thr; }
 
-  inf_threads_iterator (end_tag_t)
-    : m_inf (NULL)
-  {}
-
-  inferior *operator* ()
-  { return m_inf; }
-
-  bool operator== (const inferiors_iterator &rhs)
-  { return m_inf == rhs; }
-  
-  inferiors_iterator& operator++ ()
-  {
-    inf = inf->next;
-    return *this;
-  }
-
-private:
-  inferior *m_inf;
-};
-
-class non_exited_threads_iterator
-{
-public:
-  non_exited_threads_iterator (thread_info *&thr)
-    : m_inf (inferior_list),
-      m_thr (thr)
-  {
-    m_thr = m_inf != NULL : m_inf->thread_list : NULL;
-    if (m_inf != NULL
-	&& (m_inf->pid == 0
-	    || m_thr->state == THREAD_EXITED))
-      advance ();
-  }
-
-  thread_info *operator* ()
-  { return m_thr; }
-  
-
-  non_exited_threads_iterator& operator++ ()
+  inferiors_threads_iterator& operator++ ()
   {
     advance ();
     return *this;
   }
 
 private:
-  void skip_inf ()
-  {
-    while (m_inf != NULL && m_inf->pid == 0)
-      m_inf = m_inf->next;
-  }
-
-  void skip_thr ()
-  {
-    while (m_thr != NULL && m_thr->state == THREAD_EXITED)
-      m_thr = m_thr->next;
-  }
-
-  void advance ()
-  {
-    while (1)
-      {
-	if (m_inf == NULL && m_thr == NULL)
-	  break;
-	else if (m_thr != NULL)
-	  {
-	    m_thr = m_thr->next;
-	    skip_thr ();
-	  }
-	else
-	  {
-	    m_inf = m_inf->next;
-	    skip_inf ();
-	    if (m_inf != NULL)
-	      m_thr = m_inf->thread_list;
-	  }
-      }
-  }
+  void advance ();
 
 private:
-  inferiors *m_inf;
+  inferior *m_inf;
   thread_info *&m_thr;
 };
 
-extern thread_info *first_non_exited_thread ();
-extern thread_info *next_non_exited_thread (thread_info *thr);
+class inferiors_threads_target_iterator
+{
+public:
+  explicit inferiors_threads_target_iterator (target_ops *target,
+					      thread_info *&thr);
 
-#define ALL_NON_EXITED_THREADS(T)					\
-  for (T = first_non_exited_thread (); T; T = next_non_exited_thread (T))
+  thread_info *operator* () { return m_thr; }
 
-#endif
+  inferiors_threads_target_iterator& operator++ ()
+  {
+    advance ();
+    return *this;
+  }
+
+private:
+  void advance ();
+
+private:
+  target_ops *m_target;
+  inferior *m_inf;
+  thread_info *&m_thr;
+};
+
+template<typename InferiorThreadsIterator>
+class non_exited_threads_iterator
+{
+public:
+  template<typename... Args>
+  explicit non_exited_threads_iterator (Args&&... args)
+    : m_it (std::forward<Args> (args)...)
+  {
+    skip_exited ();
+  }
+
+  thread_info *operator* () { return *m_it; }
+
+  non_exited_threads_iterator& operator++ ()
+  {
+    ++m_it;
+    skip_exited ();
+    return *this;
+  }
+
+private:
+  void skip_exited ()
+  {
+    for (; *m_it; ++m_it)
+      if ((*m_it)->state != THREAD_EXITED)
+	break;
+  }
+
+  InferiorThreadsIterator m_it;
+};
 
 /* Traverse all threads, except those that have THREAD_EXITED
    state.  */
-
 #define ALL_NON_EXITED_THREADS(T)					\
-  for (struct inferior *anet_inf = inferior_list;				\
-       anet_inf != NULL;						\
-       anet_inf = anet_inf->next)					\
-    if (anet_inf->pid != 0)						\
-      ALL_NON_EXITED_THREADS_INF (anet_inf, T)
+  for (non_exited_threads_iterator<inferiors_threads_iterator> anet_it (T); \
+       *anet_it != NULL; \
+       ++anet_it)
 
-#define ALL_NON_EXITED_THREADS_TARGET(THR, TARGET)				\
-  for (struct inferior *anet_inf = inferior_list;			\
-       anet_inf != NULL;						\
-       anet_inf = anet_inf->next)					\
-    if (anet_inf->pid != 0 && anet_inf->process_target () == TARGET)	\
-      ALL_NON_EXITED_THREADS_INF (anet_inf, THR)
+#define ALL_NON_EXITED_THREADS_TARGET(THR, TARGET)			\
+  for (non_exited_threads_iterator<inferiors_threads_target_iterator> anet_it (TARGET, THR); \
+       *anet_it != NULL; \
+       ++anet_it)
 
 /* Traverse all threads, including those that have THREAD_EXITED
    state.  Allows deleting the currently iterated thread.  */
 #define ALL_THREADS_SAFE(T, TMP)					\
-  for (inferior *ats_inf = inferior_list;				\
-       ats_inf != NULL;							\
-       ats_inf = ats_inf->next)						\
-    for ((T) = ats_inf->thread_list;					\
-	 (T) != NULL ? ((TMP) = (T)->next, 1): 0;			\
-	 (T) = (TMP))
+  for ((T) = first_thread ();						\
+       (T) != NULL ? ((TMP) = next_thread (T), 1): 0;			\
+       (T) = (TMP))
 
 extern int thread_count (target_ops *proc_target);
 

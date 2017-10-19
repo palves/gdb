@@ -619,6 +619,65 @@ find_thread_ptid (target_ops *targ, ptid_t ptid)
   return find_thread_ptid (inf, ptid);
 }
 
+/* XXX: move these back to the header, fixing dependencies somehow.  */
+inferiors_threads_iterator::inferiors_threads_iterator (thread_info *&thr)
+  : m_thr (thr)
+{
+  /* Note, there's always at least one inferior, so m_thr always
+     ends up initialized.  */
+  for (m_inf = inferior_list; m_inf != NULL; m_inf = m_inf->next)
+    for (m_thr = m_inf->thread_list; m_thr != NULL; m_thr = m_thr->next)
+      return;
+}
+
+void
+inferiors_threads_iterator::advance ()
+{
+  goto start;
+
+  for (; m_inf != NULL; m_inf = m_inf->next)
+    {
+      m_thr = m_inf->thread_list;
+      while (m_thr != NULL)
+	{
+	  return;
+	start:
+	  m_thr = m_thr->next;
+	}
+    }
+}
+
+/* XXX: move these back to the header, fixing dependencies somehow.  */
+inferiors_threads_target_iterator::inferiors_threads_target_iterator
+  (target_ops *target, thread_info *&thr)
+  : m_target (target), m_thr (thr)
+{
+  /* Note, there's always at least one inferior, so m_thr always
+     ends up initialized.  */
+  for (m_inf = inferior_list; m_inf != NULL; m_inf = m_inf->next)
+    if (m_target == m_inf->process_target ())
+      for (m_thr = m_inf->thread_list; m_thr != NULL; m_thr = m_thr->next)
+	return;
+}
+
+void
+inferiors_threads_target_iterator::advance ()
+{
+  goto start;
+
+  for (; m_inf != NULL; m_inf = m_inf->next)
+    if (m_target == m_inf->process_target ())
+      {
+	m_thr = m_inf->thread_list;
+	while (m_thr != NULL)
+	  {
+	    return;
+	  start:
+	    m_thr = m_thr->next;
+	  }
+      }
+}
+
 /*
  * Thread iterator function.
  *
@@ -1218,7 +1277,6 @@ print_thread_info_1 (struct ui_out *uiout, char *requested_threads,
 		     int show_global_ids)
 {
   struct thread_info *tp;
-  struct inferior *inf;
   int default_inf_num = current_inferior ()->num;
 
   update_thread_list ();
@@ -1280,7 +1338,7 @@ print_thread_info_1 (struct ui_out *uiout, char *requested_threads,
     /* We'll be switching threads temporarily.  */
     scoped_restore_current_thread restore_thread;
 
-    ALL_THREADS_BY_INFERIOR (inf, tp)
+    ALL_THREADS (tp)
       {
 	int core;
 
