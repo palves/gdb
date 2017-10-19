@@ -1419,7 +1419,7 @@ remote_arch_state::remote_arch_state (struct gdbarch *gdbarch)
 static remote_target *
 get_current_remote_target ()
 {
-  target_ops *proc_target = find_target_at (process_stratum);
+  target_ops *proc_target = current_inferior ()->process_target ();
   return dynamic_cast<remote_target *> (proc_target);
 }
 

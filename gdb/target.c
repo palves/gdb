@@ -649,6 +649,15 @@ target_stack::unpush (target_ops *t)
   /* Finally close the target.  Note we do this after unchaining, so
      any target method calls from within the target_close
      implementation don't end up in T anymore.  */
+
+  /* Leave it open if we have are other inferiors referencing this
+     target still.  XXX should refcount instead?  */
+  for (inferior *inf : inferiors ())
+    {
+      if (inf->process_target () == t)
+	return 1;
+    }
+
   target_close (t);
 
   return true;
