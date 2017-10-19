@@ -457,11 +457,14 @@ struct target_ops
     virtual const target_info &info () const = 0;
 
     /* Name this target type.  */
-    const char *shortname ()
+    const char *shortname () const
     { return info ().shortname; }
 
-    const char *longname ()
+    const char *longname () const
     { return info ().longname; }
+
+    virtual const char *connection_string ()
+    { return NULL; }
 
     /* Close the target.  This is where the target can handle
        teardown.  Heap-allocated targets should delete themselves

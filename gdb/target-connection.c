@@ -34,6 +34,8 @@ core-file, and process, if any), as well as the symbol file name.)";
 
 std::set<target_ops *> process_targets;
 
+std::string uiout_field_connection (target_ops *proc_target);
+
 /* Prints the list of inferiors and their details on UIOUT.  This is a
    version of 'info_inferior_command' suitable for use from MI.
 
@@ -44,25 +46,26 @@ std::set<target_ops *> process_targets;
 static void
 print_connection (struct ui_out *uiout, const char *requested_inferiors)
 {
-#if 0
-  /* Compute number of inferiors we will print.  */
-  for (target_connection *con : target_connections)
+  int count = 0;
+
+  /* Compute number of lines we will print.  */
+  for (target_ops *t : process_targets)
     {
-      if (!number_is_in_list (requested_inferiors, con->num))
+      if (!number_is_in_list (requested_inferiors, t->connection_number))
 	continue;
 
-      ++inf_count;
+      ++count;
     }
 
-  if (inf_count == 0)
+  if (count == 0)
     {
       uiout->message ("No connections.\n");
       return;
     }
-#endif
 
   ui_out_emit_table table_emitter (uiout, 3, process_targets.size (),
 				   "connections");
+
 
   uiout->table_header (1, ui_left, "current", "");
   uiout->table_header (4, ui_left, "number", "Num");
@@ -86,7 +89,8 @@ print_connection (struct ui_out *uiout, const char *requested_inferiors)
 
       uiout->field_int ("number", t->connection_number);
 
-      uiout->field_string ("description", t->longname ());
+      uiout->field_string ("description",
+			   uiout_field_connection (t).c_str ());
 
       uiout->text ("\n");
     }
