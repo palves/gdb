@@ -408,7 +408,7 @@ breakpoints_should_be_inserted_now (void)
 	}
 
       for (inferior *inf : inferiors ())
-	if (threads_are_executing (inf->process_target ()))
+	if (inf->pid != 0 && threads_are_executing (inf->process_target ()))
 	  return 1;
 
       /* Don't remove breakpoints yet if, even though all threads are
