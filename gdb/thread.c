@@ -53,13 +53,6 @@
 
 static int highest_thread_num;
 
-/* True if any thread is, or may be executing.  We need to track this
-   separately because until we fully sync the thread list, we won't
-   know whether the target is fully stopped, even if we see stop
-   events for all known threads, because any of those threads may have
-   spawned new threads we haven't heard of yet.  */
-static int threads_executing;
-
 static int thread_alive (struct thread_info *);
 
 /* RAII type used to increase / decrease the refcount of each thread
@@ -235,7 +228,6 @@ init_thread_list (void)
 
       inf->thread_list = NULL;
     }
-  threads_executing = 0;
 }
 
 /* Allocate a new thread of inferior INF with target id PTID and add
@@ -857,19 +849,19 @@ set_executing (target_ops *targ, ptid_t ptid, bool executing)
 
   /* It only takes one running thread to spawn more threads.  */
   if (executing)
-    threads_executing = 1;
+    targ->threads_executing = true;
   /* Only clear the flag if the caller is telling us everything is
      stopped.  */
   else if (minus_one_ptid == ptid)
-    threads_executing = 0;
+    targ->threads_executing = false;
 }
 
 /* See gdbthread.h.  */
 
 int
-threads_are_executing (void)
+threads_are_executing (target_ops *target)
 {
-  return threads_executing;
+  return target->threads_executing;
 }
 
 void
@@ -1853,13 +1845,22 @@ print_selected_thread_frame (struct ui_out *uiout,
 static void
 update_threads_executing (void)
 {
-  threads_executing = 0;
-  for (thread_info *tp : all_non_exited_threads ())
+  target_ops *targ = current_inferior ()->process_target ();
+
+  targ->threads_executing = false;
+
+  for (inferior *inf : all_inferiors ())
     {
-      if (tp->executing)
+      if (inf->process_target () != targ)
+	continue;
+
+      for (thread_info *tp : inf->non_exited_threads ())
 	{
-	  threads_executing = 1;
-	  break;
+	  if (tp->executing)
+	    {
+	      targ->threads_executing = true;
+	      return;
+	    }
 	}
     }
 }

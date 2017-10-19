@@ -598,7 +598,7 @@ extern void set_stop_requested (target_ops *targ, ptid_t ptid, bool stop);
 extern void set_executing (target_ops *targ, ptid_t ptid, bool executing);
 
 /* True if any (known or unknown) thread is or may be executing.  */
-extern int threads_are_executing (void);
+extern int threads_are_executing (target_ops *targ);
 
 /* Merge the executing property of thread PTID over to its thread
    state property (frontend running/stopped view).

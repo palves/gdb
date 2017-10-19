@@ -437,6 +437,13 @@ struct target_ops
     /* To the target under this one.  */
     target_ops *beneath () const;
 
+    /* True if any thread is, or may be executing.  We need to track
+     this separately because until we fully sync the thread list, we
+     won't know whether the target is fully stopped, even if we see
+     stop events for all known threads, because any of those threads
+     may have spawned new threads we haven't heard of yet.  */
+    bool threads_executing = false;
+
     /* Free resources associated with the target.  Note that singleton
        targets, like e.g., native targets, are global objects, not
        heap allocated, and are thus only deleted on GDB exit.  The
