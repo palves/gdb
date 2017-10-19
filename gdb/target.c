@@ -2573,7 +2573,7 @@ void
 target_ops::create_inferior (const char *, const std::string &,
 			     char **, int)
 {
-  gdb_assert (0);;
+  gdb_assert (0);
 }
 
 int
