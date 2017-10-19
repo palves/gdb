@@ -3544,8 +3544,7 @@ random_pending_event_thread (inferior *inf, ptid_t waiton_ptid)
   ALL_NON_EXITED_THREADS (event_tp)
     if (thread_matches (event_tp))
       if (random_selector-- == 0)
-	goto out;
- out:
+	break;
 
   return event_tp;
 }
