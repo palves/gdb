@@ -557,7 +557,8 @@ static void remote_check_symbols (void);
 
 struct stop_reply;
 static void stop_reply_xfree (struct stop_reply *);
-static void remote_parse_stop_reply (char *, struct stop_reply *);
+static void remote_parse_stop_reply (remote_target *target,
+				     char *, stop_reply *);
 static void discard_pending_stop_replies_in_queue (struct remote_state *);
 
 static void remote_async_inferior_event_handler (gdb_client_data);
@@ -6716,7 +6717,7 @@ remote_notif_stop_parse (remote_target *target,
 			 struct notif_client *self, char *buf,
 			 struct notif_event *event)
 {
-  remote_parse_stop_reply (buf, (struct stop_reply *) event);
+  remote_parse_stop_reply (target, buf, (struct stop_reply *) event);
 }
 
 static void
@@ -7162,7 +7163,7 @@ strprefix (const char *p, const char *pend, const char *prefix)
    result is stored in EVENT, or throws an error.  */
 
 static void
-remote_parse_stop_reply (char *buf, struct stop_reply *event)
+remote_parse_stop_reply (remote_target *target, char *buf, stop_reply *event)
 {
   remote_arch_state *rsa = NULL;
   ULONGEST addr;
@@ -7368,7 +7369,7 @@ Packet: '%s'\n"),
 		      inferior *inf
 			= (event->ptid == null_ptid
 			   ? NULL
-			   : find_inferior_ptid (NULL /* XXX: this */, event->ptid));
+			   : find_inferior_ptid (target, event->ptid));
 		      /* If this is the first time we learn anything
 			 about this process, skip the registers
 			 included in this packet, since we don't yet
