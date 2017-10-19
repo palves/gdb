@@ -3575,7 +3575,9 @@ do_target_wait (ptid_t wait_ptid, execution_control_state *ecs, int options)
 
   auto inferior_matches = [&wait_ptid] (inferior *inf)
     {
-      return (/* inf->pid != 0 && */ ptid_t (inf->pid).matches (wait_ptid));
+      return (inf->resumed
+	      /* && inf->pid != 0 */
+	      && ptid_t (inf->pid).matches (wait_ptid));
     };
 
   /* First see how many events we have.  Count only resumed threads

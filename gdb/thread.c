@@ -779,7 +779,11 @@ void
 set_resumed (target_ops *targ, ptid_t ptid, bool resumed)
 {
   for (thread_info *tp : all_non_exited_threads (targ, ptid))
-    tp->resumed = resumed;
+    {
+      tp->resumed = resumed;
+      if (resumed)
+	tp->inf->resumed = true;
+    }
 }
 
 /* Helper for set_running, that marks one thread either running or
