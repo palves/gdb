@@ -329,6 +329,9 @@ public:
 
   a_target_stack m_stack;
 
+  target_ops *top_target ()
+  { return m_stack.top (); }
+
   /* State of GDB control of inferior process execution.
      See `struct inferior_control_state'.  */
   inferior_control_state control {NO_STOP_QUIETLY};

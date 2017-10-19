@@ -460,6 +460,10 @@ struct thread_info *first_thread_of_process (int pid);
    thread.  */
 extern struct thread_info *any_thread_of_process (int pid);
 
+/* Returns any thread of inferior INF, giving preference to the
+   current thread.  */
+extern thread_info *any_thread_of_inferior (inferior *inf);
+
 /* Returns any non-exited thread of process PID, giving preference to
    the current thread, and to not executing threads.  */
 extern struct thread_info *any_live_thread_of_process (int pid);
@@ -482,6 +486,10 @@ extern struct thread_info *iterate_over_threads (thread_callback_func, void *);
     ALL_THREADS (tp) \
       if (inf == tp->inf)
 
+#define ALL_NON_EXITED_THREADS_TARGET(TARGET, T)			\
+  for (T = target_thread_list (TARGET); T; T = T->next)		\
+    if ((T)->state != THREAD_EXITED)
+
 /* Traverse all threads, except those that have THREAD_EXITED
    state.  */
 
@@ -497,6 +505,11 @@ extern struct thread_info *iterate_over_threads (thread_callback_func, void *);
        (T) = (TMP))
 
 extern int thread_count (void);
+
+/* Switch from one thread to another.  Also sets the STOP_PC
+   global.  */
+extern void switch_to_thread (ptid_t ptid);
+extern void switch_to_thread (thread_info *thr);
 
 /* Switch from one thread to another.  Does not read registers and
    sets STOP_PC to -1.  */
