@@ -236,6 +236,8 @@ public:
 
   void async (int) override;
 
+  int async_wait_fd () override;
+
   void thread_events (int) override;
 
   int can_do_single_step () override;
@@ -14102,6 +14104,13 @@ static void
 remote_async_inferior_event_handler (gdb_client_data data)
 {
   inferior_event_handler (INF_REG_EVENT, data);
+}
+
+int
+remote_target::async_wait_fd ()
+{
+  struct remote_state *rs = get_remote_state ();
+  return rs->remote_desc->fd;
 }
 
 void
