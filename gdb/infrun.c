@@ -3945,14 +3945,11 @@ fetch_inferior_event (void *client_data)
       set_current_traceframe (-1);
     }
 
-  gdb::optional<scoped_restore_current_thread> maybe_restore_thread;
-
-  if (non_stop)
-    /* In non-stop mode, the user/frontend should not notice a thread
-       switch due to internal events.  Make sure we reverse to the
-       user selected thread and frame after handling the event and
-       running any breakpoint commands.  */
-    maybe_restore_thread.emplace ();
+  /* In non-stop mode, the user/frontend should not notice a thread
+     switch due to internal events.  Make sure we revert to the user
+     selected thread and frame after handling the event and running
+     any breakpoint commands.  */
+  scoped_restore_current_thread restore_thread;
 
   overlay_cache_invalid = 1;
   /* Flush target cache before starting to handle each event.  Target
@@ -3969,6 +3966,15 @@ fetch_inferior_event (void *client_data)
     {
       do_cleanups (old_chain);
       return;
+    }
+
+  gdb_assert (ecs->ws.kind != TARGET_WAITKIND_IGNORE);
+
+  /* XXX: Quick&dirty hack.  */
+  for (inferior *inf : inferiors ())
+    {
+      if (inf->process_target () == ecs->target)
+	switch_to_inferior_no_thread (inf);
     }
 
   if (debug_infrun)
@@ -4034,6 +4040,9 @@ fetch_inferior_event (void *client_data)
 	      inferior_event_handler (INF_EXEC_COMPLETE, NULL);
 	      cmd_done = 1;
 	    }
+
+	  if (!non_stop && cmd_done)
+	    restore_thread.dont_restore ();
 	}
     }
 
