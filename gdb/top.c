@@ -1622,15 +1622,19 @@ quit_force (int *exit_arg, int from_tty)
 
   /* Give all pushed targets a chance to do minimal cleanup, and pop
      them all out.  */
-  TRY
+  for (inferior *inf : inferiors ())
     {
-      pop_all_targets ();
+      switch_to_inferior_no_thread (inf);
+      TRY
+	{
+	  pop_all_targets ();
+	}
+      CATCH (ex, RETURN_MASK_ALL)
+	{
+	  exception_print (gdb_stderr, ex);
+	}
+      END_CATCH
     }
-  CATCH (ex, RETURN_MASK_ALL)
-    {
-      exception_print (gdb_stderr, ex);
-    }
-  END_CATCH
 
   /* Save the history information if it is appropriate to do so.  */
   TRY
