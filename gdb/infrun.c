@@ -3570,18 +3570,67 @@ do_target_wait_1 (inferior *inf, ptid_t ptid,
 static void
 do_target_wait (ptid_t wait_ptid, execution_control_state *ecs, int options)
 {
-  for (inferior *inf : non_exited_inferiors ())
-    if (ptid_t (inf->pid).matches (wait_ptid))
-      {
-	set_current_inferior (inf);
-	switch_to_no_thread ();
-	set_current_program_space (inf->pspace);
+  int num_inferiors = 0;
+  int random_selector;
 
-	ecs->ptid = do_target_wait_1 (inf, wait_ptid, &ecs->ws, options);
-	ecs->target = inf->process_target ();
-	if (ecs->ws.kind != TARGET_WAITKIND_IGNORE)
-	  return;
-      }
+  auto inferior_matches = [&wait_ptid] (inferior *inf)
+    {
+      return (/* inf->pid != 0 && */ ptid_t (inf->pid).matches (wait_ptid));
+    };
+
+  /* First see how many events we have.  Count only resumed threads
+     that have an event pending.  */
+  for (inferior *inf : all_inferiors ())
+    if (inferior_matches (inf))
+      num_inferiors++;
+
+  if (num_inferiors == 0)
+    return;
+
+  /* Now randomly pick a thread out of those that have had events.  */
+  random_selector = (int)
+    ((num_inferiors * (double) rand ()) / (RAND_MAX + 1.0));
+
+  if (debug_infrun && num_inferiors > 1)
+    fprintf_unfiltered (gdb_stdlog,
+			"infrun: Found %d inferiors, starting at #%d\n",
+			num_inferiors, random_selector);
+
+  /* Select the Nth thread that has had an event.  */
+
+  inferior *selected;
+
+  for (inferior *inf : all_inferiors ())
+    if (inferior_matches (inf))
+      if (random_selector-- == 0)
+	{
+	  selected = inf;
+	  break;
+	}
+
+  auto do_wait = [&] (inferior *inf)
+  {
+    set_current_inferior (inf);
+    switch_to_no_thread ();
+    set_current_program_space (inf->pspace);
+
+    ecs->ptid = do_target_wait_1 (inf, wait_ptid, &ecs->ws, options);
+    ecs->target = inf->process_target ();
+    return (ecs->ws.kind != TARGET_WAITKIND_IGNORE);
+  };
+
+  int inf_num = selected->num;
+  for (inferior *inf = selected; inf != NULL; inf = inf->next)
+    if (inferior_matches (inf))
+      if (do_wait (inf))
+	return;
+
+  for (inferior *inf = inferior_list;
+       inf != NULL && inf->num < inf_num;
+       inf = inf->next)
+    if (inferior_matches (inf))
+      if (do_wait (inf))
+	return;
 }
 
 /* Prepare and stabilize the inferior for detaching it.  E.g.,
