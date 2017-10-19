@@ -64,11 +64,9 @@ struct dummy_target : public target_ops
   void mourn_inferior () override;
   void pass_signals (int arg0, unsigned char * arg1) override;
   void program_signals (int arg0, unsigned char * arg1) override;
-  bool thread_alive (thread_info *arg0) override;
   void update_thread_list () override;
   const char *pid_to_str (ptid_t arg0) override;
   const char *extra_thread_info (thread_info *arg0) override;
-  const char *thread_name (thread_info *arg0) override;
   thread_info *thread_handle_to_thread_info (const gdb_byte *arg0, int arg1, inferior *arg2) override;
   void stop (ptid_t arg0) override;
   void interrupt () override;
@@ -231,11 +229,9 @@ struct debug_target : public target_ops
   void mourn_inferior () override;
   void pass_signals (int arg0, unsigned char * arg1) override;
   void program_signals (int arg0, unsigned char * arg1) override;
-  bool thread_alive (thread_info *arg0) override;
   void update_thread_list () override;
   const char *pid_to_str (ptid_t arg0) override;
   const char *extra_thread_info (thread_info *arg0) override;
-  const char *thread_name (thread_info *arg0) override;
   thread_info *thread_handle_to_thread_info (const gdb_byte *arg0, int arg1, inferior *arg2) override;
   void stop (ptid_t arg0) override;
   void interrupt () override;
@@ -1710,32 +1706,6 @@ debug_target::program_signals (int arg0, unsigned char * arg1)
   target_debug_print_signals (arg1);
   fputs_unfiltered (")\n", gdb_stdlog);
 }
-#if 0
-bool
-target_ops::thread_alive (thread_info *arg0)
-{
-  return this->beneath ()->thread_alive (arg0);
-}
-#endif
-bool
-dummy_target::thread_alive (thread_info *arg0)
-{
-  return false;
-}
-
-bool
-debug_target::thread_alive (thread_info *arg0)
-{
-  bool result;
-  fprintf_unfiltered (gdb_stdlog, "-> %s->thread_alive (...)\n", this->beneath ()->shortname ());
-  result = this->beneath ()->thread_alive (arg0);
-  fprintf_unfiltered (gdb_stdlog, "<- %s->thread_alive (", this->beneath ()->shortname ());
-  target_debug_print_thread_info_p (arg0);
-  fputs_unfiltered (") = ", gdb_stdlog);
-  target_debug_print_bool (result);
-  fputs_unfiltered ("\n", gdb_stdlog);
-  return result;
-}
 
 void
 target_ops::update_thread_list ()
@@ -1802,34 +1772,6 @@ debug_target::extra_thread_info (thread_info *arg0)
   fprintf_unfiltered (gdb_stdlog, "-> %s->extra_thread_info (...)\n", this->beneath ()->shortname ());
   result = this->beneath ()->extra_thread_info (arg0);
   fprintf_unfiltered (gdb_stdlog, "<- %s->extra_thread_info (", this->beneath ()->shortname ());
-  target_debug_print_thread_info_p (arg0);
-  fputs_unfiltered (") = ", gdb_stdlog);
-  target_debug_print_const_char_p (result);
-  fputs_unfiltered ("\n", gdb_stdlog);
-  return result;
-}
-
-#if 0
-const char *
-target_ops::thread_name (thread_info *arg0)
-{
-  return this->beneath ()->thread_name (arg0);
-}
-#endif
-
-const char *
-dummy_target::thread_name (thread_info *arg0)
-{
-  return NULL;
-}
-
-const char *
-debug_target::thread_name (thread_info *arg0)
-{
-  const char * result;
-  fprintf_unfiltered (gdb_stdlog, "-> %s->thread_name (...)\n", this->beneath ()->shortname ());
-  result = this->beneath ()->thread_name (arg0);
-  fprintf_unfiltered (gdb_stdlog, "<- %s->thread_name (", this->beneath ()->shortname ());
   target_debug_print_thread_info_p (arg0);
   fputs_unfiltered (") = ", gdb_stdlog);
   target_debug_print_const_char_p (result);
