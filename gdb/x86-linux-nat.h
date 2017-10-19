@@ -35,7 +35,7 @@ struct x86_linux_nat_target : public x86_nat_target<linux_nat_target>
   const struct target_desc *read_description () override;
 
   /* Add btrace methods.  */
-  int supports_btrace (enum btrace_format format) override;
+  bool supports_btrace (enum btrace_format format) override;
 
   struct btrace_target_info *enable_btrace (ptid_t ptid,
 					    const struct btrace_config *conf) override;
@@ -50,16 +50,16 @@ struct x86_linux_nat_target : public x86_nat_target<linux_nat_target>
      stopped-by-watchpoint info as soon as an lwp stops (via the low_
      methods) and caches the result, to be returned via the normal
      non-low methods.  */
-  int stopped_by_watchpoint () override
+  bool stopped_by_watchpoint () override
   { return linux_nat_target::stopped_by_watchpoint (); }
 
-  int stopped_data_address (CORE_ADDR *addr_p) override
+  bool stopped_data_address (CORE_ADDR *addr_p) override
   { return linux_nat_target::stopped_data_address (addr_p); }
 
-  int low_stopped_by_watchpoint () override
+  bool low_stopped_by_watchpoint () override
   { return x86_nat_target::stopped_by_watchpoint (); }
 
-  int low_stopped_data_address (CORE_ADDR *addr_p) override
+  bool low_stopped_data_address (CORE_ADDR *addr_p) override
   { return x86_nat_target::stopped_data_address (addr_p); }
 };
 

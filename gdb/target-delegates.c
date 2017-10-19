@@ -24,10 +24,10 @@ struct dummy_target : public target_ops
   void files_info () override;
   int insert_breakpoint (struct gdbarch *arg0, struct bp_target_info *arg1) override;
   int remove_breakpoint (struct gdbarch *arg0, struct bp_target_info *arg1, enum remove_bp_reason arg2) override;
-  int stopped_by_sw_breakpoint () override;
-  int supports_stopped_by_sw_breakpoint () override;
-  int stopped_by_hw_breakpoint () override;
-  int supports_stopped_by_hw_breakpoint () override;
+  bool stopped_by_sw_breakpoint () override;
+  bool supports_stopped_by_sw_breakpoint () override;
+  bool stopped_by_hw_breakpoint () override;
+  bool supports_stopped_by_hw_breakpoint () override;
   int can_use_hw_breakpoint (enum bptype arg0, int arg1, int arg2) override;
   int ranged_break_num_registers () override;
   int insert_hw_breakpoint (struct gdbarch *arg0, struct bp_target_info *arg1) override;
@@ -36,13 +36,13 @@ struct dummy_target : public target_ops
   int insert_watchpoint (CORE_ADDR arg0, int arg1, enum target_hw_bp_type arg2, struct expression *arg3) override;
   int insert_mask_watchpoint (CORE_ADDR arg0, CORE_ADDR arg1, enum target_hw_bp_type arg2) override;
   int remove_mask_watchpoint (CORE_ADDR arg0, CORE_ADDR arg1, enum target_hw_bp_type arg2) override;
-  int stopped_by_watchpoint () override;
+  bool stopped_by_watchpoint () override;
   int have_steppable_watchpoint () override;
   bool have_continuable_watchpoint () override;
-  int stopped_data_address (CORE_ADDR *arg0) override;
-  int watchpoint_addr_within_range (CORE_ADDR arg0, CORE_ADDR arg1, int arg2) override;
-  int region_ok_for_hw_watchpoint (CORE_ADDR arg0, int arg1) override;
-  int can_accel_watchpoint_condition (CORE_ADDR arg0, int arg1, int arg2, struct expression *arg3) override;
+  bool stopped_data_address (CORE_ADDR *arg0) override;
+  bool watchpoint_addr_within_range (CORE_ADDR arg0, CORE_ADDR arg1, int arg2) override;
+  bool region_ok_for_hw_watchpoint (CORE_ADDR arg0, int arg1) override;
+  bool can_accel_watchpoint_condition (CORE_ADDR arg0, int arg1, int arg2, struct expression *arg3) override;
   int masked_watch_num_registers (CORE_ADDR arg0, CORE_ADDR arg1) override;
   int can_do_single_step () override;
   bool supports_terminal_ours () override;
@@ -63,11 +63,10 @@ struct dummy_target : public target_ops
   int remove_exec_catchpoint (int arg0) override;
   void follow_exec (struct inferior *arg0, char *arg1) override;
   int set_syscall_catchpoint (int arg0, int arg1, int arg2, int arg3, int *arg4) override;
-  int has_exited (int arg0, int arg1, int *arg2) override;
   void mourn_inferior () override;
   void pass_signals (int arg0, unsigned char * arg1) override;
   void program_signals (int arg0, unsigned char * arg1) override;
-  int thread_alive (ptid_t arg0) override;
+  bool thread_alive (ptid_t arg0) override;
   void update_thread_list () override;
   const char *pid_to_str (ptid_t arg0) override;
   const char *extra_thread_info (thread_info *arg0) override;
@@ -82,12 +81,12 @@ struct dummy_target : public target_ops
   struct target_section_table *get_section_table () override;
   thread_control_capabilities get_thread_control_capabilities () override;
   bool attach_no_wait () override;
-  int can_async_p () override;
-  int is_async_p () override;
+  bool can_async_p () override;
+  bool is_async_p () override;
   void async (int arg0) override;
   void thread_events (int arg0) override;
-  int supports_non_stop () override;
-  int always_non_stop_p () override;
+  bool supports_non_stop () override;
+  bool always_non_stop_p () override;
   int find_memory_regions (find_memory_region_ftype arg0, void *arg1) override;
   char *make_corefile_notes (bfd *arg0, int *arg1) override;
   gdb_byte *get_bookmark (const char *arg0, int arg1) override;
@@ -102,20 +101,20 @@ struct dummy_target : public target_ops
   ptid_t get_ada_task_ptid (long arg0, long arg1) override;
   int auxv_parse (gdb_byte **arg0, gdb_byte *arg1, CORE_ADDR *arg2, CORE_ADDR *arg3) override;
   int search_memory (CORE_ADDR arg0, ULONGEST arg1, const gdb_byte *arg2, ULONGEST arg3, CORE_ADDR *arg4) override;
-  int can_execute_reverse () override;
+  bool can_execute_reverse () override;
   enum exec_direction_kind execution_direction () override;
-  int supports_multi_process () override;
-  int supports_enable_disable_tracepoint () override;
-  int supports_disable_randomization () override;
-  int supports_string_tracing () override;
-  int supports_evaluation_of_breakpoint_conditions () override;
-  int can_run_breakpoint_commands () override;
+  bool supports_multi_process () override;
+  bool supports_enable_disable_tracepoint () override;
+  bool supports_disable_randomization () override;
+  bool supports_string_tracing () override;
+  bool supports_evaluation_of_breakpoint_conditions () override;
+  bool can_run_breakpoint_commands () override;
   struct gdbarch *thread_architecture (ptid_t arg0) override;
   struct address_space *thread_address_space (ptid_t arg0) override;
-  int filesystem_is_local () override;
+  bool filesystem_is_local () override;
   void trace_init () override;
   void download_tracepoint (struct bp_location *arg0) override;
-  int can_download_tracepoint () override;
+  bool can_download_tracepoint () override;
   void download_trace_state_variable (struct trace_state_variable *arg0) override;
   void enable_tracepoint (struct bp_location *arg0) override;
   void disable_tracepoint (struct bp_location *arg0) override;
@@ -125,7 +124,7 @@ struct dummy_target : public target_ops
   void get_tracepoint_status (struct breakpoint *arg0, struct uploaded_tp *arg1) override;
   void trace_stop () override;
   int trace_find (enum trace_find_type arg0, int arg1, CORE_ADDR arg2, CORE_ADDR arg3, int *arg4) override;
-  int get_trace_state_variable_value (int arg0, LONGEST *arg1) override;
+  bool get_trace_state_variable_value (int arg0, LONGEST *arg1) override;
   int save_trace_data (const char *arg0) override;
   int upload_tracepoints (struct uploaded_tp **arg0) override;
   int upload_trace_state_variables (struct uploaded_tsv **arg0) override;
@@ -134,17 +133,17 @@ struct dummy_target : public target_ops
   void set_disconnected_tracing (int arg0) override;
   void set_circular_trace_buffer (int arg0) override;
   void set_trace_buffer_size (LONGEST arg0) override;
-  int set_trace_notes (const char *arg0, const char *arg1, const char *arg2) override;
+  bool set_trace_notes (const char *arg0, const char *arg1, const char *arg2) override;
   int core_of_thread (ptid_t arg0) override;
   int verify_memory (const gdb_byte *arg0, CORE_ADDR arg1, ULONGEST arg2) override;
-  int get_tib_address (ptid_t arg0, CORE_ADDR *arg1) override;
+  bool get_tib_address (ptid_t arg0, CORE_ADDR *arg1) override;
   void set_permissions () override;
-  int static_tracepoint_marker_at (CORE_ADDR arg0, struct static_tracepoint_marker *arg1) override;
+  bool static_tracepoint_marker_at (CORE_ADDR arg0, struct static_tracepoint_marker *arg1) override;
   VEC(static_tracepoint_marker_p) *static_tracepoint_markers_by_strid (const char *arg0) override;
   traceframe_info_up traceframe_info () override;
-  int use_agent (int arg0) override;
-  int can_use_agent () override;
-  int supports_btrace (enum btrace_format arg0) override;
+  bool use_agent (int arg0) override;
+  bool can_use_agent () override;
+  bool supports_btrace (enum btrace_format arg0) override;
   struct btrace_target_info *enable_btrace (ptid_t arg0, const struct btrace_config *arg1) override;
   void disable_btrace (struct btrace_target_info *arg0) override;
   void teardown_btrace (struct btrace_target_info *arg0) override;
@@ -156,8 +155,8 @@ struct dummy_target : public target_ops
   void save_record (const char *arg0) override;
   bool supports_delete_record () override;
   void delete_record () override;
-  int record_is_replaying (ptid_t arg0) override;
-  int record_will_replay (ptid_t arg0, int arg1) override;
+  bool record_is_replaying (ptid_t arg0) override;
+  bool record_will_replay (ptid_t arg0, int arg1) override;
   void record_stop_replaying () override;
   void goto_record_begin () override;
   void goto_record_end () override;
@@ -168,7 +167,7 @@ struct dummy_target : public target_ops
   void call_history (int arg0, int arg1) override;
   void call_history_from (ULONGEST arg0, int arg1, int arg2) override;
   void call_history_range (ULONGEST arg0, ULONGEST arg1, int arg2) override;
-  int augmented_libraries_svr4_read () override;
+  bool augmented_libraries_svr4_read () override;
   const struct frame_unwind *get_unwinder () override;
   const struct frame_unwind *get_tailcall_unwinder () override;
   void prepare_to_generate_core () override;
@@ -195,10 +194,10 @@ struct debug_target : public target_ops
   void files_info () override;
   int insert_breakpoint (struct gdbarch *arg0, struct bp_target_info *arg1) override;
   int remove_breakpoint (struct gdbarch *arg0, struct bp_target_info *arg1, enum remove_bp_reason arg2) override;
-  int stopped_by_sw_breakpoint () override;
-  int supports_stopped_by_sw_breakpoint () override;
-  int stopped_by_hw_breakpoint () override;
-  int supports_stopped_by_hw_breakpoint () override;
+  bool stopped_by_sw_breakpoint () override;
+  bool supports_stopped_by_sw_breakpoint () override;
+  bool stopped_by_hw_breakpoint () override;
+  bool supports_stopped_by_hw_breakpoint () override;
   int can_use_hw_breakpoint (enum bptype arg0, int arg1, int arg2) override;
   int ranged_break_num_registers () override;
   int insert_hw_breakpoint (struct gdbarch *arg0, struct bp_target_info *arg1) override;
@@ -207,13 +206,13 @@ struct debug_target : public target_ops
   int insert_watchpoint (CORE_ADDR arg0, int arg1, enum target_hw_bp_type arg2, struct expression *arg3) override;
   int insert_mask_watchpoint (CORE_ADDR arg0, CORE_ADDR arg1, enum target_hw_bp_type arg2) override;
   int remove_mask_watchpoint (CORE_ADDR arg0, CORE_ADDR arg1, enum target_hw_bp_type arg2) override;
-  int stopped_by_watchpoint () override;
+  bool stopped_by_watchpoint () override;
   int have_steppable_watchpoint () override;
   bool have_continuable_watchpoint () override;
-  int stopped_data_address (CORE_ADDR *arg0) override;
-  int watchpoint_addr_within_range (CORE_ADDR arg0, CORE_ADDR arg1, int arg2) override;
-  int region_ok_for_hw_watchpoint (CORE_ADDR arg0, int arg1) override;
-  int can_accel_watchpoint_condition (CORE_ADDR arg0, int arg1, int arg2, struct expression *arg3) override;
+  bool stopped_data_address (CORE_ADDR *arg0) override;
+  bool watchpoint_addr_within_range (CORE_ADDR arg0, CORE_ADDR arg1, int arg2) override;
+  bool region_ok_for_hw_watchpoint (CORE_ADDR arg0, int arg1) override;
+  bool can_accel_watchpoint_condition (CORE_ADDR arg0, int arg1, int arg2, struct expression *arg3) override;
   int masked_watch_num_registers (CORE_ADDR arg0, CORE_ADDR arg1) override;
   int can_do_single_step () override;
   bool supports_terminal_ours () override;
@@ -234,11 +233,10 @@ struct debug_target : public target_ops
   int remove_exec_catchpoint (int arg0) override;
   void follow_exec (struct inferior *arg0, char *arg1) override;
   int set_syscall_catchpoint (int arg0, int arg1, int arg2, int arg3, int *arg4) override;
-  int has_exited (int arg0, int arg1, int *arg2) override;
   void mourn_inferior () override;
   void pass_signals (int arg0, unsigned char * arg1) override;
   void program_signals (int arg0, unsigned char * arg1) override;
-  int thread_alive (ptid_t arg0) override;
+  bool thread_alive (ptid_t arg0) override;
   void update_thread_list () override;
   const char *pid_to_str (ptid_t arg0) override;
   const char *extra_thread_info (thread_info *arg0) override;
@@ -253,12 +251,12 @@ struct debug_target : public target_ops
   struct target_section_table *get_section_table () override;
   thread_control_capabilities get_thread_control_capabilities () override;
   bool attach_no_wait () override;
-  int can_async_p () override;
-  int is_async_p () override;
+  bool can_async_p () override;
+  bool is_async_p () override;
   void async (int arg0) override;
   void thread_events (int arg0) override;
-  int supports_non_stop () override;
-  int always_non_stop_p () override;
+  bool supports_non_stop () override;
+  bool always_non_stop_p () override;
   int find_memory_regions (find_memory_region_ftype arg0, void *arg1) override;
   char *make_corefile_notes (bfd *arg0, int *arg1) override;
   gdb_byte *get_bookmark (const char *arg0, int arg1) override;
@@ -273,20 +271,20 @@ struct debug_target : public target_ops
   ptid_t get_ada_task_ptid (long arg0, long arg1) override;
   int auxv_parse (gdb_byte **arg0, gdb_byte *arg1, CORE_ADDR *arg2, CORE_ADDR *arg3) override;
   int search_memory (CORE_ADDR arg0, ULONGEST arg1, const gdb_byte *arg2, ULONGEST arg3, CORE_ADDR *arg4) override;
-  int can_execute_reverse () override;
+  bool can_execute_reverse () override;
   enum exec_direction_kind execution_direction () override;
-  int supports_multi_process () override;
-  int supports_enable_disable_tracepoint () override;
-  int supports_disable_randomization () override;
-  int supports_string_tracing () override;
-  int supports_evaluation_of_breakpoint_conditions () override;
-  int can_run_breakpoint_commands () override;
+  bool supports_multi_process () override;
+  bool supports_enable_disable_tracepoint () override;
+  bool supports_disable_randomization () override;
+  bool supports_string_tracing () override;
+  bool supports_evaluation_of_breakpoint_conditions () override;
+  bool can_run_breakpoint_commands () override;
   struct gdbarch *thread_architecture (ptid_t arg0) override;
   struct address_space *thread_address_space (ptid_t arg0) override;
-  int filesystem_is_local () override;
+  bool filesystem_is_local () override;
   void trace_init () override;
   void download_tracepoint (struct bp_location *arg0) override;
-  int can_download_tracepoint () override;
+  bool can_download_tracepoint () override;
   void download_trace_state_variable (struct trace_state_variable *arg0) override;
   void enable_tracepoint (struct bp_location *arg0) override;
   void disable_tracepoint (struct bp_location *arg0) override;
@@ -296,7 +294,7 @@ struct debug_target : public target_ops
   void get_tracepoint_status (struct breakpoint *arg0, struct uploaded_tp *arg1) override;
   void trace_stop () override;
   int trace_find (enum trace_find_type arg0, int arg1, CORE_ADDR arg2, CORE_ADDR arg3, int *arg4) override;
-  int get_trace_state_variable_value (int arg0, LONGEST *arg1) override;
+  bool get_trace_state_variable_value (int arg0, LONGEST *arg1) override;
   int save_trace_data (const char *arg0) override;
   int upload_tracepoints (struct uploaded_tp **arg0) override;
   int upload_trace_state_variables (struct uploaded_tsv **arg0) override;
@@ -305,17 +303,17 @@ struct debug_target : public target_ops
   void set_disconnected_tracing (int arg0) override;
   void set_circular_trace_buffer (int arg0) override;
   void set_trace_buffer_size (LONGEST arg0) override;
-  int set_trace_notes (const char *arg0, const char *arg1, const char *arg2) override;
+  bool set_trace_notes (const char *arg0, const char *arg1, const char *arg2) override;
   int core_of_thread (ptid_t arg0) override;
   int verify_memory (const gdb_byte *arg0, CORE_ADDR arg1, ULONGEST arg2) override;
-  int get_tib_address (ptid_t arg0, CORE_ADDR *arg1) override;
+  bool get_tib_address (ptid_t arg0, CORE_ADDR *arg1) override;
   void set_permissions () override;
-  int static_tracepoint_marker_at (CORE_ADDR arg0, struct static_tracepoint_marker *arg1) override;
+  bool static_tracepoint_marker_at (CORE_ADDR arg0, struct static_tracepoint_marker *arg1) override;
   VEC(static_tracepoint_marker_p) *static_tracepoint_markers_by_strid (const char *arg0) override;
   traceframe_info_up traceframe_info () override;
-  int use_agent (int arg0) override;
-  int can_use_agent () override;
-  int supports_btrace (enum btrace_format arg0) override;
+  bool use_agent (int arg0) override;
+  bool can_use_agent () override;
+  bool supports_btrace (enum btrace_format arg0) override;
   struct btrace_target_info *enable_btrace (ptid_t arg0, const struct btrace_config *arg1) override;
   void disable_btrace (struct btrace_target_info *arg0) override;
   void teardown_btrace (struct btrace_target_info *arg0) override;
@@ -327,8 +325,8 @@ struct debug_target : public target_ops
   void save_record (const char *arg0) override;
   bool supports_delete_record () override;
   void delete_record () override;
-  int record_is_replaying (ptid_t arg0) override;
-  int record_will_replay (ptid_t arg0, int arg1) override;
+  bool record_is_replaying (ptid_t arg0) override;
+  bool record_will_replay (ptid_t arg0, int arg1) override;
   void record_stop_replaying () override;
   void goto_record_begin () override;
   void goto_record_end () override;
@@ -339,7 +337,7 @@ struct debug_target : public target_ops
   void call_history (int arg0, int arg1) override;
   void call_history_from (ULONGEST arg0, int arg1, int arg2) override;
   void call_history_range (ULONGEST arg0, ULONGEST arg1, int arg2) override;
-  int augmented_libraries_svr4_read () override;
+  bool augmented_libraries_svr4_read () override;
   const struct frame_unwind *get_unwinder () override;
   const struct frame_unwind *get_tailcall_unwinder () override;
   void prepare_to_generate_core () override;
@@ -637,102 +635,102 @@ debug_target::remove_breakpoint (struct gdbarch *arg0, struct bp_target_info *ar
   return result;
 }
 
-int
+bool
 target_ops::stopped_by_sw_breakpoint ()
 {
   return this->beneath->stopped_by_sw_breakpoint ();
 }
 
-int
+bool
 dummy_target::stopped_by_sw_breakpoint ()
 {
-  return 0;
+  return false;
 }
 
-int
+bool
 debug_target::stopped_by_sw_breakpoint ()
 {
-  int result;
+  bool result;
   fprintf_unfiltered (gdb_stdlog, "-> %s->stopped_by_sw_breakpoint (...)\n", this->beneath->shortname ());
   result = this->beneath->stopped_by_sw_breakpoint ();
   fprintf_unfiltered (gdb_stdlog, "<- %s->stopped_by_sw_breakpoint (", this->beneath->shortname ());
   fputs_unfiltered (") = ", gdb_stdlog);
-  target_debug_print_int (result);
+  target_debug_print_bool (result);
   fputs_unfiltered ("\n", gdb_stdlog);
   return result;
 }
 
-int
+bool
 target_ops::supports_stopped_by_sw_breakpoint ()
 {
   return this->beneath->supports_stopped_by_sw_breakpoint ();
 }
 
-int
+bool
 dummy_target::supports_stopped_by_sw_breakpoint ()
 {
-  return 0;
+  return false;
 }
 
-int
+bool
 debug_target::supports_stopped_by_sw_breakpoint ()
 {
-  int result;
+  bool result;
   fprintf_unfiltered (gdb_stdlog, "-> %s->supports_stopped_by_sw_breakpoint (...)\n", this->beneath->shortname ());
   result = this->beneath->supports_stopped_by_sw_breakpoint ();
   fprintf_unfiltered (gdb_stdlog, "<- %s->supports_stopped_by_sw_breakpoint (", this->beneath->shortname ());
   fputs_unfiltered (") = ", gdb_stdlog);
-  target_debug_print_int (result);
+  target_debug_print_bool (result);
   fputs_unfiltered ("\n", gdb_stdlog);
   return result;
 }
 
-int
+bool
 target_ops::stopped_by_hw_breakpoint ()
 {
   return this->beneath->stopped_by_hw_breakpoint ();
 }
 
-int
+bool
 dummy_target::stopped_by_hw_breakpoint ()
 {
-  return 0;
+  return false;
 }
 
-int
+bool
 debug_target::stopped_by_hw_breakpoint ()
 {
-  int result;
+  bool result;
   fprintf_unfiltered (gdb_stdlog, "-> %s->stopped_by_hw_breakpoint (...)\n", this->beneath->shortname ());
   result = this->beneath->stopped_by_hw_breakpoint ();
   fprintf_unfiltered (gdb_stdlog, "<- %s->stopped_by_hw_breakpoint (", this->beneath->shortname ());
   fputs_unfiltered (") = ", gdb_stdlog);
-  target_debug_print_int (result);
+  target_debug_print_bool (result);
   fputs_unfiltered ("\n", gdb_stdlog);
   return result;
 }
 
-int
+bool
 target_ops::supports_stopped_by_hw_breakpoint ()
 {
   return this->beneath->supports_stopped_by_hw_breakpoint ();
 }
 
-int
+bool
 dummy_target::supports_stopped_by_hw_breakpoint ()
 {
-  return 0;
+  return false;
 }
 
-int
+bool
 debug_target::supports_stopped_by_hw_breakpoint ()
 {
-  int result;
+  bool result;
   fprintf_unfiltered (gdb_stdlog, "-> %s->supports_stopped_by_hw_breakpoint (...)\n", this->beneath->shortname ());
   result = this->beneath->supports_stopped_by_hw_breakpoint ();
   fprintf_unfiltered (gdb_stdlog, "<- %s->supports_stopped_by_hw_breakpoint (", this->beneath->shortname ());
   fputs_unfiltered (") = ", gdb_stdlog);
-  target_debug_print_int (result);
+  target_debug_print_bool (result);
   fputs_unfiltered ("\n", gdb_stdlog);
   return result;
 }
@@ -972,27 +970,27 @@ debug_target::remove_mask_watchpoint (CORE_ADDR arg0, CORE_ADDR arg1, enum targe
   return result;
 }
 
-int
+bool
 target_ops::stopped_by_watchpoint ()
 {
   return this->beneath->stopped_by_watchpoint ();
 }
 
-int
+bool
 dummy_target::stopped_by_watchpoint ()
 {
-  return 0;
+  return false;
 }
 
-int
+bool
 debug_target::stopped_by_watchpoint ()
 {
-  int result;
+  bool result;
   fprintf_unfiltered (gdb_stdlog, "-> %s->stopped_by_watchpoint (...)\n", this->beneath->shortname ());
   result = this->beneath->stopped_by_watchpoint ();
   fprintf_unfiltered (gdb_stdlog, "<- %s->stopped_by_watchpoint (", this->beneath->shortname ());
   fputs_unfiltered (") = ", gdb_stdlog);
-  target_debug_print_int (result);
+  target_debug_print_bool (result);
   fputs_unfiltered ("\n", gdb_stdlog);
   return result;
 }
@@ -1006,7 +1004,7 @@ target_ops::have_steppable_watchpoint ()
 int
 dummy_target::have_steppable_watchpoint ()
 {
-  return 0;
+  return false;
 }
 
 int
@@ -1031,7 +1029,7 @@ target_ops::have_continuable_watchpoint ()
 bool
 dummy_target::have_continuable_watchpoint ()
 {
-  return 0;
+  return false;
 }
 
 bool
@@ -1047,48 +1045,48 @@ debug_target::have_continuable_watchpoint ()
   return result;
 }
 
-int
+bool
 target_ops::stopped_data_address (CORE_ADDR *arg0)
 {
   return this->beneath->stopped_data_address (arg0);
 }
 
-int
+bool
 dummy_target::stopped_data_address (CORE_ADDR *arg0)
 {
-  return 0;
+  return false;
 }
 
-int
+bool
 debug_target::stopped_data_address (CORE_ADDR *arg0)
 {
-  int result;
+  bool result;
   fprintf_unfiltered (gdb_stdlog, "-> %s->stopped_data_address (...)\n", this->beneath->shortname ());
   result = this->beneath->stopped_data_address (arg0);
   fprintf_unfiltered (gdb_stdlog, "<- %s->stopped_data_address (", this->beneath->shortname ());
   target_debug_print_CORE_ADDR_p (arg0);
   fputs_unfiltered (") = ", gdb_stdlog);
-  target_debug_print_int (result);
+  target_debug_print_bool (result);
   fputs_unfiltered ("\n", gdb_stdlog);
   return result;
 }
 
-int
+bool
 target_ops::watchpoint_addr_within_range (CORE_ADDR arg0, CORE_ADDR arg1, int arg2)
 {
   return this->beneath->watchpoint_addr_within_range (arg0, arg1, arg2);
 }
 
-int
+bool
 dummy_target::watchpoint_addr_within_range (CORE_ADDR arg0, CORE_ADDR arg1, int arg2)
 {
   return default_watchpoint_addr_within_range (this, arg0, arg1, arg2);
 }
 
-int
+bool
 debug_target::watchpoint_addr_within_range (CORE_ADDR arg0, CORE_ADDR arg1, int arg2)
 {
-  int result;
+  bool result;
   fprintf_unfiltered (gdb_stdlog, "-> %s->watchpoint_addr_within_range (...)\n", this->beneath->shortname ());
   result = this->beneath->watchpoint_addr_within_range (arg0, arg1, arg2);
   fprintf_unfiltered (gdb_stdlog, "<- %s->watchpoint_addr_within_range (", this->beneath->shortname ());
@@ -1098,27 +1096,27 @@ debug_target::watchpoint_addr_within_range (CORE_ADDR arg0, CORE_ADDR arg1, int 
   fputs_unfiltered (", ", gdb_stdlog);
   target_debug_print_int (arg2);
   fputs_unfiltered (") = ", gdb_stdlog);
-  target_debug_print_int (result);
+  target_debug_print_bool (result);
   fputs_unfiltered ("\n", gdb_stdlog);
   return result;
 }
 
-int
+bool
 target_ops::region_ok_for_hw_watchpoint (CORE_ADDR arg0, int arg1)
 {
   return this->beneath->region_ok_for_hw_watchpoint (arg0, arg1);
 }
 
-int
+bool
 dummy_target::region_ok_for_hw_watchpoint (CORE_ADDR arg0, int arg1)
 {
   return default_region_ok_for_hw_watchpoint (this, arg0, arg1);
 }
 
-int
+bool
 debug_target::region_ok_for_hw_watchpoint (CORE_ADDR arg0, int arg1)
 {
-  int result;
+  bool result;
   fprintf_unfiltered (gdb_stdlog, "-> %s->region_ok_for_hw_watchpoint (...)\n", this->beneath->shortname ());
   result = this->beneath->region_ok_for_hw_watchpoint (arg0, arg1);
   fprintf_unfiltered (gdb_stdlog, "<- %s->region_ok_for_hw_watchpoint (", this->beneath->shortname ());
@@ -1126,27 +1124,27 @@ debug_target::region_ok_for_hw_watchpoint (CORE_ADDR arg0, int arg1)
   fputs_unfiltered (", ", gdb_stdlog);
   target_debug_print_int (arg1);
   fputs_unfiltered (") = ", gdb_stdlog);
-  target_debug_print_int (result);
+  target_debug_print_bool (result);
   fputs_unfiltered ("\n", gdb_stdlog);
   return result;
 }
 
-int
+bool
 target_ops::can_accel_watchpoint_condition (CORE_ADDR arg0, int arg1, int arg2, struct expression *arg3)
 {
   return this->beneath->can_accel_watchpoint_condition (arg0, arg1, arg2, arg3);
 }
 
-int
+bool
 dummy_target::can_accel_watchpoint_condition (CORE_ADDR arg0, int arg1, int arg2, struct expression *arg3)
 {
-  return 0;
+  return false;
 }
 
-int
+bool
 debug_target::can_accel_watchpoint_condition (CORE_ADDR arg0, int arg1, int arg2, struct expression *arg3)
 {
-  int result;
+  bool result;
   fprintf_unfiltered (gdb_stdlog, "-> %s->can_accel_watchpoint_condition (...)\n", this->beneath->shortname ());
   result = this->beneath->can_accel_watchpoint_condition (arg0, arg1, arg2, arg3);
   fprintf_unfiltered (gdb_stdlog, "<- %s->can_accel_watchpoint_condition (", this->beneath->shortname ());
@@ -1158,7 +1156,7 @@ debug_target::can_accel_watchpoint_condition (CORE_ADDR arg0, int arg1, int arg2
   fputs_unfiltered (", ", gdb_stdlog);
   target_debug_print_struct_expression_p (arg3);
   fputs_unfiltered (") = ", gdb_stdlog);
-  target_debug_print_int (result);
+  target_debug_print_bool (result);
   fputs_unfiltered ("\n", gdb_stdlog);
   return result;
 }
@@ -1225,7 +1223,7 @@ target_ops::supports_terminal_ours ()
 bool
 dummy_target::supports_terminal_ours ()
 {
-  return 0;
+  return false;
 }
 
 bool
@@ -1652,36 +1650,6 @@ debug_target::set_syscall_catchpoint (int arg0, int arg1, int arg2, int arg3, in
   return result;
 }
 
-int
-target_ops::has_exited (int arg0, int arg1, int *arg2)
-{
-  return this->beneath->has_exited (arg0, arg1, arg2);
-}
-
-int
-dummy_target::has_exited (int arg0, int arg1, int *arg2)
-{
-  return 0;
-}
-
-int
-debug_target::has_exited (int arg0, int arg1, int *arg2)
-{
-  int result;
-  fprintf_unfiltered (gdb_stdlog, "-> %s->has_exited (...)\n", this->beneath->shortname ());
-  result = this->beneath->has_exited (arg0, arg1, arg2);
-  fprintf_unfiltered (gdb_stdlog, "<- %s->has_exited (", this->beneath->shortname ());
-  target_debug_print_int (arg0);
-  fputs_unfiltered (", ", gdb_stdlog);
-  target_debug_print_int (arg1);
-  fputs_unfiltered (", ", gdb_stdlog);
-  target_debug_print_int_p (arg2);
-  fputs_unfiltered (") = ", gdb_stdlog);
-  target_debug_print_int (result);
-  fputs_unfiltered ("\n", gdb_stdlog);
-  return result;
-}
-
 void
 target_ops::mourn_inferior ()
 {
@@ -1749,28 +1717,28 @@ debug_target::program_signals (int arg0, unsigned char * arg1)
   fputs_unfiltered (")\n", gdb_stdlog);
 }
 
-int
+bool
 target_ops::thread_alive (ptid_t arg0)
 {
   return this->beneath->thread_alive (arg0);
 }
 
-int
+bool
 dummy_target::thread_alive (ptid_t arg0)
 {
-  return 0;
+  return false;
 }
 
-int
+bool
 debug_target::thread_alive (ptid_t arg0)
 {
-  int result;
+  bool result;
   fprintf_unfiltered (gdb_stdlog, "-> %s->thread_alive (...)\n", this->beneath->shortname ());
   result = this->beneath->thread_alive (arg0);
   fprintf_unfiltered (gdb_stdlog, "<- %s->thread_alive (", this->beneath->shortname ());
   target_debug_print_ptid_t (arg0);
   fputs_unfiltered (") = ", gdb_stdlog);
-  target_debug_print_int (result);
+  target_debug_print_bool (result);
   fputs_unfiltered ("\n", gdb_stdlog);
   return result;
 }
@@ -2112,52 +2080,52 @@ debug_target::attach_no_wait ()
   return result;
 }
 
-int
+bool
 target_ops::can_async_p ()
 {
   return this->beneath->can_async_p ();
 }
 
-int
+bool
 dummy_target::can_async_p ()
 {
-  return 0;
+  return false;
 }
 
-int
+bool
 debug_target::can_async_p ()
 {
-  int result;
+  bool result;
   fprintf_unfiltered (gdb_stdlog, "-> %s->can_async_p (...)\n", this->beneath->shortname ());
   result = this->beneath->can_async_p ();
   fprintf_unfiltered (gdb_stdlog, "<- %s->can_async_p (", this->beneath->shortname ());
   fputs_unfiltered (") = ", gdb_stdlog);
-  target_debug_print_int (result);
+  target_debug_print_bool (result);
   fputs_unfiltered ("\n", gdb_stdlog);
   return result;
 }
 
-int
+bool
 target_ops::is_async_p ()
 {
   return this->beneath->is_async_p ();
 }
 
-int
+bool
 dummy_target::is_async_p ()
 {
-  return 0;
+  return false;
 }
 
-int
+bool
 debug_target::is_async_p ()
 {
-  int result;
+  bool result;
   fprintf_unfiltered (gdb_stdlog, "-> %s->is_async_p (...)\n", this->beneath->shortname ());
   result = this->beneath->is_async_p ();
   fprintf_unfiltered (gdb_stdlog, "<- %s->is_async_p (", this->beneath->shortname ());
   fputs_unfiltered (") = ", gdb_stdlog);
-  target_debug_print_int (result);
+  target_debug_print_bool (result);
   fputs_unfiltered ("\n", gdb_stdlog);
   return result;
 }
@@ -2205,52 +2173,52 @@ debug_target::thread_events (int arg0)
   fputs_unfiltered (")\n", gdb_stdlog);
 }
 
-int
+bool
 target_ops::supports_non_stop ()
 {
   return this->beneath->supports_non_stop ();
 }
 
-int
+bool
 dummy_target::supports_non_stop ()
 {
-  return 0;
+  return false;
 }
 
-int
+bool
 debug_target::supports_non_stop ()
 {
-  int result;
+  bool result;
   fprintf_unfiltered (gdb_stdlog, "-> %s->supports_non_stop (...)\n", this->beneath->shortname ());
   result = this->beneath->supports_non_stop ();
   fprintf_unfiltered (gdb_stdlog, "<- %s->supports_non_stop (", this->beneath->shortname ());
   fputs_unfiltered (") = ", gdb_stdlog);
-  target_debug_print_int (result);
+  target_debug_print_bool (result);
   fputs_unfiltered ("\n", gdb_stdlog);
   return result;
 }
 
-int
+bool
 target_ops::always_non_stop_p ()
 {
   return this->beneath->always_non_stop_p ();
 }
 
-int
+bool
 dummy_target::always_non_stop_p ()
 {
-  return 0;
+  return false;
 }
 
-int
+bool
 debug_target::always_non_stop_p ()
 {
-  int result;
+  bool result;
   fprintf_unfiltered (gdb_stdlog, "-> %s->always_non_stop_p (...)\n", this->beneath->shortname ());
   result = this->beneath->always_non_stop_p ();
   fprintf_unfiltered (gdb_stdlog, "<- %s->always_non_stop_p (", this->beneath->shortname ());
   fputs_unfiltered (") = ", gdb_stdlog);
-  target_debug_print_int (result);
+  target_debug_print_bool (result);
   fputs_unfiltered ("\n", gdb_stdlog);
   return result;
 }
@@ -2645,27 +2613,27 @@ debug_target::search_memory (CORE_ADDR arg0, ULONGEST arg1, const gdb_byte *arg2
   return result;
 }
 
-int
+bool
 target_ops::can_execute_reverse ()
 {
   return this->beneath->can_execute_reverse ();
 }
 
-int
+bool
 dummy_target::can_execute_reverse ()
 {
-  return 0;
+  return false;
 }
 
-int
+bool
 debug_target::can_execute_reverse ()
 {
-  int result;
+  bool result;
   fprintf_unfiltered (gdb_stdlog, "-> %s->can_execute_reverse (...)\n", this->beneath->shortname ());
   result = this->beneath->can_execute_reverse ();
   fprintf_unfiltered (gdb_stdlog, "<- %s->can_execute_reverse (", this->beneath->shortname ());
   fputs_unfiltered (") = ", gdb_stdlog);
-  target_debug_print_int (result);
+  target_debug_print_bool (result);
   fputs_unfiltered ("\n", gdb_stdlog);
   return result;
 }
@@ -2695,152 +2663,152 @@ debug_target::execution_direction ()
   return result;
 }
 
-int
+bool
 target_ops::supports_multi_process ()
 {
   return this->beneath->supports_multi_process ();
 }
 
-int
+bool
 dummy_target::supports_multi_process ()
 {
-  return 0;
+  return false;
 }
 
-int
+bool
 debug_target::supports_multi_process ()
 {
-  int result;
+  bool result;
   fprintf_unfiltered (gdb_stdlog, "-> %s->supports_multi_process (...)\n", this->beneath->shortname ());
   result = this->beneath->supports_multi_process ();
   fprintf_unfiltered (gdb_stdlog, "<- %s->supports_multi_process (", this->beneath->shortname ());
   fputs_unfiltered (") = ", gdb_stdlog);
-  target_debug_print_int (result);
+  target_debug_print_bool (result);
   fputs_unfiltered ("\n", gdb_stdlog);
   return result;
 }
 
-int
+bool
 target_ops::supports_enable_disable_tracepoint ()
 {
   return this->beneath->supports_enable_disable_tracepoint ();
 }
 
-int
+bool
 dummy_target::supports_enable_disable_tracepoint ()
 {
-  return 0;
+  return false;
 }
 
-int
+bool
 debug_target::supports_enable_disable_tracepoint ()
 {
-  int result;
+  bool result;
   fprintf_unfiltered (gdb_stdlog, "-> %s->supports_enable_disable_tracepoint (...)\n", this->beneath->shortname ());
   result = this->beneath->supports_enable_disable_tracepoint ();
   fprintf_unfiltered (gdb_stdlog, "<- %s->supports_enable_disable_tracepoint (", this->beneath->shortname ());
   fputs_unfiltered (") = ", gdb_stdlog);
-  target_debug_print_int (result);
+  target_debug_print_bool (result);
   fputs_unfiltered ("\n", gdb_stdlog);
   return result;
 }
 
-int
+bool
 target_ops::supports_disable_randomization ()
 {
   return this->beneath->supports_disable_randomization ();
 }
 
-int
+bool
 dummy_target::supports_disable_randomization ()
 {
   return find_default_supports_disable_randomization (this);
 }
 
-int
+bool
 debug_target::supports_disable_randomization ()
 {
-  int result;
+  bool result;
   fprintf_unfiltered (gdb_stdlog, "-> %s->supports_disable_randomization (...)\n", this->beneath->shortname ());
   result = this->beneath->supports_disable_randomization ();
   fprintf_unfiltered (gdb_stdlog, "<- %s->supports_disable_randomization (", this->beneath->shortname ());
   fputs_unfiltered (") = ", gdb_stdlog);
-  target_debug_print_int (result);
+  target_debug_print_bool (result);
   fputs_unfiltered ("\n", gdb_stdlog);
   return result;
 }
 
-int
+bool
 target_ops::supports_string_tracing ()
 {
   return this->beneath->supports_string_tracing ();
 }
 
-int
+bool
 dummy_target::supports_string_tracing ()
 {
-  return 0;
+  return false;
 }
 
-int
+bool
 debug_target::supports_string_tracing ()
 {
-  int result;
+  bool result;
   fprintf_unfiltered (gdb_stdlog, "-> %s->supports_string_tracing (...)\n", this->beneath->shortname ());
   result = this->beneath->supports_string_tracing ();
   fprintf_unfiltered (gdb_stdlog, "<- %s->supports_string_tracing (", this->beneath->shortname ());
   fputs_unfiltered (") = ", gdb_stdlog);
-  target_debug_print_int (result);
+  target_debug_print_bool (result);
   fputs_unfiltered ("\n", gdb_stdlog);
   return result;
 }
 
-int
+bool
 target_ops::supports_evaluation_of_breakpoint_conditions ()
 {
   return this->beneath->supports_evaluation_of_breakpoint_conditions ();
 }
 
-int
+bool
 dummy_target::supports_evaluation_of_breakpoint_conditions ()
 {
-  return 0;
+  return false;
 }
 
-int
+bool
 debug_target::supports_evaluation_of_breakpoint_conditions ()
 {
-  int result;
+  bool result;
   fprintf_unfiltered (gdb_stdlog, "-> %s->supports_evaluation_of_breakpoint_conditions (...)\n", this->beneath->shortname ());
   result = this->beneath->supports_evaluation_of_breakpoint_conditions ();
   fprintf_unfiltered (gdb_stdlog, "<- %s->supports_evaluation_of_breakpoint_conditions (", this->beneath->shortname ());
   fputs_unfiltered (") = ", gdb_stdlog);
-  target_debug_print_int (result);
+  target_debug_print_bool (result);
   fputs_unfiltered ("\n", gdb_stdlog);
   return result;
 }
 
-int
+bool
 target_ops::can_run_breakpoint_commands ()
 {
   return this->beneath->can_run_breakpoint_commands ();
 }
 
-int
+bool
 dummy_target::can_run_breakpoint_commands ()
 {
-  return 0;
+  return false;
 }
 
-int
+bool
 debug_target::can_run_breakpoint_commands ()
 {
-  int result;
+  bool result;
   fprintf_unfiltered (gdb_stdlog, "-> %s->can_run_breakpoint_commands (...)\n", this->beneath->shortname ());
   result = this->beneath->can_run_breakpoint_commands ();
   fprintf_unfiltered (gdb_stdlog, "<- %s->can_run_breakpoint_commands (", this->beneath->shortname ());
   fputs_unfiltered (") = ", gdb_stdlog);
-  target_debug_print_int (result);
+  target_debug_print_bool (result);
   fputs_unfiltered ("\n", gdb_stdlog);
   return result;
 }
@@ -2897,27 +2865,27 @@ debug_target::thread_address_space (ptid_t arg0)
   return result;
 }
 
-int
+bool
 target_ops::filesystem_is_local ()
 {
   return this->beneath->filesystem_is_local ();
 }
 
-int
+bool
 dummy_target::filesystem_is_local ()
 {
-  return 1;
+  return true;
 }
 
-int
+bool
 debug_target::filesystem_is_local ()
 {
-  int result;
+  bool result;
   fprintf_unfiltered (gdb_stdlog, "-> %s->filesystem_is_local (...)\n", this->beneath->shortname ());
   result = this->beneath->filesystem_is_local ();
   fprintf_unfiltered (gdb_stdlog, "<- %s->filesystem_is_local (", this->beneath->shortname ());
   fputs_unfiltered (") = ", gdb_stdlog);
-  target_debug_print_int (result);
+  target_debug_print_bool (result);
   fputs_unfiltered ("\n", gdb_stdlog);
   return result;
 }
@@ -2965,27 +2933,27 @@ debug_target::download_tracepoint (struct bp_location *arg0)
   fputs_unfiltered (")\n", gdb_stdlog);
 }
 
-int
+bool
 target_ops::can_download_tracepoint ()
 {
   return this->beneath->can_download_tracepoint ();
 }
 
-int
+bool
 dummy_target::can_download_tracepoint ()
 {
-  return 0;
+  return false;
 }
 
-int
+bool
 debug_target::can_download_tracepoint ()
 {
-  int result;
+  bool result;
   fprintf_unfiltered (gdb_stdlog, "-> %s->can_download_tracepoint (...)\n", this->beneath->shortname ());
   result = this->beneath->can_download_tracepoint ();
   fprintf_unfiltered (gdb_stdlog, "<- %s->can_download_tracepoint (", this->beneath->shortname ());
   fputs_unfiltered (") = ", gdb_stdlog);
-  target_debug_print_int (result);
+  target_debug_print_bool (result);
   fputs_unfiltered ("\n", gdb_stdlog);
   return result;
 }
@@ -3203,22 +3171,22 @@ debug_target::trace_find (enum trace_find_type arg0, int arg1, CORE_ADDR arg2, C
   return result;
 }
 
-int
+bool
 target_ops::get_trace_state_variable_value (int arg0, LONGEST *arg1)
 {
   return this->beneath->get_trace_state_variable_value (arg0, arg1);
 }
 
-int
+bool
 dummy_target::get_trace_state_variable_value (int arg0, LONGEST *arg1)
 {
-  return 0;
+  return false;
 }
 
-int
+bool
 debug_target::get_trace_state_variable_value (int arg0, LONGEST *arg1)
 {
-  int result;
+  bool result;
   fprintf_unfiltered (gdb_stdlog, "-> %s->get_trace_state_variable_value (...)\n", this->beneath->shortname ());
   result = this->beneath->get_trace_state_variable_value (arg0, arg1);
   fprintf_unfiltered (gdb_stdlog, "<- %s->get_trace_state_variable_value (", this->beneath->shortname ());
@@ -3226,7 +3194,7 @@ debug_target::get_trace_state_variable_value (int arg0, LONGEST *arg1)
   fputs_unfiltered (", ", gdb_stdlog);
   target_debug_print_LONGEST_p (arg1);
   fputs_unfiltered (") = ", gdb_stdlog);
-  target_debug_print_int (result);
+  target_debug_print_bool (result);
   fputs_unfiltered ("\n", gdb_stdlog);
   return result;
 }
@@ -3427,22 +3395,22 @@ debug_target::set_trace_buffer_size (LONGEST arg0)
   fputs_unfiltered (")\n", gdb_stdlog);
 }
 
-int
+bool
 target_ops::set_trace_notes (const char *arg0, const char *arg1, const char *arg2)
 {
   return this->beneath->set_trace_notes (arg0, arg1, arg2);
 }
 
-int
+bool
 dummy_target::set_trace_notes (const char *arg0, const char *arg1, const char *arg2)
 {
-  return 0;
+  return false;
 }
 
-int
+bool
 debug_target::set_trace_notes (const char *arg0, const char *arg1, const char *arg2)
 {
-  int result;
+  bool result;
   fprintf_unfiltered (gdb_stdlog, "-> %s->set_trace_notes (...)\n", this->beneath->shortname ());
   result = this->beneath->set_trace_notes (arg0, arg1, arg2);
   fprintf_unfiltered (gdb_stdlog, "<- %s->set_trace_notes (", this->beneath->shortname ());
@@ -3452,7 +3420,7 @@ debug_target::set_trace_notes (const char *arg0, const char *arg1, const char *a
   fputs_unfiltered (", ", gdb_stdlog);
   target_debug_print_const_char_p (arg2);
   fputs_unfiltered (") = ", gdb_stdlog);
-  target_debug_print_int (result);
+  target_debug_print_bool (result);
   fputs_unfiltered ("\n", gdb_stdlog);
   return result;
 }
@@ -3513,22 +3481,22 @@ debug_target::verify_memory (const gdb_byte *arg0, CORE_ADDR arg1, ULONGEST arg2
   return result;
 }
 
-int
+bool
 target_ops::get_tib_address (ptid_t arg0, CORE_ADDR *arg1)
 {
   return this->beneath->get_tib_address (arg0, arg1);
 }
 
-int
+bool
 dummy_target::get_tib_address (ptid_t arg0, CORE_ADDR *arg1)
 {
   tcomplain ();
 }
 
-int
+bool
 debug_target::get_tib_address (ptid_t arg0, CORE_ADDR *arg1)
 {
-  int result;
+  bool result;
   fprintf_unfiltered (gdb_stdlog, "-> %s->get_tib_address (...)\n", this->beneath->shortname ());
   result = this->beneath->get_tib_address (arg0, arg1);
   fprintf_unfiltered (gdb_stdlog, "<- %s->get_tib_address (", this->beneath->shortname ());
@@ -3536,7 +3504,7 @@ debug_target::get_tib_address (ptid_t arg0, CORE_ADDR *arg1)
   fputs_unfiltered (", ", gdb_stdlog);
   target_debug_print_CORE_ADDR_p (arg1);
   fputs_unfiltered (") = ", gdb_stdlog);
-  target_debug_print_int (result);
+  target_debug_print_bool (result);
   fputs_unfiltered ("\n", gdb_stdlog);
   return result;
 }
@@ -3561,22 +3529,22 @@ debug_target::set_permissions ()
   fputs_unfiltered (")\n", gdb_stdlog);
 }
 
-int
+bool
 target_ops::static_tracepoint_marker_at (CORE_ADDR arg0, struct static_tracepoint_marker *arg1)
 {
   return this->beneath->static_tracepoint_marker_at (arg0, arg1);
 }
 
-int
+bool
 dummy_target::static_tracepoint_marker_at (CORE_ADDR arg0, struct static_tracepoint_marker *arg1)
 {
-  return 0;
+  return false;
 }
 
-int
+bool
 debug_target::static_tracepoint_marker_at (CORE_ADDR arg0, struct static_tracepoint_marker *arg1)
 {
-  int result;
+  bool result;
   fprintf_unfiltered (gdb_stdlog, "-> %s->static_tracepoint_marker_at (...)\n", this->beneath->shortname ());
   result = this->beneath->static_tracepoint_marker_at (arg0, arg1);
   fprintf_unfiltered (gdb_stdlog, "<- %s->static_tracepoint_marker_at (", this->beneath->shortname ());
@@ -3584,7 +3552,7 @@ debug_target::static_tracepoint_marker_at (CORE_ADDR arg0, struct static_tracepo
   fputs_unfiltered (", ", gdb_stdlog);
   target_debug_print_struct_static_tracepoint_marker_p (arg1);
   fputs_unfiltered (") = ", gdb_stdlog);
-  target_debug_print_int (result);
+  target_debug_print_bool (result);
   fputs_unfiltered ("\n", gdb_stdlog);
   return result;
 }
@@ -3640,79 +3608,79 @@ debug_target::traceframe_info ()
   return result;
 }
 
-int
+bool
 target_ops::use_agent (int arg0)
 {
   return this->beneath->use_agent (arg0);
 }
 
-int
+bool
 dummy_target::use_agent (int arg0)
 {
   tcomplain ();
 }
 
-int
+bool
 debug_target::use_agent (int arg0)
 {
-  int result;
+  bool result;
   fprintf_unfiltered (gdb_stdlog, "-> %s->use_agent (...)\n", this->beneath->shortname ());
   result = this->beneath->use_agent (arg0);
   fprintf_unfiltered (gdb_stdlog, "<- %s->use_agent (", this->beneath->shortname ());
   target_debug_print_int (arg0);
   fputs_unfiltered (") = ", gdb_stdlog);
-  target_debug_print_int (result);
+  target_debug_print_bool (result);
   fputs_unfiltered ("\n", gdb_stdlog);
   return result;
 }
 
-int
+bool
 target_ops::can_use_agent ()
 {
   return this->beneath->can_use_agent ();
 }
 
-int
+bool
 dummy_target::can_use_agent ()
 {
-  return 0;
+  return false;
 }
 
-int
+bool
 debug_target::can_use_agent ()
 {
-  int result;
+  bool result;
   fprintf_unfiltered (gdb_stdlog, "-> %s->can_use_agent (...)\n", this->beneath->shortname ());
   result = this->beneath->can_use_agent ();
   fprintf_unfiltered (gdb_stdlog, "<- %s->can_use_agent (", this->beneath->shortname ());
   fputs_unfiltered (") = ", gdb_stdlog);
-  target_debug_print_int (result);
+  target_debug_print_bool (result);
   fputs_unfiltered ("\n", gdb_stdlog);
   return result;
 }
 
-int
+bool
 target_ops::supports_btrace (enum btrace_format arg0)
 {
   return this->beneath->supports_btrace (arg0);
 }
 
-int
+bool
 dummy_target::supports_btrace (enum btrace_format arg0)
 {
-  return 0;
+  return false;
 }
 
-int
+bool
 debug_target::supports_btrace (enum btrace_format arg0)
 {
-  int result;
+  bool result;
   fprintf_unfiltered (gdb_stdlog, "-> %s->supports_btrace (...)\n", this->beneath->shortname ());
   result = this->beneath->supports_btrace (arg0);
   fprintf_unfiltered (gdb_stdlog, "<- %s->supports_btrace (", this->beneath->shortname ());
   target_debug_print_enum_btrace_format (arg0);
   fputs_unfiltered (") = ", gdb_stdlog);
-  target_debug_print_int (result);
+  target_debug_print_bool (result);
   fputs_unfiltered ("\n", gdb_stdlog);
   return result;
 }
@@ -3979,48 +3947,48 @@ debug_target::delete_record ()
   fputs_unfiltered (")\n", gdb_stdlog);
 }
 
-int
+bool
 target_ops::record_is_replaying (ptid_t arg0)
 {
   return this->beneath->record_is_replaying (arg0);
 }
 
-int
+bool
 dummy_target::record_is_replaying (ptid_t arg0)
 {
-  return 0;
+  return false;
 }
 
-int
+bool
 debug_target::record_is_replaying (ptid_t arg0)
 {
-  int result;
+  bool result;
   fprintf_unfiltered (gdb_stdlog, "-> %s->record_is_replaying (...)\n", this->beneath->shortname ());
   result = this->beneath->record_is_replaying (arg0);
   fprintf_unfiltered (gdb_stdlog, "<- %s->record_is_replaying (", this->beneath->shortname ());
   target_debug_print_ptid_t (arg0);
   fputs_unfiltered (") = ", gdb_stdlog);
-  target_debug_print_int (result);
+  target_debug_print_bool (result);
   fputs_unfiltered ("\n", gdb_stdlog);
   return result;
 }
 
-int
+bool
 target_ops::record_will_replay (ptid_t arg0, int arg1)
 {
   return this->beneath->record_will_replay (arg0, arg1);
 }
 
-int
+bool
 dummy_target::record_will_replay (ptid_t arg0, int arg1)
 {
-  return 0;
+  return false;
 }
 
-int
+bool
 debug_target::record_will_replay (ptid_t arg0, int arg1)
 {
-  int result;
+  bool result;
   fprintf_unfiltered (gdb_stdlog, "-> %s->record_will_replay (...)\n", this->beneath->shortname ());
   result = this->beneath->record_will_replay (arg0, arg1);
   fprintf_unfiltered (gdb_stdlog, "<- %s->record_will_replay (", this->beneath->shortname ());
@@ -4028,7 +3996,7 @@ debug_target::record_will_replay (ptid_t arg0, int arg1)
   fputs_unfiltered (", ", gdb_stdlog);
   target_debug_print_int (arg1);
   fputs_unfiltered (") = ", gdb_stdlog);
-  target_debug_print_int (result);
+  target_debug_print_bool (result);
   fputs_unfiltered ("\n", gdb_stdlog);
   return result;
 }
@@ -4269,27 +4237,27 @@ debug_target::call_history_range (ULONGEST arg0, ULONGEST arg1, int arg2)
   fputs_unfiltered (")\n", gdb_stdlog);
 }
 
-int
+bool
 target_ops::augmented_libraries_svr4_read ()
 {
   return this->beneath->augmented_libraries_svr4_read ();
 }
 
-int
+bool
 dummy_target::augmented_libraries_svr4_read ()
 {
-  return 0;
+  return false;
 }
 
-int
+bool
 debug_target::augmented_libraries_svr4_read ()
 {
-  int result;
+  bool result;
   fprintf_unfiltered (gdb_stdlog, "-> %s->augmented_libraries_svr4_read (...)\n", this->beneath->shortname ());
   result = this->beneath->augmented_libraries_svr4_read ();
   fprintf_unfiltered (gdb_stdlog, "<- %s->augmented_libraries_svr4_read (", this->beneath->shortname ());
   fputs_unfiltered (") = ", gdb_stdlog);
-  target_debug_print_int (result);
+  target_debug_print_bool (result);
   fputs_unfiltered ("\n", gdb_stdlog);
   return result;
 }

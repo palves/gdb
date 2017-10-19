@@ -2576,10 +2576,10 @@ target_ops::create_inferior (const char *, const std::string &,
   gdb_assert (0);
 }
 
-int
+bool
 target_ops::can_run ()
 {
-  return 0;
+  return false;
 }
 
 int

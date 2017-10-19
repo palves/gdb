@@ -54,19 +54,19 @@ public:
     return NULL;
   }
 
-  int has_registers () override
+  bool has_registers () override
   {
-    return 1;
+    return true;
   }
 
-  int has_stack () override
+  bool has_stack () override
   {
-    return 1;
+    return true;
   }
 
-  int has_memory () override
+  bool has_memory () override
   {
-    return 1;
+    return true;
   }
 
   void prepare_to_store (regcache *regs) override

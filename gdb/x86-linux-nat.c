@@ -210,7 +210,7 @@ x86_linux_nat_target::read_description ()
 }
 
 
-int
+bool
 x86_linux_nat_target::supports_btrace (enum btrace_format format)
 {
   return linux_supports_btrace (this, format);
