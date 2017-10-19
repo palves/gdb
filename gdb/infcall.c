@@ -741,6 +741,10 @@ call_function_by_hand_dummy (struct value *function,
   ptid_t call_thread_ptid;
   struct gdb_exception e;
   char name_buf[RAW_FUNCTION_ADDRESS_SIZE];
+
+  if (!target_has_execution)
+    noprocess ();
+
   thread_info *call_thread = inferior_thread ();
   /* We're going to run the target, and inspect the thread's state
      afterwards.  */
@@ -749,9 +753,6 @@ call_function_by_hand_dummy (struct value *function,
 
   if (TYPE_CODE (ftype) == TYPE_CODE_PTR)
     ftype = check_typedef (TYPE_TARGET_TYPE (ftype));
-
-  if (!target_has_execution)
-    noprocess ();
 
   if (get_traceframe_number () >= 0)
     error (_("May not call functions while looking at trace frames."));
