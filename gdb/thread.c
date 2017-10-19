@@ -952,9 +952,9 @@ thread_change_ptid (target_ops *targ, ptid_t old_ptid, ptid_t new_ptid)
   observer_notify_thread_ptid_changed (old_ptid, new_ptid);
 }
 
-template <typename Func>
+template<typename Func>
 static void
-for_each_thread_that_matches (target_ops *targ, ptid_t ptid, Func func)
+for_each_thread_that_matches (target_ops *targ, ptid_t ptid, Func &&func)
 {
   bool all = ptid == minus_one_ptid;
   

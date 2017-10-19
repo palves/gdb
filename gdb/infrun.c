@@ -2851,6 +2851,43 @@ clear_proceed_status_thread (struct thread_info *tp)
   bpstat_clear (&tp->control.stop_bpstat);
 }
 
+/* XXX: copied from thread.c, but could be improved to pass thread
+   pointer directly + user_step ?*/
+
+template<typename Func>
+static void
+for_each_thread_that_matches (target_ops *targ, ptid_t ptid, Func &&func)
+{
+  bool all = ptid == minus_one_ptid;
+  
+  if (all || ptid.is_pid ())
+    {
+      for (inferior *inf : inferiors ())
+	if (inf->process_target () == targ)
+	  for (thread_info *tp : inf->threads ())
+	    if (all || tp->ptid.pid () == ptid.pid ())
+	      func (tp);
+    }
+  else
+    {
+      thread_info *tp = find_thread_ptid (targ, ptid);
+      gdb_assert (tp != NULL);
+      func (tp);
+    }
+}
+
+template<typename Func>
+static void
+for_each_non_exited_thread (target_ops *targ, ptid_t ptid, Func &&func)
+{
+  for_each_thread_that_matches (targ, ptid,
+				[&func] (thread_info *tp)
+    {
+      if (tp->state != THREAD_EXITED)
+	func (tp);
+    });
+}
+
 void
 clear_proceed_status (int step)
 {
@@ -2866,21 +2903,18 @@ clear_proceed_status (int step)
 				     execution_direction))
     target_record_stop_replaying ();
 
-  if (!non_stop)
+  if (!non_stop && inferior_ptid != null_ptid)
     {
-      struct thread_info *tp;
-      ptid_t resume_ptid;
-
-      resume_ptid = user_visible_resume_ptid (step);
+      ptid_t resume_ptid = user_visible_resume_ptid (step);
 
       /* In all-stop mode, delete the per-thread status of all threads
 	 we're about to resume, implicitly and explicitly.  */
-      ALL_NON_EXITED_THREADS (tp)
-        {
-	  if (!ptid_match (tp->ptid, resume_ptid))
-	    continue;
+
+      for_each_non_exited_thread (inferior_thread ()->inf->process_target (),
+				  resume_ptid, [] (thread_info *tp)
+	{
 	  clear_proceed_status_thread (tp);
-	}
+	});
     }
 
   if (!ptid_equal (inferior_ptid, null_ptid))
@@ -3082,27 +3116,17 @@ proceed (CORE_ADDR addr, enum gdb_signal siggnal)
     {
       struct thread_info *current = tp;
 
-      ALL_NON_EXITED_THREADS (tp)
-        {
+      for_each_non_exited_thread (current->inf->process_target (),
+				  resume_ptid,
+				  [current] (thread_info *tp)
+	{
 	  /* Ignore the current thread here.  It's handled
 	     afterwards.  */
 	  if (tp == current)
-	    continue;
-
-	  /* If resuming a process, only consider the process thread's
-	     inferior.  This avoids ptid matching processes of
-	     different targets.  */
-	  /* XXX: split loop in resume-inferior vs resume-all
-	     branches.  */
-	  if (resume_ptid.is_pid () && tp->inf != current->inf)
-	    continue;
-
-	  /* Ignore threads of processes we're not resuming.  */
-	  if (!ptid_match (tp->ptid, resume_ptid))
-	    continue;
+	    return;
 
 	  if (!thread_still_needs_step_over (tp))
-	    continue;
+	    return;
 
 	  gdb_assert (!thread_is_in_step_over_chain (tp));
 
@@ -3112,9 +3136,7 @@ proceed (CORE_ADDR addr, enum gdb_signal siggnal)
 				target_pid_to_str (tp->ptid));
 
 	  thread_step_over_chain_enqueue (tp);
-	}
-
-      tp = current;
+	});
     }
 
   /* Enqueue the current thread last, so that we move all other
@@ -3151,16 +3173,10 @@ proceed (CORE_ADDR addr, enum gdb_signal siggnal)
 
 	/* In all-stop, but the target is always in non-stop mode.
 	   Start all other threads that are implicitly resumed too.  */
-	ALL_NON_EXITED_THREADS (tp)
+	for_each_non_exited_thread (current->inf->process_target (),
+				    resume_ptid,
+				    [current, ecs] (thread_info *tp)
         {
-	  /* Ignore threads of processes we're not resuming.  */
-	  if (resume_ptid.is_pid () && tp->inf != current->inf)
-	    continue;
-
-	  /* Ignore threads of processes we're not resuming.  */
-	  if (!ptid_match (tp->ptid, resume_ptid))
-	    continue;
-
 	  if (tp->resumed)
 	    {
 	      if (debug_infrun)
@@ -3168,7 +3184,7 @@ proceed (CORE_ADDR addr, enum gdb_signal siggnal)
 				    "infrun: proceed: [%s] resumed\n",
 				    target_pid_to_str (tp->ptid));
 	      gdb_assert (tp->executing || tp->suspend.waitstatus_pending_p);
-	      continue;
+	      return;
 	    }
 
 	  if (thread_is_in_step_over_chain (tp))
@@ -3177,7 +3193,7 @@ proceed (CORE_ADDR addr, enum gdb_signal siggnal)
 		fprintf_unfiltered (gdb_stdlog,
 				    "infrun: proceed: [%s] needs step-over\n",
 				    target_pid_to_str (tp->ptid));
-	      continue;
+	      return;
 	    }
 
 	  if (debug_infrun)
@@ -3190,7 +3206,7 @@ proceed (CORE_ADDR addr, enum gdb_signal siggnal)
 	  keep_going_pass_signal (ecs);
 	  if (!ecs->wait_some_more)
 	    error (_("Command aborted."));
-	}
+	});
       }
     else if (!tp->resumed && !thread_is_in_step_over_chain (tp))
       {
@@ -4763,9 +4779,6 @@ stop_all_threads (void)
 static int
 handle_no_resumed (struct execution_control_state *ecs)
 {
-  struct inferior *inf;
-  struct thread_info *thread;
-
   if (target_can_async_p ())
     {
       struct ui *ui;
@@ -4828,19 +4841,25 @@ handle_no_resumed (struct execution_control_state *ecs)
      the synchronous command show "no unwaited-for " to the user.  */
   update_thread_list ();
 
-  ALL_NON_EXITED_THREADS (thread)
+  for (inferior *inf : inferiors ())
     {
-      if (thread->executing
-	  || thread->suspend.waitstatus_pending_p)
+      if (inf->process_target () != ecs->target)
+	continue;
+
+      for (thread_info *thread : inf->threads ())
 	{
-	  /* There were no unwaited-for children left in the target at
-	     some point, but there are now.  Just ignore.  */
-	  if (debug_infrun)
-	    fprintf_unfiltered (gdb_stdlog,
-				"infrun: TARGET_WAITKIND_NO_RESUMED "
-				"(ignoring: found resumed)\n");
-	  prepare_to_wait (ecs);
-	  return 1;
+	  if (thread->executing
+	      || thread->suspend.waitstatus_pending_p)
+	    {
+	      /* There were no unwaited-for children left in the target at
+		 some point, but there are now.  Just ignore.  */
+	      if (debug_infrun)
+		fprintf_unfiltered (gdb_stdlog,
+				    "infrun: TARGET_WAITKIND_NO_RESUMED "
+				    "(ignoring: found resumed)\n");
+	      prepare_to_wait (ecs);
+	      return true;
+	    }
 	}
     }
 
@@ -4848,12 +4867,15 @@ handle_no_resumed (struct execution_control_state *ecs)
      process exited meanwhile (thus updating the thread list results
      in an empty thread list).  In this case we know we'll be getting
      a process exit event shortly.  */
-  ALL_INFERIORS (inf)
+  for (inferior *inf : inferiors ())
     {
       if (inf->pid == 0)
 	continue;
 
-      thread = any_live_thread_of_process (inf->pid);
+      if (inf->process_target () != ecs->target)
+	continue;
+
+      thread_info *thread = any_live_thread_of_process (inf->pid);
       if (thread == NULL)
 	{
 	  if (debug_infrun)
