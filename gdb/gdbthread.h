@@ -765,9 +765,12 @@ public:
 
   DISABLE_COPY_AND_ASSIGN (scoped_restore_current_thread);
 
-  void dont_restore () { m_inf = NULL; }
+  void dont_restore () { m_dont_restore = true; }
 
 private:
+  void restore ();
+
+  bool m_dont_restore = false;
   thread_info *m_thread;
   inferior *m_inf;
   frame_id m_selected_frame_id;
