@@ -668,10 +668,8 @@ try_thread_db_load_1 (struct thread_db_info *info)
     }
 
   /* The thread library was detected.  Activate the thread_db target
-     if this is the first process using it.  */
-  if (thread_db_list->next == NULL)
-    push_target (the_thread_db_target);
-
+     for this process.  */
+  push_target (the_thread_db_target);
   return 1;
 }
 
@@ -1141,10 +1139,8 @@ thread_db_target::detach (const char *args, int from_tty)
 
   /* NOTE: From this point on, inferior_ptid is null_ptid.  */
 
-  /* If there are no more processes using libpthread, detach the
-     thread_db target ops.  */
-  if (!thread_db_list)
-    unpush_target (this);
+  /* Detach the thread_db target from this inferior.  */
+  unpush_target (this);
 }
 
 ptid_t
@@ -1177,8 +1173,7 @@ thread_db_target::wait (ptid_t ptid, struct target_waitstatus *ourstatus,
       /* New image, it may or may not end up using thread_db.  Assume
 	 not unless we find otherwise.  */
       delete_thread_db_info (ptid_get_pid (ptid));
-      if (!thread_db_list)
-	unpush_target (the_thread_db_target);
+      unpush_target (this);
 
       return ptid;
     }
@@ -1198,9 +1193,8 @@ thread_db_target::mourn_inferior ()
 
   target_beneath->mourn_inferior ();
 
-  /* Detach thread_db target ops.  */
-  if (!thread_db_list)
-    unpush_target (the_thread_db_target);
+  /* Detach the thread_db target from this inferior.  */
+  unpush_target (this);
 }
 
 struct callback_data
