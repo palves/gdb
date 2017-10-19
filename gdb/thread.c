@@ -1336,7 +1336,7 @@ print_thread_info_1 (struct ui_out *uiout, const char *requested_threads,
 	uiout->table_header (4, ui_left, "id-in-tg", "Id");
 	if (show_global_ids)
 	  uiout->table_header (4, ui_left, "id", "GId");
-	uiout->table_header (thread_id_len, ui_left, "target-id", "Target Id");
+	uiout->table_header (17, ui_left, "target-id", "Target Id");
 	uiout->table_header (1, ui_left, "frame", "Frame");
 	uiout->table_body ();
       }
