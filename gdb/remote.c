@@ -4258,6 +4258,9 @@ remote_target::process_initial_stop_replies (int from_tty)
       if (inf->pid == 0)
 	continue;
 
+      if (inf->process_target () != this)
+	continue;
+
       inf->needs_setup = 1;
 
       if (non_stop)
@@ -4281,6 +4284,8 @@ remote_target::process_initial_stop_replies (int from_tty)
 	{
 	  if (inf->pid == 0)
 	    continue;
+	  if (inf->process_target () != this)
+	    continue;
 
 	  if (inf->needs_setup)
 	    {
@@ -4296,6 +4301,9 @@ remote_target::process_initial_stop_replies (int from_tty)
      that as current.  */
   ALL_NON_EXITED_THREADS (thread)
     {
+      if (thread->inf->process_target () != this)
+	continue;
+
       if (first == NULL)
 	first = thread;
 
