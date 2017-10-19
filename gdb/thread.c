@@ -1298,17 +1298,24 @@ print_thread_info_1 (struct ui_out *uiout, const char *requested_threads,
 	int n_threads = 0;
 	size_t thread_id_len = 17;
 
-	ALL_THREADS (tp)
-	  {
-	    if (!should_print_thread (requested_threads, default_inf_num,
-				      global_ids, pid, tp))
-	      continue;
+	/* We'll be switching threads temporarily.  */
+	{
+	  /* XXX: should probably merge with the same scoped restore
+	     further below.  */
+	  scoped_restore_current_thread restore_thread;
+	  ALL_THREADS (tp)
+	    {
+	      if (!should_print_thread (requested_threads, default_inf_num,
+					global_ids, pid, tp))
+		continue;
 
-	    thread_id_len
-	      = std::max (thread_id_len,
-			  thread_target_id_str (tp).size ());
-	    ++n_threads;
-	  }
+	      thread_id_len
+		= std::max (thread_id_len,
+			    thread_target_id_str (tp).size ());
+
+	      ++n_threads;
+	    }
+	}
 
 	if (n_threads == 0)
 	  {
