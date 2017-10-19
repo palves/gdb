@@ -648,38 +648,45 @@ run_command_1 (const char *args, int from_tty, enum run_how run_how)
      shouldn't refer to run_target again.  */
   run_target = NULL;
 
-  /* We're starting off a new process.  When we get out of here, in
-     non-stop mode, finish the state of all threads of that process,
-     but leave other threads alone, as they may be stopped in internal
-     events --- the frontend shouldn't see them as stopped.  In
-     all-stop, always finish the state of all threads, as we may be
-     resuming more than just the new process.  */
-  ptid_t finish_ptid = (non_stop
-			? ptid_t (current_inferior ()->pid)
-			: minus_one_ptid);
-  target_ops *proc_target = current_inferior ()->process_target ();
-  scoped_finish_thread_state finish_state (proc_target, finish_ptid);
-
-  /* Pass zero for FROM_TTY, because at this point the "run" command
-     has done its thing; now we are setting up the running program.  */
-  post_create_inferior (current_top_target (), 0);
-
-  /* Queue a pending event so that the program stops immediately.  */
-  if (run_how == RUN_STOP_AT_FIRST_INSN)
+  TRY
     {
-      thread_info *thr = inferior_thread ();
-      thr->suspend.waitstatus_pending_p = 1;
-      thr->suspend.waitstatus.kind = TARGET_WAITKIND_STOPPED;
-      thr->suspend.waitstatus.value.sig = GDB_SIGNAL_0;
+      /* Pass zero for FROM_TTY, because at this point the "run"
+	 command has done its thing; now we are setting up the running
+	 program.  */
+      post_create_inferior (target_stack, 0);
+
+      /* Queue a pending event so that the program stops
+	 immediately.  */
+      if (run_how == RUN_STOP_AT_FIRST_INSN)
+	{
+	  thread_info *thr = inferior_thread ();
+	  thr->suspend.waitstatus_pending_p = 1;
+	  thr->suspend.waitstatus.kind = TARGET_WAITKIND_STOPPED;
+	  thr->suspend.waitstatus.value.sig = GDB_SIGNAL_0;
+	}
+
+      /* Start the target running.  Do not use -1 continuation as it
+	 would skip breakpoint right at the entry point.  */
+      proceed (regcache_read_pc (get_current_regcache ()), GDB_SIGNAL_0);
     }
+  CATCH (ex, RETURN_MASK_ALL)
+    {
+      /* We were starting off a new process, but something went wrong.
+	 When we get out of here, in non-stop mode, finish the state
+	 of all threads of that process, but leave other threads
+	 alone, as they may be stopped in internal events --- the
+	 frontend shouldn't see them as stopped.  In all-stop, always
+	 finish the state of all threads, as we may be resuming more
+	 than just the new process.  */
+      if (non_stop)
+	finish_thread_state (current_inferior ()->process_target (),
+			     ptid_t (current_inferior ()->pid));
+      else
+	finish_thread_state (NULL, minus_one_ptid);
 
-  /* Start the target running.  Do not use -1 continuation as it would skip
-     breakpoint right at the entry point.  */
-  proceed (regcache_read_pc (get_current_regcache ()), GDB_SIGNAL_0);
-
-  /* Since there was no error, there's no need to finish the thread
-     states here.  */
-  finish_state.release ();
+      throw_exception (ex);
+    }
+  END_CATCH
 }
 
 static void
