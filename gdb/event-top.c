@@ -1099,14 +1099,18 @@ async_disconnect (gdb_client_data arg)
     }
   END_CATCH
 
-  TRY
+  for (inferior *inf : inferiors ())
     {
-      pop_all_targets ();
+      switch_to_inferior_no_thread (inf);
+      TRY
+	{
+	  pop_all_targets ();
+	}
+      CATCH (exception, RETURN_MASK_ALL)
+	{
+	}
+      END_CATCH
     }
-  CATCH (exception, RETURN_MASK_ALL)
-    {
-    }
-  END_CATCH
 
   signal (SIGHUP, SIG_DFL);	/*FIXME: ???????????  */
   raise (SIGHUP);
