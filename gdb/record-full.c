@@ -319,8 +319,8 @@ public:
 };
 
 // XXXX
-static record_full_target *the_record_full_target;
-static record_full_core_target *the_record_full_core_target;
+static record_full_target the_record_full_target;
+static record_full_core_target the_record_full_core_target;
 
 record_full_base_target::record_full_base_target ()
 {
@@ -365,8 +365,8 @@ record_full_is_used (void)
   struct target_ops *t;
 
   t = find_record_target ();
-  return (t == the_record_full_target
-	  || t == the_record_full_core_target);
+  return (t == &the_record_full_target
+	  || t == &the_record_full_core_target);
 }
 
 
@@ -940,7 +940,7 @@ record_full_core_open_1 (const char *name, int from_tty)
 	     bfd_get_filename (core_bfd), bfd_errmsg (bfd_get_error ()));
     }
 
-  push_target (the_record_full_core_target);
+  push_target (&the_record_full_core_target);
   record_full_restore ();
 }
 
@@ -963,7 +963,7 @@ record_full_open_1 (const char *name, int from_tty)
     error (_("Process record: the current architecture doesn't support "
 	     "record function."));
 
-  push_target (the_record_full_target);
+  push_target (&the_record_full_target);
 }
 
 static void record_full_init_record_breakpoints (void);
@@ -1201,7 +1201,7 @@ record_full_wait_1 (struct target_ops *ops,
 
   record_full_stop_reason = TARGET_STOPPED_BY_NO_REASON;
 
-  if (!RECORD_FULL_IS_REPLAY && ops != the_record_full_core_target)
+  if (!RECORD_FULL_IS_REPLAY && ops != &the_record_full_core_target)
     {
       if (record_full_resume_step)
 	{
@@ -2546,7 +2546,7 @@ static void
 cmd_record_full_restore (const char *args, int from_tty)
 {
   core_file_command (args, from_tty);
-  the_record_full_target->open (args, from_tty);
+  record_full_target::open (args, from_tty);
 }
 
 /* Save the execution log to a file.  We use a modified elf corefile
