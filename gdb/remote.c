@@ -5375,7 +5375,7 @@ remote_target::open_1 (const char *name, int from_tty, int extended_p)
   no_shared_libraries (NULL, 0);
 
   /* Start afresh.  */
-  init_thread_list ();
+  // init_thread_list ();
 
   /* Start the remote connection.  If error() or QUIT, discard this
      target (we'd otherwise be in an inconsistent state) and then
