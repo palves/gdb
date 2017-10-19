@@ -5529,9 +5529,6 @@ remote_target::open_1 (const char *name, int from_tty, int extended_p)
   /* First delete any symbols previously loaded from shared libraries.  */
   no_shared_libraries (NULL, 0);
 
-  /* Start afresh.  */
-  // init_thread_list ();
-
   /* Start the remote connection.  If error() or QUIT, discard this
      target (we'd otherwise be in an inconsistent state) and then
      propogate the error on up the exception chain.  This ensures that
@@ -10201,17 +10198,6 @@ Remote replied unexpectedly while setting startup-with-shell: %s"),
       /* Fall back to "R".  */
       extended_remote_restart ();
     }
-
-#if 0
-  if (!have_inferiors ())
-    {
-      /* Clean up from the last time we ran, before we mark the target
-	 running again.  This will mark breakpoints uninserted, and
-	 get_offsets may insert breakpoints.  */
-      init_thread_list ();
-      init_wait_for_inferior ();
-    }
-#endif
 
   /* vRun's success return is a stop reply.  */
   stop_reply = run_worked ? rs->buf : NULL;
