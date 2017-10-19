@@ -2959,15 +2959,21 @@ attach_command (char *args, int from_tty)
       /* Done with ARGS.  */
       do_cleanups (args_chain);
 
+      /* Let infrun consider waiting for events out of this
+	 target.  */
+      inferior->process_target ()->threads_executing = true;
+
       if (!target_is_async_p ())
 	mark_infrun_async_event_handler ();
       return;
     }
+  else
+    {
+      /* Done with ARGS.  */
+      do_cleanups (args_chain);
 
-  /* Done with ARGS.  */
-  do_cleanups (args_chain);
-
-  attach_post_wait (args, from_tty, mode);
+      attach_post_wait (args, from_tty, mode);
+    }
 }
 
 /* We had just found out that the target was already attached to an
