@@ -46,7 +46,7 @@ create_thread_object (struct thread_info *tp)
     return NULL;
 
   thread_obj->thread = tp;
-  thread_obj->inf_obj = find_inferior_object (ptid_get_pid (tp->ptid));
+  thread_obj->inf_obj = (PyObject *) inferior_to_inferior_object (tp->inf);
 
   return thread_obj;
 }
@@ -283,13 +283,15 @@ gdbpy_create_ptid_object (ptid_t ptid)
 PyObject *
 gdbpy_selected_thread (PyObject *self, PyObject *args)
 {
-  PyObject *thread_obj;
-
-  thread_obj = (PyObject *) find_thread_object (inferior_ptid);
-  if (thread_obj)
+  if (inferior_ptid != null_ptid)
     {
-      Py_INCREF (thread_obj);
-      return thread_obj;
+      PyObject *thread_obj
+	= (PyObject *) thread_to_thread_object (inferior_thread ());
+      if (thread_obj != NULL)
+	{
+	  Py_INCREF (thread_obj);
+	  return thread_obj;
+	}
     }
 
   Py_RETURN_NONE;

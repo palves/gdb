@@ -31,10 +31,10 @@ static PyObject *get_event_thread (void)
 static PyObject *
 get_event_thread (void)
 {
-  PyObject *thread = NULL;
+  PyObject *thread;
 
   if (non_stop)
-    thread = (PyObject *) find_thread_object (inferior_ptid);
+    thread = (PyObject *) thread_to_thread_object (inferior_thread ());
   else
     thread = Py_None;
 
