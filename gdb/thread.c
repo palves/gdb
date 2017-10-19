@@ -1350,7 +1350,7 @@ print_thread_info_1 (struct ui_out *uiout, const char *requested_threads,
 
 	any_thread = true;
 	if (tp == current_thread && tp->state == THREAD_EXITED)
-	  current_exited = false;
+	  current_exited = true;
 
 	if (!should_print_thread (requested_threads, default_inf_num,
 				  global_ids, pid, tp))
