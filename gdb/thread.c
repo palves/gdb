@@ -292,7 +292,9 @@ add_thread_silent (target_ops *targ, ptid_t ptid)
 	  /* Now reset its ptid, and reswitch inferior_ptid to it.  */
 	  new_thr->ptid = ptid;
 	  new_thr->state = THREAD_STOPPED;
-	  switch_to_thread (new_thr);
+	  /* Be sure to not read registers yet, since at this point we
+	     may have not read the target description yet.  */
+	  switch_to_thread_no_regs (new_thr);
 
 	  gdb::observers::new_thread.notify (new_thr);
 
