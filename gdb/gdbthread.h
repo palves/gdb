@@ -763,6 +763,8 @@ public:
 
   DISABLE_COPY_AND_ASSIGN (scoped_restore_current_thread);
 
+  void dont_restore () { m_inf = NULL; }
+
 private:
   thread_info *m_thread;
   inferior *m_inf;
