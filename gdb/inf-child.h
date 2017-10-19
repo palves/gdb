@@ -29,16 +29,8 @@ struct inf_child_target
   inf_child_target ();
   ~inf_child_target () override = 0;
 
-  const char *shortname () override
-  { return "native"; }
+  const target_info &info () const override;
 
-  const char *longname () override
-  { return _("Native process"); }
-
-  const char *doc () override
-  { return _("Native process (started by the \"run\" command)."); }
-
-  void open (const char *arg, int from_tty) override;
   void close () override;
 
   void disconnect (const char *, int) override;
@@ -116,5 +108,10 @@ struct inf_child_target
 
 /* This is for native targets which use a unix/POSIX-style waitstatus.  */
 extern void store_waitstatus (struct target_waitstatus *, int);
+
+extern void add_native_target (target_ops *prototype, target_factory_ftype *func);
+
+void inf_child_open_target (struct target_ops *target, const char *arg,
+			    int from_tty);
 
 #endif

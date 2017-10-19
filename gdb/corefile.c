@@ -51,6 +51,8 @@ static int exec_file_hook_count = 0;		/* Size of array.  */
 
 
 
+void core_target_open (const char *arg, int from_tty);
+
 /* Backward compatability with old way of specifying core files.  */
 
 void
@@ -58,12 +60,10 @@ core_file_command (const char *filename, int from_tty)
 {
   dont_repeat ();		/* Either way, seems bogus.  */
 
-  gdb_assert (the_core_target != NULL);
-
   if (!filename)
     the_core_target->detach (filename, from_tty);
   else
-    the_core_target->open (filename, from_tty);
+    core_target_open (filename, from_tty);
 }
 
 

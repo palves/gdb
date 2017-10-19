@@ -419,6 +419,19 @@ typedef void async_callback_ftype (enum inferior_event_type event_type,
 #define TARGET_DEFAULT_RETURN(ARG)
 #define TARGET_DEFAULT_FUNC(ARG)
 
+struct target_info
+{
+    /* Name this target type.  */
+  const char *shortname;
+
+  /* Name for printing.  */
+  const char *longname;
+
+  /* Documentation.  Does not include trailing newline, and starts
+     with a one-line description (probably similar to longname).  */
+  const char *doc;
+};
+
 struct target_ops
   {
   public:
@@ -426,21 +439,15 @@ struct target_ops
 
     virtual ~target_ops () {}
 
+    virtual const target_info &info () const = 0;
+
     /* Name this target type.  */
-    virtual const char *shortname () = 0;
+    const char *shortname ()
+    { return info ().shortname; }
 
-    /* Name for printing.  */
-    virtual const char *longname () = 0;
-
-    /* Documentation.  Does not include trailing newline, and starts
-       ith a one-line description (probably similar to longname).  */
-    virtual const char *doc () = 0;
-
-    /* The open routine takes the rest of the parameters from the
-       command, and (if successful) pushes a new target onto the
-       stack.  Targets should supply this routine, if only to provide
-       an error message.  */
-    virtual void open (const char *, int);
+    const char *longname ()
+    { return info ().longname; }
+    
     virtual void close ();
 
     /* Attaches to a process on the target side.  Arguments are as
@@ -1266,6 +1273,8 @@ private:
   //  std::array<target_ops *, (int) debug_stratum> m_stack {};
 };
 
+extern void set_native_target (target_ops *prototype);
+
 extern target_ops *current_target_stack ();
 
 /* The ops structure for our "current" target process.  This should
@@ -1274,8 +1283,8 @@ extern target_ops *current_target_stack ();
 
 /* Define easy words for doing these operations on our current target.  */
 
-#define	target_shortname	(target_stack->shortname ())
-#define	target_longname		(target_stack->longname ())
+#define	target_shortname	(target_stack->info ().shortname)
+#define	target_longname		(target_stack->info ().longname)
 
 /* Does whatever cleanup is required for a target that we are no
    longer going to be calling.  This routine is automatically always
@@ -1290,7 +1299,7 @@ void target_close (struct target_ops *targ);
    current stack supports attaching, then it is returned.  Otherwise,
    the default run target is returned.  */
 
-extern struct target_ops *find_attach_target (void);
+extern struct target_ops *find_attach_target ();
 
 /* Find the correct target to use for "run".  If a target on the
    current stack supports creating a new inferior, then it is
@@ -2239,6 +2248,12 @@ extern int simple_verify_memory (struct target_ops* ops,
 int target_verify_memory (const gdb_byte *data,
 			  CORE_ADDR memaddr, ULONGEST size);
 
+/* The open routine takes the rest of the parameters from the command,
+   and (if successful) pushes a new target onto the stack.  Targets
+   should supply this routine, if only to provide an error
+   message.  */
+typedef void target_factory_ftype (const char *, int);
+
 /* Routines for maintenance of the target structures...
 
    add_target:   Add a target to the list of all possible targets.
@@ -2254,15 +2269,14 @@ int target_verify_memory (const gdb_byte *data,
    no matter where it is on the list.  Returns 0 if no
    change, 1 if removed from stack.  */
 
-extern void add_target (struct target_ops *);
-
-extern void add_target_with_completer (struct target_ops *t,
-				       completer_ftype *completer);
+extern void add_target (const target_info &info,
+			target_factory_ftype *func,
+			completer_ftype *completer = NULL);
 
 /* Adds a command ALIAS for target T and marks it deprecated.  This is useful
    for maintaining backwards compatibility when renaming targets.  */
 
-extern void add_deprecated_target_alias (struct target_ops *t,
+extern void add_deprecated_target_alias (const target_info &info,
 					 const char *alias);
 
 extern void push_target (struct target_ops *);

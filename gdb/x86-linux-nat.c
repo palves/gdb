@@ -314,10 +314,8 @@ x86_linux_get_thread_area (pid_t pid, void *addr, unsigned int *base_addr)
 }
 
 
-/* Add an x86 GNU/Linux target.  */
-
 void
-x86_linux_add_target (linux_nat_target *t)
+_initialize_x86_linux_nat ()
 {
   /* Initialize the debug register function vectors.  */
   x86_dr_low.set_control = x86_linux_dr_set_control;
@@ -327,13 +325,12 @@ x86_linux_add_target (linux_nat_target *t)
   x86_dr_low.get_control = x86_linux_dr_get_control;
   x86_set_debug_register_length (sizeof (void *));
 
-  add_target (t);
   /* XXXX Once these are converted to virtual methods in
      linux_nat_target, this whole function can be converted to an
      _initialize routine.  */
-  linux_nat_set_new_thread (t, x86_linux_new_thread);
-  linux_nat_set_delete_thread (t, x86_linux_delete_thread);
-  linux_nat_set_new_fork (t, x86_linux_new_fork);
-  linux_nat_set_forget_process (t, x86_forget_process);
-  linux_nat_set_prepare_to_resume (t, x86_linux_prepare_to_resume);
+  linux_nat_set_new_thread (x86_linux_new_thread);
+  linux_nat_set_delete_thread (x86_linux_delete_thread);
+  linux_nat_set_new_fork (x86_linux_new_fork);
+  linux_nat_set_forget_process (x86_forget_process);
+  linux_nat_set_prepare_to_resume (x86_linux_prepare_to_resume);
 }

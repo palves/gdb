@@ -206,6 +206,11 @@ static unsigned int record_full_insn_num = 0;
    than count of insns presently in execution log).  */
 static ULONGEST record_full_insn_count;
 
+static constexpr char record_longname[]
+  = N_("Process record and replay target");
+static constexpr char record_doc[]
+  = N_("Log program while executing and replay execution from log.");
+
 /* The target_ops of process record.  */
 
 class record_full_base_target : public target_ops
@@ -213,15 +218,9 @@ class record_full_base_target : public target_ops
 public:
   record_full_base_target ();
 
-  const char *shortname () override = 0;
+  const target_info &info () const override = 0;
 
-  const char *longname () override
-  { return _("Process record and replay target"); }
-
-  const char *doc () override
-  { return _("Log program while executing and replay execution from log."); }
-
-  void open (const char *, int) override;
+  static void open (const char *, int);
   void close () override;
   void async (int) override;
   ptid_t wait (ptid_t, struct target_waitstatus *, int) override;
@@ -253,11 +252,17 @@ public:
   void goto_record (ULONGEST insn) override;
 };
 
+static constexpr target_info record_full_target_info = {
+  "record-full",
+  record_longname,
+  record_doc,
+};
+
 class record_full_target : public record_full_base_target
-{
+{ 
 public:
-  const char *shortname () override
-  { return "record-full"; }
+  const target_info &info () const override
+  { return record_full_target_info; }
 
   void commit_resume () override;
   void resume (ptid_t, int, enum gdb_signal) override;
@@ -279,11 +284,17 @@ public:
 			 enum remove_bp_reason) override;
 };
 
+static constexpr target_info record_full_core_target_info = {
+  "record-core",
+  record_longname,
+  record_doc,
+};
+
 class record_full_core_target : public record_full_base_target
 {
 public:
-  const char *shortname () override
-  { return "record-core"; }
+  const target_info &info () const override
+  { return record_full_core_target_info; }
 
   void resume (ptid_t, int, enum gdb_signal) override;
   void disconnect (const char *, int) override;
@@ -306,6 +317,7 @@ public:
   bool has_execution (ptid_t) override;
 };
 
+// XXXX
 static record_full_target *the_record_full_target;
 static record_full_core_target *the_record_full_core_target;
 
@@ -960,8 +972,6 @@ static void record_full_init_record_breakpoints (void);
 void
 record_full_base_target::open (const char *name, int from_tty)
 {
-  struct target_ops *t;
-
   if (record_debug)
     fprintf_unfiltered (gdb_stdlog, "Process record: record_full_open\n");
 
@@ -2821,11 +2831,9 @@ _initialize_record_full (void)
   record_full_first.next = NULL;
   record_full_first.type = record_full_end;
 
-  the_record_full_target = new record_full_target ();
-  add_target (the_record_full_target);
-  add_deprecated_target_alias (the_record_full_target, "record");
-  the_record_full_core_target = new record_full_core_target ();
-  add_target (the_record_full_core_target);
+  add_target (record_full_target_info, record_full_target::open);
+  // add_deprecated_target_alias (the_record_full_target, "record");
+  add_target (record_full_core_target_info, record_full_core_target::open);
 
   add_prefix_cmd ("full", class_obscure, cmd_record_full_start,
 		  _("Start full execution recording."), &record_full_cmdlist,

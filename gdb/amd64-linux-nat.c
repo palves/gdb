@@ -50,6 +50,11 @@ struct amd64_linux_nat_target final : public x86_linux_nat_target
   /* Add our register access methods.  */
   void fetch_registers (struct regcache *, int) override;
   void store_registers (struct regcache *, int) override;
+
+  static void open (const char *arg, int from_tty)
+  {
+    inf_child_open_target (linux_target, arg, from_tty);
+  }
 };
 
 /* Mapping between the general-purpose registers in GNU/Linux x86-64
@@ -411,11 +416,10 @@ _initialize_amd64_linux_nat (void)
   gdb_assert (ARRAY_SIZE (amd64_linux_gregset32_reg_offset)
 	      == amd64_native_gregset32_num_regs);
 
-  linux_target = new amd64_linux_nat_target ();
-
   /* Add the target.  */
-  x86_linux_add_target (linux_target);
+  linux_target = new amd64_linux_nat_target ();
+  add_native_target (linux_target, amd64_linux_nat_target::open);
 
   /* Add our siginfo layout converter.  */
-  linux_nat_set_siginfo_fixup (linux_target, amd64_linux_siginfo_fixup);
+  linux_nat_set_siginfo_fixup (amd64_linux_siginfo_fixup);
 }

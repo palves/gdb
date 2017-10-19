@@ -30,6 +30,12 @@ namespace selftests {
 /* A mock process_stratum target_ops that doesn't read/write registers
    anywhere.  */
 
+static constexpr target_info remote_target_info = {
+  "test",
+  N_("gdbarch unit tests target"),
+  N_("You should never see this"),
+};
+
 class test_target_ops : public target_ops
 {
 public:
@@ -39,20 +45,8 @@ public:
     to_stratum = process_stratum;
   }
 
-  const char *shortname () override
-  {
-    return NULL;
-  }
-
-  const char *longname () override
-  {
-    return NULL;
-  }
-
-  const char *doc () override
-  {
-    return NULL;
-  }
+  const target_info &info () const override
+  { return remote_target_info; }
 
   bool has_registers () override
   {

@@ -38,22 +38,19 @@
 #define O_LARGEFILE 0
 #endif
 
+static constexpr target_info tfile_target_info = {
+  "tfile",
+  N_("Local trace dump file"),
+  N_("Use a trace file as a target.  Specify the filename of the trace file.")
+};
+
 class tfile_target : public tracefile_target
 {
  public:
-  const char *shortname () override
-  { return "tfile"; }
+  const target_info &info () const override
+  { return tfile_target_info; }
 
-  const char *longname () override
-  { return _("Local trace dump file"); }
-
-  const char *doc () override
-  {
-    return _("\
-Use a trace file as a target.  Specify the filename of the trace file.");
-  }
-
-  void open (const char *, int) override;
+  static void open (const char *, int);
   void close () override;
   void fetch_registers (struct regcache *, int) override;
   enum target_xfer_status xfer_partial (enum target_object object,
@@ -480,7 +477,7 @@ tfile_target::open (const char *arg, int from_tty)
 
   /* Looks semi-reasonable.  Toss the old trace file and work on the new.  */
 
-  unpush_target (this);
+  // unpush_target (this);
 
   trace_filename = filename.release ();
   trace_fd = scratch_chan;
@@ -497,7 +494,8 @@ tfile_target::open (const char *arg, int from_tty)
 	&& (startswith (header + 1, "TRACE0\n"))))
     error (_("File is not a valid trace file."));
 
-  push_target (this);
+  tfile_target *target = new tfile_target ();
+  push_target (target);
 
   trace_regblock_size = 0;
   ts = current_trace_status ();
@@ -550,7 +548,7 @@ tfile_target::open (const char *arg, int from_tty)
   CATCH (ex, RETURN_MASK_ALL)
     {
       /* Remove the partially set up target.  */
-      unpush_target (this);
+      unpush_target (target);
       throw_exception (ex);
     }
   END_CATCH
@@ -570,7 +568,7 @@ tfile_target::open (const char *arg, int from_tty)
 
   merge_uploaded_tracepoints (&uploaded_tps);
 
-  post_create_inferior (this, from_tty);
+  post_create_inferior (target, from_tty);
 }
 
 /* Interpret the given line from the definitions part of the trace
@@ -1138,5 +1136,5 @@ tfile_append_tdesc_line (const char *line)
 void
 _initialize_tracefile_tfile (void)
 {
-  add_target_with_completer (new tfile_target (), filename_completer);
+  add_target (tfile_target_info, tfile_target::open, filename_completer);
 }

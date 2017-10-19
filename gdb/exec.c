@@ -51,26 +51,23 @@ void (*deprecated_file_changed_hook) (const char *);
 
 static void set_section_command (char *, int);
 
+static constexpr target_info exec_target_info = {
+  "exec",
+  N_("Local exec file"),
+  N_(R"(Use an executable file as a target.
+Specify the filename of the executable file.)")
+};
+
 /* The target vector for executable files.  */
 
 struct exec_target : public target_ops
 {
   exec_target ();
 
-  const char *shortname () override
-  { return "exec"; }
+  const target_info &info () const override
+  { return exec_target_info; }
 
-  const char *longname () override
-  { return _("Local exec file"); }
-
-  const char *doc () override
-  {
-    return _("\
-Use an executable file as a target.\n\
-Specify the filename of the executable file.");
-  }
-
-  void open (const char *, int) override;
+  static void open (const char *, int);
   void close () override;
   enum target_xfer_status xfer_partial (enum target_object object,
 					const char *annex,
@@ -664,6 +661,7 @@ remove_target_sections (void *owner)
 	 remove the file_stratum target from the stack.  */
       if (old_count + (dest - src) == 0)
 	{
+#if 0
 	  struct program_space *pspace;
 
 	  ALL_PSPACES (pspace)
@@ -672,6 +670,7 @@ remove_target_sections (void *owner)
 	      return;
 
 	  unpush_target (the_exec_target);
+#endif
 	}
     }
 }
@@ -768,7 +767,7 @@ enum target_xfer_status
 section_table_read_available_memory (gdb_byte *readbuf, ULONGEST offset,
 				     ULONGEST len, ULONGEST *xfered_len)
 {
-  target_section_table *table = target_get_section_table (the_exec_target);
+  target_section_table *table = current_target_sections;
   std::vector<mem_range> available_memory
     = section_table_available_memory (offset, len,
 				      table->sections, table->sections_end);
@@ -893,7 +892,7 @@ exec_target::xfer_partial (enum target_object object,
 			   const gdb_byte *writebuf,
 			   ULONGEST offset, ULONGEST len, ULONGEST *xfered_len)
 {
-  struct target_section_table *table = get_section_table ();
+  struct target_section_table *table = current_target_sections;
 
   if (object == TARGET_OBJECT_MEMORY)
     return section_table_xfer_memory_partial (readbuf, writebuf,
@@ -1108,5 +1107,5 @@ Show writing into executable and core files."), NULL,
 			   &setlist, &showlist);
 
   the_exec_target = new exec_target ();
-  add_target_with_completer (the_exec_target, filename_completer);
+  add_target (exec_target_info, exec_target::open, filename_completer);
 }

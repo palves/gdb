@@ -41,6 +41,12 @@
 #include "vec.h"
 #include <algorithm>
 
+static constexpr target_info record_btrace_target_info = {
+  "record-btrace",
+  N_("Branch tracing target"),
+  N_("Collect control-flow trace and provide the execution history.")
+};
+
 /* The target_ops of record-btrace.  */
 
 class record_btrace_target : public target_ops
@@ -48,16 +54,10 @@ class record_btrace_target : public target_ops
 public:
   record_btrace_target ();
 
-  const char *shortname () override
-  { return "record-btrace"; }
+  const target_info &info () const override
+  { return record_btrace_target_info; }
 
-  const char *longname () override
-  { return _("Branch tracing target"); }
-
-  const char *doc () override
-  { return _("Collect control-flow trace and provide the execution history."); }
-
-  void open (const char *, int) override;
+  static void open (const char *, int);
   void close () override;
   void async (int) override;
 
@@ -3146,8 +3146,7 @@ to see the actual buffer size."), NULL, show_record_pt_buffer_size_value,
 			    &set_record_btrace_pt_cmdlist,
 			    &show_record_btrace_pt_cmdlist);
 
-  the_record_btrace_target = new record_btrace_target ();
-  add_target (the_record_btrace_target);
+  add_target (record_btrace_target_info, record_btrace_target::open);
 
   bfcache = htab_create_alloc (50, bfcache_hash, bfcache_eq, NULL,
 			       xcalloc, xfree);
