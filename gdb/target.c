@@ -236,7 +236,7 @@ target_has_all_memory_1 (void)
 {
   struct target_ops *t;
 
-  for (t = target_stack; t != NULL; t = t->beneath)
+  for (t = target_stack; t != NULL; t = t->beneath ())
     if (t->has_all_memory ())
       return 1;
 
@@ -248,7 +248,7 @@ target_has_memory_1 (void)
 {
   struct target_ops *t;
 
-  for (t = target_stack; t != NULL; t = t->beneath)
+  for (t = target_stack; t != NULL; t = t->beneath ())
     if (t->has_memory ())
       return 1;
 
@@ -260,7 +260,7 @@ target_has_stack_1 (void)
 {
   struct target_ops *t;
 
-  for (t = target_stack; t != NULL; t = t->beneath)
+  for (t = target_stack; t != NULL; t = t->beneath ())
     if (t->has_stack ())
       return 1;
 
@@ -272,7 +272,7 @@ target_has_registers_1 (void)
 {
   struct target_ops *t;
 
-  for (t = target_stack; t != NULL; t = t->beneath)
+  for (t = target_stack; t != NULL; t = t->beneath ())
     if (t->has_registers ())
       return 1;
 
@@ -284,7 +284,7 @@ target_has_execution_1 (ptid_t the_ptid)
 {
   struct target_ops *t;
 
-  for (t = target_stack; t != NULL; t = t->beneath)
+  for (t = target_stack; t != NULL; t = t->beneath ())
     if (t->has_execution (the_ptid))
       return 1;
 
@@ -523,8 +523,8 @@ current_target_stack ()
   return current_inferior ()->m_stack.top ();
 }
 
-/* Push a new target type into the stack of the existing target accessors,
-   possibly superseding some of the existing accessors.
+/* Push a new target type into the stack of the existing target
+   accessors, possibly superseding some existing accessor.
 
    Rather than allow an empty stack, we always have the dummy target at
    the bottom stratum, so we can call the function vectors without
@@ -533,32 +533,18 @@ current_target_stack ()
 void
 a_target_stack::push_target (struct target_ops *t)
 {
-  struct target_ops **cur;
-
-  /* Find the proper stratum to install this target in.  */
-  for (cur = &m_target_stack; (*cur) != NULL; cur = &(*cur)->beneath)
+  /* If there's already a target at this stratum, remove it.  */
+  if (m_stack[t->to_stratum] != NULL)
     {
-      if ((int) (t->to_stratum) >= (int) (*cur)->to_stratum)
-	break;
+      target_close (m_stack[t->to_stratum]);
+      m_stack[t->to_stratum] = NULL;
     }
 
-  /* If there's already targets at this stratum, remove them.  */
-  /* FIXME: cagney/2003-10-15: I think this should be popping all
-     targets to CUR, and not just those at this stratum level.  */
-  while ((*cur) != NULL && t->to_stratum == (*cur)->to_stratum)
-    {
-      /* There's already something at this stratum level.  Close it,
-         and un-hook it from the stack.  */
-      struct target_ops *tmp = (*cur);
+  /* Now add the new one.  */
+  m_stack[t->to_stratum] = t;
 
-      (*cur) = (*cur)->beneath;
-      tmp->beneath = NULL;
-      target_close (tmp);
-    }
-
-  /* We have removed all targets in our stratum, now add the new one.  */
-  t->beneath = (*cur);
-  (*cur) = t;
+  if (m_top < t->to_stratum)
+    m_top = t->to_stratum;
 }
 
 void
@@ -586,24 +572,23 @@ a_target_stack::unpush_target (struct target_ops *t)
     internal_error (__FILE__, __LINE__,
 		    _("Attempt to unpush the dummy target"));
 
+  gdb_assert (t != NULL);
+
   /* Look for the specified target.  Note that we assume that a target
      can only occur once in the target stack.  */
 
-  for (cur = &m_target_stack; (*cur) != NULL; cur = &(*cur)->beneath)
+  if (m_stack[t->to_stratum] != t)
     {
-      if ((*cur) == t)
-	break;
+      /* If we don't find target_ops, quit.  Only open targets should be
+	 closed.  */
+      return 0;
     }
 
-  /* If we don't find target_ops, quit.  Only open targets should be
-     closed.  */
-  if ((*cur) == NULL)
-    return 0;			
-
   /* Unchain the target.  */
-  tmp = (*cur);
-  (*cur) = (*cur)->beneath;
-  tmp->beneath = NULL;
+  m_stack[t->to_stratum] = NULL;
+
+  if (m_top == t->to_stratum)
+    m_top = t->beneath ()->to_stratum;
 
   /* Finally close the target.  Note we do this after unchaining, so
      any target method calls from within the target_close
@@ -657,7 +642,7 @@ target_is_pushed (struct target_ops *t)
 {
   struct target_ops *cur;
 
-  for (cur = target_stack; cur != NULL; cur = cur->beneath)
+  for (cur = target_stack; cur != NULL; cur = cur->beneath ())
     if (cur == t)
       return 1;
 
@@ -953,7 +938,7 @@ raw_memory_xfer_partial (struct target_ops *ops, gdb_byte *readbuf,
       if (ops->has_all_memory ())
 	break;
 
-      ops = ops->beneath;
+      ops = ops->beneath ();
     }
   while (ops != NULL);
 
@@ -1889,7 +1874,7 @@ info_target_command (char *args, int from_tty)
     printf_unfiltered (_("Symbols from \"%s\".\n"),
 		       objfile_name (symfile_objfile));
 
-  for (t = target_stack; t != NULL; t = t->beneath)
+  for (t = target_stack; t != NULL; t = t->beneath ())
     {
       if (!t->has_memory ())
 	continue;
@@ -2312,7 +2297,7 @@ target_require_runnable (void)
 {
   struct target_ops *t;
 
-  for (t = target_stack; t != NULL; t = t->beneath)
+  for (t = target_stack; t != NULL; t = t->beneath ())
     {
       /* If this target knows how to create a new program, then
 	 assume we will still be able to after killing the current
@@ -2385,7 +2370,7 @@ struct target_ops *
 find_attach_target (void)
 {
   /* If a target on the current stack can attach, use it.  */
-  for (target_ops *t = target_stack; t != NULL; t = t->beneath)
+  for (target_ops *t = target_stack; t != NULL; t = t->beneath ())
     {
       if (t->can_attach ())
 	return t;
@@ -2401,7 +2386,7 @@ struct target_ops *
 find_run_target (void)
 {
   /* If a target on the current stack can run, use it.  */
-  for (target_ops *t = target_stack; t != NULL; t = t->beneath)
+  for (target_ops *t = target_stack; t != NULL; t = t->beneath ())
     {
       if (t->can_create_inferior ())
 	return t;
@@ -2431,7 +2416,7 @@ target_info_proc (const char *args, enum info_proc_what what)
   if (t == NULL)
     t = find_default_run_target (NULL);
 
-  for (; t != NULL; t = t->beneath)
+  for (; t != NULL; t = t->beneath ())
     {
       int res = t->info_proc (args, what);
 
@@ -2520,6 +2505,13 @@ target_thread_address_space (ptid_t ptid)
   return aspace;
 }
 
+
+target_ops *
+target_ops::beneath () const
+{
+  return find_target_beneath (this);
+}
+
 void
 target_ops::close ()
 {
@@ -2561,7 +2553,7 @@ target_can_run ()
 {
   struct target_ops *t;
 
-  for (t = target_stack; t != NULL; t = t->beneath)
+  for (t = target_stack; t != NULL; t = t->beneath ())
     {
       if (t->can_run ())
 	return 1;
@@ -2728,7 +2720,7 @@ target_fileio_open_1 (struct inferior *inf, const char *filename,
 {
   struct target_ops *t;
 
-  for (t = default_fileio_target (); t != NULL; t = t->beneath)
+  for (t = default_fileio_target (); t != NULL; t = t->beneath ())
     {
       int fd = t->fileio_open (inf, filename, flags, mode,
 			       warn_if_slow, target_errno);
@@ -2876,7 +2868,7 @@ target_fileio_unlink (struct inferior *inf, const char *filename,
 {
   struct target_ops *t;
 
-  for (t = default_fileio_target (); t != NULL; t = t->beneath)
+  for (t = default_fileio_target (); t != NULL; t = t->beneath ())
     {
       int ret = t->fileio_unlink (inf, filename, target_errno);
 
@@ -2904,7 +2896,7 @@ target_fileio_readlink (struct inferior *inf, const char *filename,
 {
   struct target_ops *t;
 
-  for (t = default_fileio_target (); t != NULL; t = t->beneath)
+  for (t = default_fileio_target (); t != NULL; t = t->beneath ())
     {
       char *ret = t->fileio_readlink (inf, filename, target_errno);
 
@@ -3071,10 +3063,20 @@ default_thread_architecture (struct target_ops *ops, ptid_t ptid)
  * Find the next target down the stack from the specified target.
  */
 
-struct target_ops *
-find_target_beneath (struct target_ops *t)
+target_ops *
+a_target_stack::find_target_beneath (const target_ops *t)
 {
-  return t->beneath;
+  for (int stratum = t->to_stratum - 1; stratum >= 0; --stratum)
+    if (m_stack[stratum] != NULL)
+      return m_stack[stratum];
+
+  return NULL;
+}
+
+struct target_ops *
+find_target_beneath (const target_ops *t)
+{
+  return current_inferior ()->m_stack.find_target_beneath (t);
 }
 
 /* See target.h.  */
@@ -3084,7 +3086,7 @@ find_target_at (enum strata stratum)
 {
   struct target_ops *t;
 
-  for (t = target_stack; t != NULL; t = t->beneath)
+  for (t = target_stack; t != NULL; t = t->beneath ())
     if (t->to_stratum == stratum)
       return t;
 
@@ -3190,9 +3192,7 @@ dummy_make_corefile_notes (struct target_ops *self,
 target_ops *
 make_dummy_target ()
 {
-  target_ops *t = new dummy_target ();
-  t->beneath = NULL;
-  return t;
+  return the_dummy_target;
 }
 
 static const target_info dummy_target_info = {
@@ -3220,7 +3220,7 @@ dummy_target::info () const
 const target_info &
 debug_target::info () const
 {
-  return beneath->info ();
+  return beneath ()->info ();
 }
 
 
@@ -3772,7 +3772,7 @@ maintenance_print_target_stack (const char *cmd, int from_tty)
 
   printf_filtered (_("The current target stack is:\n"));
 
-  for (t = target_stack; t != NULL; t = t->beneath)
+  for (t = target_stack; t != NULL; t = t->beneath ())
     {
       if (t->to_stratum == debug_stratum)
 	continue;
@@ -3947,6 +3947,7 @@ set_write_memory_permission (char *args, int from_tty,
 void
 _initialize_target (void)
 {
+  the_dummy_target = new dummy_target ();
   the_debug_target = new debug_target ();
 
   add_info ("target", info_target_command, targ_desc);

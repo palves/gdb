@@ -1043,7 +1043,7 @@ record_full_base_target::async (int enable)
   else
     clear_async_event_handler (record_full_async_inferior_event_token);
 
-  beneath->async (enable);
+  beneath ()->async (enable);
 }
 
 static int record_full_resume_step = 0;
@@ -1108,7 +1108,7 @@ record_full_target::resume (ptid_t ptid, int step, enum gdb_signal signal)
       /* Make sure the target beneath reports all signals.  */
       target_pass_signals (0, NULL);
 
-      this->beneath->resume (ptid, step, signal);
+      this->beneath ()->resume (ptid, step, signal);
     }
 
   /* We are about to start executing the inferior (or simulate it),
@@ -1123,7 +1123,7 @@ void
 record_full_target::commit_resume ()
 {
   if (!RECORD_FULL_IS_REPLAY)
-    beneath->commit_resume ();
+    beneath ()->commit_resume ();
 }
 
 static int record_full_get_sig = 0;
@@ -1205,7 +1205,7 @@ record_full_wait_1 (struct target_ops *ops,
       if (record_full_resume_step)
 	{
 	  /* This is a single step.  */
-	  return ops->beneath->wait (ptid, status, options);
+	  return ops->beneath ()->wait (ptid, status, options);
 	}
       else
 	{
@@ -1218,7 +1218,7 @@ record_full_wait_1 (struct target_ops *ops,
 	    {
 	      struct thread_info *tp;
 
-	      ret = ops->beneath->wait (ptid, status, options);
+	      ret = ops->beneath ()->wait (ptid, status, options);
 	      if (status->kind == TARGET_WAITKIND_IGNORE)
 		{
 		  if (record_debug)
@@ -1295,8 +1295,8 @@ record_full_wait_1 (struct target_ops *ops,
 					    "Process record: record_full_wait "
 					    "issuing one more step in the "
 					    "target beneath\n");
-		      ops->beneath->resume (ptid, step, GDB_SIGNAL_0);
-		      ops->beneath->commit_resume ();
+		      ops->beneath ()->resume (ptid, step, GDB_SIGNAL_0);
+		      ops->beneath ()->commit_resume ();
 		      continue;
 		    }
 		}
@@ -1483,7 +1483,7 @@ record_full_base_target::stopped_by_watchpoint ()
   if (RECORD_FULL_IS_REPLAY)
     return record_full_stop_reason == TARGET_STOPPED_BY_WATCHPOINT;
   else
-    return beneath->stopped_by_watchpoint ();
+    return beneath ()->stopped_by_watchpoint ();
 }
 
 bool
@@ -1492,7 +1492,7 @@ record_full_base_target::stopped_data_address (CORE_ADDR *addr_p)
   if (RECORD_FULL_IS_REPLAY)
     return false;
   else
-    return this->beneath->stopped_data_address (addr_p);
+    return this->beneath ()->stopped_data_address (addr_p);
 }
 
 /* The to_stopped_by_sw_breakpoint method of target record-full.  */
@@ -1627,7 +1627,7 @@ record_full_target::store_registers (struct regcache *regcache, int regno)
 
       record_full_registers_change (regcache, regno);
     }
-  this->beneath->store_registers (regcache, regno);
+  this->beneath ()->store_registers (regcache, regno);
 }
 
 /* "to_xfer_partial" method.  Behavior is conditional on
@@ -1692,7 +1692,7 @@ record_full_target::xfer_partial (enum target_object object,
 	record_full_insn_num++;
     }
 
-  return this->beneath->xfer_partial (object, annex, readbuf, writebuf, offset,
+  return this->beneath ()->xfer_partial (object, annex, readbuf, writebuf, offset,
 				      len, xfered_len);
 }
 
@@ -1774,7 +1774,7 @@ record_full_target::insert_breakpoint (struct gdbarch *gdbarch,
       scoped_restore restore_operation_disable
 	= record_full_gdb_operation_disable_set ();
 
-      int ret = this->beneath->insert_breakpoint (gdbarch, bp_tgt);
+      int ret = this->beneath ()->insert_breakpoint (gdbarch, bp_tgt);
       if (ret != 0)
 	return ret;
 
@@ -1828,8 +1828,8 @@ record_full_target::remove_breakpoint (struct gdbarch *gdbarch,
 	      scoped_restore restore_operation_disable
 		= record_full_gdb_operation_disable_set ();
 
-	      int ret = this->beneath->remove_breakpoint (gdbarch, bp_tgt,
-							  reason);
+	      int ret = this->beneath ()->remove_breakpoint (gdbarch, bp_tgt,
+							     reason);
 	      if (ret != 0)
 		return ret;
 	    }
@@ -2217,10 +2217,10 @@ record_full_core_target::xfer_partial (enum target_object object,
 		  else
 		    {
 		      if (!entry)
-			return this->beneath->xfer_partial (object, annex,
-							    readbuf, writebuf,
-							    offset, len,
-							    xfered_len);
+			return this->beneath ()->xfer_partial (object, annex,
+							       readbuf, writebuf,
+							       offset, len,
+							       xfered_len);
 
 		      memcpy (readbuf, entry->buf + sec_offset,
 			      (size_t) len);
@@ -2237,9 +2237,9 @@ record_full_core_target::xfer_partial (enum target_object object,
 	error (_("You can't do that without a process to debug."));
     }
 
-  return this->beneath->xfer_partial (object, annex,
-				      readbuf, writebuf, offset, len,
-				      xfered_len);
+  return this->beneath ()->xfer_partial (object, annex,
+					 readbuf, writebuf, offset, len,
+					 xfered_len);
 }
 
 /* "to_insert_breakpoint" method for prec over corefile.  */

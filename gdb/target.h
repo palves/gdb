@@ -435,7 +435,7 @@ struct target_info
 struct target_ops
   {
   public:
-    struct target_ops *beneath;	/* To the target under this one.  */
+    target_ops *beneath () const; /* To the target under this one.  */
 
     virtual ~target_ops () {}
 
@@ -1266,11 +1266,12 @@ public:
   void push_target (struct target_ops *);
   int unpush_target (struct target_ops *);
 
-  target_ops *top () { return m_target_stack; }
+  target_ops *top () { return m_stack[m_top]; }
+  target_ops *find_target_beneath (const target_ops *t);
 
 private:
-  target_ops *m_target_stack = NULL;
-  //  std::array<target_ops *, (int) debug_stratum> m_stack {};
+  enum strata m_top {};
+  std::array<target_ops *, (int) debug_stratum> m_stack {};
 };
 
 extern void set_native_target (target_ops *prototype);
@@ -2386,7 +2387,7 @@ extern void noprocess (void) ATTRIBUTE_NORETURN;
 
 extern void target_require_runnable (void);
 
-extern struct target_ops *find_target_beneath (struct target_ops *);
+extern struct target_ops *find_target_beneath (const struct target_ops *);
 
 /* Find the target at STRATUM.  If no target is at that stratum,
    return NULL.  */
