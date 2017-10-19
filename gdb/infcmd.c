@@ -1157,7 +1157,7 @@ prepare_one_step (struct step_command_fsm *sm)
 
 	      /* Pretend that we've ran.  */
 	      resume_ptid = user_visible_resume_ptid (1);
-	      tp->set_running (true);
+	      set_running (tp->inf->process_target (), resume_ptid, true);
 
 	      step_into_inline_frame (tp);
 	      sm->count--;
