@@ -513,9 +513,12 @@ linux_nat_target::follow_fork (int follow_child, int detach_fork)
 	}
       else
 	{
-	  scoped_restore save_inferior_ptid
-	    = make_scoped_restore (&inferior_ptid);
-	  inferior_ptid = child_ptid;
+	  /* Switching inferior_ptid is not enough, because then
+	     inferior_thread () would crash by not finding the thread
+	     in the current inferior.  */
+	  scoped_restore_current_thread restore_current_thread;
+	  thread_info *child = find_thread_ptid (this, child_ptid);
+	  switch_to_thread (child);
 
 	  /* Let the thread_db layer learn about this new process.  */
 	  check_for_thread_db ();

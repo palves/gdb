@@ -488,10 +488,12 @@ holding the child stopped.  Try \"set detach-on-fork\" or \
 
 	  scoped_restore_current_pspace_and_thread restore_pspace_thread;
 
-	  inferior_ptid = child_ptid;
-	  add_thread_silent (child_inf->process_target (), inferior_ptid);
 	  set_current_inferior (child_inf);
+	  switch_to_no_thread ();
 	  child_inf->symfile_flags = SYMFILE_NO_READ;
+	  push_target (parent_inf->process_target ());
+	  add_thread_silent (child_inf->process_target (), child_ptid);
+	  inferior_ptid = child_ptid;
 
 	  /* If this is a vfork child, then the address-space is
 	     shared with the parent.  */
@@ -618,9 +620,10 @@ holding the child stopped.  Try \"set detach-on-fork\" or \
 	 this new thread, before cloning the program space, and
 	 informing the solib layer about this new process.  */
 
-      inferior_ptid = child_ptid;
-      add_thread_silent (child_inf->process_target (), inferior_ptid);
       set_current_inferior (child_inf);
+      push_target (parent_inf->process_target ());
+      add_thread_silent (child_inf->process_target (), child_ptid);
+      inferior_ptid = child_ptid;
 
       /* If this is a vfork child, then the address-space is shared
 	 with the parent.  If we detached from the parent, then we can
@@ -1201,8 +1204,10 @@ follow_exec (ptid_t ptid, char *exec_file_target)
       inf->pid = pid;
       target_follow_exec (inf, exec_file_target);
 
+      inferior *org_inferior = current_inferior ();
       set_current_inferior (inf);
       set_current_program_space (inf->pspace);
+      push_target (org_inferior->process_target ());
       add_thread (inf->process_target (), ptid);
     }
   else

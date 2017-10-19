@@ -316,6 +316,8 @@ extern inferior *current_inferior ();
 
 extern void set_current_inferior (inferior *);
 
+extern void switch_to_inferior_no_thread (inferior *inf);
+
 /* GDB represents the state of each program execution with an object
    called an inferior.  An inferior typically corresponds to a process
    but is more general and applies also to targets that do not have a
