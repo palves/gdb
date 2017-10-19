@@ -388,9 +388,14 @@ get_thread_regcache (target_ops *target, ptid_t ptid)
       || target != current_thread_target
       || current_thread_ptid != ptid)
     {
+      gdb_assert (ptid != null_ptid);
+
       current_thread_ptid = ptid;
-      current_thread_arch = target_thread_architecture (ptid);
       current_thread_target = target;
+
+      scoped_restore_current_inferior restore_current_inferior;
+      set_current_inferior (find_inferior_ptid (target, ptid));
+      current_thread_arch = target_thread_architecture (ptid);
     }
 
   return get_thread_arch_regcache (target, ptid, current_thread_arch);

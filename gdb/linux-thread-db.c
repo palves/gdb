@@ -407,8 +407,8 @@ thread_from_lwp (thread_info *stopped, ptid_t ptid)
 	   thread_db_err_str (err));
 
   /* Fill the cache.  */
-  tp = find_thread_ptid (current_inferior ()->process_target (), ptid);
-  return record_thread (info, current_inferior (), tp, ptid, &th, &ti);
+  tp = find_thread_ptid (stopped->inf->process_target (), ptid);
+  return record_thread (info, stopped->inf, tp, ptid, &th, &ti);
 }
 
 
