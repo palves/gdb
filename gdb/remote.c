@@ -4701,7 +4701,7 @@ remote_target::start_remote (int from_tty, int extended_p)
       /* Let the stub know that we want it to return the thread.  */
       set_continue_thread (minus_one_ptid);
 
-      if (thread_count () == 0)
+      if (thread_count (this) == 0)
 	{
 	  /* Target has no concept of threads at all.  GDB treats
 	     non-threaded target as single-threaded; add a main
@@ -4787,7 +4787,7 @@ remote_target::start_remote (int from_tty, int extended_p)
 	  remote_notif_get_pending_events (notif);
 	}
 
-      if (thread_count () == 0)
+      if (thread_count (this) == 0)
 	{
 	  if (!extended_p)
 	    error (_("The target is not running (try extended-remote?)"));

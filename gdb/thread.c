@@ -573,10 +573,19 @@ any_thread_p ()
   return false;
 }
 
-int
-thread_count (void)
+bool
+any_thread_p ()
 {
-  auto rng = all_threads ();
+  for (inferior *inf : all_inferiors ())
+    if (inf->thread_list != nullptr)
+      return true;
+  return false;
+}
+
+int
+thread_count (target_ops *proc_target)
+{
+  auto rng = all_threads (proc_target);
   return std::distance (rng.begin (), rng.end ());
 }
 

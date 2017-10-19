@@ -559,7 +559,9 @@ all_threads_safe ()
   return all_threads_safe_range ();
 }
 
-extern int thread_count (void);
+extern int thread_count (target_ops *proc_target);
+
+extern bool any_thread_p ();
 
 /* Return true if we have any thread in any inferior.  */
 extern bool any_thread_p ();
