@@ -665,7 +665,9 @@ extern thread_info *next_non_exited_thread (thread_info *thr);
 	 (T) != NULL ? ((TMP) = (T)->next, 1): 0;			\
 	 (T) = (TMP))
 
-extern int thread_count (void);
+extern int thread_count (target_ops *proc_target);
+
+extern bool any_thread_p ();
 
 /* Switch from one thread to another.  Also sets the STOP_PC
    global.  */

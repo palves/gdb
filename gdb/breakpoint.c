@@ -12090,7 +12090,20 @@ update_global_location_list (enum ugll_insert_mode insert_mode)
 		 around.  We simply always ignore hardware watchpoint
 		 traps we can no longer explain.  */
 
-	      old_loc->events_till_retirement = 3 * (thread_count () + 1);
+	      inferior *found_inf = NULL;
+	      for (inferior *inf : inferiors ())
+		{
+		  if (inf->pspace == old_loc->pspace)
+		    {
+		      found_inf = inf;
+		      break;
+		    }
+		}
+	      if (found_inf != NULL)
+		old_loc->events_till_retirement
+		  = 3 * (thread_count (found_inf->process_target ()) + 1);
+	      else
+		old_loc->events_till_retirement = 1;
 	      old_loc->owner = NULL;
 
 	      VEC_safe_push (bp_location_p, moribund_locations, old_loc);
