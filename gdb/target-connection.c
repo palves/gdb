@@ -23,7 +23,7 @@
 #include "gdbcmd.h"
 #include "cli/cli-utils.h"
 #include "inferior.h"
-#include <set>
+#include <map>
 
 int highest_target_connection_num;
 
@@ -32,7 +32,7 @@ static const char targ_desc[] =
 Shows the entire stack of targets currently in use (including the exec-file,
 core-file, and process, if any), as well as the symbol file name.)";
 
-std::set<target_ops *> process_targets;
+std::map<int, target_ops *> process_targets;
 
 /* Prints the list of inferiors and their details on UIOUT.  This is a
    version of 'info_inferior_command' suitable for use from MI.
@@ -47,9 +47,9 @@ print_connection (struct ui_out *uiout, const char *requested_inferiors)
   int count = 0;
 
   /* Compute number of lines we will print.  */
-  for (target_ops *t : process_targets)
+  for (auto it : process_targets)
     {
-      if (!number_is_in_list (requested_inferiors, t->connection_number))
+      if (!number_is_in_list (requested_inferiors, it.first))
 	continue;
 
       ++count;
@@ -71,8 +71,10 @@ print_connection (struct ui_out *uiout, const char *requested_inferiors)
 
   uiout->table_body ();
 
-  for (target_ops *t : process_targets)
+  for (auto it : process_targets)
     {
+      target_ops *t = it.second;
+
 #if 0
       if (!number_is_in_list (requested_inferiors, inf->num))
 	continue;

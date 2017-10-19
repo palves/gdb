@@ -442,7 +442,7 @@ public:
      may have spawned new threads we haven't heard of yet.  */
   bool threads_executing = false;
 
-  int connection_number;
+  int connection_number = 0;
 
   public:
      /* To the target under this one, in INF.  */
