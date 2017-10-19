@@ -3627,6 +3627,22 @@ do_target_wait_1 (inferior *inf, ptid_t ptid,
   return event_ptid;
 }
 
+/* Should we cache this in the target, like we do with
+   threads_are_executing?  */
+
+static bool
+threads_are_resumed_pending_p (inferior *inf)
+{
+  thread_info *tp;
+
+  ALL_NON_EXITED_THREADS_INF (inf, tp)
+    if (tp->resumed
+	&& tp->suspend.waitstatus_pending_p)
+      return true;
+
+  return false;
+}
+
 static bool
 do_target_wait (ptid_t wait_ptid, execution_control_state *ecs, int options)
 {
@@ -3636,7 +3652,8 @@ do_target_wait (ptid_t wait_ptid, execution_control_state *ecs, int options)
   auto inferior_matches = [&wait_ptid] (inferior *inf)
     {
       return (inf->process_target () != NULL
-	      && threads_are_executing (inf->process_target ())
+	      && (threads_are_executing (inf->process_target ())
+		  || threads_are_resumed_pending_p (inf))
 	      && ptid_t (inf->pid).matches (wait_ptid));
     };
 
