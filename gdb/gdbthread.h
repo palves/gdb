@@ -676,9 +676,12 @@ public:
 
   DISABLE_COPY_AND_ASSIGN (scoped_restore_current_thread);
 
-  void dont_restore () { m_inf = NULL; }
+  void dont_restore () { m_dont_restore = true; }
 
 private:
+  void restore ();
+
+  bool m_dont_restore = false;
   /* Use the "class" keyword here, because of a clash with a "thread_info"
      function in the Darwin API.  */
   class thread_info *m_thread;
