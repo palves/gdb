@@ -502,7 +502,7 @@ core_target::open (const char *arg, int from_tty)
   /* Current thread should be NUM 1 but the user does not know that.
      If a program is single threaded gdb in general does not mention
      anything about threads.  That is why the test is >= 2.  */
-  if (thread_count () >= 2)
+  if (thread_count (target) >= 2)
     {
       TRY
 	{

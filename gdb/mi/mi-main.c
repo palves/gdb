@@ -2062,7 +2062,7 @@ mi_execute_command (const char *cmd, int from_tty)
 	  interp_ui_out (top_level_interpreter ())->is_mi_like_p ()
 	  /* Don't try report anything if there are no threads --
 	     the program is dead.  */
-	  && thread_count () != 0
+	  && any_thread_p ()
 	  /* If the command already reports the thread change, no need to do it
 	     again.  */
 	  && !command_notifies_uscc_observer (command.get ()))

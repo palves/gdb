@@ -654,8 +654,17 @@ iterate_over_threads (int (*callback) (struct thread_info *, void *),
   return NULL;
 }
 
+bool
+any_thread_p ()
+{
+  for (inferior *inf : inferiors ())
+    for (thread_info *tp : inf->threads ())
+      return true;
+  return false;
+}
+
 int
-thread_count (void)
+thread_count (target_ops *proc_target)
 {
   int result = 0;
 
@@ -663,6 +672,8 @@ thread_count (void)
 
   ALL_INFERIORS (inf)
     {
+      if (inf->process_target () != proc_target)
+	continue;
       for (thread_info *tp : inf->threads ())
 	++result;
     }
