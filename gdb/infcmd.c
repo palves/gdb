@@ -508,12 +508,15 @@ post_create_inferior (struct target_ops *target, int from_tty)
 static void
 kill_if_already_running (int from_tty)
 {
-  if (inferior_ptid != null_ptid && target_has_execution)
+  if (current_inferior ()->process_target () != NULL)
     {
       /* Bail out before killing the program if we will not be able to
 	 restart it.  */
       target_require_runnable ();
+    }
 
+  if (inferior_ptid != null_ptid && target_has_execution)
+    {
       if (from_tty
 	  && !query (_("The program being debugged has been started already.\n\
 Start it from the beginning? ")))
