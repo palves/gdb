@@ -1930,15 +1930,12 @@ record_btrace_resume_thread (struct thread_info *tp,
   btinfo->flags |= flag;
 }
 
-/* Get the current frame for TP.  */
+/* Get the current frame for TP.  Return a frame id instead of a frame
+   because switching threads invalidates the frame cache.  */
 
-static struct frame_info *
-get_thread_current_frame (struct thread_info *tp)
+static frame_id
+get_thread_current_frame_id (struct thread_info *tp)
 {
-  struct frame_info *frame;
-  ptid_t old_inferior_ptid;
-  int executing;
-
   /* Set current thread, which is implicitly used by
      get_current_frame.  */
   scoped_restore_current_thread restore_thread;
@@ -1954,10 +1951,11 @@ get_thread_current_frame (struct thread_info *tp)
      For the former, EXECUTING is true and we're in to_wait, about to
      move the thread.  Since we need to recompute the stack, we temporarily
      set EXECUTING to flase.  */
-  executing = tp->executing;
+  bool executing = tp->executing;
   set_executing (proc_target, inferior_ptid, false);
 
-  frame = NULL;
+  frame_info *frame = NULL;
+
   TRY
     {
       frame = get_current_frame ();
@@ -1974,7 +1972,7 @@ get_thread_current_frame (struct thread_info *tp)
   /* Restore the previous execution state.  */
   set_executing (proc_target, inferior_ptid, executing);
 
-  return frame;
+  return get_frame_id (frame);
 }
 
 /* Start replaying a thread.  */
@@ -1999,13 +1997,11 @@ record_btrace_start_replaying (struct thread_info *tp)
      subroutines after we started replaying.  */
   TRY
     {
-      struct frame_info *frame;
-      struct frame_id frame_id;
       int upd_step_frame_id, upd_step_stack_frame_id;
 
       /* The current frame without replaying - computed via normal unwind.  */
-      frame = get_thread_current_frame (tp);
-      frame_id = get_frame_id (frame);
+      struct frame_id frame_id
+	= get_thread_current_frame_id (tp);
 
       /* Check if we need to update any stepping-related frame id's.  */
       upd_step_frame_id = frame_id_eq (frame_id,
@@ -2036,8 +2032,7 @@ record_btrace_start_replaying (struct thread_info *tp)
       registers_changed_thread (tp);
 
       /* The current frame with replaying - computed via btrace unwind.  */
-      frame = get_thread_current_frame (tp);
-      frame_id = get_frame_id (frame);
+      frame_id = get_thread_current_frame_id (tp);
 
       /* Replace stepping related frames where necessary.  */
       if (upd_step_frame_id)
