@@ -529,25 +529,27 @@ print_selected_inferior (struct ui_out *uiout)
 		  inf->num, inferior_pid_to_str (inf->pid), filename);
 }
 
-class proc_target_str_maker
+std::string
+uiout_field_connection (target_ops *proc_target)
 {
-public:
-  const char * operator () (target_ops *proc_target)
-  {
-    if (proc_target != NULL)
-      {
-	m_storage
-	  = (std::to_string (proc_target->connection_number)
-	     + " (" + proc_target->info ().longname) + ")";
-      }
-    else
-      m_storage.clear ();
-    return m_storage.c_str ();
-  }
-
-private:
-  std::string m_storage;
-};
+  if (proc_target == NULL)
+    {
+      return {};
+    }
+  else if (proc_target->connection_string () != NULL)
+    {
+      return string_printf ("%d (%s %s)",
+			    proc_target->connection_number,
+			    proc_target->shortname (),
+			    proc_target->connection_string ());
+    }
+  else
+    {
+      return string_printf ("%d (%s)",
+			    proc_target->connection_number,
+			    proc_target->shortname ());
+    }
+}
 
 /* Prints the list of inferiors and their details on UIOUT.  This is a
    version of 'info_inferior_command' suitable for use from MI.
@@ -561,12 +563,17 @@ print_inferior (struct ui_out *uiout, char *requested_inferiors)
 {
   struct inferior *inf;
   int inf_count = 0;
+  size_t connection_id_len = 20;
 
   /* Compute number of inferiors we will print.  */
   for (inf = inferior_list; inf; inf = inf->next)
     {
       if (!number_is_in_list (requested_inferiors, inf->num))
 	continue;
+
+      std::string conn = uiout_field_connection (inf->process_target ());
+      if (connection_id_len < conn.size ())
+	connection_id_len = conn.size ();
 
       ++inf_count;
     }
@@ -580,13 +587,12 @@ print_inferior (struct ui_out *uiout, char *requested_inferiors)
   ui_out_emit_table table_emitter (uiout, 5, inf_count, "inferiors");
   uiout->table_header (1, ui_left, "current", "");
   uiout->table_header (4, ui_left, "number", "Num");
-  uiout->table_header (23, ui_left, "connection-id", "Connection ID");
   uiout->table_header (17, ui_left, "target-id", "Description");
+  uiout->table_header (connection_id_len, ui_left,
+		       "connection-id", "Connection");
   uiout->table_header (17, ui_left, "exec", "Executable");
 
   uiout->table_body ();
-
-  proc_target_str_maker tstr;
 
   for (inf = inferior_list; inf; inf = inf->next)
     {
@@ -602,9 +608,10 @@ print_inferior (struct ui_out *uiout, char *requested_inferiors)
 
       uiout->field_int ("number", inf->num);
 
-      uiout->field_string ("connection-id", tstr (inf->process_target ()));
-
       uiout->field_string ("target-id", inferior_pid_to_str (inf->pid));
+
+      std::string conn = uiout_field_connection (inf->process_target ());
+      uiout->field_string ("connection-id", conn.c_str ());
 
       if (inf->pspace->pspace_exec_filename != NULL)
 	uiout->field_string ("exec", inf->pspace->pspace_exec_filename);
@@ -888,10 +895,17 @@ add_inferior_command (char *args, int from_tty)
       if (!new_connection && proc_target != NULL)
 	{
 	  push_target (proc_target);
-	  printf_filtered (_("Added inferior %d on target %d (%s)\n"),
-			   inf->num,
-			   proc_target->connection_number,
-			   proc_target->info ().longname);
+	  if (proc_target->connection_string () != NULL)
+	    printf_filtered (_("Added inferior %d on target %d (%s %s)\n"),
+			     inf->num,
+			     proc_target->connection_number,
+			     proc_target->shortname (),
+			     proc_target->connection_string ());
+	  else
+	    printf_filtered (_("Added inferior %d on target %d (%s)\n"),
+			     inf->num,
+			     proc_target->connection_number,
+			     proc_target->shortname ());
 	}
       else
 	printf_filtered (_("Added inferior %d\n"), inf->num);

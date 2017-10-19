@@ -98,6 +98,8 @@ public:
   const target_info &info () const override
   { return remote_target_info; }
 
+  const char *connection_string () const override;
+
   thread_control_capabilities get_thread_control_capabilities () override
   { return tc_schedlock; }
 
@@ -378,9 +380,9 @@ public:
   int remove_exec_catchpoint (int) override;
   enum exec_direction_kind execution_direction () override;
 
-  struct remote_state *get_remote_state ();
+  struct remote_state *get_remote_state () const;
 
-  std::unique_ptr<struct remote_state> m_remote_state;
+  mutable std::unique_ptr<struct remote_state> m_remote_state;
 
 protected:
   char *append_pending_thread_resumptions (char *p, char *endp,
@@ -974,7 +976,7 @@ get_remote_arch_state (struct gdbarch *gdbarch)
 /* Fetch the global remote target state.  */
 
 remote_state *
-remote_target::get_remote_state ()
+remote_target::get_remote_state () const
 {
   /* Make sure that the remote architecture state has been
      initialized, because doing so might reallocate rs->buf.  Any
@@ -4719,6 +4721,17 @@ remote_target::start_remote (int from_tty, int extended_p)
   /* Maybe breakpoints are global and need to be inserted now.  */
   if (breakpoints_should_be_inserted_now ())
     insert_breakpoints ();
+}
+
+const char *
+remote_target::connection_string () const
+{
+  remote_state *rs = get_remote_state ();
+
+  if (rs->remote_desc->name != NULL)
+    return rs->remote_desc->name;
+  else
+    return NULL;
 }
 
 /* Open a connection to a remote debugger.
