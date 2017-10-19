@@ -4585,15 +4585,10 @@ wait_one ()
 
       /* Block waiting for some event.  */
 
-      fd_set readfds, exceptfds;
+      fd_set readfds;
       int nfds = 0;
 
-      /* NOTE: Some OS's can scramble the READFDS when the select()
-	 call fails (ex the kernel with Red Hat 5.2).  Initialize all
-	 arguments before each call.  */
-
       FD_ZERO (&readfds);
-      FD_ZERO (&exceptfds);
 
       for (inferior *inf : inferiors ())
 	{
@@ -4604,10 +4599,7 @@ wait_one ()
 	    continue;
 
 	  int fd = target->async_wait_fd ();
-
 	  FD_SET (fd, &readfds);
-	  FD_SET (fd, &exceptfds);
-
 	  if (nfds <= fd)
 	    nfds = fd + 1;
 	}
@@ -4620,7 +4612,7 @@ wait_one ()
 
       QUIT;
 
-      int numfds = interruptible_select (nfds, &readfds, 0, &exceptfds, 0);
+      int numfds = interruptible_select (nfds, &readfds, 0, NULL, 0);
       if (numfds == 0)
 	error ("boo!");
       else if (numfds < 0)
