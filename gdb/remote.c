@@ -704,6 +704,7 @@ struct remote_state
 
   /* The status of the stub support for the various vCont actions.  */
   struct vCont_action_support supports_vCont;
+  bool supports_vCont_probed;
 
   /* Nonzero if the user has pressed Ctrl-C, but the target hasn't
      responded to that.  */
@@ -5828,6 +5829,7 @@ remote_vcont_probe (struct remote_state *rs)
     }
 
   packet_ok (buf, &remote_protocol_packets[PACKET_vCont]);
+  rs->supports_vCont_probed = true;
 }
 
 /* Helper function for building "vCont" resumptions.  Write a
@@ -6456,7 +6458,10 @@ remote_target::remote_stop_ns (ptid_t ptid)
   char *p = rs->buf;
   char *endp = rs->buf + get_remote_packet_size ();
 
-  if (packet_support (PACKET_vCont) == PACKET_SUPPORT_UNKNOWN)
+  /* This supports_vCont_probed check is a hack: we should really make
+     packet_support be per-connection.  */
+  if (packet_support (PACKET_vCont) == PACKET_SUPPORT_UNKNOWN
+      || !rs->supports_vCont_probed)
     remote_vcont_probe (rs);
 
   if (!rs->supports_vCont.t)
