@@ -1577,6 +1577,9 @@ restore_selected_frame (struct frame_id a_frame_id, int frame_level)
 
 scoped_restore_current_thread::~scoped_restore_current_thread ()
 {
+  if (m_inf == NULL)
+    return;
+
   /* If an entry of thread_info was previously selected, it won't be
      deleted because we've increased its refcount.  The thread represented
      by this thread_info entry may have already exited (due to normal exit,
@@ -1612,6 +1615,8 @@ scoped_restore_current_thread::scoped_restore_current_thread ()
 {
   m_thread = NULL;
   m_inf = current_inferior ();
+
+  gdb_assert (m_inf != NULL);
 
   if (inferior_ptid != null_ptid)
     {
