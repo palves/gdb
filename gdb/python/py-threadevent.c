@@ -25,15 +25,15 @@
    This function returns the currently stopped thread in non-stop mode and
    Py_None otherwise.  In each case it returns a borrowed reference.  */
 
-static PyObject *get_event_thread (void)
+PyObject *get_event_thread ()
   CPYCHECKER_RETURNS_BORROWED_REF;
 
-static PyObject *
-get_event_thread (void)
+PyObject *
+get_event_thread ()
 {
   PyObject *thread;
 
-  if (non_stop)
+  if (non_stop && inferior_ptid != null_ptid)
     thread = (PyObject *) thread_to_thread_object (inferior_thread ());
   else
     thread = Py_None;
