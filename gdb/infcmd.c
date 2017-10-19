@@ -2897,12 +2897,16 @@ attach_command (const char *args, int from_tty)
       add_inferior_continuation (attach_command_continuation, a,
 				 attach_command_continuation_free_args);
 
+      /* Let infrun consider waiting for events out of this
+	 target.  */
+      inferior->process_target ()->threads_executing = true;
+
       if (!target_is_async_p ())
 	mark_infrun_async_event_handler ();
       return;
     }
-
-  attach_post_wait (args, from_tty, mode);
+  else
+    attach_post_wait (args, from_tty, mode);
 }
 
 /* We had just found out that the target was already attached to an
