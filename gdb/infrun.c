@@ -3578,11 +3578,9 @@ do_target_wait (ptid_t wait_ptid, execution_control_state *ecs, int options)
 	switch_to_thread (thr);
 
 	ecs->ptid = do_target_wait_1 (inf, wait_ptid, &ecs->ws, options);
+	ecs->target = inf->process_target ();
 	if (ecs->ws.kind != TARGET_WAITKIND_IGNORE)
-	  {
-	    ecs->target = inf->process_target ();
-	    return;
-	  }
+	  return;
       }
 }
 
