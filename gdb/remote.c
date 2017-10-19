@@ -5804,6 +5804,21 @@ remote_target::follow_exec (struct inferior *inf, char *execd_pathname)
   set_pspace_remote_exec_file (inf->pspace, execd_pathname);
 }
 
+static void
+unpush_target_all_inferiors (target_ops *targ)
+{
+  /* We have to unpush the target in all inferiors though, even
+     those that aren't running.  */
+  scoped_restore_current_inferior restore_current_inferior;
+
+  for (inferior *inf : inferiors ())
+    if (inf->process_target () == targ)
+      {
+	switch_to_inferior_no_thread (inf);
+	unpush_target (targ);
+      }
+}
+
 /* Same as remote_detach, but don't send the "D" packet; just disconnect.  */
 
 void
@@ -5815,7 +5830,7 @@ remote_target::disconnect (const char *args, int from_tty)
   /* Make sure we unpush even the extended remote targets.  Calling
      target_mourn_inferior won't unpush, and remote_mourn won't
      unpush if there is more than one inferior left.  */
-  unpush_target (this);
+  unpush_target_all_inferiors (this);
   generic_mourn_inferior ();
 
   if (from_tty)
@@ -9875,7 +9890,7 @@ remote_target::mourn_inferior ()
   /* In 'target remote' mode with one inferior, we close the connection.  */
   if (!rs->extended && number_of_live_inferiors (this) <= 1)
     {
-      unpush_target (this);
+      unpush_target_all_inferiors (this);
 
       /* remote_close takes care of doing most of the clean up.  */
       generic_mourn_inferior ();
