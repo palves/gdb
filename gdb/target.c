@@ -640,8 +640,9 @@ a_target_stack::push (struct target_ops *t)
   /* If there's already a target at this stratum, remove it.  */
   if (m_stack[t->to_stratum] != NULL)
     {
-      target_close (m_stack[t->to_stratum]);
+      target_ops *prev = m_stack[t->to_stratum];
       m_stack[t->to_stratum] = NULL;
+      target_close (prev);
     }
 
   /* Now add the new one.  */
