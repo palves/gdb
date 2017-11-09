@@ -1042,7 +1042,7 @@ syms_from_objfile_1 (struct objfile *objfile,
      initial symbol reading for this file.  */
 
   (*objfile->sf->sym_init) (objfile);
-  clear_complaints (&symfile_complaints, 1, add_flags & SYMFILE_VERBOSE);
+  clear_complaints (&symfile_complaints);
 
   (*objfile->sf->sym_offsets) (objfile, addrs);
 
@@ -1090,7 +1090,7 @@ finish_new_objfile (struct objfile *objfile, symfile_add_flags add_flags)
     }
 
   /* We're done reading the symbol file; finish off complaints.  */
-  clear_complaints (&symfile_complaints, 0, add_flags & SYMFILE_VERBOSE);
+  clear_complaints (&symfile_complaints);
 }
 
 /* Process a symbol file, as either the main file or as a dynamically
@@ -2561,7 +2561,7 @@ reread_symbols (void)
 	    }
 
 	  (*objfile->sf->sym_init) (objfile);
-	  clear_complaints (&symfile_complaints, 1, 1);
+	  clear_complaints (&symfile_complaints);
 
 	  objfile->flags &= ~OBJF_PSYMTABS_READ;
 
@@ -2591,7 +2591,7 @@ reread_symbols (void)
 	    }
 
 	  /* We're done reading the symbol file; finish off complaints.  */
-	  clear_complaints (&symfile_complaints, 0, 1);
+	  clear_complaints (&symfile_complaints);
 
 	  /* Getting new symbols may change our opinion about what is
 	     frameless.  */
