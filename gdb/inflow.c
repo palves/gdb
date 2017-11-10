@@ -475,6 +475,8 @@ private:
   bool m_saved_termios_p;
 };
 
+extern int tui_write_raw;
+
 static void
 child_terminal_flush_from_to (int read_fd, int write_fd,
 			      const char *what)
@@ -511,7 +513,19 @@ child_terminal_flush_from_to (int read_fd, int write_fd,
 
       while (r > 0)
 	{
-	  int w = write (write_fd, p, r);
+	  int w;
+
+	  if (write_fd == STDOUT_FILENO)
+	    {
+	      scoped_restore restore_tui
+		= make_scoped_restore (&tui_write_raw,  1);
+
+	      gdb_stdout->write (p, r);
+	      w = r;
+	    }
+	  else {
+
+	  w = write (write_fd, p, r);
 	  if (w == -1 && errno == EAGAIN)
 	    continue;
 	  else if (w <= 0)
@@ -521,6 +535,8 @@ child_terminal_flush_from_to (int read_fd, int write_fd,
 				  what, r, err, safe_strerror (err));
 	      return;
 	    }
+
+	  }
 
 	  r -= w;
 	  p += w;

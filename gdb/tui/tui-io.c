@@ -141,10 +141,15 @@ static char *tui_rl_saved_prompt;
    buffered.  It is up to the caller to refresh the screen if
    necessary.  */
 
+int tui_write_raw;
+
 static void
 do_tui_putc (WINDOW *w, char c)
 {
   static int tui_skip_line = -1;
+
+  if (tui_write_raw && c == '\r')
+    return;
 
   /* Catch annotation and discard them.  We need two \032 and discard
      until a \n is seen.  */
