@@ -1006,11 +1006,20 @@ copy_terminal_info (struct inferior *to, struct inferior *from)
 {
   struct terminal_info *tinfo_to, *tinfo_from;
 
-  tinfo_to = get_inflow_inferior_data (to);
-  tinfo_from = get_inflow_inferior_data (from);
+  to->terminal_state = from->terminal_state;
 
-  gdb_assert (tinfo_to->run_terminal == NULL);
-  xfree (tinfo_to->ttystate);
+  tinfo_to = (terminal_info *) inferior_data (to, inflow_inferior_data);
+  gdb_assert (tinfo_to == NULL);
+
+  tinfo_from = (terminal_info *) inferior_data (from, inflow_inferior_data);
+  if (tinfo_from == NULL)
+    {
+      /* Nothing to copy.  */
+      return;
+    }
+
+  tinfo_to = new terminal_info ();
+  set_inferior_data (to, inflow_inferior_data, tinfo_to);
 
   *tinfo_to = *tinfo_from;
   if (tinfo_from->run_terminal != NULL)
@@ -1019,8 +1028,6 @@ copy_terminal_info (struct inferior *to, struct inferior *from)
   if (tinfo_from->ttystate)
     tinfo_to->ttystate
       = serial_copy_tty_state (stdin_serial, tinfo_from->ttystate);
-
-  to->terminal_state = from->terminal_state;
 
   /* Copy FROM's "set inferior-tty TTY" setting value at the time FROM
      was started to TO.  XXX should this copy the current value
