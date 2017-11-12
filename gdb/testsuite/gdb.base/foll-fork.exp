@@ -22,8 +22,25 @@ if { ![istarget "*-*-linux*"] && ![istarget "*-*-openbsd*"] } then {
 
 standard_testfile
 
-if {[prepare_for_testing "failed to prepare" $testfile $srcfile debug]} {
+if {[build_executable "failed to prepare" $testfile $srcfile debug]} {
     return -1
+}
+
+proc restart_gdb {} {
+    global GDBFLAGS
+    global testfile
+
+    save_vars { GDBFLAGS } {
+	# This testcase assumes that the child survives when the
+	# parent exits.  Make GDB put the inferiors in GDBs session so
+	# that the child doesn't die with SIGHUP when the parent (the
+	# session leader if we let GDB put the inferior in its own
+	# session) exits.  We could have the child ignore SIGHUP
+	# instead, but we'd still need to handle "Stopped by SIGHUP"
+	# events.  We leave testing that for another testcase.
+	append GDBFLAGS " -ex \"tty /dev/tty\""
+	clean_restart $testfile
+    }
 }
 
 proc check_fork_catchpoints {} {
@@ -65,7 +82,7 @@ proc test_follow_fork { who detach cmd } {
     with_test_prefix "follow $who, detach $detach, command \"$cmd\"" {
 
 	# Start a new debugger session each time so defaults are legitimate.
-	clean_restart $testfile
+	restart_gdb
 
 	if ![runto_main] {
 	    untested "could not run to main"
@@ -379,7 +396,7 @@ By default, the debugger will follow the parent process..*" \
     # Catchpoint tests.
 
     # Restart to eliminate any effects of the follow-fork tests.
-    clean_restart $testfile
+    restart_gdb
     gdb_test_no_output "set verbose"
 
     # Test the ability to catch a fork, specify that the child be
@@ -397,6 +414,8 @@ By default, the debugger will follow the parent process..*" \
     #
     if [runto_main] then { tcatch_fork_parent_follow }
 }
+
+restart_gdb
 
 # The "Detaching..." and "Attaching..." messages may be hidden by
 # default.
