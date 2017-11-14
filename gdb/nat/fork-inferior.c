@@ -478,6 +478,8 @@ fork_inferior (const char *exec_file_arg, const std::string &allargs,
 		fprintf (stderr, "in session leader (%d), reaping child (%d)\n",
 			 (int) getpid (), (int) child2);
 
+	      setproctitle ("session leader");
+
 	      int status;
 	      int res = waitpid (child2, &status, 0);
 	      if (0)
