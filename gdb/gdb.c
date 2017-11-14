@@ -21,13 +21,14 @@
 #include "interps.h"
 
 int
-main (int argc, char **argv)
+main (int argc, char **argv, char **envp)
 {
   struct captured_main_args args;
 
   memset (&args, 0, sizeof args);
   args.argc = argc;
   args.argv = argv;
+  args.envp = envp;
   args.interpreter_p = INTERP_CONSOLE;
   return gdb_main (&args);
 }

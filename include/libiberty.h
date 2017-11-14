@@ -705,6 +705,9 @@ extern int strverscmp (const char *, const char *);
 /* Set the title of a process */
 extern void setproctitle (const char *name, ...);
 
+/* Initialize state for setproctitle.  Call this early in main.  */
+extern void setproctitle_init (int argc, char *argv[], char *envp[]);
+
 /* Increase stack limit if possible.  */
 extern void stack_limit_increase (unsigned long);
 

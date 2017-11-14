@@ -1167,6 +1167,8 @@ captured_main (void *data)
 int
 gdb_main (struct captured_main_args *args)
 {
+  setproctitle_init (args->argc, args->argv, args->envp);
+
   TRY
     {
       captured_main (args);

@@ -24,6 +24,7 @@ struct captured_main_args
 {
   int argc;
   char **argv;
+  char **envp;
   const char *interpreter_p;
 };
 
