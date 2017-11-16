@@ -236,6 +236,76 @@ gdb_save_tty_state (void)
     }
 }
 
+/* Determine whether inferior INF is using the same TTY for input as
+   GDB is.  Returns 1 if it is, 0 if it isn't, and -1 if we can't
+   tell.  */
+
+static int
+sharing_input_terminal_1 (inferior *inf)
+{
+  /* Using host calls here is fine, because the child_terminal_xxx
+     functions are meant to be used by child/native targets.  */
+#if defined (__linux__) || defined (__sun__)
+  char buf[100];
+  struct stat gdb_tty;
+  struct stat inf_tty;
+  int res;
+
+  xsnprintf (buf, sizeof (buf), "/proc/%d/fd/0", inf->pid);
+  res = stat (buf, &inf_tty);
+  if (res == -1)
+    return -1;
+
+  res = fstat (STDIN_FILENO, &gdb_tty);
+  if (res == -1)
+    return -1;
+
+  return (gdb_tty.st_dev == inf_tty.st_dev
+	  && gdb_tty.st_ino == inf_tty.st_ino);
+#else
+  return -1;
+#endif
+}
+
+/* Return true if the inferior is using the same TTY for input as GDB
+   is.  If this is true, then we save/restore terminal flags/state.
+
+   This is necessary because if inf->attach_flag is set, we don't
+   offhand know whether we are sharing a terminal with the inferior or
+   not.  Attaching a process without a terminal is one case where we
+   do not; attaching a process which we ran from the same shell as GDB
+   via `&' is one case where we do.
+
+   If we can't determine, we assume the TTY is being shared.  This
+   works OK if you're only debugging one inferior.  However, if you're
+   debugging more than one inferior, and e.g., one is spawned by GDB
+   with "run" (sharing terminal with GDB), and another is attached to
+   (and running on a different terminal, as is most common), then it
+   matters, because we can only restore the terminal settings of one
+   of the inferiors, and in that scenario, we want to restore the
+   settings of the "run"'ed inferior.
+
+   Note, this is not the same as determining whether GDB and the
+   inferior are in the same session / connected to the same
+   controlling tty.  An inferior (fork child) may call setsid,
+   disconnecting itself from the ctty, while still leaving
+   stdin/stdout/stderr associated with the original terminal.  If
+   we're debugging that process, we should also save/restore terminal
+   settings.  */
+
+static bool
+sharing_input_terminal (inferior *inf)
+{
+  terminal_info *tinfo = get_inflow_inferior_data (inf);
+
+  if (tinfo->run_terminal != NULL)
+    return false;
+
+  int res = sharing_input_terminal_1 (inf);
+  /* If we can't determine, assume yes.  */
+  return (res == -1 || res == 1);
+}
+
 /* Put the inferior's terminal settings into effect.  This is
    preparation for starting or resuming the inferior.  */
 
@@ -256,7 +326,7 @@ child_terminal_inferior (struct target_ops *self)
 
   if (gdb_has_a_terminal ()
       && tinfo->ttystate != NULL
-      && tinfo->run_terminal == NULL)
+      && sharing_input_terminal (inf))
     {
       int result;
 
@@ -271,14 +341,6 @@ child_terminal_inferior (struct target_ops *self)
       result = serial_set_tty_state (stdin_serial, tinfo->ttystate);
       OOPSY ("setting tty state");
 
-      /* If inf->attach_flag is set, we don't know whether we are
-	 sharing a terminal with the inferior or not.  (attaching a
-	 process without a terminal is one case where we do not;
-	 attaching a process which we ran from the same shell as GDB
-	 via `&' is one case where we do.)  To tell whether we are
-	 sharing a terminal, we try to make the inferior's process
-	 group be the terminal's foreground process group.  That
-	 succeeds iff we're sharing a terminal.  */
       if (job_control)
 	{
 #ifdef HAVE_TERMIOS_H
@@ -293,9 +355,16 @@ child_terminal_inferior (struct target_ops *self)
 #endif
 	  if (result == -1)
 	    {
-	      fprintf_unfiltered (gdb_stderr, "tcsetpgrp failed with %d, %s\n",
-				  errno, safe_strerror (errno));
-	      return;
+#if 0
+	      /* This fails if either GDB has no controlling terminal,
+		 e.g., running under 'setsid(1)', or if the inferior
+		 is no longer attached to GDB's controlling terminal.
+		 I.e., if it called setsid to create a new session or
+		 used the TIOCNOTTY ioctl.  */
+	      fprintf_unfiltered (gdb_stderr,
+				  "[tcsetpgrp failed in child_terminal_inferior: %s]\n",
+				  safe_strerror (errno));
+#endif
 	    }
 #endif
 	}
@@ -356,7 +425,7 @@ child_terminal_save_inferior (struct target_ops *self)
 
   /* No need to save/restore if the inferior is not sharing GDB's
      tty.  */
-  if (tinfo->run_terminal != NULL)
+  if (!sharing_input_terminal (inf))
     return;
 
   int result ATTRIBUTE_UNUSED;
