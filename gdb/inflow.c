@@ -642,6 +642,8 @@ copy_terminal_info (struct inferior *to, struct inferior *from)
   if (tinfo_from->ttystate)
     tinfo_to->ttystate
       = serial_copy_tty_state (stdin_serial, tinfo_from->ttystate);
+
+  to->terminal_state = from->terminal_state;
 }
 
 void
