@@ -63,24 +63,55 @@ if [regexp "\\^done\[\r\n\]+$mi_log_prompt\\^running\[\r\n\]+\\*running,thread-i
 
 mi_gdb_test "-gdb-set logging redirect on" ".*" "redirect logging on"
 
-# Since all output will be going into the file, just keep sending commands
-# and don't expect anything to appear until logging is turned off.
-
 send_gdb "1001-gdb-set logging on\n"
-send_gdb "1002-exec-step\n"
-send_gdb "1003-exec-next\n"
-
-mi_gdb_test "1004-gdb-set logging off" ".*" "redirect logging off"
 
 set chan [open $milogfile]
-set logcontent [read $chan]
+
+# Read GDB output in channel/file CHAN, expect the result.  PATTERN is
+# the pattern to match for a PASS.
+
+proc gdb_test_file {chan pattern test} {
+    global timeout
+
+    set ticks [expr 10 * $timeout]
+    set t 0
+    set logcontent ""
+
+    while {1} {
+	set r [read $chan]
+	append logcontent $r
+
+	if [regexp "$pattern" $logcontent] {
+	    pass "$test"
+	    break
+	} else {
+	    incr t
+	    if {$t == $ticks} {
+		fail "$test (timeout)"
+		break
+	    }
+	    after 100
+	}
+    }
+}
+
+gdb_test_file $chan \
+    "1001\\^done\[\r\n\]+$mi_log_prompt" \
+    "redirect log file contents, 1"
+
+send_gdb "1002-exec-step\n"
+gdb_test_file $chan \
+    "1002\\^running\[\r\n\]+\\*running,thread-id=\"all\"\[\r\n\]+$mi_log_prompt\\*stopped,reason=\"end-stepping-range\",.*\[\r\n\]+$mi_log_prompt" \
+    "redirect log file contents, 2"
+
+send_gdb "1003-exec-next\n"
+gdb_test_file $chan \
+    "1003\\^running\[\r\n\]+\\*running,thread-id=\"all\"\[\r\n\]+$mi_log_prompt\\*stopped,reason=\"end-stepping-range\",.*\[\r\n\]+$mi_log_prompt" \
+    "redirect log file contents, 3"
+
 close $chan
 
-if [regexp "1001\\^done\[\r\n\]+$mi_log_prompt.*1002\\^running\[\r\n\]+\\*running,thread-id=\"all\"\[\r\n\]+$mi_log_prompt\\*stopped,reason=\"end-stepping-range\",.*\[\r\n\]+$mi_log_prompt.*1003\\^running\[\r\n\]+\\*running,thread-id=\"all\"\[\r\n\]+$mi_log_prompt\\*stopped,reason=\"end-stepping-range\",.*\[\r\n\]+$mi_log_prompt" $logcontent] {
-    pass "redirect log file contents"
-} else {
-    fail "redirect log file contents"
-}
+mi_gdb_test "1004-gdb-set logging off" ".*" "redirect logging off"
 
 # Now try enabling a redirect while GDB is already logging.  This used
 # to crash GDB.
