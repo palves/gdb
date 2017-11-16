@@ -7949,6 +7949,7 @@ print_signal_received_reason (struct ui_out *uiout, enum gdb_signal siggnal)
 void
 print_no_history_reason (struct ui_out *uiout)
 {
+  target_terminal::ours_for_output ();
   uiout->text ("\nNo more reverse-execution history.\n");
 }
 
