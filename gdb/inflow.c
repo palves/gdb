@@ -264,7 +264,7 @@ child_terminal_inferior (struct target_ops *self)
 	 sharing a terminal with the inferior or not.  (attaching a
 	 process without a terminal is one case where we do not;
 	 attaching a process which we ran from the same shell as GDB
-	 via `&' is one case where we do.  To tell whether we are
+	 via `&' is one case where we do.)  To tell whether we are
 	 sharing a terminal, we try to make the inferior's process
 	 group be the terminal's foreground process group.  That
 	 succeeds iff we're sharing a terminal.  */
@@ -281,7 +281,11 @@ child_terminal_inferior (struct target_ops *self)
 	  result = tcsetpgrp (0, tinfo->process_group);
 #endif
 	  if (result == -1)
-	    return;
+	    {
+	      fprintf_unfiltered (gdb_stderr, "tcsetpgrp failed with %d, %s\n",
+				  errno, safe_strerror (errno));
+	      return;
+	    }
 #endif
 	}
 
