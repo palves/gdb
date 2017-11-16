@@ -146,11 +146,9 @@ static sighandler_t sigquit_ours;
    fork_inferior, while forking a new child.  */
 static const char *inferior_thisrun_terminal;
 
-/* Nonzero if our terminal settings are in effect.  Zero if the
-   inferior's settings are in effect.  Ignored if !gdb_has_a_terminal
-   ().  */
-
-int terminal_is_ours;
+/* True if our terminal settings are in effect.  False if the
+   inferior's settings are in effect.  Ignored if !gdb_has_a_terminal ().  */
+bool terminal_is_ours = true;
 
 /* See terminal.h.  */
 
@@ -217,7 +215,7 @@ child_terminal_init (struct target_ops *self)
       /* Make sure that next time we call terminal_inferior (which will be
          before the program runs, as it needs to be), we install the new
          process group.  */
-      terminal_is_ours = 1;
+      terminal_is_ours = true;
     }
 }
 
@@ -297,7 +295,7 @@ child_terminal_inferior (struct target_ops *self)
 #endif
 	}
     }
-  terminal_is_ours = 0;
+  terminal_is_ours = false;
 }
 
 /* Put some of our terminal settings into effect,
@@ -344,7 +342,7 @@ child_terminal_ours_1 (int output_only)
   if (terminal_is_ours)
     return;
 
-  terminal_is_ours = 1;
+  terminal_is_ours = true;
 
   /* Checking inferior->run_terminal is necessary so that
      if GDB is running in the background, it won't block trying
@@ -769,8 +767,6 @@ _initialize_inflow (void)
 {
   add_info ("terminal", info_terminal_command,
 	    _("Print inferior's saved terminal status."));
-
-  terminal_is_ours = 1;
 
   /* OK, figure out whether we have job control.  */
   have_job_control ();
