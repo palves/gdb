@@ -74,7 +74,7 @@ proc return_if_fail { result } {
 # Detach from a process, and ensure that it exits after detaching.
 # This relies on inferior I/O.
 
-proc detach_and_expect_exit {test} {
+proc detach_and_expect_exit {inf_output_re test} {
     global decimal
     global gdb_spawn_id
     global inferior_spawn_id
@@ -96,7 +96,7 @@ proc detach_and_expect_exit {test} {
 	# we don't skip anything.
 	return_if_fail [gdb_test_multiple "" $test {
 	    -i "$inferior_spawn_id $gdb_spawn_id"
-	    -re "(exited, status=0)|($gdb_prompt )" {
+	    -re "($inf_output_re)|($gdb_prompt )" {
 		if {[info exists expect_out(1,string)]} {
 		    verbose -log "saw inferior exit"
 		    set saw_inf_exit 1
@@ -130,15 +130,28 @@ proc continue_to_exit_bp {} {
 #
 # CMD indicates what to do with the parent after detaching the child.
 # Can be either "detach" to detach, or "continue", to continue to
-# exit.  If "continue", then CONTINUE_RE is the regexp to expect.
-# Defaults to normal exit output.
+# exit.
 #
-proc do_detach {multi_process cmd {continue_re ""}} {
+# CHILD_EXIT indicates how is the child expected to exit.  Can be
+# either "normal" or "kill", for normal exit, and killed with SIGKILL,
+# respectively..
+#
+proc do_detach {multi_process cmd child_exit} {
     global decimal
     global server_spawn_id
 
-    if {$continue_re == ""} {
+    if {$child_exit == "normal"} {
 	set continue_re "exited normally.*"
+	set detach_re "exited, status=0"
+    } elseif {$child_exit == "signal"} {
+	if {$multi_process} {
+	    set continue_re "exited with code 02.*"
+	} else {
+	    set continue_re "terminated with signal SIGKILL.*"
+	}
+	set detach_re "signaled, sig=9"
+    } else {
+	error "unhandled \$child_exit: $child_exit"
     }
 
     set is_remote [expr {[target_info exists gdb_protocol]
@@ -154,7 +167,7 @@ proc do_detach {multi_process cmd {continue_re ""}} {
 	if {$cmd == "detach"} {
 	    # Make sure that detach works and that the parent process
 	    # exits cleanly.
-	    detach_and_expect_exit "detach parent"
+	    detach_and_expect_exit $detach_re "detach parent"
 	} elseif {$cmd == "continue"} {
 	    # Make sure that continuing works and that the parent process
 	    # exits cleanly.
@@ -191,6 +204,7 @@ proc test_detach {multi_process cmd} {
 	global binfile
 
 	clean_restart ${binfile}
+	gdb_test_no_output "tty /dev/tty"
 
 	if ![runto_main] {
 	    fail "can't run to main"
@@ -205,7 +219,7 @@ proc test_detach {multi_process cmd} {
 	# Run to _exit in the child.
 	continue_to_exit_bp
 
-	do_detach $multi_process $cmd
+	do_detach $multi_process $cmd "normal"
     }
 }
 
@@ -216,6 +230,7 @@ proc test_detach_watch {multi_process cmd} {
 	global binfile decimal
 
 	clean_restart ${binfile}
+	gdb_test_no_output "tty /dev/tty"
 
 	if ![runto_main] {
 	    fail "can't run to main"
@@ -240,7 +255,7 @@ proc test_detach_watch {multi_process cmd} {
 	# thread individually).
 	continue_to_exit_bp
 
-	do_detach $multi_process $cmd
+	do_detach $multi_process $cmd "normal"
     }
 }
 
@@ -252,6 +267,7 @@ proc test_detach_killed_outside {multi_process cmd} {
 	global binfile
 
 	clean_restart ${binfile}
+	gdb_test_no_output "tty /dev/tty"
 
 	if ![runto_main] {
 	    fail "can't run to main"
@@ -279,12 +295,7 @@ proc test_detach_killed_outside {multi_process cmd} {
 	# Give it some time to die.
 	sleep 2
 
-	if {$multi_process} {
-	    set continue_re "exited with code 02.*"
-	} else {
-	    set continue_re "terminated with signal SIGKILL.*"
-	}
-	do_detach $multi_process $cmd $continue_re
+	do_detach $multi_process $cmd "signal"
     }
 }
 
