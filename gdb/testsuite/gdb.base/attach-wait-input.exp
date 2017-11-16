@@ -47,6 +47,10 @@ proc start_program {binfile} {
 
     clean_restart $binfile
 
+    # Let our spawned inferior run in GDB's terminal/session, so that
+    # we can detach from it.
+    gdb_test_no_output "tty /dev/tty"
+
     if ![runto setup_done] then {
 	fail "can't run to setup_done"
 	return 0
