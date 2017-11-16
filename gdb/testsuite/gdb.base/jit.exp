@@ -107,7 +107,15 @@ proc one_jit_test {count match_str reattach} {
     with_test_prefix "one_jit_test-$count" {
 	global verbose testfile solib_binfile_target solib_binfile_test_msg
 
-	clean_restart $testfile
+	global GDBFLAGS
+	save_vars { GDBFLAGS } {
+	    if {$reattach} {
+		# Let our spawned inferior run in GDB's
+		# terminal/session, so that we can detach from it.
+		append GDBFLAGS { -ex "tty /dev/tty"}
+	    }
+	    clean_restart $testfile
+	}
 
 	# This is just to help debugging when things fail
 	if {$verbose > 0} {
