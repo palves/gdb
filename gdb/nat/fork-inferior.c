@@ -27,6 +27,11 @@
 #include "signals-state-save-restore.h"
 #include "gdb_tilde_expand.h"
 #include <vector>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include "nat/gdb_ptrace.h"
+#include "nat/linux-ptrace.h"
+#include "job-control.h"
 
 extern char **environ;
 
@@ -281,6 +286,35 @@ get_startup_shell ()
   return ret;
 }
 
+class scoped_ignore_sigttou
+{
+public:
+  scoped_ignore_sigttou ()
+  {
+#ifdef SIGTTOU
+    if (job_control)
+      m_osigttou = signal (SIGTTOU, SIG_IGN);
+#endif
+  }
+
+  ~scoped_ignore_sigttou ()
+  {
+#ifdef SIGTTOU
+    if (job_control)
+      signal (SIGTTOU, m_osigttou);
+#endif
+  }
+
+  DISABLE_COPY_AND_ASSIGN (scoped_ignore_sigttou);
+
+private:
+#ifdef SIGTTOU
+  sighandler_t m_osigttou = NULL;
+#endif
+};
+
+extern bool created_managed_tty ();
+
 /* See nat/fork-inferior.h.  */
 
 pid_t
@@ -360,6 +394,9 @@ fork_inferior (const char *exec_file_arg, const std::string &allargs,
   if (pre_trace_fun != NULL)
     (*pre_trace_fun) ();
 
+  /* should really block signals until the
+     restore_original_signals_state call in the child.  */
+
   /* Create the child process.  Since the child process is going to
      exec(3) shortly afterwards, try to reduce the overhead by
      calling vfork(2).  However, if PRE_TRACE_FUN is non-null, it's
@@ -372,7 +409,7 @@ fork_inferior (const char *exec_file_arg, const std::string &allargs,
      actually be a call to fork(2) due to the fact that autoconf will
      ``#define vfork fork'' on certain platforms.  */
 #if !(defined(__UCLIBC__) && defined(HAS_NOMMU))
-  if (pre_trace_fun || debug_fork)
+  if (pre_trace_fun || debug_fork || 1)
     pid = fork ();
   else
 #endif
@@ -423,6 +460,57 @@ fork_inferior (const char *exec_file_arg, const std::string &allargs,
 
       restore_original_signals_state ();
 
+      /* Fork again so that the resulting inferior process is not the
+	 session leader.  This makes it possible for the inferior to
+	 exit without killing its own children.  If we instead let the
+	 inferior process be the session leader, when it exits, it'd
+	 cause a SIGHUP to be sent to all processes in its session
+	 (i.e., it's children).  */
+      if (created_managed_tty ())
+	{
+	  pid_t child2 = fork ();
+	  if (child2 != 0)
+	    {
+	      /* We want to exit when GDB closes our terminal.  */
+	      signal (SIGHUP, SIG_DFL);
+
+	      if (0)
+		fprintf (stderr, "in session leader (%d), reaping child (%d)\n",
+			 (int) getpid (), (int) child2);
+
+	      int status;
+	      int res = waitpid (child2, &status, 0);
+	      if (0)
+		fprintf (stderr, "reaping child returned = %d\n", res);
+	      gdb_assert (res == child2);
+	      //	    gdb_assert (WIFSIGNALED (status));
+
+	      /* Don't exit yet.  While our direct child is gone, there
+		 may still be grandchildren attached to our session.
+		 We'll exit when our parent (GDB) closes the master pty,
+		 killing us with SIGHUP.  */
+	      while (1)
+		pause ();
+	    }
+	  else
+	    {
+	      int res;
+
+	      /* Run the inferior in its own process group, and make
+		 it the session's foreground pgrp.  */
+
+	      res = gdb_setpgid ();
+	      if (res == -1)
+		trace_start_error (_("setpgrp failed in grandchild"));
+
+	      scoped_ignore_sigttou ignore_sigttou;
+
+	      res = tcsetpgrp (0, getpid ());
+	      if (res == -1)
+		trace_start_error (_("tcsetpgrp failed in grandchild\n"));
+	    }
+	}
+
       /* There is no execlpe call, so we have to set the environment
          for our child in the global variable.  If we've vforked, this
          clobbers the parent, but environ is restored a few lines down
@@ -447,6 +535,49 @@ fork_inferior (const char *exec_file_arg, const std::string &allargs,
       warning ("Error: %s\n", safe_strerror (save_errno));
 
       _exit (0177);
+    }
+  else if (created_managed_tty ())
+    {
+      int status;
+      int res;
+
+      res = waitpid (pid, &status, 0);
+      gdb_assert (res == pid);
+      linux_enable_event_reporting (pid, PTRACE_O_TRACEFORK);
+      ptrace (PTRACE_CONT, pid, (PTRACE_TYPE_ARG3)1, 0);
+
+      /* Handle fork event.  */
+      res = waitpid (pid, &status, 0);
+      gdb_assert (res == pid);
+
+      int event = linux_ptrace_get_extended_event (status);
+      gdb_assert (event == PTRACE_EVENT_FORK);
+
+      unsigned long new_pid;
+
+      ptrace (PTRACE_GETEVENTMSG, pid, 0, &new_pid);
+
+      /* The new child has a pending SIGSTOP.  We can't affect it
+	 until it hits the SIGSTOP, but we're already attached.  */
+      int ret = waitpid (new_pid, &status, 0);
+      if (ret == -1)
+	perror_with_name (_("waiting for new child"));
+      else if (ret != new_pid)
+	internal_error (__FILE__, __LINE__,
+			_("wait returned unexpected PID %d"), ret);
+      else if (!WIFSTOPPED (status))
+	internal_error (__FILE__, __LINE__,
+			_("wait returned unexpected status 0x%x"), status);
+
+      linux_disable_event_reporting (pid);
+      linux_disable_event_reporting (new_pid);
+
+      /* We don't need to continue debugging the session leader.  It's
+	 simpler to just detach.  */
+      ptrace (PTRACE_DETACH, pid, (PTRACE_TYPE_ARG3) 1, 0);
+      ptrace (PTRACE_CONT, new_pid, (PTRACE_TYPE_ARG3) 1, 0);
+
+      pid = new_pid;
     }
 
   /* Restore our environment in case a vforked child clob'd it.  */

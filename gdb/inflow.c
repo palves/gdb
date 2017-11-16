@@ -28,6 +28,7 @@
 #include <signal.h>
 #include <fcntl.h>
 #include "gdb_select.h"
+#include <sys/wait.h>
 
 #include "inflow.h"
 #include "gdbcmd.h"
@@ -35,6 +36,7 @@
 #include <termios.h>
 #endif
 #include "job-control.h"
+#include "top.h"
 
 #ifdef HAVE_SYS_IOCTL_H
 #include <sys/ioctl.h>
@@ -52,19 +54,42 @@ static void child_terminal_ours_1 (target_terminal_state);
 
 static struct serial *stdin_serial;
 
+struct run_terminal_info
+{
+  ~run_terminal_info ()
+  {
+    xfree (this->ttyname);
+  }
+
+  /* The name of the tty (from the `tty' command) that we gave to the
+     inferior when it was started.  */
+  char *ttyname = NULL;
+
+  int master_fd = -1;
+  pid_t session_leader = -1;
+
+  int refc = 0;
+};
+
 /* Terminal related info we need to keep track of.  Each inferior
    holds an instance of this structure --- we save it whenever the
    corresponding inferior stops, and restore (most of it) it to the
    foreground inferior when it resumes.  */
 struct terminal_info
 {
+  ~terminal_info ()
+  {
+    delete this->run_terminal;
+    xfree (this->ttystate);
+  }
+
   /* The name of the tty (from the `tty' command) that we gave to the
      inferior when it was started.  */
-  char *run_terminal;
+  run_terminal_info *run_terminal = NULL;
 
   /* TTY state.  We save it whenever the inferior stops, and restore
      it when it resumes.  */
-  serial_ttystate ttystate;
+  serial_ttystate ttystate = NULL;
 
 #ifdef HAVE_TERMIOS_H
   /* The terminal's foreground process group.  Saved whenever the
@@ -80,11 +105,11 @@ struct terminal_info
      inf2's pgrp in the foreground instead of inf1's (which would be
      problematic since it would be left stopped: Ctrl-C wouldn't work,
      for example).  */
-  pid_t process_group;
+  pid_t process_group = -1;
 #endif
 
   /* fcntl flags.  Saved and restored just like ttystate.  */
-  int tflags;
+  int tflags = 0;
 };
 
 /* Our own tty state, which we restore every time we need to deal with
@@ -147,6 +172,8 @@ static sighandler_t sigquit_ours;
    fork_inferior, while forking a new child.  */
 static const char *inferior_thisrun_terminal;
 
+static int inferior_thisrun_terminal_master_fd = -1;
+
 /* The terminal state of the settings in GDB's controlling terminal.
    Ignored if !gdb_has_a_terminal ().
 
@@ -160,6 +187,8 @@ static const char *inferior_thisrun_terminal;
    is true when the inferior is not sharing a terminal with GDB (e.g.,
    because we attached to it).  */
 target_terminal_state gdb_ctty_state = target_terminal_state::is_ours;
+
+static bool input_fd_redirected = false;
 
 /* See terminal.h.  */
 
@@ -236,6 +265,28 @@ gdb_save_tty_state (void)
     }
 }
 
+static int
+is_gdb_terminal (const char *tty)
+{
+  struct stat gdb_tty;
+  struct stat other_tty;
+  int res;
+
+  if (strcmp (tty, "/dev/tty") == 0)
+    return 1;
+
+  res = stat (tty, &other_tty);
+  if (res == -1)
+    return -1;
+
+  res = fstat (STDIN_FILENO, &gdb_tty);
+  if (res == -1)
+    return -1;
+
+  return (gdb_tty.st_dev == other_tty.st_dev
+	  && gdb_tty.st_ino == other_tty.st_ino);
+}
+
 /* Determine whether inferior INF is using the same TTY for input as
    GDB is.  Returns 1 if it is, 0 if it isn't, and -1 if we can't
    tell.  */
@@ -247,21 +298,9 @@ sharing_input_terminal_1 (inferior *inf)
      functions are meant to be used by child/native targets.  */
 #if defined (__linux__) || defined (__sun__)
   char buf[100];
-  struct stat gdb_tty;
-  struct stat inf_tty;
-  int res;
 
   xsnprintf (buf, sizeof (buf), "/proc/%d/fd/0", inf->pid);
-  res = stat (buf, &inf_tty);
-  if (res == -1)
-    return -1;
-
-  res = fstat (STDIN_FILENO, &gdb_tty);
-  if (res == -1)
-    return -1;
-
-  return (gdb_tty.st_dev == inf_tty.st_dev
-	  && gdb_tty.st_ino == inf_tty.st_ino);
+  return is_gdb_terminal (buf);
 #else
   return -1;
 #endif
@@ -298,12 +337,209 @@ sharing_input_terminal (inferior *inf)
 {
   terminal_info *tinfo = get_inflow_inferior_data (inf);
 
-  if (tinfo->run_terminal != NULL)
-    return false;
-
   int res = sharing_input_terminal_1 (inf);
+  /* If we're attached to the inferior and we can't determine by
+     stat'ing the inferior's tty directly, assume yes.  If the child
+     was spawned, we can still check whether run_terminal is our
+     tty.  */
+  if (res == -1 && tinfo->run_terminal != NULL)
+    res = is_gdb_terminal (tinfo->run_terminal->ttyname);
+
   /* If we can't determine, assume yes.  */
   return (res == -1 || res == 1);
+}
+
+#include "event-loop.h"
+
+static int debug_terminal = 0;
+
+/* Wrappers around tcgetattr/tcsetattr to log errors.  We don't throw
+   on error instead because an error here is most likely caused by
+   stdin having been closed (e.g., GDB lost its terminal), and we may
+   be called while handling/printing exceptions.  E.g., from
+   target_target::ours_for_output() before printing an exception
+   message.  */
+
+static int
+gdb_tcgetattr (int fd, struct termios *termios)
+{
+  if (tcgetattr (fd, termios) != 0)
+    {
+      if (debug_terminal)
+	{
+	  int err = errno;
+
+	  fprintf_unfiltered (gdb_stderr,
+			      _("[tcgetattr(fd=%d) failed: %d (%s)"),
+			      fd, err, safe_strerror (err));
+	}
+      return -1;
+    }
+
+  return 0;
+}
+
+/* See gdb_tcgetattr.  */
+
+static int
+gdb_tcsetattr (int fd, int optional_actions, struct termios *termios)
+{
+  if (tcsetattr (fd, optional_actions, termios) != 0)
+    {
+      if (debug_terminal)
+	{
+	  int err = errno;
+
+	  fprintf_unfiltered (gdb_stderr,
+			      _("[tcsetattr(fd=%d) failed: %d (%s)"),
+			      fd, err, safe_strerror (err));
+	}
+      return -1;
+    }
+
+  return 0;
+}
+
+/* Disable echo, canonical mode, and \r\n -> \n translation.  Leave
+   ISIG, since we want to grab Ctrl-C before the inferior sees it.  */
+
+static void
+make_raw (struct termios *termios)
+{
+  termios->c_iflag &= ~(INLCR | IGNCR | ICRNL);
+  termios->c_oflag = 0;
+  termios->c_lflag &= ~(ECHO | ICANON);
+  termios->c_cflag &= ~CSIZE;
+  termios->c_cflag |= CLOCAL | CS8;
+  termios->c_cc[VMIN] = 0;
+  termios->c_cc[VTIME] = 0;
+}
+
+static void
+set_raw ()
+{
+  struct termios termios;
+
+  if (gdb_tcgetattr (STDIN_FILENO, &termios) == 0)
+    {
+      make_raw (&termios);
+      gdb_tcsetattr (STDIN_FILENO, TCSADRAIN, &termios);
+    }
+}
+
+class scoped_termios
+{
+public:
+  scoped_termios ()
+  {
+    if (gdb_tcgetattr (STDIN_FILENO, &m_saved_termios) == 0)
+      {
+	m_saved_termios_p = true;
+
+	struct termios raw_termios = m_saved_termios;
+	make_raw (&raw_termios);
+	gdb_tcsetattr (STDIN_FILENO, TCSADRAIN, &raw_termios);
+      }
+  }
+
+  ~scoped_termios ()
+  {
+    if (m_saved_termios_p)
+      gdb_tcsetattr (STDIN_FILENO, TCSADRAIN, &m_saved_termios);
+  }
+
+private:
+  /* The saved termios data.  */
+  struct termios m_saved_termios;
+
+  /* True iff M_SAVED_TERMIOS is valid.  */
+  bool m_saved_termios_p;
+};
+
+static void
+child_terminal_flush_stdout (run_terminal_info *run_terminal)
+{
+  char buf[1024];
+
+  gdb_assert (run_terminal->master_fd != -1);
+
+  scoped_termios save_termios;
+
+  while (1)
+    {
+      int r = read (run_terminal->master_fd, buf, sizeof (buf));
+      if (r <= 0)
+	{
+	  if (r == -1 && errno == EAGAIN)
+	    ;
+	  else if (r == -1 && errno == EIO)
+	    {
+	      if (debug_terminal)
+		fprintf_unfiltered (gdb_stdlog,
+				    "stdout: bad read: slave closed?\n");
+	    }
+	  else
+	    fprintf_unfiltered (gdb_stdlog,
+				"stdout: bad read: %d: (%d) %s\n", r,
+				errno, strerror (errno));
+	  return;
+	}
+
+#if 0
+      {
+	std::string filename = string_printf ("/home/pedro/gdb-inf-output.%d",
+					      (int) getpid ());
+	FILE *f = fopen (filename.c_str (), "a");
+	gdb_assert (f);
+	fwrite (buf, 1, r, f);
+	fclose (f);
+      }
+#endif
+
+      const char *p = buf;
+
+      while (r > 0)
+	{
+	  int w = write (STDOUT_FILENO, p, r);
+	  if (w == -1 && errno == EAGAIN)
+	    continue;
+	  else if (w <= 0)
+	    {
+	      fprintf_unfiltered (gdb_stdlog, "stdout: bad write: %d\n", w);
+	      break;
+	    }
+
+	  r -= w;
+	  p += w;
+	}
+    }
+}
+
+static void
+inferior_stdout_event_handler (int error, gdb_client_data client_data)
+{
+  run_terminal_info *run_terminal = (run_terminal_info *) client_data;
+  child_terminal_flush_stdout (run_terminal);
+}
+
+static void
+inferior_stdin_event_handler (int error, gdb_client_data client_data)
+{
+  run_terminal_info *run_terminal = (run_terminal_info *) client_data;
+
+  char buf[1024];
+
+  gdb_assert (run_terminal->master_fd != -1);
+
+  scoped_termios save_termios;
+
+  int r = read (STDIN_FILENO, buf, sizeof (buf));
+  if (r <= 0)
+    fprintf_unfiltered (gdb_stdlog, "stdin: bad read: %d\n", r);
+
+  int w = write (run_terminal->master_fd, buf, r);
+  if (w <= 0)
+    fprintf_unfiltered (gdb_stdlog, "stdin: bad write: %d\n", w);
 }
 
 /* Put the inferior's terminal settings into effect.  This is
@@ -326,22 +562,41 @@ child_terminal_inferior (struct target_ops *self)
 
   if (gdb_has_a_terminal ()
       && tinfo->ttystate != NULL
-      && sharing_input_terminal (inf))
+      && ((tinfo->run_terminal != NULL
+	   && tinfo->run_terminal->master_fd != -1)
+	  || sharing_input_terminal (inf)))
     {
       int result;
+
+      scoped_ignore_sigttou ignore_sigttou;
 
       /* We're no longer the foreground process group.  */
       gdb_ctty_state = target_terminal_state::is_inferior;
 
+      if (tinfo->run_terminal == NULL
+	  || tinfo->run_terminal->master_fd == -1)
+	{
 #ifdef F_GETFL
-      result = fcntl (0, F_SETFL, tinfo->tflags);
-      OOPSY ("fcntl F_SETFL");
+	  result = fcntl (0, F_SETFL, tinfo->tflags);
+	  OOPSY ("fcntl F_SETFL");
 #endif
 
-      result = serial_set_tty_state (stdin_serial, tinfo->ttystate);
-      OOPSY ("setting tty state");
+	  result = serial_set_tty_state (stdin_serial, tinfo->ttystate);
+	  OOPSY ("setting tty state");
+	}
 
-      if (job_control)
+      if (tinfo->run_terminal != NULL
+	  && tinfo->run_terminal->master_fd != -1)
+	{
+	  /* Disable ECHO/ICANON.  */
+	  set_raw ();
+
+	  add_file_handler (0, inferior_stdin_event_handler,
+			    tinfo->run_terminal);
+
+	  input_fd_redirected = true;
+	}
+      else if (job_control)
 	{
 #ifdef HAVE_TERMIOS_H
 	  /* If we can't tell the inferior's actual process group,
@@ -423,6 +678,13 @@ child_terminal_save_inferior (struct target_ops *self)
   inferior *inf = current_inferior ();
   terminal_info *tinfo = get_inflow_inferior_data (inf);
 
+  if (tinfo->run_terminal != NULL
+      && tinfo->run_terminal->master_fd != -1)
+    {
+      child_terminal_flush_stdout (tinfo->run_terminal);
+      return;
+    }
+
   /* No need to save/restore if the inferior is not sharing GDB's
      tty.  */
   if (!sharing_input_terminal (inf))
@@ -456,27 +718,37 @@ child_terminal_ours_1 (target_terminal_state desired_state)
 	 terminal's pgrp.  */
       scoped_ignore_sigttou ignore_sigttou;
 
-      /* Set tty state to our_ttystate.  */
       serial_set_tty_state (stdin_serial, our_terminal_info.ttystate);
 
-      /* If we only want output, then leave the inferior's pgrp in the
-	 foreground, so that Ctrl-C/Ctrl-Z reach the inferior
-	 directly.  */
+      /* If we only want output, then:
+	  - if the inferior is sharing GDB's session, leave the
+	    inferior's pgrp in the foreground, so that Ctrl-C/Ctrl-Z
+	    reach the inferior directly.
+	  - if the inferior has its own session, leave stdin
+            forwarding to the inferior.  */
       if (job_control && desired_state == target_terminal_state::is_ours)
 	{
+	  if (input_fd_redirected)
+	    {
+	      delete_file_handler (0);
+	      input_fd_redirected = false;
+	    }
+	  else
+	    {
 #ifdef HAVE_TERMIOS_H
-	  result = tcsetpgrp (0, our_terminal_info.process_group);
+	      result = tcsetpgrp (0, our_terminal_info.process_group);
 #if 0
-	  /* This fails on Ultrix with EINVAL if you run the testsuite
-	     in the background with nohup, and then log out.  GDB never
-	     used to check for an error here, so perhaps there are other
-	     such situations as well.  */
-	  if (result == -1)
-	    fprintf_unfiltered (gdb_stderr,
-				"[tcsetpgrp failed in child_terminal_ours: %s]\n",
-				safe_strerror (errno));
+	      /* This fails on Ultrix with EINVAL if you run the
+		 testsuite in the background with nohup, and then log
+		 out.  GDB never used to check for an error here, so
+		 perhaps there are other such situations as well.  */
+	      if (result == -1)
+		fprintf_unfiltered (gdb_stderr,
+				    "[tcsetpgrp failed in child_terminal_ours: %s]\n",
+				    safe_strerror (errno));
 #endif
 #endif /* termios */
+	    }
 	}
 
       if (!job_control && desired_state == target_terminal_state::is_ours)
@@ -578,11 +850,8 @@ static const struct inferior_data *inflow_inferior_data;
 static void
 inflow_inferior_data_cleanup (struct inferior *inf, void *arg)
 {
-  struct terminal_info *info = (struct terminal_info *) arg;
-
-  xfree (info->run_terminal);
-  xfree (info->ttystate);
-  xfree (info);
+  terminal_info *info = (terminal_info *) arg;
+  delete info;
 }
 
 /* Get the current svr4 data.  If none is found yet, add it now.  This
@@ -596,7 +865,7 @@ get_inflow_inferior_data (struct inferior *inf)
   info = (struct terminal_info *) inferior_data (inf, inflow_inferior_data);
   if (info == NULL)
     {
-      info = XCNEW (struct terminal_info);
+      info = new terminal_info ();
       set_inferior_data (inf, inflow_inferior_data, info);
     }
 
@@ -619,11 +888,62 @@ inflow_inferior_exit (struct inferior *inf)
   info = (struct terminal_info *) inferior_data (inf, inflow_inferior_data);
   if (info != NULL)
     {
-      xfree (info->run_terminal);
-      xfree (info->ttystate);
-      xfree (info);
+      if (info->run_terminal != NULL)
+	{
+	  run_terminal_info *run_terminal = info->run_terminal;
+
+	  if (--run_terminal->refc == 0)
+	    {
+	      if (run_terminal->master_fd != -1)
+		{
+		  delete_file_handler (run_terminal->master_fd);
+		  child_terminal_flush_stdout (run_terminal);
+		  close (run_terminal->master_fd);
+
+		  /* Since we closed the controlling terminal, the
+		     session leader should exit now, killed by SIGHUP.
+		     Reap it.  */
+		  if (debug_terminal)
+		    fprintf_unfiltered (gdb_stdlog, "reaping session leader: %d\n",
+					(int) run_terminal->session_leader);
+
+		  int status;
+		  int res = waitpid (run_terminal->session_leader,
+				     &status, 0);
+		  if (res == -1)
+		    warning (_("unexpected waitstatus "
+			       "reaping session leader: res=-1, errno=%d (%s)"),
+			     errno, safe_strerror (errno));
+		  else if (res != run_terminal->session_leader
+			   || !WIFSIGNALED (status)
+			   || WTERMSIG (status) != SIGHUP)
+		    warning (_("unexpected waitstatus "
+			       "reaping session leader: res=%d, status=0x%x"),
+			       res, status);
+		}
+	      delete run_terminal;
+	    }
+	  info->run_terminal = NULL;
+	}
+
+      delete info;
       set_inferior_data (inf, inflow_inferior_data, NULL);
     }
+}
+
+bool
+child_gdb_owns_session (inferior *inf)
+{
+  auto *info = (struct terminal_info *) inferior_data (inf, inflow_inferior_data);
+  if (info != NULL
+      && info->run_terminal != NULL
+      && info->run_terminal->master_fd != -1)
+    {
+      pid_t session = getsid (inf->pid);
+      return (session == inf->pid);
+    }
+
+  return false;
 }
 
 void
@@ -634,14 +954,12 @@ copy_terminal_info (struct inferior *to, struct inferior *from)
   tinfo_to = get_inflow_inferior_data (to);
   tinfo_from = get_inflow_inferior_data (from);
 
-  xfree (tinfo_to->run_terminal);
+  gdb_assert (tinfo_to->run_terminal == NULL);
   xfree (tinfo_to->ttystate);
 
   *tinfo_to = *tinfo_from;
-
-  if (tinfo_from->run_terminal)
-    tinfo_to->run_terminal
-      = xstrdup (tinfo_from->run_terminal);
+  if (tinfo_from->run_terminal != NULL)
+    tinfo_from->run_terminal->refc++;
 
   if (tinfo_from->ttystate)
     tinfo_to->ttystate
@@ -652,7 +970,8 @@ copy_terminal_info (struct inferior *to, struct inferior *from)
   /* Copy FROM's "set inferior-tty TTY" setting value at the time FROM
      was started to TO.  XXX should this copy the current value
      instead?  */
-  if (tinfo_from->run_terminal != NULL)
+  if (tinfo_from->run_terminal != NULL
+      && tinfo_from->run_terminal->master_fd == -1)
     to->set_tty (tinfo_from->run_terminal->ttyname);
 }
 
@@ -760,7 +1079,43 @@ new_tty_prefork (const char *ttyname)
 {
   /* Save the name for later, for determining whether we and the child
      are sharing a tty.  */
-  inferior_thisrun_terminal = ttyname;
+
+  if (ttyname != NULL)
+    {
+      inferior_thisrun_terminal = ttyname;
+      inferior_thisrun_terminal_master_fd = -1;
+    }
+  else
+    {
+      /* Open an unused pty master device.  */
+      int master_fd = posix_openpt (O_RDWR | O_NONBLOCK | O_CLOEXEC | O_NOCTTY);
+      if (master_fd == -1)
+	perror_with_name ("posix_openpt");
+
+      /* Grant access to the slave pty.  */
+      if (grantpt (master_fd) == -1)
+	{
+	  close (master_fd); /* FIXME: errno.  */
+	  perror_with_name ("grantpt");
+	}
+
+      /* Unlock the pty master/slave pair.  */
+      if (unlockpt (master_fd) == -1)
+	{
+	  close (master_fd);
+	  perror_with_name ("unlockpt");
+	}
+
+      inferior_thisrun_terminal = ptsname (master_fd);
+      inferior_thisrun_terminal_master_fd = master_fd;
+
+      serial *master_fd_serial = serial_fdopen (master_fd);
+      int result = serial_set_tty_state (master_fd_serial, initial_gdb_ttystate);
+      gdb_assert (result != -1);
+      OOPSY ("setting tty state");
+
+      serial_un_fdopen (master_fd_serial);
+    }
 }
 
 #if !defined(__GO32__) && !defined(_WIN32)
@@ -778,12 +1133,19 @@ check_syscall (const char *msg, int result)
 }
 #endif
 
+bool
+created_managed_tty ()
+{
+  return inferior_thisrun_terminal_master_fd != -1;
+}
+
 void
 new_tty (void)
 {
   int tty;
 
-  if (inferior_thisrun_terminal == 0)
+  if (inferior_thisrun_terminal == 0
+      || is_gdb_terminal (inferior_thisrun_terminal))
     return;
 #if !defined(__GO32__) && !defined(_WIN32)
 #ifdef TIOCNOTTY
@@ -847,13 +1209,30 @@ new_tty_postfork (void)
 
   if (inferior_thisrun_terminal)
     {
-      struct inferior *inf = current_inferior ();
-      struct terminal_info *tinfo = get_inflow_inferior_data (inf);
+      inferior *inf = current_inferior ();
+      terminal_info *tinfo = get_inflow_inferior_data (inf);
 
-      tinfo->run_terminal = xstrdup (inferior_thisrun_terminal);
+      auto *run_terminal = new run_terminal_info ();
+      tinfo->run_terminal = run_terminal;
+
+      run_terminal->ttyname = xstrdup (inferior_thisrun_terminal);
+      run_terminal->master_fd = inferior_thisrun_terminal_master_fd;
+      if (run_terminal->master_fd != -1)
+	{
+	  run_terminal->session_leader = getsid (inf->pid);
+	  gdb_assert (run_terminal->session_leader != -1);
+	}
+      run_terminal->refc = 1;
+
+      if (run_terminal->master_fd != -1)
+	{
+	  add_file_handler (run_terminal->master_fd,
+			    inferior_stdout_event_handler, run_terminal);
+	}
     }
 
   inferior_thisrun_terminal = NULL;
+  inferior_thisrun_terminal_master_fd = -1;
 }
 
 
@@ -910,7 +1289,9 @@ create_tty_session (void)
 #ifdef HAVE_SETSID
   pid_t ret;
 
-  if (!job_control || inferior_thisrun_terminal == 0)
+  if (!job_control
+      || inferior_thisrun_terminal == NULL
+      || is_gdb_terminal (inferior_thisrun_terminal))
     return 0;
 
   ret = setsid ();

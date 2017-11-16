@@ -405,3 +405,9 @@ target_terminal::info (const char *arg, int from_tty)
 {
   /* Placeholder.  */
 }
+
+bool
+created_managed_tty ()
+{
+  return false;
+}

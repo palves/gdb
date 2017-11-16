@@ -2935,6 +2935,22 @@ notice_new_inferior (ptid_t ptid, int leave_running, int from_tty)
   attach_post_wait ("" /* args */, from_tty, mode);
 }
 
+/* Check if a trace run is ongoing.  If so, and FROM_TTY, query the
+   user if she really wants to detach.  */
+
+static void
+query_if_gdb_owns_session ()
+{
+  extern bool child_gdb_owns_session (inferior *inf);
+
+  if (child_gdb_owns_session (current_inferior ()))
+    {
+      if (!query (_("The inferior is XXX seessionTrace is running and will "
+		    "continue after detach; detach anyway? ")))
+	error (_("Not confirmed."));
+    }
+}
+
 /*
  * detach_command --
  * takes a program previously attached to and detaches it.
@@ -2953,6 +2969,8 @@ detach_command (const char *args, int from_tty)
 
   if (ptid_equal (inferior_ptid, null_ptid))
     error (_("The program is not being run."));
+
+  query_if_gdb_owns_session ();
 
   query_if_trace_running (from_tty);
 
