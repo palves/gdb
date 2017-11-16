@@ -412,6 +412,7 @@ inf_child_target (void)
   t->to_terminal_ours_for_output = child_terminal_ours_for_output;
   t->to_terminal_ours = child_terminal_ours;
   t->to_terminal_info = child_terminal_info;
+  t->to_pass_ctrlc = child_terminal_pass_ctrlc;
   t->to_post_startup_inferior = inf_child_post_startup_inferior;
   t->to_follow_fork = inf_child_follow_fork;
   t->to_can_run = inf_child_can_run;

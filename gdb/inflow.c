@@ -46,7 +46,7 @@
 
 static void pass_signal (int);
 
-static void child_terminal_ours_1 (int);
+static void child_terminal_ours_1 (target_terminal_state);
 
 /* Record terminal status separately for debugger and inferior.  */
 
@@ -147,9 +147,19 @@ static sighandler_t sigquit_ours;
    fork_inferior, while forking a new child.  */
 static const char *inferior_thisrun_terminal;
 
-/* True if our terminal settings are in effect.  False if the
-   inferior's settings are in effect.  Ignored if !gdb_has_a_terminal ().  */
-bool terminal_is_ours = true;
+/* The terminal state of the settings in GDB's controlling terminal.
+   Ignored if !gdb_has_a_terminal ().
+
+   While target_terminal::is_ours() etc. tracks the core's intention
+   and is independent of the target backend, this tracks the actual
+   state of gdb's ctty.  So for example,
+
+     (target_terminal::is_inferior ()
+      && gdb_ctty_state == terminal_is_ours)
+
+   is true when the inferior is not sharing a terminal with GDB (e.g.,
+   because we attached to it).  */
+target_terminal_state gdb_ctty_state = target_terminal_state::is_ours;
 
 /* See terminal.h.  */
 
@@ -238,7 +248,7 @@ child_terminal_inferior (struct target_ops *self)
      the first process that ends up resumed ends up determining which
      process group the kernel forwards Ctrl-C/Ctrl-Z (SIGINT/SIGTTOU)
      to.  */
-  if (!terminal_is_ours)
+  if (gdb_ctty_state == target_terminal_state::is_inferior)
     return;
 
   inferior *inf = current_inferior ();
@@ -276,7 +286,7 @@ child_terminal_inferior (struct target_ops *self)
 	}
 
       /* We're no longer the foreground process group.  */
-      terminal_is_ours = false;
+      gdb_ctty_state = target_terminal_state::is_inferior;
 
 #ifdef F_GETFL
       result = fcntl (0, F_SETFL, tinfo->tflags);
@@ -310,7 +320,7 @@ child_terminal_inferior (struct target_ops *self)
 void
 child_terminal_ours_for_output (struct target_ops *self)
 {
-  child_terminal_ours_1 (1);
+  child_terminal_ours_1 (target_terminal_state::is_ours_for_output);
 }
 
 /* Put our terminal settings into effect.
@@ -324,12 +334,11 @@ child_terminal_ours_for_output (struct target_ops *self)
 void
 child_terminal_ours (struct target_ops *self)
 {
-  child_terminal_ours_1 (0);
+  child_terminal_ours_1 (target_terminal_state::is_ours);
 }
 
-/* output_only is not used, and should not be used unless we introduce
-   separate terminal_is_ours and terminal_is_ours_for_output
-   flags.  */
+/* Save the current terminal settings in the inferior's terminal_info
+   cache.  */
 
 void
 child_terminal_save_inferior (struct target_ops *self)
@@ -358,13 +367,13 @@ child_terminal_save_inferior (struct target_ops *self)
 #endif
 }
 
-static void
-child_terminal_ours_1 (int output_only)
-{
-  if (terminal_is_ours)
-    return;
+/* Switch terminal state to DESIRED_STATE, either is_ours, or
+   is_ours_for_output.  */
 
-  if (gdb_has_a_terminal () == 0)
+static void
+child_terminal_ours_1 (target_terminal_state desired_state)
+{
+  if (gdb_ctty_state == desired_state || !gdb_has_a_terminal ())
     return;
   else
     {
@@ -377,7 +386,10 @@ child_terminal_ours_1 (int output_only)
       /* Set tty state to our_ttystate.  */
       serial_set_tty_state (stdin_serial, our_terminal_info.ttystate);
 
-      if (job_control)
+      /* If we only want output, then leave the inferior's pgrp in the
+	 foreground, so that Ctrl-C/Ctrl-Z reach the inferior
+	 directly.  */
+      if (job_control && desired_state == target_terminal_state::is_ours)
 	{
 #ifdef HAVE_TERMIOS_H
 	  result = tcsetpgrp (0, our_terminal_info.process_group);
@@ -394,7 +406,7 @@ child_terminal_ours_1 (int output_only)
 #endif /* termios */
 	}
 
-      if (!job_control)
+      if (!job_control && desired_state == target_terminal_state::is_ours)
 	{
 	  signal (SIGINT, sigint_ours);
 #ifdef SIGQUIT
@@ -407,7 +419,49 @@ child_terminal_ours_1 (int output_only)
 #endif
     }
 
-  terminal_is_ours = true;
+  gdb_ctty_state = desired_state;
+}
+
+void
+child_terminal_pass_ctrlc (struct target_ops *self)
+{
+  gdb_assert (!target_terminal::is_ours ());
+
+#ifdef HAVE_TERMIOS_H
+  if (job_control)
+    {
+      pid_t term_pgrp = tcgetpgrp (0);
+
+      /* If there's any inferior sharing our terminal, pass the SIGINT
+	 to the terminal's foreground process group.  This acts just
+	 like the user typed a ^C on the controlling terminal.  Note
+	 that using a negative process number in kill() is a System
+	 V-ism.  The proper BSD interface is killpg().  However, all
+	 modern BSDs support the System V interface too.  */
+
+      if (term_pgrp != -1 && term_pgrp != our_terminal_info.process_group)
+	{
+	  kill (-term_pgrp, SIGINT);
+	  return;
+	}
+    }
+#endif
+
+  /* Otherwise, pass the Ctrl-C to the first inferior that was resumed
+     in the foreground.  */
+  inferior *inf;
+  ALL_INFERIORS (inf)
+    {
+      if (inf->terminal_state != target_terminal_state::is_ours)
+	{
+	  kill (inf->pid, SIGINT);
+	  return;
+	}
+    }
+
+  /* If no inferior was resumed in the foreground, then how did the
+     !is_ours check above pass?  */
+  gdb_assert_not_reached ("no inferior resumed in fg found");
 }
 
 /* Per-inferior data key.  */
