@@ -1174,7 +1174,7 @@ procfs_create_inferior (struct target_ops *ops, const char *exec_file,
   const char *in = "", *out = "", *err = "";
   int fd, fds[3];
   sigset_t set;
-  const char *inferior_io_terminal = get_inferior_io_terminal ();
+  const char *inferior_tty = current_inferior->tty ();
   struct inferior *inf;
 
   argv = xmalloc ((allargs.size () / (unsigned) 2 + 2) *
@@ -1199,14 +1199,14 @@ procfs_create_inferior (struct target_ops *ops, const char *exec_file,
 
   /* If the user specified I/O via gdb's --tty= arg, use it, but only
      if the i/o is not also being specified via redirection.  */
-  if (inferior_io_terminal)
+  if (inferior_tty != NULL)
     {
       if (!in[0])
-	in = inferior_io_terminal;
+	in = inferior_tty;
       if (!out[0])
-	out = inferior_io_terminal;
+	out = inferior_tty;
       if (!err[0])
-	err = inferior_io_terminal;
+	err = inferior_tty;
     }
 
   if (in[0])
