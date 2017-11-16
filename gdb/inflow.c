@@ -260,6 +260,17 @@ child_terminal_inferior (struct target_ops *self)
     {
       int result;
 
+      /* We're no longer the foreground process group.  */
+      gdb_ctty_state = target_terminal_state::is_inferior;
+
+#ifdef F_GETFL
+      result = fcntl (0, F_SETFL, tinfo->tflags);
+      OOPSY ("fcntl F_SETFL");
+#endif
+
+      result = serial_set_tty_state (stdin_serial, tinfo->ttystate);
+      OOPSY ("setting tty state");
+
       /* If inf->attach_flag is set, we don't know whether we are
 	 sharing a terminal with the inferior or not.  (attaching a
 	 process without a terminal is one case where we do not;
@@ -288,17 +299,6 @@ child_terminal_inferior (struct target_ops *self)
 	    }
 #endif
 	}
-
-      /* We're no longer the foreground process group.  */
-      gdb_ctty_state = target_terminal_state::is_inferior;
-
-#ifdef F_GETFL
-      result = fcntl (0, F_SETFL, tinfo->tflags);
-      OOPSY ("fcntl F_SETFL");
-#endif
-
-      result = serial_set_tty_state (stdin_serial, tinfo->ttystate);
-      OOPSY ("setting tty state");
 
       if (!job_control)
 	{
