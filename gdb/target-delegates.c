@@ -1663,26 +1663,24 @@ debug_stop (struct target_ops *self, ptid_t arg1)
 }
 
 static void
-delegate_interrupt (struct target_ops *self, ptid_t arg1)
+delegate_interrupt (struct target_ops *self)
 {
   self = self->beneath;
-  self->to_interrupt (self, arg1);
+  self->to_interrupt (self);
 }
 
 static void
-tdefault_interrupt (struct target_ops *self, ptid_t arg1)
+tdefault_interrupt (struct target_ops *self)
 {
 }
 
 static void
-debug_interrupt (struct target_ops *self, ptid_t arg1)
+debug_interrupt (struct target_ops *self)
 {
   fprintf_unfiltered (gdb_stdlog, "-> %s->to_interrupt (...)\n", debug_target.to_shortname);
-  debug_target.to_interrupt (&debug_target, arg1);
+  debug_target.to_interrupt (&debug_target);
   fprintf_unfiltered (gdb_stdlog, "<- %s->to_interrupt (", debug_target.to_shortname);
   target_debug_print_struct_target_ops_p (&debug_target);
-  fputs_unfiltered (", ", gdb_stdlog);
-  target_debug_print_ptid_t (arg1);
   fputs_unfiltered (")\n", gdb_stdlog);
 }
 

@@ -135,7 +135,9 @@ extern void child_terminal_init (struct target_ops *self);
 
 extern void child_terminal_init_with_pgrp (int pgrp);
 
-extern void child_terminal_pass_ctrlc (struct target_ops *self);
+extern void child_pass_ctrlc (struct target_ops *self);
+
+extern void child_interrupt (struct target_ops *self);
 
 /* From fork-child.c */
 

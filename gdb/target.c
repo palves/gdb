@@ -3368,7 +3368,7 @@ target_stop (ptid_t ptid)
 }
 
 void
-target_interrupt (ptid_t ptid)
+target_interrupt ()
 {
   if (!may_stop)
     {
@@ -3376,7 +3376,7 @@ target_interrupt (ptid_t ptid)
       return;
     }
 
-  (*current_target.to_interrupt) (&current_target, ptid);
+  (*current_target.to_interrupt) (&current_target);
 }
 
 /* See target.h.  */
@@ -3392,7 +3392,7 @@ target_pass_ctrlc (void)
 void
 default_target_pass_ctrlc (struct target_ops *ops)
 {
-  target_interrupt (inferior_ptid);
+  target_interrupt ();
 }
 
 /* See target/target.h.  */

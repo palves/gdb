@@ -495,8 +495,41 @@ child_terminal_ours_1 (target_terminal_state desired_state)
   gdb_ctty_state = desired_state;
 }
 
+/* Interrupt the inferior.  */
+
 void
-child_terminal_pass_ctrlc (struct target_ops *self)
+child_interrupt (struct target_ops *self)
+{
+  /* Interrupt the first inferior that has a resumed thread.  */
+  thread_info *thr;
+  thread_info *resumed = NULL;
+  ALL_NON_EXITED_THREADS (thr)
+    {
+      if (thr->executing)
+	{
+	  resumed = thr;
+	  break;
+	}
+      if (thr->suspend.waitstatus_pending_p)
+	resumed = thr;
+    }
+
+  if (resumed != NULL)
+    {
+      /* Note that unlike pressing Ctrl-C on the controlling terminal,
+	 here we only interrupt one process, not the whole process
+	 group.  This is because interrupting a process group (with
+	 either Ctrl-C or with kill(3) with negative PID) sends a
+	 SIGINT to each process in the process group, and we may not
+	 be debugging all processes in the process group.  */
+      kill (resumed->inf->pid, SIGINT);
+    }
+  else
+    printf_filtered ("Nothing to interrupt.\n");
+}
+
+void
+child_pass_ctrlc (struct target_ops *self)
 {
   gdb_assert (!target_terminal::is_ours ());
 
