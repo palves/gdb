@@ -33,6 +33,7 @@
 #include "top.h"
 #include "source.h"
 #include "event-loop.h"
+#include "inferior.h"
 
 #include "tui/tui.h"
 #include "tui/tui-io.h"
@@ -941,6 +942,8 @@ tui_async_resize_screen (gdb_client_data arg)
       tui_update_gdb_sizes ();
       tui_redisplay_readline ();
     }
+
+  child_terminal_on_sigwinch ();
 }
 #endif
 
