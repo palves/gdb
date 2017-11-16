@@ -128,6 +128,11 @@ public:
      unless called with the main UI as current UI.  */
   static void inferior ();
 
+  /* Put the inferior's terminal settings into effect.  This is
+     preparation for starting or resuming the inferior.  This is a no-op
+     unless called with the main UI as current UI.  */
+  static void restore_inferior ();
+
   /* Put our terminal settings into effect.  First record the inferior's
      terminal settings so they can be restored properly later.  This is
      a no-op unless called with the main UI as current UI.  */
@@ -187,7 +192,7 @@ public:
 	  ours_for_output ();
 	  break;
 	case target_terminal_state::is_inferior:
-	  inferior ();
+	  restore_inferior ();
 	  break;
 	}
     }

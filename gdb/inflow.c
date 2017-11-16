@@ -560,6 +560,8 @@ child_pass_ctrlc (struct target_ops *self)
     {
       if (inf->terminal_state != target_terminal_state::is_ours)
 	{
+	  gdb_assert (inf->pid != 0);
+
 	  kill (inf->pid, SIGINT);
 	  return;
 	}
@@ -611,6 +613,8 @@ static void
 inflow_inferior_exit (struct inferior *inf)
 {
   struct terminal_info *info;
+
+  inf->terminal_state = target_terminal_state::is_ours;
 
   info = (struct terminal_info *) inferior_data (inf, inflow_inferior_data);
   if (info != NULL)

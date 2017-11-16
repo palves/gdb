@@ -483,6 +483,51 @@ target_terminal::inferior (void)
     target_pass_ctrlc ();
 }
 
+/* See target/target.h.  */
+
+void
+target_terminal::restore_inferior (void)
+{
+  struct ui *ui = current_ui;
+
+  /* A background resume (``run&'') should leave GDB in control of the
+     terminal.  */
+  if (ui->prompt_state != PROMPT_BLOCKED)
+    return;
+
+  /* Since we always run the inferior in the main console (unless "set
+     inferior-tty" is in effect), when some UI other than the main one
+     calls target_terminal::inferior, then we leave the main UI's
+     terminal settings as is.  */
+  if (ui != main_ui)
+    return;
+
+  /* If GDB is resuming the inferior in the foreground, install
+     inferior's terminal modes.  */
+
+  {
+    scoped_restore_current_inferior restore_inferior;
+    struct inferior *inf;
+
+    ALL_INFERIORS (inf)
+      {
+	if (inf->terminal_state == target_terminal_state::is_ours_for_output)
+	  {
+	    set_current_inferior (inf);
+	    (*current_target.to_terminal_inferior) (&current_target);
+	    inf->terminal_state = target_terminal_state::is_inferior;
+	  }
+      }
+  }
+
+  m_terminal_state = target_terminal_state::is_inferior;
+
+  /* If the user hit C-c before, pretend that it was hit right
+     here.  */
+  if (check_quit_flag ())
+    target_pass_ctrlc ();
+}
+
 /* Switch terminal state to DESIRED_STATE, either is_ours, or
    is_ours_for_output.  */
 
@@ -504,8 +549,11 @@ target_terminal_is_ours_kind (target_terminal_state desired_state)
   ALL_INFERIORS (inf)
     {
       /* Note we don't check is_inferior here like above because we
-	 need to handle 'is_ours_for_output -> is_ours' too.  */
-      if (inf->terminal_state != desired_state)
+	 need to handle 'is_ours_for_output -> is_ours' too.  Careful
+	 to never transition from 'is_ours' to 'is_ours_for_output',
+	 though.  */
+      if (inf->terminal_state != target_terminal_state::is_ours
+	  && inf->terminal_state != desired_state)
 	{
 	  set_current_inferior (inf);
 	  if (desired_state == target_terminal_state::is_ours)
