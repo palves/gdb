@@ -150,6 +150,8 @@ find_complaint (struct complaints *complaints, const char *file,
 
 int stop_whining = 0;
 
+#include "target/target.h"
+
 /* Print a complaint, and link the complaint block into a chain for
    later handling.  */
 
@@ -180,6 +182,9 @@ vcomplaint (struct complaints **c, const char *file,
      the compiler can assume the passed in argument is a literal
      string somewhere up the call chain.  */
   gdb_assert (complaint->fmt == fmt);
+
+  target_terminal::scoped_restore_terminal_state term_state;
+  target_terminal::ours_for_output ();
 
   if (complaint->file != NULL)
     internal_vwarning (complaint->file, complaint->line, fmt, args);

@@ -322,6 +322,9 @@ add_thread_with_info (ptid_t ptid, struct private_thread_info *priv)
 
   result->priv = priv;
 
+  target_terminal::scoped_restore_terminal_state term_state;
+  target_terminal::ours_for_output ();
+
   if (print_thread_events)
     printf_unfiltered (_("[New %s]\n"), target_pid_to_str (ptid));
 
