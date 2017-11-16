@@ -1146,6 +1146,8 @@ follow_exec (ptid_t ptid, char *exec_file_target)
      it now.  */
   th->stop_requested = 0;
 
+  target_terminal::ours_for_output ();
+
   update_breakpoints_after_exec ();
 
   /* What is this a.out's name?  */
