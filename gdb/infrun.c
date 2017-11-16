@@ -1188,12 +1188,20 @@ follow_exec (ptid_t ptid, char *exec_file_target)
       /* The user wants to keep the old inferior and program spaces
 	 around.  Create a new fresh one, and switch to it.  */
 
-      /* Do exit processing for the original inferior before adding
-	 the new inferior so we don't have two active inferiors with
-	 the same ptid, which can confuse find_inferior_ptid.  */
-      exit_inferior_num_silent (current_inferior ()->num);
+      /* Do exit processing for the original inferior before setting
+	 the new inferior's PID so we don't have two active inferiors
+	 with the same ptid, which can confuse find_inferior_ptid.
+
+	 However, before exiting the original inferior, copy its
+	 terminal info to the new inferior, otherwise exiting the
+	 original inferior can destroy the last reference to the
+	 master end of the inferior's pty, if we created one.  */
 
       inf = add_inferior_with_spaces ();
+      copy_terminal_info (inf, current_inferior ());
+
+      exit_inferior_num_silent (current_inferior ()->num);
+
       inf->pid = pid;
       target_follow_exec (inf, exec_file_target);
 
