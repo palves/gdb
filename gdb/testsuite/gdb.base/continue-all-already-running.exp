@@ -18,11 +18,18 @@
 
 standard_testfile
 
-if { [prepare_for_testing "failed to prepare" ${testfile} $srcfile] } {
+if { [build_executable "failed to prepare" ${testfile} $srcfile] } {
     return -1
 }
 
-gdb_test_no_output "set non-stop on"
+save_vars { GDBFLAGS } {
+    append GDBFLAGS " -ex \"set non-stop on\""
+
+    # This test only makes sense when GDB and the inferior are reading
+    # from the same input file / sharing the terminal.
+    append GDBFLAGS " -ex \"tty /dev/tty\""
+    clean_restart $binfile
+}
 
 if ![runto_main] {
     return
