@@ -648,6 +648,12 @@ copy_terminal_info (struct inferior *to, struct inferior *from)
       = serial_copy_tty_state (stdin_serial, tinfo_from->ttystate);
 
   to->terminal_state = from->terminal_state;
+
+  /* Copy FROM's "set inferior-tty TTY" setting value at the time FROM
+     was started to TO.  XXX should this copy the current value
+     instead?  */
+  if (tinfo_from->run_terminal != NULL)
+    to->set_tty (tinfo_from->run_terminal->ttyname);
 }
 
 void
