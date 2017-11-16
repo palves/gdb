@@ -129,6 +129,8 @@ extern void child_terminal_ours_for_output (struct target_ops *self);
 
 extern void child_terminal_inferior (struct target_ops *self);
 
+extern void child_terminal_save_inferior (struct target_ops *self);
+
 extern void child_terminal_init (struct target_ops *self);
 
 extern void child_terminal_init_with_pgrp (int pgrp);
@@ -361,6 +363,11 @@ public:
 
   /* The name of terminal device to use for I/O.  */
   char *terminal = NULL;
+
+  /* True if our terminal settings are in effect.  False if the
+   inferior's settings are in effect.  Ignored if
+   !gdb_has_a_terminal().  */
+  target_terminal_state terminal_state = target_terminal_state::is_ours;
 
   /* Environment to use for running inferior,
      in format described in environ.h.  */

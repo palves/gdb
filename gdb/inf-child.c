@@ -408,6 +408,7 @@ inf_child_target (void)
   t->to_remove_breakpoint = memory_remove_breakpoint;
   t->to_terminal_init = child_terminal_init;
   t->to_terminal_inferior = child_terminal_inferior;
+  t->to_terminal_save_inferior = child_terminal_save_inferior;
   t->to_terminal_ours_for_output = child_terminal_ours_for_output;
   t->to_terminal_ours = child_terminal_ours;
   t->to_terminal_info = child_terminal_info;

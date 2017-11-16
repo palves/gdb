@@ -305,12 +305,17 @@ inf_ptrace_kill (struct target_ops *ops)
 static void
 inf_ptrace_interrupt (struct target_ops *self, ptid_t ptid)
 {
+  inferior *inf = find_inferior_ptid (ptid);
+
   /* Send a SIGINT to the process group.  This acts just like the user
      typed a ^C on the controlling terminal.  Note that using a
      negative process number in kill() is a System V-ism.  The proper
      BSD interface is killpg().  However, all modern BSDs support the
      System V interface too.  */
-  kill (-inferior_process_group (), SIGINT);
+  if (inf->attach_flag)
+    kill (inf->pid, SIGINT);
+  else
+    kill (-getpgid (inf->pid), SIGINT);
 }
 
 /* Return which PID to pass to ptrace in order to observe/control the

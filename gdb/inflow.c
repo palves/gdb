@@ -54,8 +54,8 @@ static struct serial *stdin_serial;
 
 /* Terminal related info we need to keep track of.  Each inferior
    holds an instance of this structure --- we save it whenever the
-   corresponding inferior stops, and restore it to the foreground
-   inferior when it resumes.  */
+   corresponding inferior stops, and restore (most of it) it to the
+   foreground inferior when it resumes.  */
 struct terminal_info
 {
   /* The name of the tty (from the `tty' command) that we gave to the
@@ -67,7 +67,19 @@ struct terminal_info
   serial_ttystate ttystate;
 
 #ifdef HAVE_TERMIOS_H
-  /* Process group.  Saved and restored just like ttystate.  */
+  /* The terminal's foreground process group.  Saved whenever the
+     inferior stops.  This is the pgrp displayed by "info terminal".
+     Note that this may be not the inferior's actual process group,
+     since each inferior that we spawn has its own process group, and
+     only one can be in the foreground at a time.  When the inferior
+     resumes, if we can determine the inferior's actual pgrp, then we
+     make that the foreground pgrp instead of what was saved here.
+     While it's a bit arbitrary which inferior's pgrp ends up in the
+     foreground when we resume several inferiors, this at least makes
+     'resume inf1+inf2' + 'stop all' + 'resume inf2' end up with
+     inf2's pgrp in the foreground instead of inf1's (which would be
+     problematic since it would be left stopped: Ctrl-C wouldn't work,
+     for example).  */
   pid_t process_group;
 #endif
 
@@ -119,17 +131,6 @@ private:
   sighandler_t m_osigttou = NULL;
 #endif
 };
-
-#ifdef HAVE_TERMIOS_H
-
-/* Return the process group of the current inferior.  */
-
-pid_t
-inferior_process_group (void)
-{
-  return get_inflow_inferior_data (current_inferior ())->process_group;
-}
-#endif
 
 /* While the inferior is running, we want SIGINT and SIGQUIT to go to the
    inferior only.  If we have job control, that takes care of it.  If not,
@@ -194,29 +195,21 @@ gdb_has_a_terminal (void)
 void
 child_terminal_init (struct target_ops *self)
 {
-  struct inferior *inf = current_inferior ();
-  struct terminal_info *tinfo = get_inflow_inferior_data (inf);
+  if (!gdb_has_a_terminal ())
+    return;
+
+  inferior *inf = current_inferior ();
+  terminal_info *tinfo = get_inflow_inferior_data (inf);
 
 #ifdef HAVE_TERMIOS_H
-  /* Store the process group even without a terminal as it is used not
-     only to reset the tty foreground process group, but also to
-     interrupt the inferior.  A child we spawn should be a process
-     group leader (PGID==PID) at this point, though that may not be
-     true if we're attaching to an existing process.  */
+  /* A child we spawn should be a process group leader (PGID==PID) at
+     this point, though that may not be true if we're attaching to an
+     existing process.  */
   tinfo->process_group = inf->pid;
 #endif
 
-  if (gdb_has_a_terminal ())
-    {
-      xfree (tinfo->ttystate);
-      tinfo->ttystate = serial_copy_tty_state (stdin_serial,
-					       initial_gdb_ttystate);
-
-      /* Make sure that next time we call terminal_inferior (which will be
-         before the program runs, as it needs to be), we install the new
-         process group.  */
-      terminal_is_ours = true;
-    }
+  xfree (tinfo->ttystate);
+  tinfo->ttystate = serial_copy_tty_state (stdin_serial, initial_gdb_ttystate);
 }
 
 /* Save the terminal settings again.  This is necessary for the TUI
@@ -233,30 +226,57 @@ gdb_save_tty_state (void)
     }
 }
 
-/* Put the inferior's terminal settings into effect.
-   This is preparation for starting or resuming the inferior.
-
-   N.B. Targets that want to use this with async support must build that
-   support on top of this (e.g., the caller still needs to remove stdin
-   from the event loop).  E.g., see linux_nat_terminal_inferior.  */
+/* Put the inferior's terminal settings into effect.  This is
+   preparation for starting or resuming the inferior.  */
 
 void
 child_terminal_inferior (struct target_ops *self)
 {
-  struct inferior *inf;
-  struct terminal_info *tinfo;
-
+  /* If we resume more than one inferior in the foreground on GDB's
+     terminal, then the first inferior's terminal settings "win".
+     Note that every child process is put in its own process group, so
+     the first process that ends up resumed ends up determining which
+     process group the kernel forwards Ctrl-C/Ctrl-Z (SIGINT/SIGTTOU)
+     to.  */
   if (!terminal_is_ours)
     return;
 
-  inf = current_inferior ();
-  tinfo = get_inflow_inferior_data (inf);
+  inferior *inf = current_inferior ();
+  terminal_info *tinfo = get_inflow_inferior_data (inf);
 
   if (gdb_has_a_terminal ()
       && tinfo->ttystate != NULL
       && tinfo->run_terminal == NULL)
     {
       int result;
+
+      /* If inf->attach_flag is set, we don't know whether we are
+	 sharing a terminal with the inferior or not.  (attaching a
+	 process without a terminal is one case where we do not;
+	 attaching a process which we ran from the same shell as GDB
+	 via `&' is one case where we do.  To tell whether we are
+	 sharing a terminal, we try to make the inferior's process
+	 group be the terminal's foreground process group.  That
+	 succeeds iff we're sharing a terminal.  */
+      if (job_control)
+	{
+#ifdef HAVE_TERMIOS_H
+	  /* If we can't tell the inferior's actual process group,
+	     then restore whatever was the foreground pgrp last time
+	     the inferior stopped.  See also comments describing
+	     terminal_state::process_group.  */
+#ifdef HAVE_SETPGID
+	  result = tcsetpgrp (0, getpgid (inf->pid));
+#else
+	  result = tcsetpgrp (0, tinfo->process_group);
+#endif
+	  if (result == -1)
+	    return;
+#endif
+	}
+
+      /* We're no longer the foreground process group.  */
+      terminal_is_ours = false;
 
 #ifdef F_GETFL
       result = fcntl (0, F_SETFL, tinfo->tflags);
@@ -273,29 +293,7 @@ child_terminal_inferior (struct target_ops *self)
 	  sigquit_ours = signal (SIGQUIT, SIG_IGN);
 #endif
 	}
-
-      /* If attach_flag is set, we don't know whether we are sharing a
-         terminal with the inferior or not.  (attaching a process
-         without a terminal is one case where we do not; attaching a
-         process which we ran from the same shell as GDB via `&' is
-         one case where we do, I think (but perhaps this is not
-         `sharing' in the sense that we need to save and restore tty
-         state)).  I don't know if there is any way to tell whether we
-         are sharing a terminal.  So what we do is to go through all
-         the saving and restoring of the tty state, but ignore errors
-         setting the process group, which will happen if we are not
-         sharing a terminal).  */
-
-      if (job_control)
-	{
-#ifdef HAVE_TERMIOS_H
-	  result = tcsetpgrp (0, tinfo->process_group);
-	  if (!inf->attach_flag)
-	    OOPSY ("tcsetpgrp");
-#endif
-	}
     }
-  terminal_is_ours = false;
 }
 
 /* Put some of our terminal settings into effect,
@@ -333,26 +331,40 @@ child_terminal_ours (struct target_ops *self)
    separate terminal_is_ours and terminal_is_ours_for_output
    flags.  */
 
+void
+child_terminal_save_inferior (struct target_ops *self)
+{
+  /* Avoid attempting all the ioctl's when running in batch.  */
+  if (gdb_has_a_terminal () == 0)
+    return;
+
+  inferior *inf = current_inferior ();
+  terminal_info *tinfo = get_inflow_inferior_data (inf);
+
+  /* No need to save/restore if the inferior is not sharing GDB's
+     tty.  */
+  if (tinfo->run_terminal != NULL)
+    return;
+
+  int result ATTRIBUTE_UNUSED;
+
+  xfree (tinfo->ttystate);
+  tinfo->ttystate = serial_get_tty_state (stdin_serial);
+
+  tinfo->process_group = tcgetpgrp (0);
+
+#ifdef F_GETFL
+  tinfo->tflags = fcntl (0, F_GETFL, 0);
+#endif
+}
+
 static void
 child_terminal_ours_1 (int output_only)
 {
-  struct inferior *inf;
-  struct terminal_info *tinfo;
-
   if (terminal_is_ours)
     return;
 
-  terminal_is_ours = true;
-
-  /* Checking inferior->run_terminal is necessary so that
-     if GDB is running in the background, it won't block trying
-     to do the ioctl()'s below.  Checking gdb_has_a_terminal
-     avoids attempting all the ioctl's when running in batch.  */
-
-  inf = current_inferior ();
-  tinfo = get_inflow_inferior_data (inf);
-
-  if (tinfo->run_terminal != NULL || gdb_has_a_terminal () == 0)
+  if (gdb_has_a_terminal () == 0)
     return;
   else
     {
@@ -361,17 +373,6 @@ child_terminal_ours_1 (int output_only)
       /* Ignore SIGTTOU since it will happen when we try to set the
 	 terminal's pgrp.  */
       scoped_ignore_sigttou ignore_sigttou;
-
-      xfree (tinfo->ttystate);
-      tinfo->ttystate = serial_get_tty_state (stdin_serial);
-
-#ifdef HAVE_TERMIOS_H
-      if (!inf->attach_flag)
-	/* If tcsetpgrp failed in terminal_inferior, this would give us
-	   our process group instead of the inferior's.  See
-	   terminal_inferior for details.  */
-	tinfo->process_group = tcgetpgrp (0);
-#endif
 
       /* Set tty state to our_ttystate.  */
       serial_set_tty_state (stdin_serial, our_terminal_info.ttystate);
@@ -402,10 +403,11 @@ child_terminal_ours_1 (int output_only)
 	}
 
 #ifdef F_GETFL
-      tinfo->tflags = fcntl (0, F_GETFL, 0);
       result = fcntl (0, F_SETFL, our_terminal_info.tflags);
 #endif
     }
+
+  terminal_is_ours = true;
 }
 
 /* Per-inferior data key.  */

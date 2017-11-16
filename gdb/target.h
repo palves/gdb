@@ -575,6 +575,8 @@ struct target_ops
       TARGET_DEFAULT_IGNORE ();
     void (*to_terminal_inferior) (struct target_ops *)
       TARGET_DEFAULT_IGNORE ();
+    void (*to_terminal_save_inferior) (struct target_ops *)
+      TARGET_DEFAULT_IGNORE ();
     void (*to_terminal_ours_for_output) (struct target_ops *)
       TARGET_DEFAULT_IGNORE ();
     void (*to_terminal_ours) (struct target_ops *)

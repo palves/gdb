@@ -47,6 +47,7 @@
 #include "event-top.h"
 #include <algorithm>
 #include "byte-vector.h"
+#include "terminal.h"
 
 static void generic_tls_error (void) ATTRIBUTE_NORETURN;
 
@@ -431,8 +432,8 @@ target_load (const char *arg, int from_tty)
 
 /* Define it.  */
 
-enum target_terminal::terminal_state target_terminal::terminal_state
-  = target_terminal::terminal_is_ours;
+target_terminal_state target_terminal::m_terminal_state
+  = target_terminal_state::is_ours;
 
 /* See target/target.h.  */
 
@@ -441,7 +442,7 @@ target_terminal::init (void)
 {
   (*current_target.to_terminal_init) (&current_target);
 
-  terminal_state = terminal_is_ours;
+  m_terminal_state = target_terminal_state::is_ours;
 }
 
 /* See target/target.h.  */
@@ -463,18 +464,59 @@ target_terminal::inferior (void)
   if (ui != main_ui)
     return;
 
-  if (terminal_state == terminal_is_inferior)
-    return;
-
   /* If GDB is resuming the inferior in the foreground, install
      inferior's terminal modes.  */
-  (*current_target.to_terminal_inferior) (&current_target);
-  terminal_state = terminal_is_inferior;
+
+  struct inferior *inf = current_inferior ();
+
+  if (inf->terminal_state != target_terminal_state::is_inferior)
+    {
+      (*current_target.to_terminal_inferior) (&current_target);
+      inf->terminal_state = target_terminal_state::is_inferior;
+    }
+
+  m_terminal_state = target_terminal_state::is_inferior;
 
   /* If the user hit C-c before, pretend that it was hit right
      here.  */
   if (check_quit_flag ())
     target_pass_ctrlc ();
+}
+
+/* Switch terminal state to DESIRED_STATE, either is_ours, or
+   is_ours_for_output.  */
+
+static void
+target_terminal_is_ours_kind (target_terminal_state desired_state)
+{
+  scoped_restore_current_inferior restore_inferior;
+  struct inferior *inf;
+
+  ALL_INFERIORS (inf)
+    {
+      if (inf->terminal_state == target_terminal_state::is_inferior)
+	{
+	  set_current_inferior (inf);
+	  (*current_target.to_terminal_save_inferior) (&current_target);
+	}
+    }
+
+  ALL_INFERIORS (inf)
+    {
+      /* Note we don't check is_inferior here like above because we
+	 need to handle 'is_ours_for_output -> is_ours' too.  */
+      if (inf->terminal_state != desired_state)
+	{
+	  set_current_inferior (inf);
+	  if (desired_state == target_terminal_state::is_ours)
+	    (*current_target.to_terminal_ours) (&current_target);
+	  else if (desired_state == target_terminal_state::is_ours_for_output)
+	    (*current_target.to_terminal_ours_for_output) (&current_target);
+	  else
+	    gdb_assert_not_reached ("unhandled desired state");
+	  inf->terminal_state = desired_state;
+	}
+    }
 }
 
 /* See target/target.h.  */
@@ -488,11 +530,11 @@ target_terminal::ours ()
   if (ui != main_ui)
     return;
 
-  if (terminal_state == terminal_is_ours)
+  if (m_terminal_state == target_terminal_state::is_ours)
     return;
 
-  (*current_target.to_terminal_ours) (&current_target);
-  terminal_state = terminal_is_ours;
+  target_terminal_is_ours_kind (target_terminal_state::is_ours);
+  m_terminal_state = target_terminal_state::is_ours;
 }
 
 /* See target/target.h.  */
@@ -506,10 +548,11 @@ target_terminal::ours_for_output ()
   if (ui != main_ui)
     return;
 
-  if (terminal_state != terminal_is_inferior)
+  if (!target_terminal::is_inferior ())
     return;
-  (*current_target.to_terminal_ours_for_output) (&current_target);
-  terminal_state = terminal_is_ours_for_output;
+
+  target_terminal_is_ours_kind (target_terminal_state::is_ours_for_output);
+  target_terminal::m_terminal_state = target_terminal_state::is_ours_for_output;
 }
 
 /* See target/target.h.  */

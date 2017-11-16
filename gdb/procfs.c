@@ -4209,7 +4209,12 @@ procfs_files_info (struct target_ops *ignore)
 static void
 procfs_interrupt (struct target_ops *self, ptid_t ptid)
 {
-  kill (-inferior_process_group (), SIGINT);
+  inferior *inf = find_inferior_ptid (ptid);
+
+  if (inf->attach_flag)
+    kill (inf->pid, SIGINT);
+  else
+    kill (-getpgid (inf->pid), SIGINT);
 }
 
 /* Make it die.  Wait for it to die.  Clean up after it.  Note: this
