@@ -1043,7 +1043,12 @@ exit_lwp (struct lwp_info *lp)
   if (th)
     {
       if (print_thread_events)
-	printf_unfiltered (_("[%s exited]\n"), target_pid_to_str (lp->ptid));
+	{
+	  target_terminal::scoped_restore_terminal_state term_state;
+	  target_terminal::ours_for_output ();
+
+	  printf_unfiltered (_("[%s exited]\n"), target_pid_to_str (lp->ptid));
+	}
 
       delete_thread (lp->ptid);
     }
