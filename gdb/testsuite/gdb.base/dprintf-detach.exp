@@ -39,7 +39,14 @@ proc dprintf_detach_test { breakpoint_always_inserted dprintf_style disconnected
 
     with_test_prefix "$test_prefix" {
 	# Start with a clean gdb
-	clean_restart ${binfile}
+
+	global GDBFLAGS
+	save_vars { GDBFLAGS } {
+	    # Make the inferior run in the same session as GDB, so
+	    # that we can detach from it.
+	    append GDBFLAGS " -ex \"tty /dev/tty\""
+	    clean_restart $binfile
+	}
 
 	gdb_test_no_output "set breakpoint always-inserted ${breakpoint_always_inserted}"
 	gdb_test_no_output "set dprintf-style ${dprintf_style}"

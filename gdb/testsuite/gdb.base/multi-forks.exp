@@ -139,6 +139,9 @@ foreach mode { "child" "parent" } {
 
 clean_restart ${binfile}
 
+# So we can safely detach after "run".
+gdb_test_no_output "tty /dev/tty"
+
 runto_main
 gdb_breakpoint $exit_bp_loc
 

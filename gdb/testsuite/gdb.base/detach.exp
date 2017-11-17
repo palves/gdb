@@ -35,11 +35,13 @@ proc do_detach_tests {} {
   global binfile
   global escapedbinfile
   global subdir
-  global pass
+
+  # So we can safely detach after "run".
+  gdb_test_no_output "tty /dev/tty"
 
   runto_main
-  gdb_test_no_output "set should_exit = 1" "set should_exit, $pass"
-  gdb_test "detach" "Detaching from program: .*$escapedbinfile, .*" "detach, $pass"
+  gdb_test_no_output "set should_exit = 1" "set should_exit"
+  gdb_test "detach" "Detaching from program: .*$escapedbinfile, .*"
 }
 
 # Start with a fresh gdb
@@ -48,14 +50,15 @@ gdb_start
 gdb_reinitialize_dir $srcdir/$subdir
 gdb_load ${binfile}
 
-global pass
-set pass "one"
-do_detach_tests
+with_test_prefix "one" {
+    do_detach_tests
+}
 
 # Wait a moment and do it again.
 exec sleep 1
 
-set pass "two"
-do_detach_tests
+with_test_prefix "two" {
+    do_detach_tests
+}
 
 return 0

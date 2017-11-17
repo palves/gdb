@@ -76,6 +76,9 @@ proc thr_apply_detach {thread_set} {
 
 	clean_restart ${binfile}
 
+	# So we can safely detach after "run".
+	gdb_test_no_output "tty /dev/tty"
+
 	if ![runto_main] {
 	    fail "can't run to main"
 	    return -1

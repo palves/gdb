@@ -147,6 +147,9 @@ with_test_prefix "kill" {
 }
 
 with_test_prefix "detach" {
+    # So we can safely detach after "start".
+    gdb_test_no_output "tty /dev/tty"
+
     gdb_test "start" "main.*"
 
     set test "detach"
