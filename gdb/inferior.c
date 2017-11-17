@@ -80,7 +80,7 @@ inferior::~inferior ()
   discard_all_inferior_continuations (inf);
   inferior_free_data (inf);
   xfree (inf->args);
-  xfree (inf->terminal);
+  xfree (inf->m_terminal);
   target_desc_info_free (inf->tdesc_info);
 }
 
@@ -91,6 +91,24 @@ inferior::inferior (int pid_)
     registry_data ()
 {
   inferior_alloc_data (this);
+}
+
+
+void
+inferior::set_tty (const char *terminal_name)
+{
+  xfree (m_terminal);
+
+  if (terminal_name != NULL && *terminal_name != '\0')
+    m_terminal = xstrdup (terminal_name);
+  else
+    m_terminal = NULL;
+}
+
+const char *
+inferior::tty ()
+{
+  return m_terminal;
 }
 
 struct inferior *

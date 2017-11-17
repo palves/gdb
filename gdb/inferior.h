@@ -77,11 +77,6 @@ extern void set_sigint_trap (void);
 
 extern void clear_sigint_trap (void);
 
-/* Set/get file name for default use for standard in/out in the inferior.  */
-
-extern void set_inferior_io_terminal (const char *terminal_name);
-extern const char *get_inferior_io_terminal (void);
-
 /* Collected pid, tid, etc. of the debugged inferior.  When there's
    no inferior, ptid_get_pid (inferior_ptid) will be 0.  */
 
@@ -322,6 +317,13 @@ public:
   /* Returns true if we can delete this inferior.  */
   bool deletable () const { return refcount () == 0; }
 
+  /* Set/get file name for default use for standard in/out in the
+     inferior.  On Unix systems, we try to make TERMINAL_NAME the
+     inferior's controlling terminal.  Ownership of TERMINAL_NAME is
+     not transferred.  */
+  void set_tty (const char *terminal_name);
+  const char *tty ();
+
   /* Pointer to next inferior in singly-linked list of inferiors.  */
   struct inferior *next = NULL;
 
@@ -370,9 +372,11 @@ public:
      this inferior.  */
   gdb::unique_xmalloc_ptr<char> cwd;
 
+private:
   /* The name of terminal device to use for I/O.  */
-  char *terminal = NULL;
+  char *m_terminal = NULL;
 
+public:
   /* The terminal state as set by the last target_terminal::terminal_*
      call.  */
   target_terminal_state terminal_state = target_terminal_state::is_ours;
