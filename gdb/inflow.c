@@ -897,6 +897,34 @@ get_inflow_inferior_data (struct inferior *inf)
   return info;
 }
 
+#ifdef TIOCGWINSZ
+
+/* See inferior.h.  */
+
+void
+child_terminal_on_sigwinch ()
+{
+  struct winsize size;
+
+  if (ioctl (0, TIOCGWINSZ, &size) == -1)
+    return;
+
+  /* For each inferior that is connected to a terminal that we
+     created, resize the inferior's terminal to match GDB's.  */
+  inferior *inf;
+  ALL_INFERIORS (inf)
+    {
+      terminal_info *info
+	= (terminal_info *) inferior_data (inf, inflow_inferior_data);
+      if (info != NULL
+	  && info->run_terminal != NULL
+	  && info->run_terminal->master_fd != -1)
+	ioctl (info->run_terminal->master_fd, TIOCSWINSZ, &size);
+    }
+}
+
+#endif
+
 /* This is a "inferior_exit" observer.  Releases the TERMINAL_INFO member
    of the inferior structure.  This field is private to inflow.c, and
    its type is opaque to the rest of GDB.  PID is the target pid of
