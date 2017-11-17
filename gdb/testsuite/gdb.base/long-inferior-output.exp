@@ -47,7 +47,12 @@ if { ![runto_main] } then {
 set printing_done_line [gdb_get_line_number "printing done"]
 gdb_test "break $printing_done_line" ".*" "set breakpoint after printing"
 
-send_gdb "continue\n"
+set test "continue"
+gdb_test_multiple $test $test {
+    -re "Continuing\.\r\n" {
+	pass $test
+    }
+}
 
 set expected_lines 3000
 set more 1
@@ -56,11 +61,14 @@ while {$more} {
     set more 0
     gdb_expect {
 	-i $inferior_spawn_id
-	-ex "this is line number $i" {
+	-re "^this is line number $i\r\n" {
 	    incr i
-           if {$i != $expected_lines} {
+	    if {$i != $expected_lines} {
 		set more 1
 	    }
+	}
+	-re "this is line number \[^\r\n\]*\r\n" {
+	    # If we see this, we've lost output.
 	}
     }
 }
