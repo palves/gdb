@@ -55,6 +55,7 @@
 #include "gdbsupport/gdb_optional.h"
 #include "source.h"
 #include "cli/cli-style.h"
+#include "terminal.h"
 
 /* Local functions: */
 
@@ -2715,6 +2716,27 @@ notice_new_inferior (thread_info *thr, bool leave_running, int from_tty)
   attach_post_wait (from_tty, mode);
 }
 
+/* Check if the current inferior is associated with a session/terminal
+   created by GDB.  If so, query the user if he/she really wants to
+   detach.  */
+
+static void
+query_detach_if_gdb_owns_session ()
+{
+  if (child_gdb_owns_session (current_inferior ()))
+    {
+      if (!query (_("\
+warning: The process was started by GDB and associated with its\n\
+own session/tty.  If you detach, GDB closes the process's terminal\n\
+and the likely consequence is that the process is killed by SIGHUP,\n\
+unless it explicitly handles or ignores that signal.\n\
+One way to avoid this is by starting the program in the same session\n\
+as GDB using the \"tty /dev/tty\" command.\n\
+Detach anyway? ")))
+	error (_("Not confirmed."));
+    }
+}
+
 /*
  * detach_command --
  * takes a program previously attached to and detaches it.
@@ -2735,6 +2757,8 @@ detach_command (const char *args, int from_tty)
     error (_("The program is not being run."));
 
   scoped_disable_commit_resumed disable_commit_resumed ("detaching");
+
+  query_detach_if_gdb_owns_session ();
 
   query_if_trace_running (from_tty);
 

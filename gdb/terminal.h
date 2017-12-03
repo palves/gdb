@@ -27,6 +27,13 @@ extern void new_tty (void);
 
 extern void new_tty_postfork (void);
 
+/* Returns true if new_tty_prefork created a gdb-managed terminal.  */
+extern bool created_managed_tty ();
+
+/* Return true if INF was started by GDB and is associated with a
+   session and terminal managed by GDB.  */
+extern bool child_gdb_owns_session (inferior *inf);
+
 extern void copy_terminal_info (struct inferior *to, struct inferior *from);
 
 /* Exchange the terminal info and state between inferiors A and B.  */

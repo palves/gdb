@@ -27,7 +27,11 @@
 #include "gdbsupport/pathstuff.h"
 #include "gdbsupport/signals-state-save-restore.h"
 #include "gdbsupport/gdb_tilde_expand.h"
+#include "gdbsupport/scoped_ignore_sigttou.h"
+#include "gdbsupport/managed-tty.h"
 #include <vector>
+#include <sys/types.h>
+#include <sys/wait.h>
 
 extern char **environ;
 
@@ -271,7 +275,8 @@ fork_inferior (const char *exec_file_arg, const std::string &allargs,
 	       void (*pre_trace_fun) (),
 	       const char *shell_file_arg,
 	       void (*exec_fun)(const char *file, char * const *argv,
-				char * const *env))
+				char * const *env),
+	       pid_t (*handle_session_leader_fork) (pid_t sl_pid))
 {
   pid_t pid;
   /* Set debug_fork then attach to the child while it sleeps, to debug.  */
@@ -354,7 +359,7 @@ fork_inferior (const char *exec_file_arg, const std::string &allargs,
      actually be a call to fork(2) due to the fact that autoconf will
      ``#define vfork fork'' on certain platforms.  */
 #if !(defined(__UCLIBC__) && defined(HAS_NOMMU))
-  if (pre_trace_fun || debug_fork)
+  if (pre_trace_fun || debug_fork || child_has_managed_tty_hook ())
     pid = fork ();
   else
 #endif
@@ -405,6 +410,85 @@ fork_inferior (const char *exec_file_arg, const std::string &allargs,
 
       restore_original_signals_state ();
 
+      /* Fork again so that the resulting inferior process is not the
+	 session leader.  This makes it possible for the inferior to
+	 exit without killing its own children.  If we instead let the
+	 inferior process be the session leader, when it exits, it'd
+	 cause a SIGHUP to be sent to all processes in its session
+	 (i.e., it's children).  The code is disabled on no-MMU
+	 machines because those can't do fork, only vfork.  In theory
+	 we could make this work with vfork by making the session
+	 leader process exec a helper process, probably gdb itself in
+	 a special mode (e.g., something like
+	   exec /proc/self/exe --session-leader-for PID
+      */
+#if GDB_MANAGED_TERMINALS
+      if (child_has_managed_tty_hook ())
+	{
+	  /* Fork again, to make sure the inferior is not the new
+	     session's leader.  */
+	  pid_t child2 = fork ();
+	  if (child2 != 0)
+	    {
+	      /* This is the parent / session leader process.  It just
+		 stays around until GDB closes the terminal.  */
+
+	      /* We want to exit when GDB closes our terminal.  */
+	      signal (SIGHUP, SIG_DFL);
+
+	      managed_tty_debug_printf
+		(_("session-leader (sid=%d): waiting for child pid=%d exit\n"),
+		 (int) getpid (), (int) child2);
+
+	      /* Reap the child/inferior exit status.  */
+	      int status;
+	      int res = waitpid (child2, &status, 0);
+
+	      managed_tty_debug_printf (_("session-leader (sid=%d): "
+					  "wait for child pid=%d returned: "
+					  "res=%d, waitstatus=0x%x\n"),
+					(int) getpid (), child2, res, status);
+
+	      if (res == -1)
+		warning (_("session-leader (sid=%d): unexpected waitstatus "
+			   "reaping child pid=%d: "
+			   "res=-1, errno=%d (%s)"),
+			 (int) getpid (), child2, errno, safe_strerror (errno));
+	      else if (res != child2)
+		warning (_("session-leader (sid=%d): unexpected waitstatus "
+			   "reaping child pid=%d: "
+			   "res=%d, status=0x%x"),
+			 (int) getpid (), child2, res, status);
+
+	      /* Don't exit yet.  While our direct child is gone,
+		 there may still be grandchildren attached to our
+		 session.  We'll exit when our parent (GDB) closes the
+		 pty, killing us with SIGHUP.  */
+	      while (1)
+		pause ();
+	    }
+	  else
+	    {
+	      /* This is the child / final inferior process.  */
+
+	      int res;
+
+	      /* Run the inferior in its own process group, and make
+		 it the session's foreground pgrp.  */
+
+	      res = gdb_setpgid ();
+	      if (res == -1)
+		trace_start_error (_("setpgid failed in grandchild"));
+
+	      scoped_ignore_sigttou ignore_sigttou;
+
+	      res = tcsetpgrp (0, getpid ());
+	      if (res == -1)
+		trace_start_error (_("tcsetpgrp failed in grandchild\n"));
+	    }
+	}
+#endif /* GDB_MANAGED_TERMINALS */
+
       /* There is no execlpe call, so we have to set the environment
 	 for our child in the global variable.  If we've vforked, this
 	 clobbers the parent, but environ is restored a few lines down
@@ -433,6 +517,9 @@ fork_inferior (const char *exec_file_arg, const std::string &allargs,
 
   /* Restore our environment in case a vforked child clob'd it.  */
   environ = save_our_env;
+
+  if (child_has_managed_tty_hook () && handle_session_leader_fork != nullptr)
+    pid = handle_session_leader_fork (pid);
 
   postfork_hook (pid);
 
