@@ -2932,6 +2932,28 @@ notice_new_inferior (ptid_t ptid, int leave_running, int from_tty)
   attach_post_wait ("" /* args */, from_tty, mode);
 }
 
+/* Check if a trace run is ongoing.  If so, and FROM_TTY, query the
+   user if she really wants to detach.  */
+
+static void
+query_if_gdb_owns_session ()
+{
+  extern bool child_gdb_owns_session (inferior *inf);
+
+  if (child_gdb_owns_session (current_inferior ()))
+    {
+      if (!query (_("\
+warning: The process was started by GDB and associated with its\n\
+own session/tty.  If you detach, GDB closes the process's terminal\n\
+and the likely consequence is that the process is killed by SIGHUP,\n\
+unless it explicitly handles or ignores that signal.\n\
+One way to avoid this is by starting the program in the same session\n\
+as GDB using the \"tty /dev/tty\" command.\n\
+Detach anyway? ")))
+	error (_("Not confirmed."));
+    }
+}
+
 /*
  * detach_command --
  * takes a program previously attached to and detaches it.
@@ -2950,6 +2972,8 @@ detach_command (const char *args, int from_tty)
 
   if (ptid_equal (inferior_ptid, null_ptid))
     error (_("The program is not being run."));
+
+  query_if_gdb_owns_session ();
 
   query_if_trace_running (from_tty);
 

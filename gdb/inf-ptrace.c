@@ -75,6 +75,8 @@ inf_ptrace_remove_fork_catchpoint (struct target_ops *self, int pid)
 #endif /* PT_GET_PROCESS_STATE */
 
 
+extern bool created_managed_tty ();
+
 /* Prepare to be traced.  */
 
 static void
@@ -83,6 +85,8 @@ inf_ptrace_me (void)
   /* "Trace me, Dr. Memory!"  */
   if (ptrace (PT_TRACE_ME, 0, (PTRACE_TYPE_ARG3) 0, 0) < 0)
     trace_start_error_with_name ("ptrace");
+  if (created_managed_tty ())
+    raise (SIGSTOP);
 }
 
 /* Start a new inferior Unix child process.  EXEC_FILE is the file to
