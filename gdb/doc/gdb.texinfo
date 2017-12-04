@@ -3023,6 +3023,11 @@ directs that processes started with subsequent @code{run} commands
 default to do input and output on the terminal @file{/dev/ttyb} and have
 that as their controlling terminal.
 
+A request to use the special @file{/dev/tty} file as input and output
+device is interpreted as a request for doing I/O to the same terminal
+that @value{GDBN} uses, and is equivalent to clearing the I/O device
+by invoking the @code{tty} command with no arguments.
+
 An explicit redirection in @code{run} overrides the @code{tty} command's
 effect on the input/output device, but not its effect on the controlling
 terminal.
