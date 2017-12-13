@@ -2809,7 +2809,7 @@ x86_sw_breakpoint_from_kind (int kind, int *size)
 static int
 x86_supports_range_stepping (void)
 {
-  return 1;
+  return 0;
 }
 
 /* Implementation of linux_target_ops method "supports_hardware_single_step".
