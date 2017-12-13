@@ -217,7 +217,7 @@ struct gdbarch_tdep
   CORE_ADDR sigtramp_end;
 
   /* Detect sigtramp.  */
-  int (*sigtramp_p) (struct frame_info *);
+  bool (*sigtramp_p) (struct gdbarch *gdbarch, CORE_ADDR);
 
   /* Get address of sigcontext for sigtramp.  */
   CORE_ADDR (*sigcontext_addr) (struct frame_info *);
@@ -397,8 +397,8 @@ extern CORE_ADDR i386_pe_skip_trampoline_code (struct frame_info *frame,
 extern CORE_ADDR i386_skip_main_prologue (struct gdbarch *gdbarch,
 					  CORE_ADDR pc);
 
-/* Return whether the THIS_FRAME corresponds to a sigtramp routine.  */
-extern int i386_sigtramp_p (struct frame_info *this_frame);
+/* Return whether PC corresponds to a sigtramp routine.  */
+extern bool i386_sigtramp_p (CORE_ADDR pc);
 
 /* Return non-zero if REGNUM is a member of the specified group.  */
 extern int i386_register_reggroup_p (struct gdbarch *gdbarch, int regnum,

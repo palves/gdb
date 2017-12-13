@@ -2764,7 +2764,8 @@ amd64_sigtramp_frame_sniffer (const struct frame_unwind *self,
 			      struct frame_info *this_frame,
 			      void **this_cache)
 {
-  struct gdbarch_tdep *tdep = gdbarch_tdep (get_frame_arch (this_frame));
+  struct gdbarch *gdbarch = get_frame_arch (this_frame);
+  struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
 
   /* We shouldn't even bother if we don't have a sigcontext_addr
      handler.  */
@@ -2773,7 +2774,7 @@ amd64_sigtramp_frame_sniffer (const struct frame_unwind *self,
 
   if (tdep->sigtramp_p != NULL)
     {
-      if (tdep->sigtramp_p (this_frame))
+      if (tdep->sigtramp_p (gdbarch, get_frame_pc (this_frame)))
 	return 1;
     }
 

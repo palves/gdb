@@ -132,11 +132,9 @@ static const gdb_byte amd64_x32_linux_sigtramp_code[] =
    the routine.  Otherwise, return 0.  */
 
 static CORE_ADDR
-amd64_linux_sigtramp_start (struct frame_info *this_frame)
+amd64_linux_sigtramp_start (struct gdbarch *gdbarch, CORE_ADDR pc)
 {
-  struct gdbarch *gdbarch;
   const gdb_byte *sigtramp_code;
-  CORE_ADDR pc = get_frame_pc (this_frame);
   gdb_byte buf[LINUX_SIGTRAMP_LEN];
 
   /* We only recognize a signal trampoline if PC is at the start of
@@ -146,7 +144,7 @@ amd64_linux_sigtramp_start (struct frame_info *this_frame)
      PC is not at the start of the instruction sequence, there will be
      a few trailing readable bytes on the stack.  */
 
-  if (!safe_frame_unwind_memory (this_frame, pc, buf, sizeof buf))
+  if (target_read_memory (pc, buf, sizeof buf))
     return 0;
 
   if (buf[0] != LINUX_SIGTRAMP_INSN0)
@@ -155,11 +153,10 @@ amd64_linux_sigtramp_start (struct frame_info *this_frame)
 	return 0;
 
       pc -= LINUX_SIGTRAMP_OFFSET1;
-      if (!safe_frame_unwind_memory (this_frame, pc, buf, sizeof buf))
+      if (target_read_memory (pc, buf, sizeof buf))
 	return 0;
     }
 
-  gdbarch = get_frame_arch (this_frame);
   if (gdbarch_ptr_bit (gdbarch) == 32)
     sigtramp_code = amd64_x32_linux_sigtramp_code;
   else
@@ -173,10 +170,9 @@ amd64_linux_sigtramp_start (struct frame_info *this_frame)
 /* Return whether THIS_FRAME corresponds to a GNU/Linux sigtramp
    routine.  */
 
-static int
-amd64_linux_sigtramp_p (struct frame_info *this_frame)
+static bool
+amd64_linux_sigtramp_p (struct gdbarch *gdbarch, CORE_ADDR pc)
 {
-  CORE_ADDR pc = get_frame_pc (this_frame);
   const char *name;
 
   find_pc_partial_function (pc, &name, NULL, NULL);
@@ -188,7 +184,7 @@ amd64_linux_sigtramp_p (struct frame_info *this_frame)
      __sigaction, or __libc_sigaction (all aliases to the same
      function).  */
   if (name == NULL || strstr (name, "sigaction") != NULL)
-    return (amd64_linux_sigtramp_start (this_frame) != 0);
+    return (amd64_linux_sigtramp_start (gdbarch, pc) != 0);
 
   return (strcmp ("__restore_rt", name) == 0);
 }
@@ -245,13 +241,15 @@ amd64_linux_get_syscall_number (struct gdbarch *gdbarch,
    Return false if it is not a rt_sigreturn syscall.  */
 
 static bool
-amd64_linux_sigreturn_return_addr (struct frame_info *frame,
+amd64_linux_sigreturn_return_addr (struct regcache *regcache,
 				   CORE_ADDR *pc)
 {
   /* Is this a rt_sigreturn syscall?  */
-  int syscall_num = get_frame_register_signed (frame, AMD64_RAX_REGNUM);
+  int syscall_num = regcache_raw_get_signed (regcache, AMD64_RAX_REGNUM);
   if (syscall_num == amd64_sys_rt_sigreturn)
     {
+      // if (tdep->sigtramp_p != NULL && tdep->sigtramp_p (pc))
+      frame_info *frame = get_current_frame (); /* FIXME */
       if (get_frame_type (frame) == SIGTRAMP_FRAME)
 	{
 	  *pc = frame_unwind_caller_pc (frame);
@@ -264,9 +262,9 @@ amd64_linux_sigreturn_return_addr (struct frame_info *frame,
 /* Implement the 'syscall_next_pc' gdbarch_tdep hook.  */
 
 static bool
-amd64_linux_syscall_next_pc (struct frame_info *frame, CORE_ADDR *return_addr)
+amd64_linux_syscall_next_pc (struct regcache *regcache, CORE_ADDR *return_addr)
 {
-  return amd64_linux_sigreturn_return_addr (frame, return_addr);
+  return amd64_linux_sigreturn_return_addr (regcache, return_addr);
 }
 
 /* From <asm/sigcontext.h>.  */

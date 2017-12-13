@@ -121,9 +121,8 @@ static const gdb_byte linux_sigtramp_code[] =
    start of the routine.  Otherwise, return 0.  */
 
 static CORE_ADDR
-i386_linux_sigtramp_start (struct frame_info *this_frame)
+i386_linux_sigtramp_start (struct gdbarch *gdbarch, CORE_ADDR pc)
 {
-  CORE_ADDR pc = get_frame_pc (this_frame);
   gdb_byte buf[LINUX_SIGTRAMP_LEN];
 
   /* We only recognize a signal trampoline if PC is at the start of
@@ -133,7 +132,7 @@ i386_linux_sigtramp_start (struct frame_info *this_frame)
      PC is not at the start of the instruction sequence, there will be
      a few trailing readable bytes on the stack.  */
 
-  if (!safe_frame_unwind_memory (this_frame, pc, buf, LINUX_SIGTRAMP_LEN))
+  if (target_read_memory (pc, buf, LINUX_SIGTRAMP_LEN))
     return 0;
 
   if (buf[0] != LINUX_SIGTRAMP_INSN0)
@@ -154,7 +153,7 @@ i386_linux_sigtramp_start (struct frame_info *this_frame)
 
       pc -= adjust;
 
-      if (!safe_frame_unwind_memory (this_frame, pc, buf, LINUX_SIGTRAMP_LEN))
+      if (target_read_memory (pc, buf, LINUX_SIGTRAMP_LEN))
 	return 0;
     }
 
@@ -189,9 +188,8 @@ static const gdb_byte linux_rt_sigtramp_code[] =
    start of the routine.  Otherwise, return 0.  */
 
 static CORE_ADDR
-i386_linux_rt_sigtramp_start (struct frame_info *this_frame)
+i386_linux_rt_sigtramp_start (struct gdbarch *gdbarch, CORE_ADDR pc)
 {
-  CORE_ADDR pc = get_frame_pc (this_frame);
   gdb_byte buf[LINUX_RT_SIGTRAMP_LEN];
 
   /* We only recognize a signal trampoline if PC is at the start of
@@ -201,7 +199,7 @@ i386_linux_rt_sigtramp_start (struct frame_info *this_frame)
      PC is not at the start of the instruction sequence, there will be
      a few trailing readable bytes on the stack.  */
 
-  if (!safe_frame_unwind_memory (this_frame, pc, buf, LINUX_RT_SIGTRAMP_LEN))
+  if (target_read_memory (pc, buf, LINUX_RT_SIGTRAMP_LEN))
     return 0;
 
   if (buf[0] != LINUX_RT_SIGTRAMP_INSN0)
@@ -211,8 +209,7 @@ i386_linux_rt_sigtramp_start (struct frame_info *this_frame)
 
       pc -= LINUX_RT_SIGTRAMP_OFFSET1;
 
-      if (!safe_frame_unwind_memory (this_frame, pc, buf,
-				     LINUX_RT_SIGTRAMP_LEN))
+      if (target_read_memory (pc, buf, LINUX_RT_SIGTRAMP_LEN))
 	return 0;
     }
 
@@ -225,10 +222,9 @@ i386_linux_rt_sigtramp_start (struct frame_info *this_frame)
 /* Return whether THIS_FRAME corresponds to a GNU/Linux sigtramp
    routine.  */
 
-static int
-i386_linux_sigtramp_p (struct frame_info *this_frame)
+static bool
+i386_linux_sigtramp_p (struct gdbarch *gdbarch, CORE_ADDR pc)
 {
-  CORE_ADDR pc = get_frame_pc (this_frame);
   const char *name;
 
   find_pc_partial_function (pc, &name, NULL, NULL);
@@ -239,8 +235,8 @@ i386_linux_sigtramp_p (struct frame_info *this_frame)
      be part of the preceding function.  This should always be sigaction,
      __sigaction, or __libc_sigaction (all aliases to the same function).  */
   if (name == NULL || strstr (name, "sigaction") != NULL)
-    return (i386_linux_sigtramp_start (this_frame) != 0
-	    || i386_linux_rt_sigtramp_start (this_frame) != 0);
+    return (i386_linux_sigtramp_start (gdbarch, pc) != 0
+	    || i386_linux_rt_sigtramp_start (gdbarch, pc) != 0);
 
   return (strcmp ("__restore", name) == 0
 	  || strcmp ("__restore_rt", name) == 0);
@@ -285,7 +281,7 @@ i386_linux_sigcontext_addr (struct frame_info *this_frame)
   get_frame_register (this_frame, I386_ESP_REGNUM, buf);
   sp = extract_unsigned_integer (buf, 4, byte_order);
 
-  pc = i386_linux_sigtramp_start (this_frame);
+  pc = i386_linux_sigtramp_start (gdbarch, get_frame_pc (this_frame));
   if (pc)
     {
       /* The sigcontext structure lives on the stack, right after
@@ -299,7 +295,7 @@ i386_linux_sigcontext_addr (struct frame_info *this_frame)
       return sp;
     }
 
-  pc = i386_linux_rt_sigtramp_start (this_frame);
+  pc = i386_linux_rt_sigtramp_start (gdbarch, get_frame_pc (this_frame));
   if (pc)
     {
       CORE_ADDR ucontext_addr;
@@ -570,22 +566,26 @@ i386_linux_get_syscall_number (struct gdbarch *gdbarch,
    return 1.  Return 0 if it is not a rt_sigreturn/sigreturn
    syscall.  */
 
-static int
-i386_linux_sigreturn_return_addr (struct frame_info *frame,
-				 CORE_ADDR *pc)
+static bool
+i386_linux_sigreturn_return_addr (struct regcache *regcache,
+				  CORE_ADDR *pc)
 {
   /* Is this a sigreturn or rt_sigreturn syscall?  */
-  int syscall_num = get_frame_register_signed (frame, I386_EAX_REGNUM);
+  int syscall_num = regcache_raw_get_signed (regcache, I386_EAX_REGNUM);
   if ((syscall_num == i386_sys_sigreturn
        || syscall_num == i386_sys_rt_sigreturn))
     {
+      struct gdbarch *gdbarch = regcache->arch ();
+      struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
+      //      if (tdep->sigtramp_p != NULL && tdep->sigtramp_p (gdbarch, pc))
+      frame_info *frame = get_current_frame (); /* FIXME */
       if (get_frame_type (frame) == SIGTRAMP_FRAME)
 	{
 	  *pc = frame_unwind_caller_pc (frame);
-	  return 1;
+	  return true;
 	}
     }
-  return 0;
+  return false;
 }
 
 /* Implement the 'syscall_next_pc' gdbarch_tdep hook.  */

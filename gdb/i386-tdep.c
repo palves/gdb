@@ -2518,7 +2518,8 @@ i386_sigtramp_frame_sniffer (const struct frame_unwind *self,
 			     struct frame_info *this_frame,
 			     void **this_prologue_cache)
 {
-  struct gdbarch_tdep *tdep = gdbarch_tdep (get_frame_arch (this_frame));
+  struct gdbarch *gdbarch = get_frame_arch (this_frame);
+  struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
 
   /* We shouldn't even bother if we don't have a sigcontext_addr
      handler.  */
@@ -2527,7 +2528,7 @@ i386_sigtramp_frame_sniffer (const struct frame_unwind *self,
 
   if (tdep->sigtramp_p != NULL)
     {
-      if (tdep->sigtramp_p (this_frame))
+      if (tdep->sigtramp_p (gdbarch, get_frame_pc (this_frame)))
 	return 1;
     }
 
@@ -3986,10 +3987,9 @@ i386_pe_skip_trampoline_code (struct frame_info *frame,
 /* Return whether the THIS_FRAME corresponds to a sigtramp
    routine.  */
 
-int
-i386_sigtramp_p (struct frame_info *this_frame)
+bool
+i386_sigtramp_p (struct gdbarch *gdbarch, CORE_ADDR pc)
 {
-  CORE_ADDR pc = get_frame_pc (this_frame);
   const char *name;
 
   find_pc_partial_function (pc, &name, NULL, NULL);
@@ -4022,10 +4022,9 @@ i386_print_insn (bfd_vma pc, struct disassemble_info *info)
 /* Return whether THIS_FRAME corresponds to a SVR4 sigtramp
    routine.  */
 
-static int
-i386_svr4_sigtramp_p (struct frame_info *this_frame)
+static bool
+i386_svr4_sigtramp_p (struct gdbarch *gdbarch, CORE_ADDR pc)
 {
-  CORE_ADDR pc = get_frame_pc (this_frame);
   const char *name;
 
   /* The origin of these symbols is currently unknown.  */
