@@ -45,6 +45,14 @@ extern void i386_linux_handle_segmentation_fault (struct gdbarch *gdbarch,
 /* Return the target description according to XCR0.  */
 extern const struct target_desc *i386_linux_read_description (uint64_t xcr0);
 
+/* Enum that defines some syscall identifiers for i386 Linux.  */
+
+enum i386_syscall
+  {
+    i386_sys_sigreturn = 119,
+    i386_sys_rt_sigreturn = 173,
+  };
+
 /* Format of XSAVE extended state is:
  	struct
 	{

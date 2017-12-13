@@ -657,6 +657,19 @@ regcache_raw_get_signed (struct regcache *regcache, int regnum)
   return value;
 }
 
+ULONGEST
+regcache_raw_get_unsigned (struct regcache *regcache, int regnum)
+{
+  ULONGEST value;
+  enum register_status status;
+
+  status = regcache_raw_read_unsigned (regcache, regnum, &value);
+  if (status == REG_UNAVAILABLE)
+    throw_error (NOT_AVAILABLE_ERROR,
+		 _("Register %d is not available"), regnum);
+  return value;
+}
+
 enum register_status
 regcache_cooked_read (struct regcache *regcache, int regnum, gdb_byte *buf)
 {

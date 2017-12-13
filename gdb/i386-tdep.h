@@ -249,6 +249,12 @@ struct gdbarch_tdep
   /* Parse syscall args.  */
   int (*i386_syscall_record) (struct regcache *regcache);
 
+  /* If REGCACHE is stopped at a syscall instruction that would
+     transfer control to some address not the one after the syscall
+     instruction, writes the expected next PC to NEXT_PC, and returns
+     true.  Otherwise, returns false.  */
+  bool (*syscall_next_pc) (struct regcache *regcache, CORE_ADDR *next_pc);
+
   /* Regsets. */
   const struct regset *fpregset;
 };
@@ -444,6 +450,8 @@ extern const struct target_desc *i386_target_description (uint64_t xcr0);
 
 /* Return true iff the current target is MPX enabled.  */
 extern int i386_mpx_enabled (void);
+std::vector<CORE_ADDR> i386_software_single_step (struct regcache *regcache);
+
 
 
 /* Functions and variables exported from i386-bsd-tdep.c.  */
