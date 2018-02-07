@@ -1311,6 +1311,10 @@ print_thread_info_1 (struct ui_out *uiout, const char *requested_threads,
 					global_ids, pid, tp))
 		continue;
 
+	      /* Switch inferiors so we're looking at the right target
+		 stack.  */
+	      switch_to_inferior_no_thread (tp->inf);
+
 	      thread_id_len
 		= std::max (thread_id_len,
 			    thread_target_id_str (tp).size ());
