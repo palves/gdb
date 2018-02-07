@@ -502,13 +502,16 @@ target_terminal::info (const char *arg, int from_tty)
 bool
 target_supports_terminal_ours (void)
 {
-  /* This can be called before there is any target, so we must check
-     for nullptr here.  */
-  target_ops *top = current_top_target ();
+  /* The current top target is the target at the top of the target
+     stack of the current inferior.  While normally there's always an
+     inferior, we must check for nullptr here because we can get here
+     very early during startup, before the initial inferior is first
+     created.  */
+  inferior *inf = current_inferior ();
 
-  if (top == nullptr)
+  if (inf == nullptr)
     return false;
-  return top->supports_terminal_ours ();
+  return inf->top_target ()->supports_terminal_ours ();
 }
 
 static void
