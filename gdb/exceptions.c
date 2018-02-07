@@ -39,7 +39,10 @@ print_flush (void)
     deprecated_error_begin_hook ();
 
   gdb::optional<target_terminal::scoped_restore_terminal_state> term_state;
-  if (target_supports_terminal_ours ())
+  /* We can be called before the initial inferior is created, and
+     target methods rely on the current inferior to find the righ
+     target stack.  */
+  if (current_inferior () != NULL && target_supports_terminal_ours ())
     {
       term_state.emplace ();
       target_terminal::ours_for_output ();
