@@ -397,7 +397,7 @@ breakpoints_should_be_inserted_now (void)
 	 no threads under GDB's control yet.  */
       return 1;
     }
-  else if (target_has_execution)
+  else
     {
       struct thread_info *tp;
 
