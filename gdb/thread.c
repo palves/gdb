@@ -1515,7 +1515,7 @@ switch_to_thread (thread_info *thr)
 {
   gdb_assert (thr != NULL);
 
-  if (inferior_ptid == thr->ptid)
+  if (thr->inf == current_inferior () && inferior_ptid == thr->ptid)
     return;
 
   switch_to_thread_no_regs (thr);
