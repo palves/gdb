@@ -551,21 +551,6 @@ extern void inferior_appeared (struct inferior *inf, int pid);
 /* Get rid of all inferiors.  */
 extern void discard_all_inferiors (void);
 
-/* Translate the integer inferior id (GDB's homegrown id, not the system's)
-   into a "pid" (which may be overloaded with extra inferior information).  */
-extern int gdb_inferior_id_to_pid (int);
-
-/* Translate a target 'pid' into the integer inferior id (GDB's
-   homegrown id, not the system's).  */
-extern int pid_to_gdb_inferior_id (int pid);
-
-/* Boolean test for an already-known pid.  */
-extern int in_inferior_list (int pid);
-
-/* Boolean test for an already-known inferior id (GDB's homegrown id,
-   not the system's).  */
-extern int valid_gdb_inferior_id (int num);
-
 /* Search function to lookup an inferior by target 'pid'.  */
 extern struct inferior *find_inferior_pid (target_ops *targ, int pid);
 

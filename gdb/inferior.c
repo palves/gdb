@@ -363,52 +363,6 @@ iterate_over_inferiors (int (*callback) (struct inferior *, void *),
 }
 
 int
-valid_gdb_inferior_id (int num)
-{
-  struct inferior *inf;
-
-  for (inf = inferior_list; inf; inf = inf->next)
-    if (inf->num == num)
-      return 1;
-
-  return 0;
-}
-
-int
-pid_to_gdb_inferior_id (int pid)
-{
-  struct inferior *inf;
-
-  for (inf = inferior_list; inf; inf = inf->next)
-    if (inf->pid == pid)
-      return inf->num;
-
-  return 0;
-}
-
-int
-gdb_inferior_id_to_pid (int num)
-{
-  struct inferior *inferior = find_inferior_id (num);
-  if (inferior)
-    return inferior->pid;
-  else
-    return -1;
-}
-
-int
-in_inferior_list (int pid)
-{
-  struct inferior *inf;
-
-  for (inf = inferior_list; inf; inf = inf->next)
-    if (inf->pid == pid)
-      return 1;
-
-  return 0;
-}
-
-int
 have_inferiors (void)
 {
   struct inferior *inf;
@@ -645,8 +599,6 @@ print_inferior (struct ui_out *uiout, const char *requested_inferiors)
 static void
 detach_inferior_command (const char *args, int from_tty)
 {
-  struct thread_info *tp;
-
   if (!args || !*args)
     error (_("Requires argument (inferior id(s) to detach)"));
 
@@ -655,21 +607,21 @@ detach_inferior_command (const char *args, int from_tty)
     {
       int num = parser.get_number ();
 
-      if (!valid_gdb_inferior_id (num))
+      inferior *inf = find_inferior_id (num);
+      if (inf == NULL)
 	{
 	  warning (_("Inferior ID %d not known."), num);
 	  continue;
 	}
 
-      int pid = gdb_inferior_id_to_pid (num);
-      if (pid == 0)
+      if (inf->pid == 0)
 	{
 	  warning (_("Inferior ID %d is not running."), num);
 	  continue;
 	}
 
-      tp = any_thread_of_process (pid);
-      if (!tp)
+      thread_info *tp = any_thread_of_inferior (inf);
+      if (tp == NULL)
 	{
 	  warning (_("Inferior ID %d has no threads."), num);
 	  continue;
@@ -684,8 +636,6 @@ detach_inferior_command (const char *args, int from_tty)
 static void
 kill_inferior_command (const char *args, int from_tty)
 {
-  struct thread_info *tp;
-
   if (!args || !*args)
     error (_("Requires argument (inferior id(s) to kill)"));
 
@@ -694,21 +644,21 @@ kill_inferior_command (const char *args, int from_tty)
     {
       int num = parser.get_number ();
 
-      if (!valid_gdb_inferior_id (num))
+      inferior *inf = find_inferior_id (num);
+      if (inf == NULL)
 	{
 	  warning (_("Inferior ID %d not known."), num);
 	  continue;
 	}
 
-      int pid = gdb_inferior_id_to_pid (num);
-      if (pid == 0)
+      if (inf->pid == 0)
 	{
 	  warning (_("Inferior ID %d is not running."), num);
 	  continue;
 	}
 
-      tp = any_thread_of_process (pid);
-      if (!tp)
+      thread_info *tp = any_thread_of_inferior (inf);
+      if (tp == NULL)
 	{
 	  warning (_("Inferior ID %d has no threads."), num);
 	  continue;

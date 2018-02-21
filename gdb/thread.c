@@ -797,24 +797,6 @@ any_thread_of_inferior (inferior *inf)
 }
 
 struct thread_info *
-any_thread_of_process (int pid)
-{
-  struct thread_info *tp;
-
-  gdb_assert (pid != 0);
-
-  /* Prefer the current thread.  */
-  if (ptid_get_pid (inferior_ptid) == pid)
-    return inferior_thread ();
-
-  ALL_NON_EXITED_THREADS (tp)
-    if (ptid_get_pid (tp->ptid) == pid)
-      return tp;
-
-  return NULL;
-}
-
-struct thread_info *
 any_live_thread_of_process (inferior *inf)
 {
   struct thread_info *curr_tp = NULL;

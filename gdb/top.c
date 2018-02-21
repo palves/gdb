@@ -1471,12 +1471,11 @@ static int
 kill_or_detach (struct inferior *inf, void *args)
 {
   struct qt_args *qt = (struct qt_args *) args;
-  struct thread_info *thread;
 
   if (inf->pid == 0)
     return 0;
 
-  thread = any_thread_of_process (inf->pid);
+  thread_info *thread = any_thread_of_inferior (inf);
   if (thread != NULL)
     {
       switch_to_thread (thread);

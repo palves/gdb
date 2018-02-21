@@ -2483,7 +2483,7 @@ remote_target::remote_notice_new_inferior (ptid_t currthread, int executing)
 	 extended-remote which already was debugging an inferior, we
 	 may not know about it yet.  Add it before adding its child
 	 thread, so notifications are emitted in a sensible order.  */
-      if (!in_inferior_list (ptid_get_pid (currthread)))
+      if (find_inferior_pid (this, ptid_get_pid (currthread)) == NULL)
 	{
 	  struct remote_state *rs = get_remote_state ();
 	  int fake_pid_p = !remote_multi_process_p (rs);

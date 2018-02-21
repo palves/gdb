@@ -2075,7 +2075,7 @@ target_pre_inferior (int from_tty)
 static void
 dispose_inferior (struct inferior *inf)
 {
-  struct thread_info *thread = any_thread_of_process (inf->pid);
+  thread_info *thread = any_thread_of_inferior (inf);
   if (thread != NULL)
     {
       switch_to_thread (thread);

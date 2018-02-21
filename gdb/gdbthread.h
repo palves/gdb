@@ -459,10 +459,6 @@ struct thread_info *find_thread_by_handle (struct value *thread_handle,
 /* Finds the first thread of the specified inferior.  */
 extern thread_info *first_thread_of_inferior (inferior *inf);
 
-/* Returns any thread of process PID, giving preference to the current
-   thread.  */
-extern struct thread_info *any_thread_of_process (int pid);
-
 /* Returns any thread of inferior INF, giving preference to the
    current thread.  */
 extern thread_info *any_thread_of_inferior (inferior *inf);
