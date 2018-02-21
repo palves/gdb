@@ -1968,10 +1968,10 @@ darwin_nat_target::pid_to_str (ptid_t ptid)
   return normal_pid_to_str (ptid);
 }
 
-int
+bool
 darwin_nat_target::thread_alive (ptid_t ptid)
 {
-  return 1;
+  return true;
 }
 
 /* If RDADDR is not NULL, read inferior task's LEN bytes from ADDR and
@@ -2315,10 +2315,10 @@ darwin_nat_target::get_ada_task_ptid (long lwp, long thread)
     return null_ptid;
 }
 
-int
+bool
 darwin_nat_target::supports_multi_process ()
 {
-  return 1;
+  return true;
 }
 
 void

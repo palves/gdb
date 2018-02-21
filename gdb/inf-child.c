@@ -205,10 +205,10 @@ inf_child_target::post_startup_inferior (ptid_t ptid)
      operation by a debugger.  */
 }
 
-int
+bool
 inf_child_target::can_run ()
 {
-  return 1;
+  return true;
 }
 
 bool
@@ -231,31 +231,31 @@ inf_child_target::pid_to_exec_file (int pid)
   return NULL;
 }
 
-int
+bool
 inf_child_target::has_all_memory ()
 {
   return default_child_has_all_memory ();
 }
 
-int
+bool
 inf_child_target::has_memory ()
 {
   return default_child_has_memory ();
 }
 
-int
+bool
 inf_child_target::has_stack ()
 {
   return default_child_has_stack ();
 }
 
-int
+bool
 inf_child_target::has_registers ()
 {
   return default_child_has_registers ();
 }
 
-int
+bool
 inf_child_target::has_execution (ptid_t ptid)
 {
   return default_child_has_execution (ptid);
@@ -413,19 +413,19 @@ inf_child_target::fileio_readlink (struct inferior *inf, const char *filename,
 #endif
 }
 
-int
+bool
 inf_child_target::use_agent (int use)
 {
   if (agent_loaded_p ())
     {
       ::use_agent = use;
-      return 1;
+      return true;
     }
   else
-    return 0;
+    return false;
 }
 
-int
+bool
 inf_child_target::can_use_agent ()
 {
   return agent_loaded_p ();

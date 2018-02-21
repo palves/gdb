@@ -86,8 +86,8 @@ public:
   void call_history_from (ULONGEST begin, int size, int flags) override;
   void call_history_range (ULONGEST begin, ULONGEST end, int flags) override;
 
-  int record_is_replaying (ptid_t ptid) override;
-  int record_will_replay (ptid_t ptid, int dir) override;
+  bool record_is_replaying (ptid_t ptid) override;
+  bool record_will_replay (ptid_t ptid, int dir) override;
   void record_stop_replaying () override;
 
   enum target_xfer_status xfer_partial (enum target_object object,
@@ -117,18 +117,18 @@ public:
 
   void stop (ptid_t) override;
   void update_thread_list () override;
-  int thread_alive (ptid_t ptid) override;
+  bool thread_alive (ptid_t ptid) override;
   void goto_record_begin () override;
   void goto_record_end () override;
   void goto_record (ULONGEST insn) override;
 
-  int can_execute_reverse () override;
+  bool can_execute_reverse () override;
 
-  int stopped_by_sw_breakpoint () override;
-  int supports_stopped_by_sw_breakpoint () override;
+  bool stopped_by_sw_breakpoint () override;
+  bool supports_stopped_by_sw_breakpoint () override;
 
-  int stopped_by_hw_breakpoint () override;
-  int supports_stopped_by_hw_breakpoint () override;
+  bool stopped_by_hw_breakpoint () override;
+  bool supports_stopped_by_hw_breakpoint () override;
 
   enum exec_direction_kind execution_direction () override;
   void prepare_to_generate_core () override;
@@ -1357,21 +1357,21 @@ record_btrace_target::record_method (ptid_t ptid)
 
 /* The to_record_is_replaying method of target record-btrace.  */
 
-int
+bool
 record_btrace_target::record_is_replaying (ptid_t ptid)
 {
   struct thread_info *tp;
 
   ALL_NON_EXITED_THREADS (tp)
     if (ptid_match (tp->ptid, ptid) && btrace_is_replaying (tp))
-      return 1;
+      return true;
 
-  return 0;
+  return false;
 }
 
 /* The to_record_will_replay method of target record-btrace.  */
 
-int
+bool
 record_btrace_target::record_will_replay (ptid_t ptid, int dir)
 {
   return dir == EXEC_REVERSE || record_is_replaying (ptid);
@@ -2671,15 +2671,15 @@ record_btrace_target::stop (ptid_t ptid)
 
 /* The to_can_execute_reverse method of target record-btrace.  */
 
-int
+bool
 record_btrace_target::can_execute_reverse ()
 {
-  return 1;
+  return true;
 }
 
 /* The to_stopped_by_sw_breakpoint method of target record-btrace.  */
 
-int
+bool
 record_btrace_target::stopped_by_sw_breakpoint ()
 {
   if (record_is_replaying (minus_one_ptid))
@@ -2695,18 +2695,18 @@ record_btrace_target::stopped_by_sw_breakpoint ()
 /* The to_supports_stopped_by_sw_breakpoint method of target
    record-btrace.  */
 
-int
+bool
 record_btrace_target::supports_stopped_by_sw_breakpoint ()
 {
   if (record_is_replaying (minus_one_ptid))
-    return 1;
+    return true;
 
   return this->beneath->supports_stopped_by_sw_breakpoint ();
 }
 
 /* The to_stopped_by_sw_breakpoint method of target record-btrace.  */
 
-int
+bool
 record_btrace_target::stopped_by_hw_breakpoint ()
 {
   if (record_is_replaying (minus_one_ptid))
@@ -2722,11 +2722,11 @@ record_btrace_target::stopped_by_hw_breakpoint ()
 /* The to_supports_stopped_by_hw_breakpoint method of target
    record-btrace.  */
 
-int
+bool
 record_btrace_target::supports_stopped_by_hw_breakpoint ()
 {
   if (record_is_replaying (minus_one_ptid))
-    return 1;
+    return true;
 
   return this->beneath->supports_stopped_by_hw_breakpoint ();
 }
@@ -2746,7 +2746,7 @@ record_btrace_target::update_thread_list ()
 
 /* The to_thread_alive method of target record-btrace.  */
 
-int
+bool
 record_btrace_target::thread_alive (ptid_t ptid)
 {
   /* We don't add or remove threads during replay.  */
