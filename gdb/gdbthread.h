@@ -426,16 +426,6 @@ extern int thread_has_single_step_breakpoint_here (struct thread_info *tp,
 						   const address_space *aspace,
 						   CORE_ADDR addr);
 
-/* Translate the global integer thread id (GDB's homegrown id, not the
-   system's) into a "pid" (which may be overloaded with extra thread
-   information).  */
-extern ptid_t global_thread_id_to_ptid (int num);
-
-/* Translate a 'pid' (which may be overloaded with extra thread
-   information) into the global integer thread id (GDB's homegrown id,
-   not the system's).  */
-// extern int ptid_to_global_thread_id (ptid_t ptid);
-
 /* Returns whether to show inferior-qualified thread IDs, or plain
    thread numbers.  Inferior-qualified IDs are shown whenever we have
    multiple inferiors, or the only inferior left has number > 1.  */

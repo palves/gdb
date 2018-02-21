@@ -764,27 +764,6 @@ valid_global_thread_id (int global_id)
   return 0;
 }
 
-int
-ptid_to_global_thread_id (inferior *inf, ptid_t ptid)
-{
-  for (thread_info *tp : inf->threads ())
-    if (tp->ptid == ptid)
-      return tp->global_num;
-
-  return 0;
-}
-
-ptid_t
-global_thread_id_to_ptid (int global_id)
-{
-  struct thread_info *thread = find_thread_global_id (global_id);
-
-  if (thread)
-    return thread->ptid;
-  else
-    return minus_one_ptid;
-}
-
 bool
 in_thread_list (target_ops *targ, ptid_t ptid)
 {
