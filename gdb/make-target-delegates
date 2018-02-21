@@ -36,7 +36,7 @@ $ARGS_PART = qr,(?<args>\(.*\)),;
 # We strip the indentation so here we only need the caret.
 $INTRO_PART = qr,^,;
 
-$POINTER_PART = qr,\s*(\*)?\s*,;
+$POINTER_PART = qr,\s*(\*)*\s*,;
 
 # Match a C++ symbol, including scope operators and template
 # parameters.  E.g., 'std::vector<something>'.

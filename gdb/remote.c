@@ -4461,7 +4461,7 @@ remote_target::start_remote (int from_tty, int extended_p)
 		                    "warning: couldn't determine remote "
 				    "current thread; picking first in list.\n");
 
-	      inferior_ptid = thread_list->ptid;
+	      inferior_ptid = target_thread_list ()->ptid;
 	    }
 	}
 

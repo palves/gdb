@@ -476,7 +476,7 @@ extern struct thread_info *iterate_over_threads (thread_callback_func, void *);
 
 /* Traverse all threads.  */
 #define ALL_THREADS(T)				\
-  for (T = thread_list; T; T = T->next)		\
+  for (T = target_thread_list (); T; T = T->next)	\
 
 /* Traverse over all threads, sorted by inferior.  */
 #define ALL_THREADS_BY_INFERIOR(inf, tp) \
@@ -488,13 +488,13 @@ extern struct thread_info *iterate_over_threads (thread_callback_func, void *);
    state.  */
 
 #define ALL_NON_EXITED_THREADS(T)				\
-  for (T = thread_list; T; T = T->next) \
+  for (T = target_thread_list (); T; T = T->next)			\
     if ((T)->state != THREAD_EXITED)
 
 /* Traverse all threads, including those that have THREAD_EXITED
    state.  Allows deleting the currently iterated thread.  */
-#define ALL_THREADS_SAFE(T, TMP)	\
-  for ((T) = thread_list;			\
+#define ALL_THREADS_SAFE(T, TMP)		\
+  for ((T) = target_thread_list ();		\
        (T) != NULL ? ((TMP) = (T)->next, 1): 0;	\
        (T) = (TMP))
 
@@ -712,6 +712,6 @@ extern void print_selected_thread_frame (struct ui_out *uiout,
    alive anymore.  */
 extern void thread_select (const char *tidstr, class thread_info *thr);
 
-extern struct thread_info *thread_list;
+// extern struct thread_info *thread_list;
 
 #endif /* GDBTHREAD_H */
