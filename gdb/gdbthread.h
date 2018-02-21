@@ -488,8 +488,8 @@ extern struct thread_info *iterate_over_threads (thread_callback_func, void *);
     ALL_THREADS (tp) \
       if (inf == tp->inf)
 
-#define ALL_NON_EXITED_THREADS_TARGET(TARGET, T)			\
-  for (T = target_thread_list (TARGET); T; T = T->next)		\
+#define ALL_NON_EXITED_THREADS_TARGET(INF, T)			\
+  for (T = target_thread_list (INF); T; T = T->next)		\
     if ((T)->state != THREAD_EXITED)
 
 /* Traverse all threads, except those that have THREAD_EXITED

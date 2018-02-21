@@ -180,6 +180,8 @@
   target_debug_do_print (host_address_to_string (X))
 #define target_debug_print_thread_info_pp(X)		\
   target_debug_do_print (host_address_to_string (X))
+#define target_debug_print_inferior_p(X)		\
+  target_debug_do_print (host_address_to_string (X))
 
 static void
 target_debug_print_struct_target_waitstatus_p (struct target_waitstatus *status)
