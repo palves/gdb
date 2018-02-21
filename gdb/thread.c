@@ -664,6 +664,24 @@ first_thread_of_process (int pid)
   return ret;
 }
 
+thread_info *
+any_thread_of_inferior (inferior *inf)
+{
+  struct thread_info *tp;
+
+  gdb_assert (inf->pid != 0);
+
+  /* Prefer the current thread.  */
+  if (inf == current_inferior ())
+    return inferior_thread ();
+
+  ALL_NON_EXITED_THREADS_TARGET (inf->top_target (), tp)
+    if (ptid_get_pid (tp->ptid) == inf->pid)
+      return tp;
+
+  return NULL;
+}
+
 struct thread_info *
 any_thread_of_process (int pid)
 {
@@ -1427,7 +1445,7 @@ switch_to_no_thread ()
 
 /* Switch from one thread to another.  */
 
-static void
+void
 switch_to_thread (thread_info *thr)
 {
   gdb_assert (thr != NULL);

@@ -3354,18 +3354,30 @@ target_close (struct target_ops *targ)
 }
 
 thread_info **
-target_thread_list_p (void)
+target_thread_list_p (target_ops *targ)
 {
-  return target_stack->get_thread_list_p ();
+  return targ->get_thread_list_p ();
 }
 
 thread_info *
-target_thread_list (void)
+target_thread_list (target_ops *targ)
 {
-  thread_info **list_p = target_thread_list_p ();
+  thread_info **list_p = targ->get_thread_list_p ();
   if (list_p == NULL)
     return NULL;
   return *list_p;
+}
+
+thread_info **
+target_thread_list_p ()
+{
+  return target_thread_list_p (target_stack);
+}
+
+thread_info *
+target_thread_list ()
+{
+  return target_thread_list (target_stack);
 }
 
 int

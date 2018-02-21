@@ -1689,8 +1689,10 @@ extern void target_pass_signals (int nsig, unsigned char *pass_signals);
 extern void target_program_signals (int nsig, unsigned char *program_signals);
 
 extern thread_info **target_thread_list_p ();
-
 extern thread_info *target_thread_list ();
+
+extern thread_info **target_thread_list_p (target_ops *targ);
+extern thread_info *target_thread_list (target_ops *targ);
 
 /* Check to see if a thread is still alive.  */
 

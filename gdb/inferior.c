@@ -710,15 +710,13 @@ inferior_command (const char *args, int from_tty)
 
   if (inf->pid != 0)
     {
-      if (inf->pid != ptid_get_pid (inferior_ptid))
+      if (inf != current_inferior ())
 	{
-	  struct thread_info *tp;
-
-	  tp = any_thread_of_process (inf->pid);
-	  if (!tp)
+	  thread_info *tp = any_thread_of_inferior (inf);
+	  if (tp == NULL)
 	    error (_("Inferior has no threads."));
 
-	  switch_to_thread (tp->ptid);
+	  switch_to_thread (tp);
 	}
 
       observer_notify_user_selected_context_changed
