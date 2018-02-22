@@ -268,7 +268,7 @@ inferior_appeared (struct inferior *inf, int pid)
 {
   /* If this is the first inferior with threads, reset the global
      thread id.  */
-  if (!have_inferiors ())
+  if (!any_thread_p ())
     init_thread_list ();
 
   inf->pid = pid;
@@ -362,16 +362,15 @@ iterate_over_inferiors (int (*callback) (struct inferior *, void *),
   return NULL;
 }
 
-int
-have_inferiors (void)
+bool
+have_inferiors_with_execution (target_ops *proc_target)
 {
-  struct inferior *inf;
+  for (inferior *inf : inferiors ())
+    if (inf->process_target () == proc_target
+	&& inf->has_execution ())
+      return true;
 
-  for (inf = inferior_list; inf; inf = inf->next)
-    if (inf->pid != 0)
-      return 1;
-
-  return 0;
+  return false;
 }
 
 /* Return the number of live inferiors.  We account for the case

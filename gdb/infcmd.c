@@ -2610,21 +2610,6 @@ kill_command (const char *arg, int from_tty)
   if (!query (_("Kill the program being debugged? ")))
     error (_("Not confirmed."));
   target_kill ();
-
-  /* If we still have other inferiors to debug, then don't mess with
-     with their threads.  */
-  if (!have_inferiors ())
-    {
-      init_thread_list ();		/* Destroy thread info.  */
-
-      /* Killing off the inferior can leave us with a core file.  If
-	 so, print the state we are left in.  */
-      if (target_has_stack)
-	{
-	  printf_filtered (_("In %s,\n"), target_longname);
-	  print_stack_frame (get_selected_frame (NULL), 1, SRC_AND_LOC, 1);
-	}
-    }
   bfd_cache_close_all ();
 }
 
@@ -3025,11 +3010,6 @@ detach_command (const char *args, int from_tty)
      detach from a single inferior.  */
   if (!gdbarch_has_global_solist (target_gdbarch ()))
     no_shared_libraries (NULL, from_tty);
-
-  /* If we still have inferiors to debug, then don't mess with their
-     threads.  */
-  if (!have_inferiors ())
-    init_thread_list ();
 
   if (deprecated_detach_hook)
     deprecated_detach_hook ();
