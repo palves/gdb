@@ -278,18 +278,6 @@ inferior_appeared (struct inferior *inf, int pid)
   observer_notify_inferior_appeared (inf);
 }
 
-void
-discard_all_inferiors (void)
-{
-  struct inferior *inf;
-
-  for (inf = inferior_list; inf; inf = inf->next)
-    {
-      if (inf->pid != 0)
-	exit_inferior_silent (inf);
-    }
-}
-
 struct inferior *
 find_inferior_id (int num)
 {
