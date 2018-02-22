@@ -575,9 +575,6 @@ extern void exit_inferior_num_silent (int num);
 
 extern void inferior_appeared (struct inferior *inf, int pid);
 
-/* Get rid of all inferiors.  */
-extern void discard_all_inferiors (void);
-
 /* Search function to lookup an inferior by target 'pid'.  */
 extern struct inferior *find_inferior_pid (target_ops *targ, int pid);
 
