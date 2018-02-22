@@ -5514,7 +5514,7 @@ remote_target::open_1 (const char *name, int from_tty, int extended_p)
   /* If we're connected to a running target, target_preopen will kill it.
      Ask this question first, before target_preopen has a chance to kill
      anything.  */
-  if (curr_remote != NULL && !have_inferiors ())
+  if (prev_remote != NULL)
     {
       if (from_tty
 	  && !query (_("Already connected to a remote target.  Disconnect? ")))
@@ -9931,7 +9931,7 @@ remote_target::mourn_inferior ()
   /* Call common code to mark the inferior as not running.  */
   generic_mourn_inferior ();
 
-  if (!have_inferiors ())
+  if (!have_inferiors_with_execution (this))
     {
       if (!remote_multi_process_p (rs))
 	{

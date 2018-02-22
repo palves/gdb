@@ -606,8 +606,9 @@ extern struct inferior *iterate_over_inferiors (int (*) (struct inferior *,
 							 void *),
 						void *);
 
-/* Returns true if the inferior list is not empty.  */
-extern int have_inferiors (void);
+/* Returns true if the inferior list has any process bound to
+   PROC_TARGET with execution.  */
+extern bool have_inferiors_with_execution (target_ops *proc_target);
 
 /* Returns the number of live inferiors running on PROC_TARGET (real
    live processes with execution).  */

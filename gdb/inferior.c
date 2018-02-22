@@ -333,13 +333,14 @@ iterate_over_inferiors (int (*callback) (struct inferior *, void *),
   return NULL;
 }
 
-int
-have_inferiors (void)
+bool
+have_inferiors_with_execution (target_ops *proc_target)
 {
-  for (inferior *inf ATTRIBUTE_UNUSED : all_non_exited_inferiors ())
-    return 1;
+  for (inferior *inf : all_non_exited_inferiors (proc_target))
+    if (inf->has_execution ())
+      return true;
 
-  return 0;
+  return false;
 }
 
 /* Return the number of live inferiors.  We account for the case
