@@ -578,6 +578,11 @@ holding the child stopped.  Try \"set detach-on-fork\" or \
 
       parent_pspace = parent_inf->pspace;
 
+      /* Get a strong reference to the target before (maybe) detaching
+	 the parent.  Otherwise detaching could close the target.  */
+      target_ops *target = parent_inf->process_target ();
+      target->incref ();
+
       /* If we're vforking, we want to hold on to the parent until the
 	 child exits or execs.  At child exec or exit time we can
 	 remove the old breakpoints from the parent and detach or
@@ -613,6 +618,7 @@ holding the child stopped.  Try \"set detach-on-fork\" or \
 	    }
 
 	  target_detach (parent_inf, 0);
+	  parent_inf = NULL;
 	}
 
       /* Note that the detach above makes PARENT_INF dangling.  */
@@ -622,8 +628,9 @@ holding the child stopped.  Try \"set detach-on-fork\" or \
 	 informing the solib layer about this new process.  */
 
       set_current_inferior (child_inf);
-      push_target (parent_inf->process_target ());
-      add_thread_silent (child_inf->process_target (), child_ptid);
+      push_target (target);
+      target->decref ();
+      add_thread_silent (target, child_ptid);
       inferior_ptid = child_ptid;
 
       /* If this is a vfork child, then the address-space is shared
