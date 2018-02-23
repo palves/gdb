@@ -4012,8 +4012,7 @@ fetch_inferior_event (void *client_data)
   scoped_restore save_exec_dir
     = make_scoped_restore (&execution_direction, target_execution_direction ());
 
-  if (!do_target_wait (minus_one_ptid, ecs,
-		       /* XXX push this down?*/ target_can_async_p () ? TARGET_WNOHANG : 0))
+  if (!do_target_wait (minus_one_ptid, ecs, TARGET_WNOHANG))
     {
       do_cleanups (old_chain);
       return;
