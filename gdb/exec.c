@@ -680,6 +680,16 @@ remove_target_sections (void *owner)
     }
 }
 
+/* See exec.h.  */
+
+void
+exec_on_vfork ()
+{
+  if (current_program_space->target_sections.sections
+      != current_program_space->target_sections.sections_end)
+    push_target (&the_exec_target);
+}
+
 
 
 enum target_xfer_status
