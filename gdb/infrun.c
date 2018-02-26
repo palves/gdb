@@ -503,6 +503,8 @@ holding the child stopped.  Try \"set detach-on-fork\" or \
 	      child_inf->pspace = parent_inf->pspace;
 	      child_inf->aspace = parent_inf->aspace;
 
+	      exec_on_vfork ();
+
 	      /* The parent will be frozen until the child is done
 		 with the shared region.  Keep track of the
 		 parent.  */
@@ -640,6 +642,8 @@ holding the child stopped.  Try \"set detach-on-fork\" or \
 	{
 	  child_inf->pspace = parent_pspace;
 	  child_inf->aspace = child_inf->pspace->aspace;
+
+	  exec_on_vfork ();
 	}
       else
 	{
