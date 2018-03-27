@@ -1250,10 +1250,29 @@ extern void set_native_target (target_ops *target);
    NULL.  */
 extern target_ops *get_native_target ();
 
+class a_target_stack
+{
+public:
+  void push (struct target_ops *t);
+  int unpush (struct target_ops *t);
+
+  bool is_pushed (target_ops *t)
+  { return at (t->to_stratum) == t; }
+
+  target_ops *at (enum strata stratum) { return m_stack[stratum]; }
+  target_ops *top () { return at (m_top); }
+  target_ops *find_beneath (const target_ops *t);
+
+private:
+  enum strata m_top {};
+  std::array<target_ops *, (int) debug_stratum> m_stack {};
+};
+
+extern target_ops *current_target_stack ();
+
 /* The ops structure for our "current" target process.  This should
    never be NULL.  If there is no target, it points to the dummy_target.  */
-
-extern struct target_ops *target_stack;
+#define target_stack current_target_stack ()
 
 /* Define easy words for doing these operations on our current target.  */
 

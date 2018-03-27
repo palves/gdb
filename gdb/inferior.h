@@ -322,6 +322,24 @@ public:
   /* Returns true if we can delete this inferior.  */
   bool deletable () const { return refcount () == 0; }
 
+  void push_target (struct target_ops *t)
+  { m_stack.push (t); }
+
+  int unpush_target (struct target_ops *t)
+  { return m_stack.unpush (t); }
+
+  bool target_is_pushed (target_ops *t)
+  { return m_stack.is_pushed (t); }
+
+  target_ops *find_target_beneath (const target_ops *t)
+  { return m_stack.find_beneath (t); }
+
+  target_ops *top_target ()
+  { return m_stack.top (); }
+
+  target_ops *process_target ()
+  { return m_stack.at (process_stratum); }
+
   /* Pointer to next inferior in singly-linked list of inferiors.  */
   struct inferior *next = NULL;
 
@@ -448,6 +466,9 @@ public:
 
   /* Per inferior data-pointers required by other GDB modules.  */
   REGISTRY_FIELDS;
+
+private:
+  a_target_stack m_stack;
 };
 
 /* Keep a registry of per-inferior data-pointers required by other GDB

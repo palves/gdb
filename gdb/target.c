@@ -118,8 +118,6 @@ static struct target_ops *the_debug_target;
 /* The target structure we are currently using to talk to a process
    or file or whatever "inferior" we have.  */
 
-struct target_ops *target_stack;
-
 /* Command list for target.  */
 
 static struct cmd_list_element *targetlist = NULL;
@@ -628,49 +626,53 @@ default_execution_direction (struct target_ops *self)
 to_execution_direction must be implemented for reverse async");
 }
 
-/* Push a new target type into the stack of the existing target accessors,
-   possibly superseding some of the existing accessors.
+target_ops *
+current_target_stack ()
+{
+  return current_inferior ()->top_target ();
+}
+
+/* Push a new target type into the stack of the existing target
+   accessors, possibly superseding some existing accessor.
 
    Rather than allow an empty stack, we always have the dummy target at
    the bottom stratum, so we can call the function vectors without
    checking them.  */
 
 void
+a_target_stack::push (struct target_ops *t)
+{
+  /* If there's already a target at this stratum, remove it.  */
+  if (m_stack[t->to_stratum] != NULL)
+    {
+      target_close (m_stack[t->to_stratum]);
+      m_stack[t->to_stratum] = NULL;
+    }
+
+  /* Now add the new one.  */
+  m_stack[t->to_stratum] = t;
+
+  if (m_top < t->to_stratum)
+    m_top = t->to_stratum;
+}
+
+void
 push_target (struct target_ops *t)
 {
-  struct target_ops **cur;
+  current_inferior ()->push_target (t);
+}
 
-  /* Find the proper stratum to install this target in.  */
-  for (cur = &target_stack; (*cur) != NULL; cur = &(*cur)->beneath)
-    {
-      if ((int) (t->to_stratum) >= (int) (*cur)->to_stratum)
-	break;
-    }
-
-  /* If there's already targets at this stratum, remove them.  */
-  /* FIXME: cagney/2003-10-15: I think this should be popping all
-     targets to CUR, and not just those at this stratum level.  */
-  while ((*cur) != NULL && t->to_stratum == (*cur)->to_stratum)
-    {
-      /* There's already something at this stratum level.  Close it,
-         and un-hook it from the stack.  */
-      struct target_ops *tmp = (*cur);
-
-      (*cur) = (*cur)->beneath;
-      tmp->beneath = NULL;
-      target_close (tmp);
-    }
-
-  /* We have removed all targets in our stratum, now add the new one.  */
-  t->beneath = (*cur);
-  (*cur) = t;
+int
+unpush_target (struct target_ops *t)
+{
+  return current_inferior ()->unpush_target (t);
 }
 
 /* Remove a target_ops vector from the stack, wherever it may be.
    Return how many times it was removed (0 or 1).  */
 
 int
-unpush_target (struct target_ops *t)
+a_target_stack::unpush (struct target_ops *t)
 {
   struct target_ops **cur;
   struct target_ops *tmp;
@@ -679,24 +681,23 @@ unpush_target (struct target_ops *t)
     internal_error (__FILE__, __LINE__,
 		    _("Attempt to unpush the dummy target"));
 
+  gdb_assert (t != NULL);
+
   /* Look for the specified target.  Note that we assume that a target
      can only occur once in the target stack.  */
 
-  for (cur = &target_stack; (*cur) != NULL; cur = &(*cur)->beneath)
+  if (m_stack[t->to_stratum] != t)
     {
-      if ((*cur) == t)
-	break;
+      /* If we don't find target_ops, quit.  Only open targets should be
+	 closed.  */
+      return 0;
     }
 
-  /* If we don't find target_ops, quit.  Only open targets should be
-     closed.  */
-  if ((*cur) == NULL)
-    return 0;			
-
   /* Unchain the target.  */
-  tmp = (*cur);
-  (*cur) = (*cur)->beneath;
-  tmp->beneath = NULL;
+  m_stack[t->to_stratum] = NULL;
+
+  if (m_top == t->to_stratum)
+    m_top = t->beneath ()->to_stratum;
 
   /* Finally close the target.  Note we do this after unchaining, so
      any target method calls from within the target_close
@@ -748,13 +749,7 @@ pop_all_targets (void)
 int
 target_is_pushed (struct target_ops *t)
 {
-  struct target_ops *cur;
-
-  for (cur = target_stack; cur != NULL; cur = cur->beneath)
-    if (cur == t)
-      return 1;
-
-  return 0;
+  return current_inferior ()->target_is_pushed (t);
 }
 
 /* Default implementation of to_get_thread_local_address.  */
@@ -3181,10 +3176,20 @@ default_thread_architecture (struct target_ops *ops, ptid_t ptid)
  * Find the next target down the stack from the specified target.
  */
 
+target_ops *
+a_target_stack::find_beneath (const target_ops *t)
+{
+  for (int stratum = t->to_stratum - 1; stratum >= 0; --stratum)
+    if (m_stack[stratum] != NULL)
+      return m_stack[stratum];
+
+  return NULL;
+}
+
 struct target_ops *
 find_target_beneath (struct target_ops *t)
 {
-  return t->beneath;
+  return current_inferior ()->find_target_beneath (t);
 }
 
 /* See target.h.  */
@@ -3297,6 +3302,11 @@ dummy_make_corefile_notes (struct target_ops *self,
 
 #include "target-delegates.c"
 
+target_ops *
+get_dummy_target ()
+{
+  return the_dummy_target;
+}
 
 static const target_info dummy_target_info = {
   "None",
@@ -4034,11 +4044,9 @@ set_write_memory_permission (const char *args, int from_tty,
 }
 
 void
-initialize_targets (void)
+_initialize_target (void)
 {
   the_dummy_target = new dummy_target ();
-  push_target (the_dummy_target);
-
   the_debug_target = new debug_target ();
 
   add_info ("target", info_target_command, targ_desc);
