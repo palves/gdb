@@ -3147,9 +3147,17 @@ proceed (CORE_ADDR addr, enum gdb_signal siggnal)
       {
 	/* In all-stop, but the target is always in non-stop mode.
 	   Start all other threads that are implicitly resumed too.  */
-	for (thread_info *tp : all_non_exited_threads (resume_target,
-						       resume_ptid))
+	for (thread_info *tp : all_non_exited_threads (resume_target, resume_ptid))
 	  {
+	    if (!tp->has_execution ())
+	      {
+		if (debug_infrun)
+		  fprintf_unfiltered (gdb_stdlog,
+				      "infrun: proceed: [%s] target has no execution\n",
+				      target_pid_to_str (tp->ptid));
+		return;
+	      }
+
 	  if (tp->resumed)
 	    {
 	      if (debug_infrun)

@@ -1614,7 +1614,7 @@ thread_db_target::update_thread_list ()
 	 stop.  That uses thread_db entry points that do not walk
 	 libpthread's thread list, so should be safe, as well as more
 	 efficient.  */
-      if (target_has_execution_1 (thread->ptid))
+      if (target_has_execution_1 (thread->inf))
 	continue;
 
       thread_db_find_new_threads_1 (thread);

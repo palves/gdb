@@ -347,12 +347,12 @@ have_inferiors (void)
    in the middle of a 'mourn' operation.  */
 
 int
-number_of_live_inferiors (void)
+number_of_live_inferiors (target_ops *proc_target)
 {
   int num_inf = 0;
 
-  for (inferior *inf : all_non_exited_inferiors ())
-    if (target_has_execution_1 (ptid_t (inf->pid)))
+  for (inferior *inf : all_non_exited_inferiors (proc_target))
+    if (inf->has_execution ())
       for (thread_info *tp ATTRIBUTE_UNUSED : inf->non_exited_threads ())
 	{
 	  /* Found a live thread in this inferior, go to the next
@@ -369,7 +369,7 @@ number_of_live_inferiors (void)
 int
 have_live_inferiors (void)
 {
-  return number_of_live_inferiors () > 0;
+  return number_of_live_inferiors (NULL) > 0;
 }
 
 /* Prune away any unused inferiors, and then prune away no longer used

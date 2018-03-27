@@ -368,6 +368,16 @@ public:
   target_ops *target_at (enum strata stratum)
   { return m_stack.at (stratum); }
 
+  bool has_execution ()
+  {
+    /* If there's no process_stratum target yet, then there can't be
+       execution.  */
+    target_ops *proc_target = process_target ();
+    if (proc_target == NULL)
+      return false;
+    return process_target ()->has_execution (this);
+  }
+
   /* Pointer to next inferior in singly-linked list of inferiors.  */
   struct inferior *next = NULL;
 
@@ -597,8 +607,9 @@ extern struct inferior *iterate_over_inferiors (int (*) (struct inferior *,
 /* Returns true if the inferior list is not empty.  */
 extern int have_inferiors (void);
 
-/* Returns the number of live inferiors (real live processes).  */
-extern int number_of_live_inferiors (void);
+/* Returns the number of live inferiors running on PROC_TARGET (real
+   live processes with execution).  */
+extern int number_of_live_inferiors (target_ops *proc_target);
 
 /* Returns true if there are any live inferiors in the inferior list
    (not cores, not executables, real live processes).  */
