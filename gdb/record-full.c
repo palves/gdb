@@ -315,7 +315,7 @@ public:
 			 struct bp_target_info *,
 			 enum remove_bp_reason) override;
 
-  bool has_execution (ptid_t) override;
+  bool has_execution (inferior *inf) override;
 };
 
 static record_full_target the_record_full_target;
@@ -2263,7 +2263,7 @@ record_full_core_target::remove_breakpoint (struct gdbarch *gdbarch,
 /* "to_has_execution" method for prec over corefile.  */
 
 bool
-record_full_core_target::has_execution (ptid_t the_ptid)
+record_full_core_target::has_execution (inferior *inf)
 {
   return true;
 }

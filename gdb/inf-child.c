@@ -267,9 +267,9 @@ inf_child_target::has_registers ()
 }
 
 bool
-inf_child_target::has_execution (ptid_t ptid)
+inf_child_target::has_execution (inferior *inf)
 {
-  return default_child_has_execution (ptid);
+  return default_child_has_execution (inf);
 }
 
 /* Implementation of to_fileio_open.  */

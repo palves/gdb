@@ -435,25 +435,24 @@ have_inferiors (void)
    in the middle of a 'mourn' operation.  */
 
 int
-number_of_live_inferiors (void)
+number_of_live_inferiors (target_ops *proc_target)
 {
-  struct inferior *inf;
   int num_inf = 0;
 
-  for (inf = inferior_list; inf; inf = inf->next)
-    if (inf->pid != 0)
+  for (inferior *inf : inferiors ())
+    if ((proc_target == NULL || proc_target == inf->process_target ())
+	&& inf->has_execution ())
       {
-	struct thread_info *tp;
-
-	ALL_NON_EXITED_THREADS (tp)
-	 if (tp && ptid_get_pid (tp->ptid) == inf->pid)
-	   if (target_has_execution_1 (tp->ptid))
-	     {
-	       /* Found a live thread in this inferior, go to the next
-		  inferior.  */
-	       ++num_inf;
-	       break;
-	     }
+	for (thread_info *tp : inf->threads ())
+	  {
+	    if (tp->state != THREAD_EXITED)
+	      {
+		/* Found a live thread in this inferior, go to the next
+		   inferior.  */
+		++num_inf;
+		break;
+	      }
+	  }
       }
 
   return num_inf;
@@ -464,7 +463,7 @@ number_of_live_inferiors (void)
 int
 have_live_inferiors (void)
 {
-  return number_of_live_inferiors () > 0;
+  return number_of_live_inferiors (NULL) > 0;
 }
 
 /* Prune away any unused inferiors, and then prune away no longer used

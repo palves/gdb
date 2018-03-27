@@ -237,16 +237,12 @@ default_child_has_registers ()
 }
 
 int
-default_child_has_execution (ptid_t the_ptid)
+default_child_has_execution (inferior *inf)
 {
-  /* If there's no thread selected, then we can't make it run through
-     hoops.  */
-  if (ptid_equal (the_ptid, null_ptid))
-    return 0;
-
-  return 1;
+  /* If there's a process running already, we can't make it run
+     through hoops.  */
+  return inf->pid != 0;
 }
-
 
 int
 target_has_all_memory_1 (void)
@@ -296,22 +292,20 @@ target_has_registers_1 (void)
   return 0;
 }
 
-int
-target_has_execution_1 (ptid_t the_ptid)
+bool
+target_has_execution_1 (inferior *inf)
 {
-  struct target_ops *t;
+  for (target_ops *t = inf->top_target (); t != NULL; t = t->beneath ())
+    if (t->has_execution (inf))
+      return true;
 
-  for (t = target_stack; t != NULL; t = t->beneath ())
-    if (t->has_execution (the_ptid))
-      return 1;
-
-  return 0;
+  return false;
 }
 
 int
 target_has_execution_current (void)
 {
-  return target_has_execution_1 (inferior_ptid);
+  return target_has_execution_1 (current_inferior ());
 }
 
 /* This is used to implement the various target commands.  */
