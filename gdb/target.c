@@ -258,7 +258,7 @@ target_has_all_memory_1 (void)
 {
   struct target_ops *t;
 
-  for (t = target_stack; t != NULL; t = t->beneath)
+  for (t = target_stack; t != NULL; t = t->beneath ())
     if (t->has_all_memory ())
       return 1;
 
@@ -270,7 +270,7 @@ target_has_memory_1 (void)
 {
   struct target_ops *t;
 
-  for (t = target_stack; t != NULL; t = t->beneath)
+  for (t = target_stack; t != NULL; t = t->beneath ())
     if (t->has_memory ())
       return 1;
 
@@ -282,7 +282,7 @@ target_has_stack_1 (void)
 {
   struct target_ops *t;
 
-  for (t = target_stack; t != NULL; t = t->beneath)
+  for (t = target_stack; t != NULL; t = t->beneath ())
     if (t->has_stack ())
       return 1;
 
@@ -294,7 +294,7 @@ target_has_registers_1 (void)
 {
   struct target_ops *t;
 
-  for (t = target_stack; t != NULL; t = t->beneath)
+  for (t = target_stack; t != NULL; t = t->beneath ())
     if (t->has_registers ())
       return 1;
 
@@ -306,7 +306,7 @@ target_has_execution_1 (ptid_t the_ptid)
 {
   struct target_ops *t;
 
-  for (t = target_stack; t != NULL; t = t->beneath)
+  for (t = target_stack; t != NULL; t = t->beneath ())
     if (t->has_execution (the_ptid))
       return 1;
 
@@ -1042,7 +1042,7 @@ raw_memory_xfer_partial (struct target_ops *ops, gdb_byte *readbuf,
       if (ops->has_all_memory ())
 	break;
 
-      ops = ops->beneath;
+      ops = ops->beneath ();
     }
   while (ops != NULL);
 
@@ -1976,7 +1976,7 @@ info_target_command (const char *args, int from_tty)
     printf_unfiltered (_("Symbols from \"%s\".\n"),
 		       objfile_name (symfile_objfile));
 
-  for (t = target_stack; t != NULL; t = t->beneath)
+  for (t = target_stack; t != NULL; t = t->beneath ())
     {
       if (!t->has_memory ())
 	continue;
@@ -2404,7 +2404,7 @@ target_require_runnable (void)
 {
   struct target_ops *t;
 
-  for (t = target_stack; t != NULL; t = t->beneath)
+  for (t = target_stack; t != NULL; t = t->beneath ())
     {
       /* If this target knows how to create a new program, then
 	 assume we will still be able to after killing the current
@@ -2487,7 +2487,7 @@ struct target_ops *
 find_attach_target (void)
 {
   /* If a target on the current stack can attach, use it.  */
-  for (target_ops *t = target_stack; t != NULL; t = t->beneath)
+  for (target_ops *t = target_stack; t != NULL; t = t->beneath ())
     {
       if (t->can_attach ())
 	return t;
@@ -2503,7 +2503,7 @@ struct target_ops *
 find_run_target (void)
 {
   /* If a target on the current stack can run, use it.  */
-  for (target_ops *t = target_stack; t != NULL; t = t->beneath)
+  for (target_ops *t = target_stack; t != NULL; t = t->beneath ())
     {
       if (t->can_create_inferior ())
 	return t;
@@ -2533,7 +2533,7 @@ target_info_proc (const char *args, enum info_proc_what what)
   if (t == NULL)
     t = find_default_run_target (NULL);
 
-  for (; t != NULL; t = t->beneath)
+  for (; t != NULL; t = t->beneath ())
     {
       int res = t->info_proc (args, what);
 
@@ -2622,6 +2622,13 @@ target_thread_address_space (ptid_t ptid)
   return aspace;
 }
 
+
+target_ops *
+target_ops::beneath () const
+{
+  return find_target_beneath (this);
+}
+
 void
 target_ops::close ()
 {
@@ -2663,7 +2670,7 @@ target_can_run ()
 {
   struct target_ops *t;
 
-  for (t = target_stack; t != NULL; t = t->beneath)
+  for (t = target_stack; t != NULL; t = t->beneath ())
     {
       if (t->can_run ())
 	return 1;
@@ -2830,7 +2837,7 @@ target_fileio_open_1 (struct inferior *inf, const char *filename,
 {
   struct target_ops *t;
 
-  for (t = default_fileio_target (); t != NULL; t = t->beneath)
+  for (t = default_fileio_target (); t != NULL; t = t->beneath ())
     {
       int fd = t->fileio_open (inf, filename, flags, mode,
 			       warn_if_slow, target_errno);
@@ -2978,7 +2985,7 @@ target_fileio_unlink (struct inferior *inf, const char *filename,
 {
   struct target_ops *t;
 
-  for (t = default_fileio_target (); t != NULL; t = t->beneath)
+  for (t = default_fileio_target (); t != NULL; t = t->beneath ())
     {
       int ret = t->fileio_unlink (inf, filename, target_errno);
 
@@ -3006,7 +3013,7 @@ target_fileio_readlink (struct inferior *inf, const char *filename,
 {
   struct target_ops *t;
 
-  for (t = default_fileio_target (); t != NULL; t = t->beneath)
+  for (t = default_fileio_target (); t != NULL; t = t->beneath ())
     {
       char *ret = t->fileio_readlink (inf, filename, target_errno);
 
@@ -3184,7 +3191,7 @@ a_target_stack::find_beneath (const target_ops *t)
 }
 
 struct target_ops *
-find_target_beneath (struct target_ops *t)
+find_target_beneath (const target_ops *t)
 {
   return current_inferior ()->find_target_beneath (t);
 }
@@ -3196,7 +3203,7 @@ find_target_at (enum strata stratum)
 {
   struct target_ops *t;
 
-  for (t = target_stack; t != NULL; t = t->beneath)
+  for (t = target_stack; t != NULL; t = t->beneath ())
     if (t->to_stratum == stratum)
       return t;
 
@@ -3330,7 +3337,7 @@ dummy_target::info () const
 const target_info &
 debug_target::info () const
 {
-  return beneath->info ();
+  return beneath ()->info ();
 }
 
 
@@ -3868,7 +3875,7 @@ maintenance_print_target_stack (const char *cmd, int from_tty)
 
   printf_filtered (_("The current target stack is:\n"));
 
-  for (t = target_stack; t != NULL; t = t->beneath)
+  for (t = target_stack; t != NULL; t = t->beneath ())
     {
       if (t->to_stratum == debug_stratum)
 	continue;
