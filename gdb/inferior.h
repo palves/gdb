@@ -416,6 +416,10 @@ public:
   /* The highest thread number this inferior ever had.  */
   int highest_thread_num = 0;
 
+  /* Whether this inferior was resumed.  If not, then we don't wait
+     for run control events out of this inferior.  */
+  bool resumed = false;
+
   /* State of GDB control of inferior process execution.
      See `struct inferior_control_state'.  */
   inferior_control_state control;
