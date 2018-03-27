@@ -2145,6 +2145,8 @@ target_pid_to_str (ptid_t ptid)
 const char *
 target_thread_name (struct thread_info *info)
 {
+  gdb_assert (info->inf == current_inferior ());
+
   return target_stack->thread_name (info);
 }
 
@@ -3318,6 +3320,8 @@ target_close (struct target_ops *targ)
 int
 target_thread_alive (thread_info *thread)
 {
+  gdb_assert (thread->inf == current_inferior ());
+
   return target_stack->thread_alive (thread);
 }
 
