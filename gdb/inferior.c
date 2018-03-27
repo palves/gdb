@@ -520,7 +520,7 @@ print_inferior (struct ui_out *uiout, const char *requested_inferiors)
       return;
     }
 
-//#define SHOW_CONNECTION
+#define SHOW_CONNECTION
 
   int ncols = 4;
 #ifdef SHOW_CONNECTION
