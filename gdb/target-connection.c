@@ -1,6 +1,6 @@
-/* Select target systems and architectures at runtime for GDB.
+/* List of target connections for GDB.
 
-   Copyright (C) 2017 Free Software Foundation, Inc.
+   Copyright (C) 2017-2018 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -27,58 +27,60 @@
 
 int highest_target_connection_num;
 
-static const char targ_desc[] =
-  R"(Names of targets and files being debugged.
-Shows the entire stack of targets currently in use (including the exec-file,
-core-file, and process, if any), as well as the symbol file name.)";
-
 std::map<int, target_ops *> process_targets;
 
-/* Prints the list of inferiors and their details on UIOUT.  This is a
-   version of 'info_inferior_command' suitable for use from MI.
+/* Prints the list of target connections and their details on UIOUT.
 
-   If REQUESTED_INFERIORS is not NULL, it's a list of GDB ids of the
-   inferiors that should be printed.  Otherwise, all inferiors are
-   printed.  */
+   If REQUESTED_CONNECTIONS is not NULL, it's a list of GDB ids of the
+   target connections that should be printed.  Otherwise, all target
+   connections are printed.  */
 
 static void
-print_connection (struct ui_out *uiout, const char *requested_inferiors)
+print_connection (struct ui_out *uiout, const char *requested_connections)
 {
   int count = 0;
+  size_t name_len = 0;
 
   /* Compute number of lines we will print.  */
-  for (auto it : process_targets)
+  for (const auto &it : process_targets)
     {
-      if (!number_is_in_list (requested_inferiors, it.first))
+      if (!number_is_in_list (requested_connections, it.first))
 	continue;
 
       ++count;
+
+      target_ops *t = it.second;
+
+      size_t l = strlen (t->shortname ());
+      if (t->connection_string () != NULL)
+	l += 1 + strlen (t->connection_string ());
+
+      if (l > name_len)
+	name_len = l;
     }
 
   if (count == 0)
     {
-      uiout->message ("No connections.\n");
+      uiout->message (_("No connections.\n"));
       return;
     }
 
-  ui_out_emit_table table_emitter (uiout, 3, process_targets.size (),
+  ui_out_emit_table table_emitter (uiout, 4, process_targets.size (),
 				   "connections");
-
 
   uiout->table_header (1, ui_left, "current", "");
   uiout->table_header (4, ui_left, "number", "Num");
+  uiout->table_header (name_len + 1, ui_left, "name", "Name");
   uiout->table_header (17, ui_left, "description", "Description");
 
   uiout->table_body ();
 
-  for (auto it : process_targets)
+  for (const auto &it : process_targets)
     {
       target_ops *t = it.second;
 
-#if 0
-      if (!number_is_in_list (requested_inferiors, inf->num))
+      if (!number_is_in_list (requested_connections, t->connection_number))
 	continue;
-#endif
 
       ui_out_emit_tuple tuple_emitter (uiout, NULL);
 
@@ -91,11 +93,14 @@ print_connection (struct ui_out *uiout, const char *requested_inferiors)
 
       if (t->connection_string () != NULL)
 	{
-	  uiout->field_fmt ("description", "%s %s",
-			    t->shortname (), t->connection_string ());
+	  std::string str = string_printf ("%s %s", t->shortname (),
+					   t->connection_string ());
+	  uiout->field_string ("name", str.c_str ());
 	}
       else
-	uiout->field_string ("description", t->shortname ());
+	uiout->field_string ("name", t->shortname ());
+
+      uiout->field_string ("description", t->longname ());
 
       uiout->text ("\n");
     }
@@ -107,28 +112,11 @@ info_connections_command (const char *args, int from_tty)
   print_connection (current_uiout, args);
 }
 
-static void
-add_connection_command (const char *args, int from_tty)
-{
-}
-
-static void
-connection_command (const char *args, int from_tty)
-{
-}
-
 void
 _initialize_target_connections ()
 {
-  add_info ("connections", info_connections_command, targ_desc);
-
-  add_com ("add-connection", no_class, add_connection_command,
-	   _(R"(Add a new target connection.
-Usage: add-connection
-N is the optional number of connections to add, default is 1.)"));
-
-  add_cmd ("connection", class_run, connection_command, _("\
-Use this command to switch between inferiors.\n\
-The new inferior ID must be currently known."),
-	   &cmdlist);
+  add_info ("connections", info_connections_command,
+	    _("\
+Names of target connections being debugged.\n\
+Shows the list of targets currently in use as well as their description."));
 }
