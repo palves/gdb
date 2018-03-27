@@ -622,6 +622,9 @@ current_target_stack ()
   return current_inferior ()->top_target ();
 }
 
+extern std::map<int, target_ops *> process_targets;
+extern int highest_target_connection_num;;
+
 /* Push a new target type into the stack of the existing target
    accessors, possibly superseding some existing accessor.
 
@@ -632,12 +635,22 @@ current_target_stack ()
 void
 a_target_stack::push (struct target_ops *t)
 {
+  t->incref ();
+
+  if (t->to_stratum == process_stratum && t->connection_number == 0)
+    {
+      t->connection_number = ++highest_target_connection_num;
+      process_targets[t->connection_number] = t;
+    }
+
   /* If there's already a target at this stratum, remove it.  */
   if (m_stack[t->to_stratum] != NULL)
     {
       target_ops *prev = m_stack[t->to_stratum];
       m_stack[t->to_stratum] = NULL;
       target_close (prev);
+
+      prev->decref ();
     }
 
   /* Now add the new one.  */
@@ -647,47 +660,16 @@ a_target_stack::push (struct target_ops *t)
     m_top = t->to_stratum;
 }
 
-extern std::map<int, target_ops *> process_targets;
-extern int highest_target_connection_num;;
-
 void
 push_target (struct target_ops *t)
 {
-  if (t->to_stratum == process_stratum)
-    {
-      if (t->connection_number == 0)
-	{
-	  t->connection_number = ++highest_target_connection_num;
-	  /* XXX: this can throw.  Can we move this whole block until
-	     after we've pushed the target in the inferior's
-	     stack?  */
-	  process_targets[t->connection_number] = t;
-	}
-    }
-
   current_inferior ()->push_target (t);
 }
 
 int
 unpush_target (struct target_ops *t)
 {
-  if (current_inferior ()->unpush_target (t))
-    {
-      if (t->to_stratum == process_stratum)
-	{
-	  /* If no other inferior is using this target, then drop it
-	     from the connection list.  */
-	  for (inferior *inf : inferiors ())
-	    {
-	      if (t == inf->process_target ())
-		return true;
-	    }
-	  process_targets.erase (t->connection_number);
-	  t->connection_number = 0;
-	}
-      return true;
-    }
-  return false;
+  return current_inferior ()->unpush_target (t);
 }
 
 /* Remove a target_ops vector from the stack, wherever it may be.
@@ -721,20 +703,23 @@ a_target_stack::unpush (struct target_ops *t)
   if (m_top == t->to_stratum)
     m_top = t->beneath ()->to_stratum;
 
-  /* Finally close the target.  Note we do this after unchaining, so
-     any target method calls from within the target_close
-     implementation don't end up in T anymore.  */
-
-  /* Leave it open if we have are other inferiors referencing this
-     target still.  XXX should refcount instead?  */
-  for (inferior *inf : inferiors ())
+  /* Finally close the target, if there are no inferiors
+     referencing this target still.  Note we do this after unchaining,
+     so any target method calls from within the target_close
+     implementation don't end up in T anymore.  Do leave the target
+     open if we have are other inferiors referencing this target
+     still.  */
+  t->decref ();
+  if (t->refcount () == 0)
     {
-      if (inf->process_target () == t)
-	return 1;
+      if (t->to_stratum == process_stratum)
+	{
+	  /* Drop it from the connection list.  */
+	  process_targets.erase (t->connection_number);
+	  t->connection_number = 0;
+	}
+      target_close (t);
     }
-
-  target_close (t);
-
   return 1;
 }
 

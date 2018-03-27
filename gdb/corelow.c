@@ -264,6 +264,8 @@ void
 core_target::close ()
 {
   core_close ();
+
+  delete this;
 }
 
 /* Look for sections whose names start with `.reg/' so that we can

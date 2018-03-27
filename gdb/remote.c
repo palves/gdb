@@ -4078,6 +4078,8 @@ remote_target::close ()
   remote_notif_state_xfree (rs->notif_state);
 
   trace_reset_local_state ();
+
+  delete this;
 }
 
 /* Query the remote side for the text, data and bss offsets.  */
