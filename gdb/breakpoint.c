@@ -409,7 +409,8 @@ breakpoints_should_be_inserted_now (void)
 	}
 
       for (inferior *inf : inferiors ())
-	if (inf->pid != 0 && threads_are_executing (inf->process_target ()))
+	if (inf->has_execution ()
+	    && threads_are_executing (inf->process_target ()))
 	  return 1;
 
       /* Don't remove breakpoints yet if, even though all threads are
@@ -2916,7 +2917,7 @@ update_inserted_breakpoint_locations (void)
 	 if we aren't attached to any process yet, we should still
 	 insert breakpoints.  */
       if (!gdbarch_has_global_breakpoints (target_gdbarch ())
-	  && ptid_equal (inferior_ptid, null_ptid))
+	  && (inferior_ptid == null_ptid || !target_has_execution))
 	continue;
 
       val = insert_bp_location (bl, &tmp_error_stream, &disabled_breaks,
@@ -2972,7 +2973,7 @@ insert_breakpoint_locations (void)
 	 if we aren't attached to any process yet, we should still
 	 insert breakpoints.  */
       if (!gdbarch_has_global_breakpoints (target_gdbarch ())
-	  && ptid_equal (inferior_ptid, null_ptid))
+	  && (inferior_ptid == null_ptid || !target_has_execution))
 	continue;
 
       val = insert_bp_location (bl, &tmp_error_stream, &disabled_breaks,

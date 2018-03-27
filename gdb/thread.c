@@ -2083,7 +2083,8 @@ print_selected_thread_frame (struct ui_out *uiout,
 }
 
 /* Update the 'threads_executing' global based on the threads we know
-   about right now.  */
+   about right now.  This is used by infrun to tell whether we should
+   pull events out of the current target.  */
 
 static void
 update_threads_executing (void)
@@ -2099,6 +2100,17 @@ update_threads_executing (void)
     {
       if (inf->process_target () != targ)
 	continue;
+
+      if (!inf->has_execution ())
+	continue;
+
+      /* If the process has no threads, then it must be we have a
+	 process-exit event pending.  */
+      if (inf->thread_list == NULL)
+	{
+	  targ->threads_executing = true;
+	  return;
+	}
 
       for (thread_info *tp : inf->threads ())
 	{
