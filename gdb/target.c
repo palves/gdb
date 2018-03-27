@@ -2055,6 +2055,8 @@ target_pid_to_str (ptid_t ptid)
 const char *
 target_thread_name (struct thread_info *info)
 {
+  gdb_assert (info->inf == current_inferior ());
+
   return current_top_target ()->thread_name (info);
 }
 
