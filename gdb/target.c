@@ -699,10 +699,11 @@ pop_all_targets (void)
   pop_all_targets_above (dummy_stratum);
 }
 
-/* Return 1 if T is now pushed in the target stack.  Return 0 otherwise.  */
+/* Return true if T is now pushed in the current inferior's target
+   stack.  Return false otherwise.  */
 
-int
-target_is_pushed (struct target_ops *t)
+bool
+target_is_pushed (target_ops *t)
 {
   return current_inferior ()->target_is_pushed (t);
 }

@@ -2380,7 +2380,7 @@ extern void pop_all_targets_at_and_above (enum strata stratum);
    strictly above ABOVE_STRATUM.  */
 extern void pop_all_targets_above (enum strata above_stratum);
 
-extern int target_is_pushed (struct target_ops *t);
+extern bool target_is_pushed (target_ops *t);
 
 extern CORE_ADDR target_translate_tls_address (struct objfile *objfile,
 					       CORE_ADDR offset);
