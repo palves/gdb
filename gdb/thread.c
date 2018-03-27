@@ -66,7 +66,7 @@ thread_info::has_execution ()
 
 static int highest_thread_num;
 
-static int thread_alive (struct thread_info *);
+static bool thread_alive (struct thread_info *);
 
 /* RAII type used to increase / decrease the refcount of each thread
    in a given list of threads.  */
@@ -839,14 +839,38 @@ any_live_thread_of_process (inferior *inf)
 }
 
 /* Return true if TP is an active thread.  */
-static int
-thread_alive (struct thread_info *tp)
+
+static bool
+thread_alive (thread_info *tp)
 {
   if (tp->state == THREAD_EXITED)
-    return 0;
-  if (!target_thread_alive (tp))
-    return 0;
-  return 1;
+    return false;
+
+  gdb_assert (tp->inf == current_inferior ());
+
+  return target_thread_alive (tp);
+}
+
+/* Switch to thread TP if it is alive.  Returns true if successfully
+   switched, false otherwise.  */
+
+static bool
+switch_to_thread_if_alive (thread_info *thr)
+{
+  scoped_restore_current_thread restore_thread;
+
+  /* Switch inferior first, so that we're looking at the right target
+     stack.  */
+  switch_to_inferior_no_thread (thr->inf);
+
+  if (thread_alive (thr))
+    {
+      switch_to_thread (thr);
+      restore_thread.dont_restore ();
+      return true;
+    }
+
+  return false;
 }
 
 /* See gdbthreads.h.  */
@@ -856,8 +880,12 @@ prune_threads (void)
 {
   struct thread_info *tp, *tmp;
 
+  scoped_restore_current_thread restore_thread;
+
   ALL_THREADS_SAFE (tp, tmp)
     {
+      switch_to_inferior_no_thread (tp->inf);
+
       if (!thread_alive (tp))
 	delete_thread (tp);
     }
@@ -1757,9 +1785,8 @@ thread_apply_all_command (const char *cmd, int from_tty)
       scoped_restore_current_thread restore_thread;
 
       for (thread_info *thr : thr_list_cpy)
-	if (thread_alive (thr))
+	if (switch_to_thread_if_alive (thr))
 	  {
-	    switch_to_thread (thr);
 	    printf_filtered (_("\nThread %s (%s):\n"),
 			     print_thread_id (thr),
 			     target_pid_to_str (inferior_ptid));
@@ -1840,13 +1867,11 @@ thread_apply_command (const char *tidlist, int from_tty)
 	  continue;
 	}
 
-      if (!thread_alive (tp))
+      if (!switch_to_thread_if_alive (tp))
 	{
 	  warning (_("Thread %s has terminated."), print_thread_id (tp));
 	  continue;
 	}
-
-      switch_to_thread (tp);
 
       printf_filtered (_("\nThread %s (%s):\n"), print_thread_id (tp),
 		       target_pid_to_str (inferior_ptid));
@@ -1990,10 +2015,8 @@ show_print_thread_events (struct ui_file *file, int from_tty,
 void
 thread_select (const char *tidstr, thread_info *tp)
 {
-  if (!thread_alive (tp))
+  if (!switch_to_thread_if_alive (tp))
     error (_("Thread ID %s has terminated."), tidstr);
-
-  switch_to_thread (tp);
 
   annotate_thread_changed ();
 
