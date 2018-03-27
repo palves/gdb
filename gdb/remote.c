@@ -5461,7 +5461,7 @@ remote_target::remote_serial_quit_handler ()
 	{
 	  if (query (_("The target is not responding to GDB commands.\n"
 		       "Stop debugging it? ")))
-	    remote_unpush_and_throw ();
+	    remote_unpush_and_throw (this);
 	}
       /* If ^C has already been sent once, offer to disconnect.  */
       else if (!target_terminal::is_ours () && rs->ctrlc_pending_p)
@@ -5485,19 +5485,30 @@ remote_serial_quit_handler ()
   curr_quit_handler_target->remote_serial_quit_handler ();
 }
 
-/* Remove any of the remote.c targets from target stack.  Upper targets depend
-   on it so remove them first.  */
+/* Remove the remote target from the target stack of each inferior
+   that is using it.  Upper targets depend on it so remove them
+   first.  */
 
 static void
-remote_unpush_target (void)
+remote_unpush_target (remote_target *target)
 {
-  pop_all_targets_at_and_above (process_stratum);
+  /* We have to unpush the target in all inferiors though, even
+     those that aren't running.  */
+  scoped_restore_current_inferior restore_current_inferior;
+
+  for (inferior *inf : inferiors ())
+    if (inf->process_target () == target)
+      {
+	switch_to_inferior_no_thread (inf);
+	pop_all_targets_at_and_above (process_stratum);
+	generic_mourn_inferior ();
+      }
 }
 
 static void
-remote_unpush_and_throw (void)
+remote_unpush_and_throw (remote_target *target)
 {
-  remote_unpush_target ();
+  remote_unpush_target (target);
   throw_error (TARGET_CLOSE_ERROR, _("Disconnected from target."));
 }
 
@@ -5645,7 +5656,7 @@ remote_target::open_1 (const char *name, int from_tty, int extended_p)
 	/* Pop the partially set up target - unless something else did
 	   already before throwing the exception.  */
 	if (ex.error != TARGET_CLOSE_ERROR)
-	  remote_unpush_target ();
+	  remote_unpush_target (remote);
 	throw_exception (ex);
       }
     END_CATCH
@@ -5806,21 +5817,6 @@ remote_target::follow_exec (struct inferior *inf, char *execd_pathname)
   set_pspace_remote_exec_file (inf->pspace, execd_pathname);
 }
 
-static void
-unpush_target_all_inferiors (target_ops *targ)
-{
-  /* We have to unpush the target in all inferiors though, even
-     those that aren't running.  */
-  scoped_restore_current_inferior restore_current_inferior;
-
-  for (inferior *inf : inferiors ())
-    if (inf->process_target () == targ)
-      {
-	switch_to_inferior_no_thread (inf);
-	unpush_target (targ);
-      }
-}
-
 /* Same as remote_detach, but don't send the "D" packet; just disconnect.  */
 
 void
@@ -5830,10 +5826,10 @@ remote_target::disconnect (const char *args, int from_tty)
     error (_("Argument given to \"disconnect\" when remotely debugging."));
 
   /* Make sure we unpush even the extended remote targets.  Calling
-     target_mourn_inferior won't unpush, and remote_mourn won't
-     unpush if there is more than one inferior left.  */
-  unpush_target_all_inferiors (this);
-  generic_mourn_inferior ();
+     target_mourn_inferior won't unpush, and
+     remote_target::mourn_inferior won't unpush if there is more than
+     one inferior left.  */
+  remote_unpush_target (this);
 
   if (from_tty)
     puts_filtered ("Ending remote debugging.\n");
@@ -6813,7 +6809,7 @@ remote_target::interrupt_query ()
       if (query (_("The target is not responding to interrupt requests.\n"
 		   "Stop debugging it? ")))
 	{
-	  remote_unpush_target ();
+	  remote_unpush_target (this);
 	  throw_error (TARGET_CLOSE_ERROR, _("Disconnected from target."));
 	}
     }
@@ -9048,11 +9044,11 @@ remote_target::files_info ()
    for output compatibility with throw_perror_with_name.  */
 
 static void
-unpush_and_perror (const char *string)
+unpush_and_perror (remote_target *target, const char *string)
 {
   int saved_errno = errno;
 
-  remote_unpush_target ();
+  remote_unpush_target (target);
   throw_error (TARGET_CLOSE_ERROR, "%s: %s.", string,
 	       safe_strerror (saved_errno));
 }
@@ -9088,12 +9084,12 @@ remote_target::readchar (int timeout)
   switch ((enum serial_rc) ch)
     {
     case SERIAL_EOF:
-      remote_unpush_target ();
+      remote_unpush_target (this);
       throw_error (TARGET_CLOSE_ERROR, _("Remote connection closed"));
       /* no return */
     case SERIAL_ERROR:
-      unpush_and_perror (_("Remote communication error.  "
-			   "Target disconnected."));
+      unpush_and_perror (this, _("Remote communication error.  "
+				 "Target disconnected."));
       /* no return */
     case SERIAL_TIMEOUT:
       break;
@@ -9121,8 +9117,8 @@ remote_target::remote_serial_write (const char *str, int len)
 
   if (serial_write (rs->remote_desc, str, len))
     {
-      unpush_and_perror (_("Remote communication error.  "
-			   "Target disconnected."));
+      unpush_and_perror (this, _("Remote communication error.  "
+				 "Target disconnected."));
     }
 
   if (rs->got_ctrlc_during_io)
@@ -9631,7 +9627,7 @@ remote_target::getpkt_or_notif_sane_1 (char **buf, long *sizeof_buf,
 
 	      if (forever)	/* Watchdog went off?  Kill the target.  */
 		{
-		  remote_unpush_target ();
+		  remote_unpush_target (this);
 		  throw_error (TARGET_CLOSE_ERROR,
 			       _("Watchdog timeout has expired.  "
 				 "Target detached."));
@@ -9892,10 +9888,7 @@ remote_target::mourn_inferior ()
   /* In 'target remote' mode with one inferior, we close the connection.  */
   if (!rs->extended && number_of_live_inferiors (this) <= 1)
     {
-      unpush_target_all_inferiors (this);
-
-      /* remote_close takes care of doing most of the clean up.  */
-      generic_mourn_inferior ();
+      remote_unpush_target (this);
       return;
     }
 
