@@ -503,7 +503,8 @@ fbsd_corefile_thread (struct thread_info *info,
 {
   struct regcache *regcache;
 
-  regcache = get_thread_arch_regcache (info->ptid, args->gdbarch);
+  regcache = get_thread_arch_regcache (info->inf->process_target (),
+				       info->ptid, args->gdbarch);
 
   target_fetch_registers (regcache, -1);
 
@@ -1146,8 +1147,7 @@ fbsd_get_siginfo_type (struct gdbarch *gdbarch)
 /* Implement the "get_syscall_number" gdbarch method.  */
 
 static LONGEST
-fbsd_get_syscall_number (struct gdbarch *gdbarch,
-			 ptid_t ptid)
+fbsd_get_syscall_number (struct gdbarch *gdbarch, thread_info *thread)
 {
 
   /* FreeBSD doesn't use gdbarch_get_syscall_number since FreeBSD

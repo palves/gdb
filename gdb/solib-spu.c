@@ -88,7 +88,8 @@ spu_skip_standalone_loader (void)
 
       target_resume (inferior_ptid, 1, GDB_SIGNAL_0);
       target_wait (minus_one_ptid, &ws, 0);
-      set_executing (minus_one_ptid, 0);
+      set_executing (current_inferior ()->process_target (),
+		     minus_one_ptid, 0);
 
       inferior_thread ()->control.in_infcall = 0;
     }

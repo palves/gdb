@@ -101,13 +101,15 @@ parse_spufs_run (ptid_t ptid, int *fd, CORE_ADDR *addr)
   if (gdbarch_bfd_arch_info (target_gdbarch ())->arch != bfd_arch_powerpc)
     return 0;
 
+  target_ops *proc_target = current_inferior ()->process_target ();
+
   /* If we're called too early (e.g. after fork), we cannot
      access the inferior yet.  */
-  if (find_inferior_ptid (ptid) == NULL)
+  if (find_inferior_ptid (proc_target, ptid) == NULL)
     return 0;
 
   /* Get PPU-side registers.  */
-  regcache = get_thread_arch_regcache (ptid, target_gdbarch ());
+  regcache = get_thread_arch_regcache (proc_target, ptid, target_gdbarch ());
   tdep = gdbarch_tdep (target_gdbarch ());
 
   /* Fetch instruction preceding current NIP.  */
@@ -157,8 +159,7 @@ spu_multiarch_target::thread_architecture (ptid_t ptid)
   if (parse_spufs_run (ptid, &spufs_fd, &spufs_addr))
     return spu_gdbarch (spufs_fd);
 
-  target_ops *beneath = find_target_beneath (this);
-  return beneath->thread_architecture (ptid);
+  return beneath ()->thread_architecture (ptid);
 }
 
 /* Override the to_region_ok_for_hw_watchpoint routine.  */

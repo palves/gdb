@@ -103,9 +103,9 @@ struct ravenscar_thread_target : public target_ops
 
   bool stopped_data_address (CORE_ADDR *) override;
 
-  bool thread_alive (ptid_t ptid) override;
+  bool thread_alive (thread_info *thread) override;
 
-  int core_of_thread (ptid_t ptid) override;
+  int core_of_thread (thread_info *thread) override;
 
   void update_thread_list () override;
 
@@ -121,15 +121,15 @@ struct ravenscar_thread_target : public target_ops
   bool has_memory ()  override { return default_child_has_memory (); }
   bool has_stack ()  override { return default_child_has_stack (); }
   bool has_registers ()  override { return default_child_has_registers (); }
-  bool has_execution (ptid_t ptid) override
-  { return default_child_has_execution (ptid); }
+  bool has_execution (inferior *inf) override
+  { return beneath (inf)->has_execution (inf); }
 };
 
 /* This module's target-specific operations.  */
 static ravenscar_thread_target ravenscar_ops;
 
 static ptid_t ravenscar_active_task (int cpu);
-static void ravenscar_update_inferior_ptid (void);
+static void ravenscar_update_inferior_ptid (target_ops *proc_target);
 static int has_ravenscar_runtime (void);
 static int ravenscar_runtime_initialized (void);
 static void ravenscar_inferior_created (struct target_ops *target,
@@ -218,7 +218,7 @@ get_base_thread_from_ravenscar_task (ptid_t ptid)
    update inferior_ptid accordingly.  */
 
 static void
-ravenscar_update_inferior_ptid (void)
+ravenscar_update_inferior_ptid (target_ops *proc_target)
 {
   int base_cpu;
 
@@ -240,8 +240,8 @@ ravenscar_update_inferior_ptid (void)
   /* The running thread may not have been added to
      system.tasking.debug's list yet; so ravenscar_update_thread_list
      may not always add it to the thread list.  Add it here.  */
-  if (!find_thread_ptid (inferior_ptid))
-    add_thread (inferior_ptid);
+  if (!find_thread_ptid (proc_target, inferior_ptid))
+    add_thread (proc_target, inferior_ptid);
 }
 
 /* The Ravenscar Runtime exports a symbol which contains the ID of
@@ -351,7 +351,7 @@ ravenscar_thread_target::wait (ptid_t ptid,
     {
       inferior_ptid = event_ptid;
       this->update_thread_list ();
-      ravenscar_update_inferior_ptid ();
+      ravenscar_update_inferior_ptid (beneath);
     }
   return inferior_ptid;
 }
@@ -362,8 +362,9 @@ ravenscar_thread_target::wait (ptid_t ptid,
 static void
 ravenscar_add_thread (struct ada_task_info *task)
 {
-  if (find_thread_ptid (task->ptid) == NULL)
-    add_thread (task->ptid);
+  target_ops *targ = current_inferior ()->process_target ();
+  if (find_thread_ptid (targ, task->ptid) == NULL)
+    add_thread (targ, task->ptid);
 }
 
 void
@@ -397,7 +398,7 @@ ravenscar_thread_target::extra_thread_info (thread_info *tp)
 }
 
 bool
-ravenscar_thread_target::thread_alive (ptid_t ptid)
+ravenscar_thread_target::thread_alive (thread_info *thr)
 {
   /* Ravenscar tasks are non-terminating.  */
   return true;
@@ -546,14 +547,14 @@ ravenscar_thread_target::mourn_inferior ()
 /* Implement the to_core_of_thread target_ops "method".  */
 
 int
-ravenscar_thread_target::core_of_thread (ptid_t ptid)
+ravenscar_thread_target::core_of_thread (thread_info *thr)
 {
   ptid_t saved_ptid = inferior_ptid;
-  struct target_ops *beneath = find_target_beneath (this);
+  struct target_ops *beneath = this->beneath ();
   int result;
 
   inferior_ptid = get_base_thread_from_ravenscar_task (saved_ptid);
-  result = beneath->core_of_thread (inferior_ptid);
+  result = beneath->core_of_thread (thr);
   inferior_ptid = saved_ptid;
   return result;
 }
@@ -577,7 +578,7 @@ ravenscar_inferior_created (struct target_ops *target, int from_tty)
       return;
     }
 
-  ravenscar_update_inferior_ptid ();
+  ravenscar_update_inferior_ptid (target);
   push_target (&ravenscar_ops);
 }
 

@@ -57,7 +57,7 @@ struct bsd_uthread_target final : public target_ops
   ptid_t wait (ptid_t, struct target_waitstatus *, int) override;
   void resume (ptid_t, int, enum gdb_signal) override;
 
-  bool thread_alive (ptid_t ptid) override;
+  bool thread_alive (thread_info *thread) override;
 
   void update_thread_list () override;
 
@@ -419,12 +419,13 @@ bsd_uthread_target::wait (ptid_t ptid, struct target_waitstatus *status,
      ptid with tid set, then ptid is still the initial thread of
      the process.  Notify GDB core about it.  */
   if (ptid_get_tid (inferior_ptid) == 0
-      && ptid_get_tid (ptid) != 0 && !in_thread_list (ptid))
-    thread_change_ptid (inferior_ptid, ptid);
+      && ptid_get_tid (ptid) != 0 && !in_thread_list (beneath, ptid))
+    thread_change_ptid (beneath, inferior_ptid, ptid);
 
   /* Don't let the core see a ptid without a corresponding thread.  */
-  if (!in_thread_list (ptid) || is_exited (ptid))
-    add_thread (ptid);
+  if (!in_thread_list (beneath, ptid)
+      || inferior_thread ()->state == THREAD_EXITED)
+    add_thread (beneath, ptid);
 
   return ptid;
 }
@@ -438,11 +439,10 @@ bsd_uthread_target::resume (ptid_t ptid, int step, enum gdb_signal sig)
 }
 
 bool
-bsd_uthread_target::thread_alive (ptid_t ptid)
+bsd_uthread_target::thread_alive (thread_info *thr)
 {
   enum bfd_endian byte_order = gdbarch_byte_order (target_gdbarch ());
-  struct target_ops *beneath = find_target_beneath (this);
-  CORE_ADDR addr = ptid_get_tid (ptid);
+  CORE_ADDR addr = ptid_get_tid (thr->ptid);
 
   if (addr != 0)
     {
@@ -456,7 +456,7 @@ bsd_uthread_target::thread_alive (ptid_t ptid)
 	return false;
     }
 
-  return beneath->thread_alive (ptid);
+  return beneath ()->thread_alive (thr);
 }
 
 void
@@ -473,15 +473,17 @@ bsd_uthread_target::update_thread_list ()
     {
       ptid_t ptid = ptid_build (pid, 0, addr);
 
-      if (!in_thread_list (ptid) || is_exited (ptid))
+      target_ops *proc_target = this->beneath ();
+      if (!in_thread_list (proc_target, ptid)
+	  || inferior_thread ()->state == THREAD_EXITED)
 	{
 	  /* If INFERIOR_PTID doesn't have a tid member yet, then ptid
 	     is still the initial thread of the process.  Notify GDB
 	     core about it.  */
 	  if (ptid_get_tid (inferior_ptid) == 0)
-	    thread_change_ptid (inferior_ptid, ptid);
+	    thread_change_ptid (proc_target, inferior_ptid, ptid);
 	  else
-	    add_thread (ptid);
+	    add_thread (proc_target, ptid);
 	}
 
       addr = bsd_uthread_read_memory_address (addr + offset);
