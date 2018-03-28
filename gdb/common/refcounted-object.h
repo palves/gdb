@@ -51,4 +51,18 @@ private:
   int m_refcount = 0;
 };
 
+class scoped_inc_dec_ref
+{
+public:
+  explicit scoped_inc_dec_ref (refcounted_object *obj)
+    : m_obj (obj)
+  { m_obj->incref (); }
+
+  ~scoped_inc_dec_ref ()
+  { m_obj->decref (); }
+
+private:
+  refcounted_object *m_obj;
+};
+
 #endif /* REFCOUNTED_OBJECT_H */

@@ -33,6 +33,7 @@
 #include "infrun.h"
 #include "observer.h"
 #include "gdbthread.h"
+#include "inferior.h"
 
 /* Set to 1 when the TUI mode must be activated when we first start
    gdb.  */
@@ -217,7 +218,8 @@ tui_on_user_selected_context_changed (user_selected_what selection)
   if (cli_suppress_notification.user_selected_context)
     return;
 
-  tp = find_thread_ptid (inferior_ptid);
+  tp = find_thread_ptid (current_inferior ()->process_target (),
+			 inferior_ptid);
 
   SWITCH_THRU_ALL_UIS ()
     {

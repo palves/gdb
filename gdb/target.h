@@ -642,9 +642,7 @@ struct target_ops
 				  unsigned char * TARGET_DEBUG_PRINTER (target_debug_print_signals))
       TARGET_DEFAULT_IGNORE ();
 
-    virtual thread_info **get_thread_list_p (inferior *inf)
-      TARGET_DEFAULT_RETURN (NULL);
-    virtual bool thread_alive (ptid_t ptid)
+    virtual bool thread_alive (thread_info *thread)
       TARGET_DEFAULT_RETURN (false);
     virtual void update_thread_list ()
       TARGET_DEFAULT_IGNORE ();
@@ -888,13 +886,6 @@ struct target_ops
     virtual struct gdbarch *thread_architecture (ptid_t)
       TARGET_DEFAULT_FUNC (default_thread_architecture);
 
-    /* Determine current address space of thread PTID.
-
-       The default implementation always returns the inferior's
-       address space.  */
-    virtual struct address_space *thread_address_space (ptid_t)
-      TARGET_DEFAULT_FUNC (default_thread_address_space);
-
     /* Target file operations.  */
 
     /* Return nonzero if the filesystem seen by the current inferior
@@ -1054,14 +1045,14 @@ struct target_ops
 				  const char *stopnotes)
       TARGET_DEFAULT_RETURN (false);
 
-    /* Return the processor core that thread PTID was last seen on.
+    /* Return the processor core that the thread was last seen on.
        This information is updated only when:
        - update_thread_list is called
        - thread stops
        If the core cannot be determined -- either for the specified
        thread, or right now, or in this debug session, or for this
        target -- return -1.  */
-    virtual int core_of_thread (ptid_t ptid)
+    virtual int core_of_thread (thread_info *thread)
       TARGET_DEFAULT_RETURN (-1);
 
     /* Verify that the memory in the [MEMADDR, MEMADDR+SIZE) range
@@ -1138,7 +1129,7 @@ struct target_ops
       TARGET_DEFAULT_RETURN (NULL);
 
     /* Current recording method.  */
-    virtual enum record_method record_method (ptid_t ptid)
+    virtual enum record_method record_method (thread_info *thread)
       TARGET_DEFAULT_RETURN (RECORD_METHOD_NONE);
 
     /* Stop trace recording.  */
@@ -1417,10 +1408,6 @@ extern void target_store_registers (struct regcache *regcache, int regs);
 #define	target_prepare_to_store(regcache)	\
      (target_stack->prepare_to_store) (regcache)
 
-/* Determine current address space of thread PTID.  */
-
-struct address_space *target_thread_address_space (ptid_t);
-
 /* Implement the "info proc" command.  This returns one if the request
    was handled, and zero otherwise.  It can also throw an exception if
    an error was encountered while attempting to handle the
@@ -1692,15 +1679,9 @@ extern void target_pass_signals (int nsig, unsigned char *pass_signals);
 
 extern void target_program_signals (int nsig, unsigned char *program_signals);
 
-extern thread_info **target_thread_list_p ();
-extern thread_info *target_thread_list ();
-
-extern thread_info **target_thread_list_p (inferior *inf);
-extern thread_info *target_thread_list (inferior *inf);
-
 /* Check to see if a thread is still alive.  */
 
-extern int target_thread_alive (ptid_t ptid);
+extern int target_thread_alive (thread_info *thread);
 
 /* Sync the target's threads with GDB's thread list.  */
 
@@ -2240,7 +2221,7 @@ extern gdb::unique_xmalloc_ptr<char> target_fileio_read_stralloc
   (target_stack->log_command) (p)
 
 
-extern int target_core_of_thread (ptid_t ptid);
+extern int target_core_of_thread (thread_info *thread);
 
 /* See to_get_unwinder in struct target_ops.  */
 extern const struct frame_unwind *target_get_unwinder (void);
@@ -2486,7 +2467,7 @@ extern int target_supports_delete_record (void);
 extern void target_delete_record (void);
 
 /* See to_record_method.  */
-extern enum record_method target_record_method (ptid_t ptid);
+extern enum record_method target_record_method (thread_info *thread);
 
 /* See to_record_is_replaying in struct target_ops.  */
 extern int target_record_is_replaying (ptid_t ptid);

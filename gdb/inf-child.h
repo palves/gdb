@@ -26,15 +26,10 @@
 struct inf_child_target
   : public memory_breakpoint_target<target_ops>
 {
-  thread_info *thread_list;
-
   inf_child_target ();
   ~inf_child_target () override = 0;
 
   const target_info &info () const override;
-
-  thread_info **get_thread_list_p (inferior *inf) override
-  { return &thread_list; }
 
   void close () override;
 

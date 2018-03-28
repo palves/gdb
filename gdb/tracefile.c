@@ -463,7 +463,7 @@ tracefile_target::has_registers ()
    tracefile has one thread faked by GDB.  */
 
 bool
-tracefile_target::thread_alive (ptid_t ptid)
+tracefile_target::thread_alive (thread_info *thread)
 {
   return 1;
 }

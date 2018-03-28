@@ -113,7 +113,7 @@ done_accessing_memory (void)
 
   /* Restore the previous selected thread.  */
   general_thread = prev_general_thread;
-  switch_to_thread (general_thread);
+  switch_to_thread (the_target, general_thread);
 }
 
 int

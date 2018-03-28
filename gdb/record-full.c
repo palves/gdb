@@ -21,6 +21,7 @@
 #include "gdbcmd.h"
 #include "regcache.h"
 #include "gdbthread.h"
+#include "inferior.h"
 #include "event-top.h"
 #include "completer.h"
 #include "arch-utils.h"
@@ -239,7 +240,7 @@ public:
   gdb_byte *get_bookmark (const char *, int) override;
   void goto_bookmark (const gdb_byte *, int) override;
   enum exec_direction_kind execution_direction () override;
-  enum record_method record_method (ptid_t ptid) override;
+  enum record_method record_method (thread_info *thread) override;
   void info_record () override;
   void save_record (const char *filename) override;
   bool supports_delete_record () override;
@@ -1278,14 +1279,17 @@ record_full_wait_1 (struct target_ops *ops,
 
                       if (gdbarch_software_single_step_p (gdbarch))
 			{
+			  target_ops *proc_target
+			    = current_inferior ()->process_target ();
+
 			  /* Try to insert the software single step breakpoint.
 			     If insert success, set step to 0.  */
-			  set_executing (inferior_ptid, 0);
+			  set_executing (proc_target, inferior_ptid, 0);
 			  reinit_frame_cache ();
 
 			  step = !insert_single_step_breakpoints (gdbarch);
 
-			  set_executing (inferior_ptid, 1);
+			  set_executing (proc_target, inferior_ptid, 1);
 			}
 
 		      if (record_debug)
@@ -1915,7 +1919,7 @@ record_full_base_target::execution_direction ()
 /* The to_record_method method of target record-full.  */
 
 enum record_method
-record_full_base_target::record_method (ptid_t ptid)
+record_full_base_target::record_method (thread_info *thread)
 {
   return RECORD_METHOD_FULL;
 }

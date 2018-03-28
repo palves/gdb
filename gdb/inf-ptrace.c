@@ -119,7 +119,7 @@ inf_ptrace_target::create_inferior (const char *exec_file,
   /* We have something that executes now.  We'll be running through
      the shell at this point (if startup-with-shell is true), but the
      pid shouldn't change.  */
-  add_thread_silent (ptid);
+  add_thread_silent (this, ptid);
 
   discard_cleanups (back_to);
 
@@ -221,7 +221,7 @@ inf_ptrace_target::attach (const char *args, int from_tty)
 
   /* Always add a main thread.  If some target extends the ptrace
      target, it should decorate the ptid later with more info.  */
-  add_thread_silent (inferior_ptid);
+  add_thread_silent (this, inferior_ptid);
 
   discard_cleanups (back_to);
 }
@@ -592,10 +592,10 @@ inf_ptrace_target::xfer_partial (enum target_object object,
 /* Return non-zero if the thread specified by PTID is alive.  */
 
 bool
-inf_ptrace_target::thread_alive (ptid_t ptid)
+inf_ptrace_target::thread_alive (thread_info *thread)
 {
   /* ??? Is kill the right way to do this?  */
-  return (::kill (ptid_get_pid (ptid), 0) != -1);
+  return (::kill (thread->ptid.pid (), 0) != -1);
 }
 
 /* Print status information about what we're accessing.  */

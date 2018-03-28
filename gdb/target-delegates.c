@@ -65,8 +65,7 @@ struct dummy_target : public target_ops
   void mourn_inferior () override;
   void pass_signals (int arg0, unsigned char * arg1) override;
   void program_signals (int arg0, unsigned char * arg1) override;
-  thread_info **get_thread_list_p (inferior *arg0) override;
-  bool thread_alive (ptid_t arg0) override;
+  bool thread_alive (thread_info *arg0) override;
   void update_thread_list () override;
   const char *pid_to_str (ptid_t arg0) override;
   const char *extra_thread_info (thread_info *arg0) override;
@@ -110,7 +109,6 @@ struct dummy_target : public target_ops
   bool supports_evaluation_of_breakpoint_conditions () override;
   bool can_run_breakpoint_commands () override;
   struct gdbarch *thread_architecture (ptid_t arg0) override;
-  struct address_space *thread_address_space (ptid_t arg0) override;
   bool filesystem_is_local () override;
   void trace_init () override;
   void download_tracepoint (struct bp_location *arg0) override;
@@ -134,7 +132,7 @@ struct dummy_target : public target_ops
   void set_circular_trace_buffer (int arg0) override;
   void set_trace_buffer_size (LONGEST arg0) override;
   bool set_trace_notes (const char *arg0, const char *arg1, const char *arg2) override;
-  int core_of_thread (ptid_t arg0) override;
+  int core_of_thread (thread_info *arg0) override;
   int verify_memory (const gdb_byte *arg0, CORE_ADDR arg1, ULONGEST arg2) override;
   bool get_tib_address (ptid_t arg0, CORE_ADDR *arg1) override;
   void set_permissions () override;
@@ -148,7 +146,7 @@ struct dummy_target : public target_ops
   void teardown_btrace (struct btrace_target_info *arg0) override;
   enum btrace_error read_btrace (struct btrace_data *arg0, struct btrace_target_info *arg1, enum btrace_read_type arg2) override;
   const struct btrace_config *btrace_conf (const struct btrace_target_info *arg0) override;
-  enum record_method record_method (ptid_t arg0) override;
+  enum record_method record_method (thread_info *arg0) override;
   void stop_recording () override;
   void info_record () override;
   void save_record (const char *arg0) override;
@@ -234,8 +232,7 @@ struct debug_target : public target_ops
   void mourn_inferior () override;
   void pass_signals (int arg0, unsigned char * arg1) override;
   void program_signals (int arg0, unsigned char * arg1) override;
-  thread_info **get_thread_list_p (inferior *arg0) override;
-  bool thread_alive (ptid_t arg0) override;
+  bool thread_alive (thread_info *arg0) override;
   void update_thread_list () override;
   const char *pid_to_str (ptid_t arg0) override;
   const char *extra_thread_info (thread_info *arg0) override;
@@ -279,7 +276,6 @@ struct debug_target : public target_ops
   bool supports_evaluation_of_breakpoint_conditions () override;
   bool can_run_breakpoint_commands () override;
   struct gdbarch *thread_architecture (ptid_t arg0) override;
-  struct address_space *thread_address_space (ptid_t arg0) override;
   bool filesystem_is_local () override;
   void trace_init () override;
   void download_tracepoint (struct bp_location *arg0) override;
@@ -303,7 +299,7 @@ struct debug_target : public target_ops
   void set_circular_trace_buffer (int arg0) override;
   void set_trace_buffer_size (LONGEST arg0) override;
   bool set_trace_notes (const char *arg0, const char *arg1, const char *arg2) override;
-  int core_of_thread (ptid_t arg0) override;
+  int core_of_thread (thread_info *arg0) override;
   int verify_memory (const gdb_byte *arg0, CORE_ADDR arg1, ULONGEST arg2) override;
   bool get_tib_address (ptid_t arg0, CORE_ADDR *arg1) override;
   void set_permissions () override;
@@ -317,7 +313,7 @@ struct debug_target : public target_ops
   void teardown_btrace (struct btrace_target_info *arg0) override;
   enum btrace_error read_btrace (struct btrace_data *arg0, struct btrace_target_info *arg1, enum btrace_read_type arg2) override;
   const struct btrace_config *btrace_conf (const struct btrace_target_info *arg0) override;
-  enum record_method record_method (ptid_t arg0) override;
+  enum record_method record_method (thread_info *arg0) override;
   void stop_recording () override;
   void info_record () override;
   void save_record (const char *arg0) override;
@@ -1733,52 +1729,26 @@ debug_target::program_signals (int arg0, unsigned char * arg1)
   fputs_unfiltered (")\n", gdb_stdlog);
 }
 
-thread_info **
-target_ops::get_thread_list_p (inferior *arg0)
-{
-  return this->beneath ()->get_thread_list_p (arg0);
-}
-
-thread_info **
-dummy_target::get_thread_list_p (inferior *arg0)
-{
-  return NULL;
-}
-
-thread_info **
-debug_target::get_thread_list_p (inferior *arg0)
-{
-  thread_info ** result;
-  fprintf_unfiltered (gdb_stdlog, "-> %s->get_thread_list_p (...)\n", this->beneath ()->shortname ());
-  result = this->beneath ()->get_thread_list_p (arg0);
-  fprintf_unfiltered (gdb_stdlog, "<- %s->get_thread_list_p (", this->beneath ()->shortname ());
-  target_debug_print_inferior_p (arg0);
-  fputs_unfiltered (") = ", gdb_stdlog);
-  target_debug_print_thread_info_pp (result);
-  fputs_unfiltered ("\n", gdb_stdlog);
-  return result;
-}
-
 bool
-target_ops::thread_alive (ptid_t arg0)
+target_ops::thread_alive (thread_info *arg0)
 {
   return this->beneath ()->thread_alive (arg0);
 }
 
 bool
-dummy_target::thread_alive (ptid_t arg0)
+dummy_target::thread_alive (thread_info *arg0)
 {
   return false;
 }
 
 bool
-debug_target::thread_alive (ptid_t arg0)
+debug_target::thread_alive (thread_info *arg0)
 {
   bool result;
   fprintf_unfiltered (gdb_stdlog, "-> %s->thread_alive (...)\n", this->beneath ()->shortname ());
   result = this->beneath ()->thread_alive (arg0);
   fprintf_unfiltered (gdb_stdlog, "<- %s->thread_alive (", this->beneath ()->shortname ());
-  target_debug_print_ptid_t (arg0);
+  target_debug_print_thread_info_p (arg0);
   fputs_unfiltered (") = ", gdb_stdlog);
   target_debug_print_bool (result);
   fputs_unfiltered ("\n", gdb_stdlog);
@@ -2880,32 +2850,6 @@ debug_target::thread_architecture (ptid_t arg0)
   return result;
 }
 
-struct address_space *
-target_ops::thread_address_space (ptid_t arg0)
-{
-  return this->beneath ()->thread_address_space (arg0);
-}
-
-struct address_space *
-dummy_target::thread_address_space (ptid_t arg0)
-{
-  return default_thread_address_space (this, arg0);
-}
-
-struct address_space *
-debug_target::thread_address_space (ptid_t arg0)
-{
-  struct address_space * result;
-  fprintf_unfiltered (gdb_stdlog, "-> %s->thread_address_space (...)\n", this->beneath ()->shortname ());
-  result = this->beneath ()->thread_address_space (arg0);
-  fprintf_unfiltered (gdb_stdlog, "<- %s->thread_address_space (", this->beneath ()->shortname ());
-  target_debug_print_ptid_t (arg0);
-  fputs_unfiltered (") = ", gdb_stdlog);
-  target_debug_print_struct_address_space_p (result);
-  fputs_unfiltered ("\n", gdb_stdlog);
-  return result;
-}
-
 bool
 target_ops::filesystem_is_local ()
 {
@@ -3467,25 +3411,25 @@ debug_target::set_trace_notes (const char *arg0, const char *arg1, const char *a
 }
 
 int
-target_ops::core_of_thread (ptid_t arg0)
+target_ops::core_of_thread (thread_info *arg0)
 {
   return this->beneath ()->core_of_thread (arg0);
 }
 
 int
-dummy_target::core_of_thread (ptid_t arg0)
+dummy_target::core_of_thread (thread_info *arg0)
 {
   return -1;
 }
 
 int
-debug_target::core_of_thread (ptid_t arg0)
+debug_target::core_of_thread (thread_info *arg0)
 {
   int result;
   fprintf_unfiltered (gdb_stdlog, "-> %s->core_of_thread (...)\n", this->beneath ()->shortname ());
   result = this->beneath ()->core_of_thread (arg0);
   fprintf_unfiltered (gdb_stdlog, "<- %s->core_of_thread (", this->beneath ()->shortname ());
-  target_debug_print_ptid_t (arg0);
+  target_debug_print_thread_info_p (arg0);
   fputs_unfiltered (") = ", gdb_stdlog);
   target_debug_print_int (result);
   fputs_unfiltered ("\n", gdb_stdlog);
@@ -3829,25 +3773,25 @@ debug_target::btrace_conf (const struct btrace_target_info *arg0)
 }
 
 enum record_method
-target_ops::record_method (ptid_t arg0)
+target_ops::record_method (thread_info *arg0)
 {
   return this->beneath ()->record_method (arg0);
 }
 
 enum record_method
-dummy_target::record_method (ptid_t arg0)
+dummy_target::record_method (thread_info *arg0)
 {
   return RECORD_METHOD_NONE;
 }
 
 enum record_method
-debug_target::record_method (ptid_t arg0)
+debug_target::record_method (thread_info *arg0)
 {
   enum record_method result;
   fprintf_unfiltered (gdb_stdlog, "-> %s->record_method (...)\n", this->beneath ()->shortname ());
   result = this->beneath ()->record_method (arg0);
   fprintf_unfiltered (gdb_stdlog, "<- %s->record_method (", this->beneath ()->shortname ());
-  target_debug_print_ptid_t (arg0);
+  target_debug_print_thread_info_p (arg0);
   fputs_unfiltered (") = ", gdb_stdlog);
   target_debug_print_enum_record_method (result);
   fputs_unfiltered ("\n", gdb_stdlog);

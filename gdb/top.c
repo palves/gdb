@@ -1479,7 +1479,7 @@ kill_or_detach (struct inferior *inf, void *args)
   thread = any_thread_of_process (inf->pid);
   if (thread != NULL)
     {
-      switch_to_thread (thread->ptid);
+      switch_to_thread (thread);
 
       /* Leave core files alone.  */
       if (target_has_execution)

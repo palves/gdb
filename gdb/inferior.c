@@ -147,9 +147,9 @@ delete_thread_of_inferior (struct thread_info *tp, void *data)
   if (ptid_get_pid (tp->ptid) == arg->pid)
     {
       if (arg->silent)
-	delete_thread_silent (tp->ptid);
+	delete_thread_silent (tp);
       else
-	delete_thread (tp->ptid);
+	delete_thread (tp);
     }
 
   return 0;
@@ -233,10 +233,9 @@ exit_inferior_1 (struct inferior *inftoex, int silent)
 }
 
 void
-exit_inferior (int pid)
+exit_inferior (inferior *inf)
 {
-  struct inferior *inf = find_inferior_pid (pid);
-
+  int pid = inf->pid;
   exit_inferior_1 (inf, 0);
 
   if (print_inferior_events)
@@ -244,10 +243,16 @@ exit_inferior (int pid)
 }
 
 void
-exit_inferior_silent (int pid)
+exit_inferior_silent (target_ops *targ, int pid)
 {
-  struct inferior *inf = find_inferior_pid (pid);
+  struct inferior *inf = find_inferior_pid (targ, pid);
 
+  exit_inferior_1 (inf, 1);
+}
+
+void
+exit_inferior_silent (inferior *inf)
+{
   exit_inferior_1 (inf, 1);
 }
 
@@ -270,15 +275,7 @@ detach_inferior (inferior *inf)
   exit_inferior_1 (inf, 0);
 
   if (print_inferior_events)
-    printf_unfiltered (_("[Inferior %d detached]\n"), pid);
-}
-
-/* See inferior.h.  */
-
-void
-detach_inferior (int pid)
-{
-  detach_inferior (find_inferior_pid (pid));
+    printf_unfiltered (_("[Inferior %d detached]\n"), inf->pid);
 }
 
 void
@@ -299,7 +296,7 @@ discard_all_inferiors (void)
   for (inf = inferior_list; inf; inf = inf->next)
     {
       if (inf->pid != 0)
-	exit_inferior_silent (inf->pid);
+	exit_inferior_silent (inf);
     }
 }
 
@@ -316,7 +313,7 @@ find_inferior_id (int num)
 }
 
 struct inferior *
-find_inferior_pid (int pid)
+find_inferior_pid (target_ops *targ, int pid)
 {
   struct inferior *inf;
 
@@ -326,7 +323,7 @@ find_inferior_pid (int pid)
   gdb_assert (pid != 0);
 
   for (inf = inferior_list; inf; inf = inf->next)
-    if (inf->pid == pid)
+    if (inf->process_target () == targ && inf->pid == pid)
       return inf;
 
   return NULL;
@@ -335,9 +332,9 @@ find_inferior_pid (int pid)
 /* See inferior.h */
 
 struct inferior *
-find_inferior_ptid (ptid_t ptid)
+find_inferior_ptid (target_ops *targ, ptid_t ptid)
 {
-  return find_inferior_pid (ptid_get_pid (ptid));
+  return find_inferior_pid (targ, ptid.pid ());
 }
 
 /* See inferior.h.  */
@@ -649,7 +646,7 @@ detach_inferior_command (const char *args, int from_tty)
 	  continue;
 	}
 
-      switch_to_thread (tp->ptid);
+      switch_to_thread (tp);
 
       detach_command (NULL, from_tty);
     }
@@ -688,7 +685,7 @@ kill_inferior_command (const char *args, int from_tty)
 	  continue;
 	}
 
-      switch_to_thread (tp->ptid);
+      switch_to_thread (tp);
 
       target_kill ();
     }
@@ -727,7 +724,7 @@ inferior_command (const char *args, int from_tty)
   else
     {
       set_current_inferior (inf);
-      switch_to_thread (null_ptid);
+      switch_to_no_thread ();
       set_current_program_space (inf->pspace);
 
       observer_notify_user_selected_context_changed (USER_SELECTED_INFERIOR);
@@ -867,7 +864,7 @@ add_inferior_command (const char *args, int from_tty)
 	     symbols.q.  */
 	  set_current_program_space (inf->pspace);
 	  set_current_inferior (inf);
-	  switch_to_thread (null_ptid);
+	  switch_to_no_thread ();
 
 	  exec_file_attach (exec.get (), from_tty);
 	  symbol_file_add_main (exec.get (), add_flags);
@@ -955,7 +952,7 @@ clone_inferior_command (const char *args, int from_tty)
       printf_filtered (_("Added inferior %d.\n"), inf->num);
 
       set_current_inferior (inf);
-      switch_to_thread (null_ptid);
+      switch_to_no_thread ();
       clone_program_space (pspace, orginf->pspace);
     }
 }

@@ -76,7 +76,7 @@ public:
 					ULONGEST *xfered_len) override;
   void files_info () override;
 
-  bool thread_alive (ptid_t ptid) override;
+  bool thread_alive (thread_info *) override;
   const struct target_desc *read_description () override;
 
   const char *pid_to_str (ptid_t) override;
@@ -229,11 +229,9 @@ core_close ()
 {
   if (core_bfd)
     {
-      int pid = ptid_get_pid (inferior_ptid);
       inferior_ptid = null_ptid;    /* Avoid confusion from thread
 				       stuff.  */
-      if (pid != 0)
-	exit_inferior_silent (pid);
+      exit_inferior_silent (current_inferior ());
 
       /* Clear out solib state while the bfd is still open.  See
          comments in clear_solib in solib.c.  */
@@ -301,7 +299,7 @@ add_to_thread_list (bfd *abfd, asection *asect, void *reg_sect_arg)
 
   ptid = ptid_build (pid, lwpid, 0);
 
-  add_thread (ptid);
+  add_thread (inf->process_target (), ptid);
 
 /* Warning, Will Robinson, looking at BFD private data! */
 
@@ -422,16 +420,16 @@ core_target_open (const char *arg, int from_tty)
 	 which was the "main" thread.  The latter case shouldn't
 	 usually happen, but we're dealing with input here, which can
 	 always be broken in different ways.  */
-      struct thread_info *thread = first_thread_of_process (-1);
+      thread_info *thread = first_thread_of_inferior (current_inferior ());
 
       if (thread == NULL)
 	{
 	  inferior_appeared (current_inferior (), CORELOW_PID);
 	  inferior_ptid = pid_to_ptid (CORELOW_PID);
-	  add_thread_silent (inferior_ptid);
+	  add_thread_silent (target, inferior_ptid);
 	}
       else
-	switch_to_thread (thread->ptid);
+	switch_to_thread (thread);
     }
 
   post_create_inferior (target, from_tty);
@@ -917,7 +915,7 @@ core_target::xfer_partial (enum target_object object, const char *annex,
    behavior.  */
 
 bool
-core_target::thread_alive (ptid_t ptid)
+core_target::thread_alive (thread_info *thread)
 {
   return true;
 }
@@ -965,7 +963,7 @@ core_target::pid_to_str (ptid_t ptid)
 
   /* Otherwise, this isn't a "threaded" core -- use the PID field, but
      only if it isn't a fake PID.  */
-  inf = find_inferior_ptid (ptid);
+  inf = find_inferior_ptid (this, ptid);
   if (inf != NULL && !inf->fake_pid_p)
     return normal_pid_to_str (ptid);
 

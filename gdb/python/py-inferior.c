@@ -86,9 +86,6 @@ python_on_normal_stop (struct bpstats *bs, int print_frame)
   if (!gdb_python_initialized)
     return;
 
-  if (!find_thread_ptid (inferior_ptid))
-      return;
-
   stop_signal = inferior_thread ()->suspend.stop_signal;
 
   gdbpy_enter enter_py (get_current_arch (), current_language);
@@ -295,9 +292,9 @@ python_inferior_deleted (struct inferior *inf)
 PyObject *
 find_inferior_object (int pid)
 {
-  struct inferior *inf = find_inferior_pid (pid);
+  inferior *inf = find_inferior_pid (NULL/*XXX*/, pid);
 
-  if (inf)
+  if (inf != NULL)
     return inferior_to_inferior_object (inf);
 
   return NULL;
