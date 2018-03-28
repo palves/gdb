@@ -280,23 +280,20 @@ extern void linux_unstop_all_lwps (void);
    methods in linux_nat_target instead.  */
 
 /* Register a method to call whenever a new thread is attached.  */
-void linux_nat_set_new_thread (struct target_ops *, void (*) (struct lwp_info *));
+void linux_nat_set_new_thread (void (*) (struct lwp_info *));
 
 /* Register a method to call whenever a new thread is deleted.  */
-void linux_nat_set_delete_thread (struct target_ops *,
-				  void (*) (struct arch_lwp_info *));
+void linux_nat_set_delete_thread (void (*) (struct arch_lwp_info *));
 
 /* Register a method to call whenever a new fork is attached.  */
 typedef void (linux_nat_new_fork_ftype) (struct lwp_info *parent,
 					 pid_t child_pid);
-void linux_nat_set_new_fork (struct target_ops *ops,
-			     linux_nat_new_fork_ftype *fn);
+void linux_nat_set_new_fork (linux_nat_new_fork_ftype *fn);
 
 /* Register a method to call whenever a process is killed or
    detached.  */
 typedef void (linux_nat_forget_process_ftype) (pid_t pid);
-void linux_nat_set_forget_process (struct target_ops *ops,
-				   linux_nat_forget_process_ftype *fn);
+void linux_nat_set_forget_process (linux_nat_forget_process_ftype *fn);
 
 /* Call the method registered with the function above.  PID is the
    process to forget about.  */
@@ -305,15 +302,13 @@ void linux_nat_forget_process (pid_t pid);
 /* Register a method that converts a siginfo object between the layout
    that ptrace returns, and the layout in the architecture of the
    inferior.  */
-void linux_nat_set_siginfo_fixup (struct target_ops *,
-				  int (*) (siginfo_t *,
+void linux_nat_set_siginfo_fixup (int (*) (siginfo_t *,
 					   gdb_byte *,
 					   int));
 
 /* Register a method to call prior to resuming a thread.  */
 
-void linux_nat_set_prepare_to_resume (struct target_ops *,
-				      void (*) (struct lwp_info *));
+void linux_nat_set_prepare_to_resume (void (*) (struct lwp_info *));
 
 /* Update linux-nat internal state when changing from one fork
    to another.  */

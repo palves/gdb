@@ -4700,8 +4700,7 @@ linux_nat_target::linux_nat_target ()
 
 /* Register a method to call whenever a new thread is attached.  */
 void
-linux_nat_set_new_thread (struct target_ops *t,
-			  void (*new_thread) (struct lwp_info *))
+linux_nat_set_new_thread (void (*new_thread) (struct lwp_info *))
 {
   /* Save the pointer.  We only support a single registered instance
      of the GNU/Linux native target, so we do not need to map this to
@@ -4711,8 +4710,7 @@ linux_nat_set_new_thread (struct target_ops *t,
 
 /* Register a method to call whenever a new thread is attached.  */
 void
-linux_nat_set_delete_thread (struct target_ops *t,
-			     void (*delete_thread) (struct arch_lwp_info *))
+linux_nat_set_delete_thread (void (*delete_thread) (struct arch_lwp_info *))
 {
   /* Save the pointer.  We only support a single registered instance
      of the GNU/Linux native target, so we do not need to map this to
@@ -4723,8 +4721,7 @@ linux_nat_set_delete_thread (struct target_ops *t,
 /* See declaration in linux-nat.h.  */
 
 void
-linux_nat_set_new_fork (struct target_ops *t,
-			linux_nat_new_fork_ftype *new_fork)
+linux_nat_set_new_fork (linux_nat_new_fork_ftype *new_fork)
 {
   /* Save the pointer.  */
   linux_nat_new_fork = new_fork;
@@ -4733,8 +4730,7 @@ linux_nat_set_new_fork (struct target_ops *t,
 /* See declaration in linux-nat.h.  */
 
 void
-linux_nat_set_forget_process (struct target_ops *t,
-			      linux_nat_forget_process_ftype *fn)
+linux_nat_set_forget_process (linux_nat_forget_process_ftype *fn)
 {
   /* Save the pointer.  */
   linux_nat_forget_process_hook = fn;
@@ -4753,8 +4749,7 @@ linux_nat_forget_process (pid_t pid)
    that ptrace returns, and the layout in the architecture of the
    inferior.  */
 void
-linux_nat_set_siginfo_fixup (struct target_ops *t,
-			     int (*siginfo_fixup) (siginfo_t *,
+linux_nat_set_siginfo_fixup (int (*siginfo_fixup) (siginfo_t *,
 						   gdb_byte *,
 						   int))
 {
@@ -4765,8 +4760,7 @@ linux_nat_set_siginfo_fixup (struct target_ops *t,
 /* Register a method to call prior to resuming a thread.  */
 
 void
-linux_nat_set_prepare_to_resume (struct target_ops *t,
-				 void (*prepare_to_resume) (struct lwp_info *))
+linux_nat_set_prepare_to_resume (void (*prepare_to_resume) (struct lwp_info *))
 {
   /* Save the pointer.  */
   linux_nat_prepare_to_resume = prepare_to_resume;

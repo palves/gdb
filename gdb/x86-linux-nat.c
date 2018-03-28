@@ -325,9 +325,9 @@ _initialize_x86_linux_nat ()
   /* XXXX Once these are converted to virtual methods in
      linux_nat_target, this whole function can be converted to an
      _initialize routine.  */
-  linux_nat_set_new_thread (t, x86_linux_new_thread);
-  linux_nat_set_delete_thread (t, x86_linux_delete_thread);
-  linux_nat_set_new_fork (t, x86_linux_new_fork);
-  linux_nat_set_forget_process (t, x86_forget_process);
-  linux_nat_set_prepare_to_resume (t, x86_linux_prepare_to_resume);
+  linux_nat_set_new_thread (x86_linux_new_thread);
+  linux_nat_set_delete_thread (x86_linux_delete_thread);
+  linux_nat_set_new_fork (x86_linux_new_fork);
+  linux_nat_set_forget_process (x86_forget_process);
+  linux_nat_set_prepare_to_resume (x86_linux_prepare_to_resume);
 }
