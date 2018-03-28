@@ -3346,7 +3346,33 @@ target_interrupt ()
 void
 target_pass_ctrlc (void)
 {
-  current_top_target ()->pass_ctrlc ();
+  /* Pass the Ctrl-C to the first inferior that has a thread
+     running.  */
+  for (inferior *inf : inferiors ())
+    {
+      target_ops *proc_target = inf->process_target ();
+      if (proc_target == NULL)
+	continue;
+
+      for (thread_info *thr : inf->threads ())
+	{
+	  /* A thread can be THREAD_STOPPED and executing, while
+	     running an infcall.  */
+	  if (thr->state == THREAD_RUNNING || thr->executing)
+	    {
+	      /* We can get here quite deep in target layers.  Avoid
+		 switching thread context or anything that would
+		 communicate with the target (e.g., to fetch
+		 registers), or flushing e.g., the frame cache.  We
+		 just switch inferior in order to be able to call
+		 through the target_stack.  */
+	      scoped_restore_current_inferior restore_inferior;
+	      set_current_inferior (inf);
+	      current_top_target ()->pass_ctrlc ();
+	      return;
+	    }
+	}
+    }
 }
 
 /* See target.h.  */
