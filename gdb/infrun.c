@@ -4392,9 +4392,9 @@ do_wait_one (ptid_t wait_ptid, struct target_waitstatus *ws)
   target_dcache_invalidate ();
 
   if (deprecated_target_wait_hook)
-    event_ptid = deprecated_target_wait_hook (wait_ptid, ws, 0);
+    event_ptid = deprecated_target_wait_hook (wait_ptid, ws, TARGET_WNOHANG);
   else
-    event_ptid = target_wait (wait_ptid, ws, 0);
+    event_ptid = target_wait (wait_ptid, ws, TARGET_WNOHANG);
 
   if (debug_infrun)
     print_target_wait_results (wait_ptid, event_ptid, ws);
@@ -4424,10 +4424,12 @@ wait_one ()
 	ptid_t wait_ptid (inf->pid);
 	event.target = inf->process_target ();
 	event.ptid = do_wait_one (wait_ptid, &event.ws);
-	return event;
+	if (event.ws.kind != TARGET_WAITKIND_IGNORE
+	    && event.ws.kind != TARGET_WAITKIND_NO_RESUMED)
+	  return event;
       }
 
-  return {};
+  return {NULL, minus_one_ptid, {TARGET_WAITKIND_IGNORE}};
 }
 
 /* Generate a wrapper for target_stopped_by_REASON that works on PTID
@@ -4624,6 +4626,13 @@ stop_all_threads (void)
 	  if (ws.kind == TARGET_WAITKIND_NO_RESUMED)
 	    {
 	      /* All resumed threads exited.  */
+	    }
+	  else if (ws.kind == TARGET_WAITKIND_IGNORE)
+	    {
+	      /* No events yet.  */
+	      /* Major hack.  Should be waiting for event in all
+		 target's file descriptors.  */
+	      usleep (1000);
 	    }
 	  else if (ws.kind == TARGET_WAITKIND_THREAD_EXITED
 		   || ws.kind == TARGET_WAITKIND_EXITED
