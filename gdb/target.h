@@ -1849,6 +1849,9 @@ extern struct thread_info *target_thread_handle_to_thread_info
 #define target_thread_architecture(ptid) \
      (target_stack->thread_architecture (ptid))
 
+extern struct gdbarch *default_thread_architecture (target_ops *ops,
+						    ptid_t ptid);
+
 /*
  * Iterator function for target memory regions.
  * Calls a callback function once for each memory region 'mapped'
@@ -2552,8 +2555,12 @@ public:
   void store_registers (regcache *regs, int regno) override
   {
   }
-};
 
+  struct gdbarch *thread_architecture (ptid_t ptid) override
+  {
+    return default_thread_architecture (this, ptid);
+  }
+};
 
 } // namespace selftests
 #endif /* GDB_SELF_TEST */

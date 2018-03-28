@@ -97,6 +97,11 @@ struct inf_child_target
 
   bool can_use_agent () override;
 
+  struct gdbarch *thread_architecture (ptid_t ptid) override
+  {
+    return default_thread_architecture (this, ptid);
+  }
+
  protected:
   /* Unpush the target if it wasn't explicitly open with "target native"
      and there are no live inferiors left.  Note: if calling this as a
