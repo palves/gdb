@@ -3932,7 +3932,7 @@ procfs_make_note_section (struct target_ops *self, bfd *obfd, int *note_size)
 			     &thread_args);
   note_data = thread_args.note_data;
 
-  auxv_len = target_read_alloc (&current_target, TARGET_OBJECT_AUXV,
+  auxv_len = target_read_alloc (target_stack, TARGET_OBJECT_AUXV,
 				NULL, &auxv);
   if (auxv_len > 0)
     {

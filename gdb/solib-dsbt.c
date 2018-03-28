@@ -295,7 +295,7 @@ dsbt_get_initial_loadmaps (void)
   gdb_byte *buf;
   struct dsbt_info *info = get_dsbt_info ();
 
-  if (0 >= target_read_alloc (&current_target, TARGET_OBJECT_FDPIC,
+  if (0 >= target_read_alloc (target_stack, TARGET_OBJECT_FDPIC,
 			      "exec", &buf))
     {
       info->exec_loadmap = NULL;
@@ -305,7 +305,7 @@ dsbt_get_initial_loadmaps (void)
   if (solib_dsbt_debug)
     dsbt_print_loadmap (info->exec_loadmap);
 
-  if (0 >= target_read_alloc (&current_target, TARGET_OBJECT_FDPIC,
+  if (0 >= target_read_alloc (target_stack, TARGET_OBJECT_FDPIC,
 			      "interp", &buf))
     {
       info->interp_loadmap = NULL;

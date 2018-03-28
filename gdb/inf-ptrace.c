@@ -36,14 +36,16 @@
 
 
 
+inf_ptrace_target::~inf_ptrace_target ()
+{}
+
 #ifdef PT_GET_PROCESS_STATE
 
 /* Target hook for follow_fork.  On entry and at return inferior_ptid is
    the ptid of the followed inferior.  */
 
-static int
-inf_ptrace_follow_fork (struct target_ops *ops, int follow_child,
-			int detach_fork)
+int
+inf_ptrace_target::follow_fork (int follow_child, int detach_fork)
 {
   if (!follow_child)
     {
@@ -60,14 +62,14 @@ inf_ptrace_follow_fork (struct target_ops *ops, int follow_child,
   return 0;
 }
 
-static int
-inf_ptrace_insert_fork_catchpoint (struct target_ops *self, int pid)
+int
+inf_ptrace_target::insert_fork_catchpoint (int pid)
 {
   return 0;
 }
 
-static int
-inf_ptrace_remove_fork_catchpoint (struct target_ops *self, int pid)
+int
+inf_ptrace_target::remove_fork_catchpoint (int pid)
 {
   return 0;
 }
@@ -90,24 +92,24 @@ inf_ptrace_me (void)
    ENV is the environment vector to pass.  If FROM_TTY is non-zero, be
    chatty about it.  */
 
-static void
-inf_ptrace_create_inferior (struct target_ops *ops,
-			    const char *exec_file, const std::string &allargs,
-			    char **env, int from_tty)
+void
+inf_ptrace_target::create_inferior (const char *exec_file,
+				    const std::string &allargs,
+				    char **env, int from_tty)
 {
   pid_t pid;
   ptid_t ptid;
 
   /* Do not change either targets above or the same target if already present.
      The reason is the target stack is shared across multiple inferiors.  */
-  int ops_already_pushed = target_is_pushed (ops);
+  int ops_already_pushed = target_is_pushed (this);
   struct cleanup *back_to = make_cleanup (null_cleanup, NULL);
 
   if (! ops_already_pushed)
     {
       /* Clear possible core file with its process_stratum.  */
-      push_target (ops);
-      make_cleanup_unpush_target (ops);
+      push_target (this);
+      make_cleanup_unpush_target (this);
     }
 
   pid = fork_inferior (exec_file, allargs, env, inf_ptrace_me, NULL,
@@ -130,8 +132,8 @@ inf_ptrace_create_inferior (struct target_ops *ops,
 
 #ifdef PT_GET_PROCESS_STATE
 
-static void
-inf_ptrace_post_startup_inferior (struct target_ops *self, ptid_t pid)
+void
+inf_ptrace_target::post_startup_inferior (ptid_t pid)
 {
   ptrace_event_t pe;
 
@@ -147,8 +149,8 @@ inf_ptrace_post_startup_inferior (struct target_ops *self, ptid_t pid)
 
 /* Clean up a rotting corpse of an inferior after it died.  */
 
-static void
-inf_ptrace_mourn_inferior (struct target_ops *ops)
+void
+inf_ptrace_target::mourn_inferior ()
 {
   int status;
 
@@ -158,14 +160,14 @@ inf_ptrace_mourn_inferior (struct target_ops *ops)
      only report its exit status to its original parent.  */
   waitpid (ptid_get_pid (inferior_ptid), &status, 0);
 
-  inf_child_mourn_inferior (ops);
+  inf_child_target::mourn_inferior ();
 }
 
 /* Attach to the process specified by ARGS.  If FROM_TTY is non-zero,
    be chatty about it.  */
 
-static void
-inf_ptrace_attach (struct target_ops *ops, const char *args, int from_tty)
+void
+inf_ptrace_target::attach (const char *args, int from_tty)
 {
   char *exec_file;
   pid_t pid;
@@ -173,7 +175,7 @@ inf_ptrace_attach (struct target_ops *ops, const char *args, int from_tty)
 
   /* Do not change either targets above or the same target if already present.
      The reason is the target stack is shared across multiple inferiors.  */
-  int ops_already_pushed = target_is_pushed (ops);
+  int ops_already_pushed = target_is_pushed (this);
   struct cleanup *back_to = make_cleanup (null_cleanup, NULL);
 
   pid = parse_pid_to_attach (args);
@@ -185,8 +187,8 @@ inf_ptrace_attach (struct target_ops *ops, const char *args, int from_tty)
     {
       /* target_pid_to_str already uses the target.  Also clear possible core
 	 file with its process_stratum.  */
-      push_target (ops);
-      make_cleanup_unpush_target (ops);
+      push_target (this);
+      make_cleanup_unpush_target (this);
     }
 
   if (from_tty)
@@ -226,8 +228,8 @@ inf_ptrace_attach (struct target_ops *ops, const char *args, int from_tty)
 
 #ifdef PT_GET_PROCESS_STATE
 
-static void
-inf_ptrace_post_attach (struct target_ops *self, int pid)
+void
+inf_ptrace_target::post_attach (int pid)
 {
   ptrace_event_t pe;
 
@@ -243,8 +245,8 @@ inf_ptrace_post_attach (struct target_ops *self, int pid)
 
 /* Detach from the inferior.  If FROM_TTY is non-zero, be chatty about it.  */
 
-static void
-inf_ptrace_detach (struct target_ops *ops, inferior *inf, int from_tty)
+void
+inf_ptrace_target::detach (inferior *inf, int from_tty)
 {
   pid_t pid = ptid_get_pid (inferior_ptid);
 
@@ -263,24 +265,24 @@ inf_ptrace_detach (struct target_ops *ops, inferior *inf, int from_tty)
   error (_("This system does not support detaching from a process"));
 #endif
 
-  inf_ptrace_detach_success (ops, inf);
+  detach_success (inf);
 }
 
 /* See inf-ptrace.h.  */
 
 void
-inf_ptrace_detach_success (struct target_ops *ops, inferior *inf)
+inf_ptrace_target::detach_success (inferior *inf)
 {
   inferior_ptid = null_ptid;
   detach_inferior (inf);
 
-  inf_child_maybe_unpush_target (ops);
+  maybe_unpush_target ();
 }
 
 /* Kill the inferior.  */
 
-static void
-inf_ptrace_kill (struct target_ops *ops)
+void
+inf_ptrace_target::kill ()
 {
   pid_t pid = ptid_get_pid (inferior_ptid);
   int status;
@@ -314,9 +316,8 @@ get_ptrace_pid (ptid_t ptid)
    STEP is nonzero, single-step it.  If SIGNAL is nonzero, give it
    that signal.  */
 
-static void
-inf_ptrace_resume (struct target_ops *ops,
-		   ptid_t ptid, int step, enum gdb_signal signal)
+void
+inf_ptrace_target::resume (ptid_t ptid, int step, enum gdb_signal signal)
 {
   pid_t pid;
   int request;
@@ -356,9 +357,9 @@ inf_ptrace_resume (struct target_ops *ops,
    process ID of the child, or MINUS_ONE_PTID in case of error; store
    the status in *OURSTATUS.  */
 
-static ptid_t
-inf_ptrace_wait (struct target_ops *ops,
-		 ptid_t ptid, struct target_waitstatus *ourstatus, int options)
+ptid_t
+inf_ptrace_target::wait (ptid_t ptid, struct target_waitstatus *ourstatus,
+			 int options)
 {
   pid_t pid;
   int status, save_errno;
@@ -504,11 +505,11 @@ inf_ptrace_peek_poke (pid_t pid, gdb_byte *readbuf,
 
 /* Implement the to_xfer_partial target_ops method.  */
 
-static enum target_xfer_status
-inf_ptrace_xfer_partial (struct target_ops *ops, enum target_object object,
-			 const char *annex, gdb_byte *readbuf,
-			 const gdb_byte *writebuf,
-			 ULONGEST offset, ULONGEST len, ULONGEST *xfered_len)
+enum target_xfer_status
+inf_ptrace_target::xfer_partial (enum target_object object,
+				 const char *annex, gdb_byte *readbuf,
+				 const gdb_byte *writebuf,
+				 ULONGEST offset, ULONGEST len, ULONGEST *xfered_len)
 {
   pid_t pid = get_ptrace_pid (inferior_ptid);
 
@@ -590,17 +591,17 @@ inf_ptrace_xfer_partial (struct target_ops *ops, enum target_object object,
 
 /* Return non-zero if the thread specified by PTID is alive.  */
 
-static int
-inf_ptrace_thread_alive (struct target_ops *ops, ptid_t ptid)
+int
+inf_ptrace_target::thread_alive (ptid_t ptid)
 {
   /* ??? Is kill the right way to do this?  */
-  return (kill (ptid_get_pid (ptid), 0) != -1);
+  return (::kill (ptid_get_pid (ptid), 0) != -1);
 }
 
 /* Print status information about what we're accessing.  */
 
-static void
-inf_ptrace_files_info (struct target_ops *ignore)
+void
+inf_ptrace_target::files_info ()
 {
   struct inferior *inf = current_inferior ();
 
@@ -609,8 +610,8 @@ inf_ptrace_files_info (struct target_ops *ignore)
 		   target_pid_to_str (inferior_ptid));
 }
 
-static const char *
-inf_ptrace_pid_to_str (struct target_ops *ops, ptid_t ptid)
+const char *
+inf_ptrace_target::pid_to_str (ptid_t ptid)
 {
   return normal_pid_to_str (ptid);
 }
@@ -622,9 +623,9 @@ inf_ptrace_pid_to_str (struct target_ops *ops, ptid_t ptid)
    Return -1 if there is insufficient buffer for a whole entry.
    Return 1 if an entry was read into *TYPEP and *VALP.  */
 
-static int
-inf_ptrace_auxv_parse (struct target_ops *ops, gdb_byte **readptr,
-		       gdb_byte *endptr, CORE_ADDR *typep, CORE_ADDR *valp)
+int
+inf_ptrace_target::auxv_parse (gdb_byte **readptr, gdb_byte *endptr,
+			       CORE_ADDR *typep, CORE_ADDR *valp)
 {
   struct type *int_type = builtin_type (target_gdbarch ())->builtin_int;
   struct type *ptr_type = builtin_type (target_gdbarch ())->builtin_data_ptr;
@@ -649,172 +650,4 @@ inf_ptrace_auxv_parse (struct target_ops *ops, gdb_byte **readptr,
 }
 
 #endif
-
-/* Create a prototype ptrace target.  The client can override it with
-   local methods.  */
-
-struct target_ops *
-inf_ptrace_target (void)
-{
-  struct target_ops *t = inf_child_target ();
-
-  t->to_attach = inf_ptrace_attach;
-  t->to_detach = inf_ptrace_detach;
-  t->to_resume = inf_ptrace_resume;
-  t->to_wait = inf_ptrace_wait;
-  t->to_files_info = inf_ptrace_files_info;
-  t->to_kill = inf_ptrace_kill;
-  t->to_create_inferior = inf_ptrace_create_inferior;
-#ifdef PT_GET_PROCESS_STATE
-  t->to_follow_fork = inf_ptrace_follow_fork;
-  t->to_insert_fork_catchpoint = inf_ptrace_insert_fork_catchpoint;
-  t->to_remove_fork_catchpoint = inf_ptrace_remove_fork_catchpoint;
-  t->to_post_startup_inferior = inf_ptrace_post_startup_inferior;
-  t->to_post_attach = inf_ptrace_post_attach;
-#endif
-  t->to_mourn_inferior = inf_ptrace_mourn_inferior;
-  t->to_thread_alive = inf_ptrace_thread_alive;
-  t->to_pid_to_str = inf_ptrace_pid_to_str;
-  t->to_xfer_partial = inf_ptrace_xfer_partial;
-#if defined (PT_IO) && defined (PIOD_READ_AUXV)
-  t->to_auxv_parse = inf_ptrace_auxv_parse;
-#endif
-
-  return t;
-}
 
-
-/* Pointer to a function that returns the offset within the user area
-   where a particular register is stored.  */
-static CORE_ADDR (*inf_ptrace_register_u_offset)(struct gdbarch *, int, int);
-
-/* Fetch register REGNUM from the inferior.  */
-
-static void
-inf_ptrace_fetch_register (struct regcache *regcache, int regnum)
-{
-  struct gdbarch *gdbarch = regcache->arch ();
-  CORE_ADDR addr;
-  size_t size;
-  PTRACE_TYPE_RET *buf;
-  pid_t pid;
-  int i;
-
-  /* This isn't really an address, but ptrace thinks of it as one.  */
-  addr = inf_ptrace_register_u_offset (gdbarch, regnum, 0);
-  if (addr == (CORE_ADDR)-1
-      || gdbarch_cannot_fetch_register (gdbarch, regnum))
-    {
-      regcache_raw_supply (regcache, regnum, NULL);
-      return;
-    }
-
-  pid = get_ptrace_pid (regcache_get_ptid (regcache));
-
-  size = register_size (gdbarch, regnum);
-  gdb_assert ((size % sizeof (PTRACE_TYPE_RET)) == 0);
-  buf = (PTRACE_TYPE_RET *) alloca (size);
-
-  /* Read the register contents from the inferior a chunk at a time.  */
-  for (i = 0; i < size / sizeof (PTRACE_TYPE_RET); i++)
-    {
-      errno = 0;
-      buf[i] = ptrace (PT_READ_U, pid, (PTRACE_TYPE_ARG3)(uintptr_t)addr, 0);
-      if (errno != 0)
-	error (_("Couldn't read register %s (#%d): %s."),
-	       gdbarch_register_name (gdbarch, regnum),
-	       regnum, safe_strerror (errno));
-
-      addr += sizeof (PTRACE_TYPE_RET);
-    }
-  regcache_raw_supply (regcache, regnum, buf);
-}
-
-/* Fetch register REGNUM from the inferior.  If REGNUM is -1, do this
-   for all registers.  */
-
-static void
-inf_ptrace_fetch_registers (struct target_ops *ops,
-			    struct regcache *regcache, int regnum)
-{
-  if (regnum == -1)
-    for (regnum = 0;
-	 regnum < gdbarch_num_regs (regcache->arch ());
-	 regnum++)
-      inf_ptrace_fetch_register (regcache, regnum);
-  else
-    inf_ptrace_fetch_register (regcache, regnum);
-}
-
-/* Store register REGNUM into the inferior.  */
-
-static void
-inf_ptrace_store_register (const struct regcache *regcache, int regnum)
-{
-  struct gdbarch *gdbarch = regcache->arch ();
-  CORE_ADDR addr;
-  size_t size;
-  PTRACE_TYPE_RET *buf;
-  pid_t pid;
-  int i;
-
-  /* This isn't really an address, but ptrace thinks of it as one.  */
-  addr = inf_ptrace_register_u_offset (gdbarch, regnum, 1);
-  if (addr == (CORE_ADDR)-1 
-      || gdbarch_cannot_store_register (gdbarch, regnum))
-    return;
-
-  pid = get_ptrace_pid (regcache_get_ptid (regcache));
-
-  size = register_size (gdbarch, regnum);
-  gdb_assert ((size % sizeof (PTRACE_TYPE_RET)) == 0);
-  buf = (PTRACE_TYPE_RET *) alloca (size);
-
-  /* Write the register contents into the inferior a chunk at a time.  */
-  regcache_raw_collect (regcache, regnum, buf);
-  for (i = 0; i < size / sizeof (PTRACE_TYPE_RET); i++)
-    {
-      errno = 0;
-      ptrace (PT_WRITE_U, pid, (PTRACE_TYPE_ARG3)(uintptr_t)addr, buf[i]);
-      if (errno != 0)
-	error (_("Couldn't write register %s (#%d): %s."),
-	       gdbarch_register_name (gdbarch, regnum),
-	       regnum, safe_strerror (errno));
-
-      addr += sizeof (PTRACE_TYPE_RET);
-    }
-}
-
-/* Store register REGNUM back into the inferior.  If REGNUM is -1, do
-   this for all registers.  */
-
-static void
-inf_ptrace_store_registers (struct target_ops *ops,
-			    struct regcache *regcache, int regnum)
-{
-  if (regnum == -1)
-    for (regnum = 0;
-	 regnum < gdbarch_num_regs (regcache->arch ());
-	 regnum++)
-      inf_ptrace_store_register (regcache, regnum);
-  else
-    inf_ptrace_store_register (regcache, regnum);
-}
-
-/* Create a "traditional" ptrace target.  REGISTER_U_OFFSET should be
-   a function returning the offset within the user area where a
-   particular register is stored.  */
-
-struct target_ops *
-inf_ptrace_trad_target (CORE_ADDR (*register_u_offset)
-					(struct gdbarch *, int, int))
-{
-  struct target_ops *t = inf_ptrace_target();
-
-  gdb_assert (register_u_offset);
-  inf_ptrace_register_u_offset = register_u_offset;
-  t->to_fetch_registers = inf_ptrace_fetch_registers;
-  t->to_store_registers = inf_ptrace_store_registers;
-
-  return t;
-}

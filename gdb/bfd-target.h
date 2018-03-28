@@ -28,4 +28,7 @@ struct target_ops;
    released when the target is closed.  */
 struct target_ops *target_bfd_reopen (struct bfd *bfd);
 
+/* Close and destroy a target created by target_bfd_reopen.  */
+void target_bfd_close (struct target_ops *ops);
+
 #endif

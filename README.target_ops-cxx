@@ -1,0 +1,95 @@
+Subject: [PATCH] Convert struct target_ops to C++ [2017-02-25]
+
+I.e., use C++ virtual methods and inheritance instead of tables of
+function pointers.
+
+* Status:
+
+  | target             | converted? | testing |
+  |--------------------+------------+---------|
+  | i386 GNU/Linux     | x          | B       |
+  | x86-64 GNU/Linux   | x          | T       |
+  | windows-nat.c      | x          | B       |
+  | exec.c             | x          | T       |
+  | corelow.c          | x          | T       |
+  | remote.c           | x          | B       |
+  | ctf.c              | x          | B       |
+  | record-full.c      | x          | T       |
+  | record-btrace.c    | x          | B       |
+  | darwin-nat.c       | x          | B       |
+  | i386-darwin-nat.c  | x          | B       |
+  | remote-sim.c       | x          | B       |
+  | spu-multiarch.c    | x          | B       |
+  | bsd-uthread.c      | x          | B       |
+  | ravenscar-thread.c | x          | B       |
+
+  All host-independent targets an x86-64 GNU/Linux
+  --enable-targets=all build pulls in are converted.
+
+- Unconverted:
+
+  A bunch of Linux ports.  Solaris, Nto.  BSDs.
+
+  Essentially ALL other native targets in the tree must be converted.
+  Help much appreciated!
+
+* Implementation notes:
+
+- The flattened current_target is gone.  References to current_target
+  or current_target.beneath are replaced to references to target_stack
+  (the top of the stack) directly.
+
+- To keep "set debug target" working, I added a new debug_stratum
+  layer that sits on top of the stack, prints the debug and delegates
+  to the target beneath.  In addition, I made the shortname and
+  longname properties of target_ops be virtual methods instead of data
+  fields, and made the debug target defer those to the target beneath.
+  This is so that debug code sprinkled around that does "if
+  (debugtarget) ..."  can transparently print the name of the target
+  beneath.
+
+- We can no longer check whether a target_ops implements a method by
+  comparing the function pointer.  Fixing that required adding a few
+  more target_ops methods.  E.g.,:
+
+    +  for (t = target_stack; t != NULL; t = t->beneath)
+	 {
+    -      if (t->to_create_inferior != NULL)
+    +      if (t->can_create_inferior ())
+	    break;
+	 }
+
+- make-target-delegates was adjusted to generate C++ classes and
+  methods.
+
+  It now generates a couple classes that inherit target_ops:
+  dummy_target and debug_target.
+
+  Since we need to generate the class declaration as well, we now
+  generate the code in two passes.
+
+- I eliminated to_xclose.  It's not exactly clear how this will all
+  work on a multi-target world, so there's no point in keeping a
+  partial conversion in place.  bfd-target.c now exports a function
+  that closes the target and then deletes it.  See target_bfd_close.
+
+- We can no longer use x86_use_watchpoints to install custom methods.
+
+  Instead, we solve this with a template.
+
+- The old weird double-target linux_ops mechanism in linux-nat.c, is
+  gone, replaced by adding a few virtual methods to linux-nat.h's
+  target_ops, called low_XXX, that the concrete linux-nat
+  implementations override.  Sort of like gdbserver's
+  linux_target_ops, but simpler, for requiring only one
+  target_ops-like hierarchy, which spares implementing the same method
+  twice when we need to forward the method to a low implementation.
+  The low target simply reimplements the target_ops method directly in
+  that case.
+
+- There are a few remaining linux-nat.c hooks that would be better converted to
+  low_ methods like above.  E.g.:
+
+   linux_nat_set_new_thread (t, x86_linux_new_thread);
+   linux_nat_set_new_fork (t, x86_linux_new_fork);
+   linux_nat_set_forget_process

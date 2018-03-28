@@ -203,7 +203,7 @@ procfs_open_1 (struct target_ops *ops, const char *arg, int from_tty)
     }
   do_cleanups (cleanups);
 
-  inf_child_open_target (ops, arg, from_tty);
+  inf_child_target::open (arg, from_tty);
   printf_filtered ("Debugging using %s\n", nto_procfs_path);
 }
 
