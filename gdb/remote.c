@@ -9214,7 +9214,7 @@ remote_target::putpkt_binary (const char *buf, int cnt)
 	  std::string str
 	    = escape_buffer (buf2, std::min (len, REMOTE_DEBUG_MAX_CHAR));
 
-	  fprintf_unfiltered (gdb_stdlog, "Sending packet: %s: %s",
+	  fprintf_unfiltered (gdb_stdlog, "Sending packet to \"%s\": %s",
 			      rs->remote_desc->name,
 			      str.c_str ());
 
@@ -9301,7 +9301,7 @@ remote_target::putpkt_binary (const char *buf, int cnt)
 			std::string str = escape_buffer (rs->buf, val);
 
 			fprintf_unfiltered (gdb_stdlog,
-					    "  Notification received on %s: %s\n",
+					    "  Notification received on \"%s\": %s\n",
 					    rs->remote_desc->name,
 					    str.c_str ());
 		      }
@@ -9679,7 +9679,8 @@ remote_target::getpkt_or_notif_sane_1 (char **buf, long *sizeof_buf,
 	      std::string str = escape_buffer (*buf, val);
 
 	      fprintf_unfiltered (gdb_stdlog,
-				  "  Notification received: %s\n",
+				  "  Notification received on \"%s\": %s\n",
+				  rs->remote_desc->name,
 				  str.c_str ());
 	    }
 	  if (is_notif != NULL)
