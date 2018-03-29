@@ -42,10 +42,10 @@
 #include "nat/x86-linux-dregs.h"
 #include "nat/linux-ptrace.h"
 
-/* linux_nat_new_fork hook.   */
+/* linux_nat_target::low_new_fork implementation.  */
 
-static void
-x86_linux_new_fork (struct lwp_info *parent, pid_t child_pid)
+void
+x86_linux_nat_target::low_new_fork (struct lwp_info *parent, pid_t child_pid)
 {
   pid_t parent_pid;
   struct x86_debug_reg_state *parent_state;
@@ -321,13 +321,4 @@ _initialize_x86_linux_nat ()
   x86_dr_low.get_status = x86_linux_dr_get_status;
   x86_dr_low.get_control = x86_linux_dr_get_control;
   x86_set_debug_register_length (sizeof (void *));
-
-  /* XXXX Once these are converted to virtual methods in
-     linux_nat_target, this whole function can be converted to an
-     _initialize routine.  */
-  linux_nat_set_new_thread (x86_linux_new_thread);
-  linux_nat_set_delete_thread (x86_linux_delete_thread);
-  linux_nat_set_new_fork (x86_linux_new_fork);
-  linux_nat_set_forget_process (x86_forget_process);
-  linux_nat_set_prepare_to_resume (x86_linux_prepare_to_resume);
 }
