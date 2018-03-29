@@ -311,10 +311,8 @@ x86_linux_get_thread_area (pid_t pid, void *addr, unsigned int *base_addr)
 }
 
 
-/* Add an x86 GNU/Linux target.  */
-
 void
-x86_linux_add_target (linux_nat_target *t)
+_initialize_x86_linux_nat ()
 {
   /* Initialize the debug register function vectors.  */
   x86_dr_low.set_control = x86_linux_dr_set_control;
@@ -324,7 +322,6 @@ x86_linux_add_target (linux_nat_target *t)
   x86_dr_low.get_control = x86_linux_dr_get_control;
   x86_set_debug_register_length (sizeof (void *));
 
-  add_target (t);
   /* XXXX Once these are converted to virtual methods in
      linux_nat_target, this whole function can be converted to an
      _initialize routine.  */

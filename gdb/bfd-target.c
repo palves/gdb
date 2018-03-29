@@ -23,6 +23,12 @@
 #include "exec.h"
 #include "gdb_bfd.h"
 
+static const target_info target_bfd_target_info = {
+  "bfd",
+  N_("BFD backed target"),
+  N_("You should never see this")
+};
+
 /* A target that wraps a BFD.  */
 class target_bfd : public target_ops
 {
@@ -39,14 +45,8 @@ public:
   explicit target_bfd (struct bfd *bfd);
   ~target_bfd () override;
 
-  const char *shortname () override
-  { return "bfd"; }
-
-  const char *longname () override
-  { return _("BFD backed target"); }
-
-  const char *doc () override
-  { return _("You should never see this"); }
+  const target_info &info () const override
+  { return target_bfd_target_info; }
 
   target_xfer_status
     xfer_partial (target_object object,

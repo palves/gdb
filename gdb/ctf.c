@@ -32,23 +32,20 @@
 #include <ctype.h>
 #include <algorithm>
 
+static const target_info ctf_target_info = {
+  "ctf",
+  N_("CTF file"),
+  N_("(Use a CTF directory as a target.\n\
+Specify the filename of the CTF directory.")
+};
+
 class ctf_target : public tracefile_target
 {
 public:
-  const char *shortname () override
-  { return "ctf"; }
+  const target_info &info () const override
+  { return ctf_target_info; }
 
-  const char *longname () override
-  { return _("CTF file"); }
-
-  const char *doc () override
-  {
-    return _("\
-Use a CTF directory as a target.\n\
-Specify the filename of the CTF directory.");
-  }
-
-  void open (const char *, int) override;
+  static void open (const char *, int);
   void close () override;
   void fetch_registers (struct regcache *, int) override;
   enum target_xfer_status xfer_partial (enum target_object object,
@@ -1159,7 +1156,9 @@ ctf_target::open (const char *dirname, int from_tty)
   gdb_assert (start_pos->type == BT_SEEK_RESTORE);
 
   trace_dirname = xstrdup (dirname);
-  push_target (this);
+
+  ctf_target *target = new ctf_target ();
+  push_target (target);
 
   inferior_appeared (current_inferior (), CTF_PID);
   inferior_ptid = pid_to_ptid (CTF_PID);
@@ -1168,7 +1167,7 @@ ctf_target::open (const char *dirname, int from_tty)
   merge_uploaded_trace_state_variables (&uploaded_tsvs);
   merge_uploaded_tracepoints (&uploaded_tps);
 
-  post_create_inferior (this, from_tty);
+  post_create_inferior (target, from_tty);
 }
 
 /* This is the implementation of target_ops method to_close.  Destroy
@@ -1722,6 +1721,6 @@ void
 _initialize_ctf (void)
 {
 #if HAVE_LIBBABELTRACE
-  add_target_with_completer (new ctf_target (), filename_completer);
+  add_target (ctf_target_info, ctf_target::open, filename_completer);
 #endif
 }

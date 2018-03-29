@@ -50,24 +50,20 @@
 #define O_LARGEFILE 0
 #endif
 
+static const target_info core_target_info = {
+  "core",
+  N_("Local core dump file"),
+  N_("Use a core file as a target.  Specify the filename of the core file.")
+};
+
 class core_target : public target_ops
 {
 public:
   core_target ();
 
-  const char *shortname () override
-  { return "core"; }
+  const target_info &info () const override
+  { return core_target_info; }
 
-  const char *longname () override
-  { return _("Local core dump file"); }
-
-  const char *doc () override
-  {
-    return _("\
-Use a core file as a target.  Specify the filename of the core file.");
-  }
-
-  void open (const char *, int) override;
   void close () override;
   void detach (inferior *, int) override;
   void fetch_registers (struct regcache *, int) override;
@@ -314,10 +310,10 @@ add_to_thread_list (bfd *abfd, asection *asect, void *reg_sect_arg)
     inferior_ptid = ptid;			/* Yes, make it current.  */
 }
 
-/* This routine opens and sets up the core file bfd.  */
+/* See gdbcore.h.  */
 
 void
-core_target::open (const char *arg, int from_tty)
+core_target_open (const char *arg, int from_tty)
 {
   const char *p;
   int siggy;
@@ -366,10 +362,6 @@ core_target::open (const char *arg, int from_tty)
 	     filename.get (), bfd_errmsg (bfd_get_error ()));
     }
 
-  /* Looks semi-reasonable.  Toss the old core file and work on the
-     new.  */
-
-  unpush_target (this);
   core_bfd = temp_bfd.release ();
   old_chain = make_cleanup (core_close_cleanup, 0 /*ignore*/);
 
@@ -396,7 +388,8 @@ core_target::open (const char *arg, int from_tty)
   if (!exec_bfd)
     set_gdbarch_from_file (core_bfd);
 
-  push_target (this);
+  core_target *target = new core_target ();
+  push_target (target);
   discard_cleanups (old_chain);
 
   /* Do this before acknowledging the inferior, so if
@@ -441,7 +434,7 @@ core_target::open (const char *arg, int from_tty)
 	switch_to_thread (thread->ptid);
     }
 
-  post_create_inferior (this, from_tty);
+  post_create_inferior (target, from_tty);
 
   /* Now go through the target stack looking for threads since there
      may be a thread_stratum target loaded on top of target core by
@@ -1026,11 +1019,5 @@ core_target::info_proc (const char *args, enum info_proc_what request)
 void
 _initialize_corelow (void)
 {
-  if (the_core_target != NULL)
-    internal_error (__FILE__, __LINE__,
-		    _("init_core_ops: core target already exists (\"%s\")."),
-		    the_core_target->longname ());
-  the_core_target = new class core_target ();
-
-  add_target_with_completer (the_core_target, filename_completer);
+  add_target (core_target_info, core_target_open, filename_completer);
 }

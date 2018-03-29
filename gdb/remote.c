@@ -76,6 +76,17 @@
 #include "environ.h"
 #include "common/byte-vector.h"
 
+static const char remote_doc[] = N_("\
+Use a remote computer via a serial line, using a gdb-specific protocol.\n\
+Specify the serial device it is connected to\n\
+(e.g. /dev/ttyS0, /dev/ttya, COM1, etc.).");
+
+static const target_info remote_target_info = {
+  "remote",
+  N_("Remote serial target in gdb-specific protocol"),
+  remote_doc
+};
+
 class remote_target : public target_ops
 {
 public:
@@ -84,24 +95,13 @@ public:
     to_stratum = process_stratum;
   }
 
-  const char *shortname () override
-  { return "remote"; }
-
-  const char *longname () override
-  { return _("Remote serial target in gdb-specific protocol"); }
-
-  const char *doc () override
-  {
-    return _("\
-Use a remote computer via a serial line, using a gdb-specific protocol.\n\
-Specify the serial device it is connected to\n\
-(e.g. /dev/ttyS0, /dev/ttya, COM1, etc.).");
-  }
+  const target_info &info () const override
+  { return remote_target_info; }
 
   thread_control_capabilities get_thread_control_capabilities () override
   { return tc_schedlock; }
 
-  void open (const char *, int) override;
+  static void open (const char *, int);
   void close () override;
 
   void detach (inferior *, int) override;
@@ -373,8 +373,14 @@ Specify the serial device it is connected to\n\
   enum exec_direction_kind execution_direction () override;
 
 protected:
-  void open_1 (const char *name, int from_tty, int extended_p);
+  static void open_1 (const char *name, int from_tty, int extended_p);
   void start_remote (int from_tty, int extended_p);
+};
+
+static const target_info extended_remote_target_info = {
+  "extended-remote",
+  N_("Extended remote serial target in gdb-specific protocol"),
+  remote_doc
 };
 
 /* Set up the extended remote target by extending the standard remote
@@ -383,13 +389,10 @@ protected:
 class extended_remote_target : public remote_target
 {
 public:
-  const char *shortname () override
-  { return "extended-remote"; }
+  const target_info &info () const override
+  { return extended_remote_target_info; }
 
-  const char *longname () override
-  { return _("Extended remote serial target in gdb-specific protocol"); }
-
-  void open (const char *, int) override;
+  static void open (const char *, int);
 
   bool can_create_inferior () override { return true; }
   void create_inferior (const char *, const std::string &,
@@ -5279,7 +5282,10 @@ remote_target::open_1 (const char *name, int from_tty, int extended_p)
       puts_filtered (name);
       puts_filtered ("\n");
     }
-  push_target (this);		/* Switch to using remote target now.  */
+
+  remote_target *target
+    = extended_p ? new extended_remote_target () : new remote_target ();
+  push_target (target);		/* Switch to using remote target now.  */
 
   /* Register extra event sources in the event loop.  */
   remote_async_inferior_event_token
@@ -5347,7 +5353,7 @@ remote_target::open_1 (const char *name, int from_tty, int extended_p)
 
     TRY
       {
-	start_remote (from_tty, extended_p);
+	target->start_remote (from_tty, extended_p);
       }
     CATCH (ex, RETURN_MASK_ALL)
       {
@@ -14025,8 +14031,8 @@ _initialize_remote (void)
      time.  */
   remote_state = new_remote_state ();
 
-  add_target (new remote_target ());
-  add_target (new extended_remote_target ());
+  add_target (remote_target_info, remote_target::open);
+  add_target (extended_remote_target_info, extended_remote_target::open);
 
   /* Hook into new objfile notification.  */
   observer_attach_new_objfile (remote_new_objfile);

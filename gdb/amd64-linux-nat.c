@@ -52,6 +52,8 @@ struct amd64_linux_nat_target final : public x86_linux_nat_target
   void store_registers (struct regcache *, int) override;
 };
 
+static amd64_linux_nat_target the_amd64_linux_nat_target;
+
 /* Mapping between the general-purpose registers in GNU/Linux x86-64
    `struct user' format and GDB's register cache layout for GNU/Linux
    i386.
@@ -411,11 +413,10 @@ _initialize_amd64_linux_nat (void)
   gdb_assert (ARRAY_SIZE (amd64_linux_gregset32_reg_offset)
 	      == amd64_native_gregset32_num_regs);
 
-  linux_target = new amd64_linux_nat_target ();
-
   /* Add the target.  */
-  x86_linux_add_target (linux_target);
+  linux_target = &the_amd64_linux_nat_target;
+  add_inf_child_target (linux_target);
 
   /* Add our siginfo layout converter.  */
-  linux_nat_set_siginfo_fixup (linux_target, amd64_linux_siginfo_fixup);
+  linux_nat_set_siginfo_fixup (amd64_linux_siginfo_fixup);
 }
