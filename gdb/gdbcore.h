@@ -135,7 +135,9 @@ extern void specify_exec_file_hook (void (*hook) (const char *filename));
 
 extern bfd *core_bfd;
 
-extern struct target_ops *core_target;
+/* corelow.c target.  It is never NULL after GDB initialization.  */
+
+extern struct target_ops *the_core_target;
 
 /* Whether to open exec and core files read-only or read-write.  */
 
