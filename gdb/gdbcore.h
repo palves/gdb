@@ -153,8 +153,6 @@ extern void exec_file_attach (const char *filename, int from_tty);
 
 extern void exec_file_locate_attach (int pid, int defer_bp_reset, int from_tty);
 
-extern void exec_file_clear (int from_tty);
-
 extern void validate_files (void);
 
 /* The current default bfd target.  */
