@@ -73,7 +73,7 @@ msymbol_is_function (struct objfile *objfile, minimal_symbol *minsym,
       {
 	struct gdbarch *gdbarch = get_objfile_arch (objfile);
 	CORE_ADDR pc = gdbarch_convert_from_func_ptr_addr (gdbarch, msym_addr,
-							   &current_target);
+							   target_stack);
 	if (pc != msym_addr)
 	  {
 	    if (func_address_p != NULL)
@@ -1501,7 +1501,7 @@ find_solib_trampoline_target (struct frame_info *frame, CORE_ADDR pc)
 	    func = gdbarch_convert_from_func_ptr_addr
 		    (get_objfile_arch (objfile),
 		     MSYMBOL_VALUE_ADDRESS (objfile, msymbol),
-		     &current_target);
+		     target_stack);
 
 	    /* Ignore data symbols that are not function descriptors.  */
 	    if (func != MSYMBOL_VALUE_ADDRESS (objfile, msymbol))
