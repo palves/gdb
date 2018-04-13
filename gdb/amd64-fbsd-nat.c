@@ -32,10 +32,20 @@
 #include "fbsd-nat.h"
 #include "amd64-tdep.h"
 #include "amd64-nat.h"
-#include "x86-bsd-nat.h"
+#include "amd64-bsd-nat.h"
 #include "x86-nat.h"
 #include "x86-xstate.h"
 
+
+class amd64_fbsd_nat_target final
+  : public amd64_bsd_nat_target<fbsd_nat_target>
+{
+public:
+  /* Add some extra features to the common *BSD/i386 target.  */
+  const struct target_desc *read_description () override;
+};
+
+static amd64_fbsd_nat_target the_amd64_fbsd_nat_target;
 
 /* Offset in `struct reg' where MEMBER is stored.  */
 #define REG_OFFSET(member) offsetof (struct reg, member)
@@ -141,10 +151,10 @@ amd64fbsd_supply_pcb (struct regcache *regcache, struct pcb *pcb)
 }
 
 
-/* Implement the to_read_description method.  */
+/* Implement the read_description method.  */
 
-static const struct target_desc *
-amd64fbsd_read_description (struct target_ops *ops)
+const struct target_desc *
+amd64_fbsd_nat_target::read_description (struct target_ops *ops)
 {
 #ifdef PT_GETXSTATE_INFO
   static int xsave_probed;
@@ -188,17 +198,11 @@ amd64fbsd_read_description (struct target_ops *ops)
 void
 _initialize_amd64fbsd_nat (void)
 {
-  struct target_ops *t;
+  struct target_ops *t = &the_amd64_fbsd_nat_target;
   int offset;
 
   amd64_native_gregset32_reg_offset = amd64fbsd32_r_reg_offset;
   amd64_native_gregset64_reg_offset = amd64fbsd64_r_reg_offset;
-
-  /* Add some extra features to the common *BSD/i386 target.  */
-  t = amd64bsd_target ();
-  t->to_read_description = amd64fbsd_read_description;
-
-  fbsd_nat_add_target (t);
 
   /* Support debugging kernel virtual memory images.  */
   bsd_kvm_add_target (amd64fbsd_supply_pcb);
