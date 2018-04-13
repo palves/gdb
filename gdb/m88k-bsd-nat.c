@@ -29,6 +29,14 @@
 #include "m88k-tdep.h"
 #include "inf-ptrace.h"
 
+struct m88k_bsd_nat_target : public inf_ptrace_target
+{
+  void fetch_registers (struct regcache *, int) override;
+  void store_registers (struct regcache *, int) override;
+};
+
+static m88k_bsd_nat_target the_m88k_bsd_nat_target;
+
 /* Supply the general-purpose registers stored in GREGS to REGCACHE.  */
 
 static void
@@ -62,9 +70,8 @@ m88kbsd_collect_gregset (const struct regcache *regcache,
 /* Fetch register REGNUM from the inferior.  If REGNUM is -1, do this
    for all registers.  */
 
-static void
-m88kbsd_fetch_inferior_registers (struct target_ops *ops,
-				  struct regcache *regcache, int regnum)
+void
+m88k_bsd_nat_target::fetch_registers (struct regcache *regcache, int regnum)
 {
   struct reg regs;
 
@@ -78,9 +85,8 @@ m88kbsd_fetch_inferior_registers (struct target_ops *ops,
 /* Store register REGNUM back into the inferior.  If REGNUM is -1, do
    this for all registers.  */
 
-static void
-m88kbsd_store_inferior_registers (struct target_ops *ops,
-				  struct regcache *regcache, int regnum)
+void
+m88k_bsd_nat_target::store_registers (struct regcache *regcache, int regnum)
 {
   struct reg regs;
 
@@ -98,10 +104,5 @@ m88kbsd_store_inferior_registers (struct target_ops *ops,
 void
 _initialize_m88kbsd_nat (void)
 {
-  struct target_ops *t;
-
-  t = inf_ptrace_target ();
-  t->to_fetch_registers = m88kbsd_fetch_inferior_registers;
-  t->to_store_registers = m88kbsd_store_inferior_registers;
-  add_target (t);
+  add_target (&the_m88k_bsd_nat_target);
 }
