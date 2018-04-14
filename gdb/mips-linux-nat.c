@@ -801,5 +801,5 @@ triggers a breakpoint or watchpoint."),
 			   &maintenance_set_cmdlist,
 			   &maintenance_show_cmdlist);
 
-  add_target (&the_mips_linux_nat_target);
+  add_inf_child_target (&the_mips_linux_nat_target);
 }

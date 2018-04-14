@@ -72,5 +72,5 @@ _initialize_sparc_linux_nat (void)
   sparc_fpregmap = &sparc32_bsd_fpregmap;
 
   /* Register the target.  */
-  add_target (&the_sparc_linux_nat_target);
+  add_inf_child_target (&the_sparc_linux_nat_target);
 }

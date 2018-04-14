@@ -519,5 +519,5 @@ void
 _initialize_m68k_linux_nat (void)
 {
   /* Register the target.  */
-  add_target (&the_m68k_linux_nat_target);
+  add_inf_child_target (&the_m68k_linux_nat_target);
 }

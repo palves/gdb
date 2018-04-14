@@ -929,8 +929,6 @@ ia64_linux_nat_target::low_status_is_event (int status)
 void
 _initialize_ia64_linux_nat (void)
 {
-  struct target_ops *t = &the_ia64_linux_nat_target;
-
   /* Register the target.  */
-  add_target (t);
+  add_inf_child_target (&the_ia64_linux_nat_target);
 }

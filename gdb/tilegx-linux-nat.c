@@ -167,5 +167,5 @@ tilegx_linux_nat_target::store_registers (struct regcache *regcache,
 void
 _initialize_tile_linux_nat (void)
 {
-  add_target (&the_tilegx_linux_nat_target);
+  add_inf_child_target (&the_tilegx_linux_nat_target);
 }

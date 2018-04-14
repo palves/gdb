@@ -842,5 +842,5 @@ _initialize_aarch64_linux_nat (void)
   add_show_debug_regs_command ();
 
   /* Register the target.  */
-  add_target (t);
+  add_inf_child_target (t);
 }

@@ -241,5 +241,5 @@ void
 _initialize_m32r_linux_nat (void)
 {
   /* Register the target.  */
-  add_target (&the_m32r_linux_nat_target);
+  add_inf_child_target (&the_m32r_linux_nat_target);
 }

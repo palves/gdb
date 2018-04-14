@@ -103,5 +103,5 @@ alpha_linux_nat_target::register_u_offset (struct gdbarch *gdbarch,
 void
 _initialize_alpha_linux_nat (void)
 {
-  add_target (&the_alpha_linux_nat_target);
+  add_inf_child_target (&the_alpha_linux_nat_target);
 }

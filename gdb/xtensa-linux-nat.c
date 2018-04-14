@@ -364,5 +364,5 @@ _initialize_xtensa_linux_nat (void)
 	xtreg_high = ptr->gdb_regnum;
     }
 
-  add_target (&the_xtensa_linux_nat_target);
+  add_inf_child_target (&the_xtensa_linux_nat_target);
 }

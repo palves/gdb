@@ -390,5 +390,5 @@ void
 _initialize_hppa_linux_nat (void)
 {
   /* Register the target.  */
-  add_target (&the_hppa_linux_nat_target);
+  add_inf_child_target (&the_hppa_linux_nat_target);
 }

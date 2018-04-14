@@ -163,7 +163,7 @@ i386_fbsd_nat_traget::read_description ()
 void
 _initialize_i386fbsd_nat (void)
 {
-  add_target (&the_i386_fbsd_nat_target);
+  add_inf_child_target (&the_i386_fbsd_nat_target);
 
   /* Support debugging kernel virtual memory images.  */
   bsd_kvm_add_target (i386fbsd_supply_pcb);

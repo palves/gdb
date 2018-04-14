@@ -1065,10 +1065,8 @@ s390_linux_nat_target::read_description ()
 void
 _initialize_s390_nat (void)
 {
-  struct target_ops *t = &the_s390_linux_nat_target;
-
   /* Register the target.  */
-  add_target (t);
+  add_inf_child_target (&the_s390_linux_nat_target);
 
   /* A maintenance command to enable showing the PER state.  */
   add_setshow_boolean_cmd ("show-debug-regs", class_maintenance,
