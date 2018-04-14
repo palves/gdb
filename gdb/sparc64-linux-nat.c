@@ -39,6 +39,12 @@ public:
 
   void store_registers (struct regcache *regcache, int regnum) override;
   { sparc_store_inferior_registers (this, regcache, regnum); }
+
+  /* Override linux_nat_target low methods.  */
+
+  /* ADI support */
+  void low_forget_process (pid_t pid) override
+  { sparc_forget_process (pid); }
 };
 
 static sparc64_linux_nat_target the_sparc64_linux_nat_target;
@@ -91,9 +97,6 @@ _initialize_sparc64_linux_nat (void)
 
   /* Register the target.  */
   add_target (t);
-
-  /* ADI support */
-  linux_nat_set_forget_process (t, sparc64_forget_process);
 
   sparc_gregmap = &sparc64_linux_ptrace_gregmap;
 }
