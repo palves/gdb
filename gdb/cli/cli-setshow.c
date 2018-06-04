@@ -100,7 +100,7 @@ parse_cli_boolean_value (const char *arg)
   int b = parse_cli_boolean_value (&arg);
   if (b >= 0)
     {
-      arg = skip_spaces_const (arg);
+      arg = skip_spaces (arg);
       if (*arg != '\0')
 	return -1;
     }
@@ -184,6 +184,64 @@ parse_cli_var_uinteger (var_types var_type, const char **arg)
     error (_("integer %s out of range"), plongest (val));
 
   return val;
+}
+
+const char *
+parse_cli_var_enum (const char **args, const char *const *enums)
+{
+  /* If no argument was supplied, print an informative error
+     message.  */
+  if (args == NULL || *args == NULL)
+    {
+      char *msg;
+      int msg_len = 0;
+
+      for (size_t i = 0; enums[i]; i++)
+	msg_len += strlen (enums[i]) + 2;
+
+      msg = (char *) xmalloc (msg_len);
+      *msg = '\0';
+      make_cleanup (xfree, msg);
+
+      for (size_t i = 0; enums[i]; i++)
+	{
+	  if (i != 0)
+	    strcat (msg, ", ");
+	  strcat (msg, enums[i]);
+	}
+      error (_("Requires an argument. Valid arguments are %s."),
+	     msg);
+    }
+
+  const char *p = skip_to_space (*args);
+  size_t len = p - *args;
+
+  int nmatches = 0;
+  const char *match = NULL;
+  for (size_t i = 0; enums[i]; i++)
+    if (strncmp (*args, enums[i], len) == 0)
+      {
+	if (enums[i][len] == '\0')
+	  {
+	    match = enums[i];
+	    nmatches = 1;
+	    break; /* Exact match.  */
+	  }
+	else
+	  {
+	    match = enums[i];
+	    nmatches++;
+	  }
+      }
+
+  if (nmatches <= 0)
+    error (_("Undefined item: \"%.*s\"."), (int) len, *args);
+
+  if (nmatches > 1)
+    error (_("Ambiguous item \"%.*s\"."), (int) len, *args);
+
+  *args += len;
+  return match;
 }
 
 /* Do a "set" command.  ARG is NULL if no argument, or the
@@ -379,57 +437,11 @@ do_set_command (const char *arg, int from_tty, struct cmd_list_element *c)
       }
     case var_enum:
       {
-	int i;
-	int len;
-	int nmatches;
-	const char *match = NULL;
-	const char *p;
+	const char *match = parse_cli_var_enum (&arg, c->enums);
 
-	/* If no argument was supplied, print an informative error
-	   message.  */
-	if (arg == NULL)
-	  {
-	    std::string msg;
-
-	    for (i = 0; c->enums[i]; i++)
-	      {
-		if (i != 0)
-		  msg += ", ";
-		msg += c->enums[i];
-	      }
-	    error (_("Requires an argument. Valid arguments are %s."), 
-		   msg.c_str ());
-	  }
-
-	p = strchr (arg, ' ');
-
-	if (p)
-	  len = p - arg;
-	else
-	  len = strlen (arg);
-
-	nmatches = 0;
-	for (i = 0; c->enums[i]; i++)
-	  if (strncmp (arg, c->enums[i], len) == 0)
-	    {
-	      if (c->enums[i][len] == '\0')
-		{
-		  match = c->enums[i];
-		  nmatches = 1;
-		  break; /* Exact match.  */
-		}
-	      else
-		{
-		  match = c->enums[i];
-		  nmatches++;
-		}
-	    }
-
-	if (nmatches <= 0)
-	  error (_("Undefined item: \"%s\"."), arg);
-
-	if (nmatches > 1)
-	  error (_("Ambiguous item \"%s\"."), arg);
+	arg = skip_spaces (arg);
+	if (*arg != '\0')
+	  error (_("garbage: %s"), arg);
 
 	if (*(const char **) c->var != match)
 	  {

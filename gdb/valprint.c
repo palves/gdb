@@ -3235,7 +3235,7 @@ Generic command for setting what things to print in \"raw\" mode."),
 		  &showprintrawlist, "show print raw ", 0, &showprintlist);
 
   gdb::option::add_setshow_cmds_for_options
-    (&user_print_options,
+    (no_class, &user_print_options,
      value_print_option_defs, ARRAY_SIZE (value_print_option_defs),
      &setprintlist, &showprintlist);
 

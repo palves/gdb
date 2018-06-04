@@ -71,8 +71,13 @@ public:
     {
       int *(*boolean) (const option_def &, void *ctx);
       unsigned int *(*uinteger) (const option_def &, void *ctx);
+      const char **(*enumeration) (const option_def &, void *ctx);
     }
   var_address;
+
+  /* Pointer to NULL terminated list of enumerated values (like
+     argv).  */
+  const char *const *enums = NULL;
 
 public:
   /* The "show" callback to use in the associated command.  E.g.,
@@ -139,6 +144,27 @@ struct uinteger_option_def : option_def
   }
 };
 
+/* An enum command line option.  */
+template<typename Context>
+struct enum_option_def : option_def
+{
+  enum_option_def (const char *long_option_,
+		   const char *const *enumlist,
+		   const char **(*var_address_cb_) (Context *),
+		   show_value_ftype *show_cmd_cb_,
+		   const char *set_doc_,
+		   const char *show_doc_,
+		   const char *help_doc_)
+    : option_def (long_option_, var_enum,
+		  (erased_var_address_ftype *) var_address_cb_,
+		  show_cmd_cb_,
+		  set_doc_, show_doc_, help_doc_)
+  {
+    var_address.enumeration = detail::get_var_address<const char *, Context>;
+    this->enums = enumlist;
+  }
+};
+
 extern bool complete_options (const option_def *options, size_t options_size,
 			      completion_tracker &tracker,
 			      const char *text, const char *word);
@@ -149,11 +175,11 @@ extern void build_help (const option_def *options, size_t options_size,
 extern void process_options (const option_def *options, size_t options_size,
 			     void *ctx, const char **args);
 
-extern void
-  add_setshow_cmds_for_options (void *ctx,
-				const option_def *options, size_t options_size,
-				struct cmd_list_element **set_list,
-				struct cmd_list_element **show_list);
+extern void add_setshow_cmds_for_options
+  (command_class cmd_class, void *ctx,
+   const option_def *options, size_t options_size,
+   struct cmd_list_element **set_list,
+   struct cmd_list_element **show_list);
 
 } /* namespace option */
 } /* namespace gdb */

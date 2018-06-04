@@ -19,9 +19,19 @@
 
 struct cmd_list_element;
 
+extern const char *boolean_enums[];
+
 /* Parse ARG, an option to a boolean variable.
    Returns 1 for true, 0 for false, and -1 if invalid.  */
 extern int parse_cli_boolean_value (const char *arg);
+
+extern int parse_cli_boolean_value (const char **arg);
+
+extern unsigned int parse_cli_var_uinteger (var_types var_type,
+					    const char **arg);
+
+const char *parse_cli_var_enum (const char **args,
+				const char *const *enums);
 
 extern void do_set_command (const char *arg, int from_tty,
 			    struct cmd_list_element *c);

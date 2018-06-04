@@ -69,7 +69,7 @@ get_ulongest (const char **pp, int trailer)
 
   if (!(isspace (*p) || *p == '\0' || *p == trailer))
     error (_("Trailing junk at: %s"), p);
-  p = skip_spaces_const (p);
+  p = skip_spaces (p);
   *pp = p;
   return retval;
 }

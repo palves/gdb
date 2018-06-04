@@ -20,12 +20,9 @@
 #include "defs.h"
 #include "cli/cli-option.h"
 #include "cli/cli-utils.h"
+#include "cli/cli-setshow.h"
 #include "command.h"
 #include <vector>
-
-int parse_cli_boolean_value (const char **arg);
-unsigned int parse_cli_var_uinteger (var_types var_type, const char **arg);
-extern const char *boolean_enums[];
 
 namespace gdb {
 namespace option {
@@ -34,6 +31,7 @@ union option_value
 {
   bool boolean;
   unsigned int uinteger;
+  const char *enumeration;
 };
 
 struct option_def_and_value
@@ -62,14 +60,14 @@ find_end_options_marker (const char *args)
     {
       const char *p = args;
 
-      p = skip_spaces_const (p);
+      p = skip_spaces (p);
       while (*p)
 	{
 	  if (check_for_argument (&p, "--"))
 	    return p;
 	  else
-	    p = skip_to_space_const (p);
-	  p = skip_spaces_const (p);
+	    p = skip_to_space (p);
+	  p = skip_spaces (p);
 	}
     }
 
@@ -97,7 +95,7 @@ parse_option (const option_def *options, size_t options_size,
   *args += 1;
 
   const char *arg = *args;
-  const char *after = skip_to_space_const (arg);
+  const char *after = skip_to_space (arg);
   size_t len = after - arg;
   const option_def *match = NULL;
   for (size_t i = 0; i < options_size; i++)
@@ -133,7 +131,7 @@ parse_option (const option_def *options, size_t options_size,
     }
 
   *args += len;
-  *args = skip_spaces_const (*args);
+  *args = skip_spaces (*args);
   if (completion != NULL)
     completion->word = *args;
 
@@ -147,7 +145,7 @@ parse_option (const option_def *options, size_t options_size,
 	  {
 	    if (completion != NULL)
 	      {
-		*args = skip_to_space_const (*args);
+		*args = skip_to_space (*args);
 		if (**args == '\0')
 		  {
 		    complete_on_enum (completion->tracker,
@@ -174,6 +172,27 @@ parse_option (const option_def *options, size_t options_size,
       {
 	option_value val;
 	val.uinteger = parse_cli_var_uinteger (match->type, args);
+	return option_def_and_value {*match, val};
+      }
+    case var_enum:
+      {
+	option_value val;
+
+	if (completion != NULL)
+	  {
+	    const char *val_str = *args;
+	    *args = skip_to_space (*args);
+	    if (**args == '\0')
+	      {
+		complete_on_enum (completion->tracker,
+				  match->enums, val_str, val_str);
+		return {};
+	      }
+	  }
+
+	if (check_for_argument (args, "--"))
+	  args = NULL;
+	val.enumeration = parse_cli_var_enum (args, match->enums);
 	return option_def_and_value {*match, val};
       }
 
@@ -223,7 +242,7 @@ complete_options (const option_def *options, size_t options_size,
 
       while (1)
 	{
-	  args = skip_spaces_const (args);
+	  args = skip_spaces (args);
 	  completion_info.word = args;
 
 	  if (strcmp (args, "-") == 0 || strcmp (args, "--") == 0)
@@ -273,7 +292,7 @@ process_options (const option_def *options, size_t options_size,
 
   while (1)
     {
-      *args = skip_spaces_const (*args);
+      *args = skip_spaces (*args);
 
       auto ov = parse_option (options, options_size, args);
       if (!ov)
@@ -288,6 +307,10 @@ process_options (const option_def *options, size_t options_size,
 	case var_uinteger:
 	  *ov->option.var_address.uinteger (ov->option, ctx)
 	    = ov->value.uinteger;
+	  break;
+	case var_enum:
+	  *ov->option.var_address.enumeration (ov->option, ctx)
+	    = ov->value.enumeration;
 	  break;
 	default:
 	  gdb_assert_not_reached ("unhandled option type");
@@ -342,7 +365,8 @@ build_help (const option_def *options, size_t options_size,
 }
 
 void
-add_setshow_cmds_for_options (void *ctx,
+add_setshow_cmds_for_options (command_class cmd_class,
+			      void *ctx,
 			      const option_def *options, size_t options_size,
 			      struct cmd_list_element **set_list,
 			      struct cmd_list_element **show_list)
@@ -353,7 +377,7 @@ add_setshow_cmds_for_options (void *ctx,
 
       if (option.type == var_boolean)
 	{
-	  add_setshow_boolean_cmd (option.name, no_class,
+	  add_setshow_boolean_cmd (option.name, cmd_class,
 				   option.var_address.boolean (option, ctx),
 				   option.set_doc, option.show_doc,
 				   option.help_doc,
@@ -362,12 +386,22 @@ add_setshow_cmds_for_options (void *ctx,
 	}
       else if (option.type == var_uinteger)
 	{
-	  add_setshow_uinteger_cmd (option.name, no_class,
+	  add_setshow_uinteger_cmd (option.name, cmd_class,
 				    option.var_address.uinteger (option, ctx),
 				    option.set_doc, option.show_doc,
 				    option.help_doc,
 				    NULL, option.show_cmd_cb,
 				    set_list, show_list);
+	}
+      else if (option.type == var_enum)
+	{
+	  add_setshow_enum_cmd (option.name, cmd_class,
+				option.enums,
+				option.var_address.enumeration (option, ctx),
+				option.set_doc, option.show_doc,
+				option.help_doc,
+				NULL, option.show_cmd_cb,
+				set_list, show_list);
 	}
       else
 	gdb_assert_not_reached (_("option type not handled"));

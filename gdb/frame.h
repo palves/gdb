@@ -753,7 +753,10 @@ extern void print_stack_frame (struct frame_info *, int print_level,
 			       enum print_what print_what,
 			       int set_current_sal);
 
-extern void print_frame_info (struct frame_info *, int print_level,
+struct frame_print_options;
+
+extern void print_frame_info (const frame_print_options &fp_opts,
+			      frame_info *, int print_level,
 			      enum print_what print_what, int args,
 			      int set_current_sal);
 
@@ -764,6 +767,10 @@ extern int deprecated_frame_register_read (struct frame_info *frame, int regnum,
 
 /* From stack.c.  */
 
+extern const char print_frame_arguments_all[];
+extern const char print_frame_arguments_scalars[];
+extern const char print_frame_arguments_none[];
+
 extern const char print_entry_values_no[];
 extern const char print_entry_values_only[];
 extern const char print_entry_values_preferred[];
@@ -771,7 +778,14 @@ extern const char print_entry_values_if_needed[];
 extern const char print_entry_values_both[];
 extern const char print_entry_values_compact[];
 extern const char print_entry_values_default[];
-extern const char *print_entry_values;
+
+struct frame_print_options
+{
+  const char *print_frame_arguments = print_frame_arguments_scalars;
+  const char *print_entry_values = print_entry_values_default;
+};
+
+extern frame_print_options user_frame_print_options;
 
 /* Inferior function parameter value read in from a frame.  */
 
@@ -800,7 +814,8 @@ struct frame_arg
   const char *entry_kind;
 };
 
-extern void read_frame_arg (struct symbol *sym, struct frame_info *frame,
+extern void read_frame_arg (const frame_print_options &fp_opts,
+			    symbol *sym, frame_info *frame,
 			    struct frame_arg *argp,
 			    struct frame_arg *entryargp);
 extern void read_frame_local (struct symbol *sym, struct frame_info *frame,
