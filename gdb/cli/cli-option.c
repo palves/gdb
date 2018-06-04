@@ -79,6 +79,14 @@ static void complete_on_options (const option_def *options,
 				 completion_tracker &tracker,
 				 const char *text, const char *word);
 
+static void
+complete_on_all_options (const option_def *options, size_t options_size,
+			 completion_tracker &tracker)
+{
+  static const char opt[] = "-";
+  complete_on_options (options, options_size, tracker, opt + 1, opt);
+}
+
 static gdb::optional<option_def_and_value>
 parse_option (const option_def *options, size_t options_size,
 	      const char **args,
@@ -139,6 +147,8 @@ parse_option (const option_def *options, size_t options_size,
   if (completion != NULL)
     completion->word = *args;
 
+
+  
   switch (match->type)
     {
     case var_boolean:
@@ -146,7 +156,17 @@ parse_option (const option_def *options, size_t options_size,
 	const char *val_str = *args;
 	int res;
 
-	if (**args == '-' || **args == '\0')
+	if (**args == '\0' && completion != NULL)
+	  {
+	    /* Complete on both "on/off" and more options.  */
+
+	    complete_on_enum (completion->tracker,
+			      boolean_enums, val_str, val_str);
+	    complete_on_all_options (options, options_size,
+				     completion->tracker);
+	    return {};
+	  }
+	else if (**args == '-' || **args == '\0')
 	  res = 1;
 	else
 	  {
@@ -262,9 +282,7 @@ complete_options (const option_def *options, size_t options_size,
 	    }
 	  else if (args > text && *args == '\0' && isspace (args[-1]))
 	    {
-	      static const char opt[] = "-";
-	      complete_on_options (options, options_size,
-				   tracker, opt + 1, opt);
+	      complete_on_all_options (options, options_size, tracker);
 	    }
 	  else
 	    {
