@@ -783,6 +783,10 @@ struct frame_print_options
 {
   const char *print_frame_arguments = print_frame_arguments_scalars;
   const char *print_entry_values = print_entry_values_default;
+
+  /* If non-zero, don't invoke pretty-printers for frame
+     arguments.  */
+  int print_raw_frame_arguments;
 };
 
 extern frame_print_options user_frame_print_options;

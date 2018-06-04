@@ -70,9 +70,6 @@ static const char *const print_frame_arguments_choices[] =
   NULL
 };
 
-/* If non-zero, don't invoke pretty-printers for frame arguments.  */
-static int print_raw_frame_arguments;
-
 /* The possible choices of "set print entry-values", and the value
    of this setting.  */
 
@@ -129,7 +126,18 @@ or both.  Note that one or both of these values may be <optimized out>.)"),
     NULL /* help_doc */
   },
 
+  boolean_option_def {
+    "raw-frame-arguments",
+    [] (frame_print_options *opt) { return &opt->print_raw_frame_arguments; },
+    NULL, /* show_cmd_cb */
+    N_("Set whether to print frame arguments in raw form."),
+    N_("Show whether to print frame arguments in raw form."),
+    N_(R"(If set, frame arguments are printed in raw form, bypassing any
+pretty-printers for that value.)")
+  },
+
 };
+
 
 /* Prototypes for local functions.  */
 
@@ -333,7 +341,7 @@ print_frame_arg (const frame_print_options &fp_opts,
 
 	      get_no_prettyformat_print_options (&vp_opts);
 	      vp_opts.deref_ref = 1;
-	      vp_opts.raw = print_raw_frame_arguments;
+	      vp_opts.raw = fp_opts.print_raw_frame_arguments;
 
 	      /* True in "summary" mode, false otherwise.  */
 	      vp_opts.summary
@@ -2656,6 +2664,7 @@ on this backtrace."));
 Select the stack frame that contains <func>.\n\
 Usage: func <name>"));
 
+#if 0
   add_setshow_boolean_cmd ("frame-arguments", no_class,
 			   &print_raw_frame_arguments, _("\
 Set whether to print frame arguments in raw form."), _("\
@@ -2664,6 +2673,7 @@ If set, frame arguments are printed in raw form, bypassing any\n\
 pretty-printers for that value."),
 			   NULL, NULL,
 			   &setprintrawlist, &showprintrawlist);
+#endif
 
   add_setshow_auto_boolean_cmd ("disassemble-next-line", class_stack,
 			        &disassemble_next_line, _("\
