@@ -21,6 +21,7 @@
 #define CLI_OPTION_H 1
 
 #include "common/gdb_optional.h"
+#include "common/array-view.h"
 #include "completer.h"
 #include <string>
 #include "command.h"
@@ -188,35 +189,32 @@ struct enum_option_def : option_def
 
 struct option_def_group
 {
-  const option_def *options;
-  size_t options_size;
+  gdb::array_view<option_def> options;
   void *ctx;
 };
 
-extern bool complete_options (const option_def *options, size_t options_size,
+extern bool complete_options (gdb::array_view<option_def> options,
 			      completion_tracker &tracker,
 			      const char *text, const char *word);
 
-extern bool complete_options (const option_def_group *options_group,
-			      size_t options_group_size,
-			     completion_tracker &tracker,
+extern bool complete_options (gdb::array_view<option_def_group> options_group,
+			      completion_tracker &tracker,
 			      const char *text, const char *word);
 
-extern void build_help (const option_def *options, size_t options_size,
+extern void build_help (gdb::array_view<option_def> options,
 			std::string &help);
 
-extern void process_options (const option_def *options, size_t options_size,
+extern void process_options (gdb::array_view<option_def> options,
 			     void *ctx, const char **args);
 
-extern void process_options (const option_def_group *options_group,
-			     size_t options_group_size,
-			     const char **args);
+extern void process_options
+  (gdb::array_view<option_def_group> options_group,
+   const char **args);
 
-extern void add_setshow_cmds_for_options
-  (command_class cmd_class, void *ctx,
-   const option_def *options, size_t options_size,
-   struct cmd_list_element **set_list,
-   struct cmd_list_element **show_list);
+extern void add_setshow_cmds_for_options (command_class cmd_class, void *ctx,
+					  gdb::array_view<option_def> options,
+					  struct cmd_list_element **set_list,
+					  struct cmd_list_element **show_list);
 
 } /* namespace option */
 } /* namespace gdb */

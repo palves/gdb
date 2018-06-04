@@ -3188,9 +3188,7 @@ static const gdb::option::option_def value_print_option_defs[] = {
 void
 value_print_options_process (value_print_options &opts, const char **args)
 {
-  gdb::option::process_options (value_print_option_defs,
-				ARRAY_SIZE (value_print_option_defs),
-				&opts, args);
+  gdb::option::process_options (value_print_option_defs, &opts, args);
 }
 
 bool
@@ -3198,16 +3196,13 @@ value_print_options_complete (completion_tracker &tracker,
 			      const char *text, const char *word)
 {
   return gdb::option::complete_options (value_print_option_defs,
-					ARRAY_SIZE (value_print_option_defs),
 					tracker, text, word);
 }
 
 void
 value_print_options_build_help (std::string &help)
 {
-  gdb::option::build_help (value_print_option_defs,
-			   ARRAY_SIZE (value_print_option_defs),
-			   help);
+  gdb::option::build_help (value_print_option_defs, help);
 }
 
 void
@@ -3235,8 +3230,7 @@ Generic command for setting what things to print in \"raw\" mode."),
 		  &showprintrawlist, "show print raw ", 0, &showprintlist);
 
   gdb::option::add_setshow_cmds_for_options
-    (no_class, &user_print_options,
-     value_print_option_defs, ARRAY_SIZE (value_print_option_defs),
+    (no_class, &user_print_options, value_print_option_defs,
      &setprintlist, &showprintlist);
 
   add_setshow_zuinteger_cmd ("input-radix", class_support, &input_radix_1,

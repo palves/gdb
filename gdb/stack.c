@@ -1928,14 +1928,11 @@ backtrace_command (const char *arg, int from_tty)
   backtrace_cmd_options bt_opts;
 
   gdb::option::option_def_group grp[] = {
-    { frame_print_option_defs, ARRAY_SIZE (frame_print_option_defs),
-      &fp_opts },
-
-    { backtrace_command_option_defs, ARRAY_SIZE (backtrace_command_option_defs),
-      &bt_opts },
+    { {frame_print_option_defs}, &fp_opts },
+    { {backtrace_command_option_defs}, &bt_opts },
   };
 
-  gdb::option::process_options (grp, ARRAY_SIZE (grp), &arg);
+  gdb::option::process_options (grp, &arg);
 
   if (arg != NULL)
     {
@@ -1976,14 +1973,11 @@ backtrace_command_completer (struct cmd_list_element *ignore,
 			     const char *text, const char *word)
 {
   gdb::option::option_def_group grp[] = {
-    { frame_print_option_defs,
-      ARRAY_SIZE (frame_print_option_defs) },
-    { backtrace_command_option_defs,
-      ARRAY_SIZE (backtrace_command_option_defs) },
+    { {frame_print_option_defs} },
+    { {backtrace_command_option_defs} },
   };
 
-  if (gdb::option::complete_options (grp, ARRAY_SIZE (grp),
-				     tracker, text, word))
+  if (gdb::option::complete_options (grp, tracker, text, word))
     return;
 
   if (word == NULL)
@@ -2738,6 +2732,5 @@ source line."),
 
   gdb::option::add_setshow_cmds_for_options
     (class_stack, &user_frame_print_options,
-     frame_print_option_defs, ARRAY_SIZE (frame_print_option_defs),
-     &setprintlist, &showprintlist);
+     frame_print_option_defs, &setprintlist, &showprintlist);
 }

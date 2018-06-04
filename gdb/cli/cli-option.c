@@ -75,19 +75,17 @@ find_end_options_marker (const char *args)
   return NULL;
 }
 
-static void complete_on_options (const option_def_group *options_group,
-				 size_t options_group_size,
-				 completion_tracker &tracker,
-				 const char *text, const char *word);
+static void complete_on_options
+  (gdb::array_view<option_def_group> options_group,
+   completion_tracker &tracker,
+   const char *text, const char *word);
 
 static void
-complete_on_all_options (const option_def_group *options_group,
-			 size_t options_group_size,
+complete_on_all_options (gdb::array_view<option_def_group > options_group,
 			 completion_tracker &tracker)
 {
   static const char opt[] = "-";
-  complete_on_options (options_group, options_group_size,
-		       tracker, opt + 1, opt);
+  complete_on_options (options_group, tracker, opt + 1, opt);
 }
 
 static gdb::unique_xmalloc_ptr<char>
@@ -97,8 +95,7 @@ make_unique_xstrdup (const char *str)
 }
 
 static gdb::optional<option_def_and_value>
-parse_option (const option_def_group *options_group,
-	      size_t options_group_size,
+parse_option (gdb::array_view<option_def_group> options_group,
 	      bool have_marker,
 	      const char **args,
 	      parse_option_completion_info *completion = NULL)
@@ -119,14 +116,10 @@ parse_option (const option_def_group *options_group,
   const option_def *match = NULL;
   void *match_ctx;
 
-  for (size_t j = 0; j < options_group_size; j++)
+  for (const auto &grp : options_group)
     {
-      const option_def_group &grp = options_group[j];
-
-      for (size_t i = 0; i < grp.options_size; i++)
+      for (const auto &o : grp.options)
 	{
-	  const auto &o = grp.options[i];
-
 	  if (strncmp (o.name, arg, len) == 0)
 	    {
 	      if (match != NULL)
@@ -134,7 +127,6 @@ parse_option (const option_def_group *options_group,
 		  if (completion != NULL && arg[len] == '\0')
 		    {
 		      complete_on_options (options_group,
-					   options_group_size,
 					   completion->tracker,
 					   arg, completion->word);
 		      return {};
@@ -162,8 +154,7 @@ parse_option (const option_def_group *options_group,
 
   if (completion != NULL && arg[len] == '\0')
     {
-      complete_on_options (options_group, options_group_size,
-			   completion->tracker,
+      complete_on_options (options_group, completion->tracker,
 			   arg, completion->word);
       return {};
     }
@@ -193,8 +184,7 @@ parse_option (const option_def_group *options_group,
 
 	    complete_on_enum (completion->tracker,
 			      boolean_enums, val_str, val_str);
-	    complete_on_all_options (options_group, options_group_size,
-				     completion->tracker);
+	    complete_on_all_options (options_group, completion->tracker);
 	    return {};
 	  }
 	else if (**args == '-')
@@ -326,27 +316,22 @@ parse_option (const option_def_group *options_group,
 }
 
 static void
-complete_on_options (const option_def_group *options_group,
-		     size_t options_group_size,
+complete_on_options (gdb::array_view<option_def_group> options_group,
 		     completion_tracker &tracker,
 		     const char *text, const char *word)
 {
   size_t textlen = strlen (text);
-  for (size_t j = 0; j < options_group_size; j++)
-    {
-      const option_def_group &grp = options_group[j];
-      for (size_t i = 0; i < grp.options_size; i++)
+  for (const auto &grp : options_group)
+    for (const auto &opt : grp.options)
+      if (strncmp (opt.name, text, textlen) == 0)
 	{
-	  const char *oname = grp.options[i].name;
-	  if (strncmp (oname, text, textlen) == 0)
-	    tracker.add_completion (make_completion_match_str (oname, text, word));
+	  tracker.add_completion
+	    (make_completion_match_str (opt.name, text, word));
 	}
-    }
 }
 
 bool
-complete_options (const option_def_group *options_group,
-		  size_t options_group_size,
+complete_options (gdb::array_view<option_def_group> options_group,
 		  completion_tracker &tracker,
 		  const char *text, const char *word)
 {
@@ -368,8 +353,7 @@ complete_options (const option_def_group *options_group,
 
 	  if (strcmp (args, "-") == 0)
 	    {
-	      complete_on_options (options_group, options_group_size,
-				   tracker, args + 1,
+	      complete_on_options (options_group, tracker, args + 1,
 				   completion_info.word);
 	    }
 	  else if (strcmp (args, "--") == 0)
@@ -379,13 +363,12 @@ complete_options (const option_def_group *options_group,
 	    }
 	  else if (args > text && *args == '\0' && isspace (args[-1]))
 	    {
-	      complete_on_all_options (options_group, options_group_size,
-				       tracker);
+	      complete_on_all_options (options_group, tracker);
 	    }
 	  else
 	    {
-	      auto ov = parse_option (options_group, options_group_size,
-				      true, &args, &completion_info);
+	      auto ov = parse_option (options_group, true,
+				      &args, &completion_info);
 	      if (!ov && !tracker.have_completions ())
 		return true;
 	    }
@@ -404,21 +387,19 @@ complete_options (const option_def_group *options_group,
 }
 
 bool
-complete_options (const option_def *options, size_t options_size,
+complete_options (gdb::array_view<option_def> options,
 		  completion_tracker &tracker,
 		  const char *text, const char *word)
 {
   const option_def_group options_group[] = {
-    { options, options_size }
+    { options }
   };
 
-  return complete_options (options_group, ARRAY_SIZE (options_group),
-			   tracker, text, word);
+  return complete_options (options_group, tracker, text, word);
 }
 
 void
-process_options (const option_def_group *options_group,
-		 size_t options_group_size,
+process_options (gdb::array_view<option_def_group> options_group,
 		 const char **args)
 {
   if (*args == NULL)
@@ -435,8 +416,7 @@ process_options (const option_def_group *options_group,
     {
       *args = skip_spaces (*args);
 
-      auto ov = parse_option (options_group, options_group_size,
-			      have_marker, args);
+      auto ov = parse_option (options_group, have_marker, args);
       if (!ov)
 	break;
 
@@ -461,14 +441,14 @@ process_options (const option_def_group *options_group,
 }
 
 void
-process_options (const option_def *options, size_t options_size,
-		 void *ctx, const char **args)
+process_options (gdb::array_view<option_def> options, void *ctx,
+		 const char **args)
 {
   const option_def_group options_group[] = {
-    { options, options_size, ctx }
+    { options, ctx }
   };
 
-  process_options (options_group, ARRAY_SIZE (options_group), args);
+  process_options (options_group, args);
 }
 
 static const char *
@@ -489,12 +469,10 @@ get_val_type_str (const option_def &opt)
 }
 
 void
-build_help (const option_def *options, size_t options_size,
-	    std::string &help)
+build_help (gdb::array_view<option_def> options, std::string &help)
 {
-  for (size_t i = 0; i < options_size; i++)
+  for (const auto &o : options)
     {
-      const auto &o = options[i];
       if (o.set_doc == NULL)
 	continue;
 
@@ -523,14 +501,12 @@ build_help (const option_def *options, size_t options_size,
 void
 add_setshow_cmds_for_options (command_class cmd_class,
 			      void *ctx,
-			      const option_def *options, size_t options_size,
+			      gdb::array_view<option_def> options,
 			      struct cmd_list_element **set_list,
 			      struct cmd_list_element **show_list)
 {
-  for (size_t i = 0; i < options_size; i++)
+  for (const auto &option : options)
     {
-      const auto &option = options[i];
-
       if (option.type == var_boolean)
 	{
 	  add_setshow_boolean_cmd (option.name, cmd_class,
