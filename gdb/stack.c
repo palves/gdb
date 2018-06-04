@@ -136,6 +136,23 @@ or both.  Note that one or both of these values may be <optimized out>.)"),
 pretty-printers for that value.)")
   },
 
+  boolean_option_def {
+    "full",
+    [] (frame_print_options *opt) { return &opt->full; },
+    NULL, /* show_cmd_cb */
+    N_("Set whether to print the values of the local variables."),
+    N_("Show whether to print the values of the local variables."),
+    NULL, /* help_doc */
+  },
+
+  boolean_option_def {
+    "no-filters",
+    [] (frame_print_options *opt) { return &opt->no_filters; },
+    NULL, /* show_cmd_cb */
+    N_("Set whether to prohibit frame filters from executing on a backtrace."),
+    N_("Show whether to prohibit frame filters from executing on a backtrace."),
+    NULL, /* help_doc */
+  },
 };
 
 

@@ -787,6 +787,10 @@ struct frame_print_options
   /* If non-zero, don't invoke pretty-printers for frame
      arguments.  */
   int print_raw_frame_arguments;
+
+  int full;
+
+  int no_filters;
 };
 
 extern frame_print_options user_frame_print_options;
