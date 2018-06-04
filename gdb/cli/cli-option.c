@@ -409,18 +409,6 @@ complete_options (gdb::array_view<const option_def_group> options_group,
   return false;
 }
 
-bool
-complete_options (gdb::array_view<const option_def> options,
-		  completion_tracker &tracker,
-		  const char **args)
-{
-  const option_def_group options_group[] = {
-    { options }
-  };
-
-  return complete_options (options_group, tracker, args);
-}
-
 void
 process_options (gdb::array_view<const option_def_group> options_group,
 		 const char **args)
@@ -461,17 +449,6 @@ process_options (gdb::array_view<const option_def_group> options_group,
 	  gdb_assert_not_reached ("unhandled option type");
 	}
     }
-}
-
-void
-process_options (gdb::array_view<const option_def> options, void *ctx,
-		 const char **args)
-{
-  const option_def_group options_group[] = {
-    { options, ctx }
-  };
-
-  process_options (options_group, args);
 }
 
 static const char *

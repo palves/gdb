@@ -209,19 +209,12 @@ struct option_def_group
   void *ctx;
 };
 
-extern bool complete_options (gdb::array_view<const option_def> options,
-			      completion_tracker &tracker,
-			      const char **args);
-
 extern bool complete_options (gdb::array_view<const option_def_group> options_group,
 			      completion_tracker &tracker,
 			      const char **args);
 
 extern void build_help (gdb::array_view<const option_def> options,
 			std::string &help);
-
-extern void process_options (gdb::array_view<const option_def> options,
-			     void *ctx, const char **args);
 
 extern void process_options
   (gdb::array_view<const option_def_group> options_group,

@@ -154,7 +154,7 @@ compile_file_command_completer (struct cmd_list_element *ignore,
 				completion_tracker &tracker,
 				const char *text, const char *word)
 {
-  if (gdb::option::complete_options ({{raw_option_def, NULL}},
+  if (gdb::option::complete_options ({{raw_option_def}},
 				     tracker, &text))
     return;
 

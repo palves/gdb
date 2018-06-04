@@ -3188,15 +3188,16 @@ static const gdb::option::option_def value_print_option_defs[] = {
 void
 value_print_options_process (value_print_options &opts, const char **args)
 {
-  gdb::option::process_options (value_print_option_defs, &opts, args);
+  gdb::option::process_options ({{{value_print_option_defs}, &opts}},
+				args);
 }
 
 bool
 value_print_options_complete (completion_tracker &tracker,
-			      const char **text)
+			      const char **args)
 {
-  return gdb::option::complete_options (value_print_option_defs,
-					tracker, text);
+  return gdb::option::complete_options ({{{value_print_option_defs}}},
+					tracker, args);
 }
 
 void
