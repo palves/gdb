@@ -1683,6 +1683,21 @@ thread_apply_all_command (const char *cmd, int from_tty)
     }
 }
 
+static void
+thread_apply_all_command_completer (struct cmd_list_element *ignore,
+				    completion_tracker &tracker,
+				    const char *text, const char *word)
+{
+  static const gdb::option::option_def_group group
+    = {ascending_option_def.def ()};
+
+  if (gdb::option::complete_options (tracker, &text, group))
+    return;
+
+  /* Should recurse into the completion machinery here somehow and
+     complete the command passed as argument.  */
+}
+
 /* Implementation of the "thread apply" command.  */
 
 static void
@@ -2070,8 +2085,8 @@ Usage: thread apply ID... COMMAND\n\
 ID is a space-separated list of IDs of threads to apply COMMAND on."),
 		  &thread_apply_list, "thread apply ", 1, &thread_cmd_list);
 
-  add_cmd ("all", class_run, thread_apply_all_command,
-	   _("\
+  c = add_cmd ("all", class_run, thread_apply_all_command,
+	       _("\
 Apply a command to all threads.\n\
 \n\
 Usage: thread apply all [-ascending] COMMAND\n\
@@ -2079,6 +2094,7 @@ Usage: thread apply all [-ascending] COMMAND\n\
             The default is descending order.\
 "),
 	   &thread_apply_list);
+  set_cmd_completer_handle_brkchars (c, thread_apply_all_command_completer);
 
   add_cmd ("name", class_run, thread_name_command,
 	   _("Set the current thread's name.\n\
