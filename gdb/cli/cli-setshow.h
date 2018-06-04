@@ -30,6 +30,15 @@ extern int parse_cli_boolean_value (const char **arg);
 extern unsigned int parse_cli_var_uinteger (var_types var_type,
 					    const char **arg);
 
+struct enum_match
+{
+  int nmatches;
+  const char *match;
+};
+
+extern enum_match find_enum_match (const char *args, size_t len,
+				   const char *const *enums);
+
 const char *parse_cli_var_enum (const char **args,
 				const char *const *enums);
 

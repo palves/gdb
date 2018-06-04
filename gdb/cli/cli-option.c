@@ -195,10 +195,10 @@ parse_option (const option_def *options, size_t options_size,
 	    res = parse_cli_boolean_value (args);
 	    if (res < 0)
 	      {
+		const char *end = skip_to_space (*args);
 		if (completion != NULL)
 		  {
-		    *args = skip_to_space (*args);
-		    if (**args == '\0')
+		    if (*end == '\0')
 		      {
 			complete_on_enum (completion->tracker,
 					  boolean_enums, val_str, val_str);
@@ -206,13 +206,30 @@ parse_option (const option_def *options, size_t options_size,
 		      }
 		  }
 
-		error (_("Unrecognized option value for -%s: %s"),
-		       match->name, val_str);
+		error (_("Unrecognized option value for -%s: %.*s"),
+		       match->name, (int) (end - val_str), val_str);
 	      }
 	    else if (completion != NULL && **args == '\0')
 	      {
-		complete_on_enum (completion->tracker, boolean_enums,
-				  val_str, val_str);
+		/* While "cmd -boolean [TAB]" only offers "on" and
+		   "off", the boolean option actually accepts "1",
+		   "yes", etc. as boolean values.  We complete on
+		   VAL_STR instead of BOOLEAN_ENUMS here to make these
+		   work:
+
+		    "p -object 1[TAB]" -> "p -object 1 -"
+		    "p -object yes[TAB]" -> "p -object yes -"
+
+		   Etc.  Most importantly, the space is auto-appended.
+
+		   Otherwise, if we only completed on on/off here,
+		   then it might look to the user like "1" isn't
+		   valid, like:
+		    "p -object 1[TAB]" -> "p -object 1" (i.e., nothing happens).
+		*/
+		completion->tracker.add_completion
+		  (gdb::unique_xmalloc_ptr<char> (concat (val_str, " -", (char *) NULL)));
+		completion->tracker.set_suppress_append_ws (true);
 		return {};
 	      }
 	  }
@@ -227,6 +244,10 @@ parse_option (const option_def *options, size_t options_size,
 	  {
 	    if (**args == '\0')
 	      {
+		/* Convenience to let the user know what the option
+		   can accept.  Note there's not common prefix between
+		   the strings on purpose, so that readline doesn't do
+		   a partial match.  */
 		completion->tracker.add_completion
 		  (make_unique_xstrdup ("NUMBER"));
 		completion->tracker.add_completion
@@ -236,7 +257,8 @@ parse_option (const option_def *options, size_t options_size,
 	    else if (startswith ("unlimited", *args))
 	      {
 		completion->tracker.add_completion
-		  (make_unique_xstrdup ("unlimited"));
+		  (make_unique_xstrdup ("unlimited -"));
+		completion->tracker.set_suppress_append_ws (true);
 		return {};
 	      }
 	  }
@@ -247,15 +269,26 @@ parse_option (const option_def *options, size_t options_size,
       }
     case var_enum:
       {
-	option_value val;
-
 	if (completion != NULL)
 	  {
 	    const char *after = skip_to_space (*args);
 	    if (*after == '\0')
 	      {
-		complete_on_enum (completion->tracker,
-				  match->enums, *args, *args);
+		size_t textlen = after - *args;
+		enum_match ematch
+		  = find_enum_match (*args, textlen, match->enums);
+		if (ematch.nmatches == 1)
+		  {
+		    completion->tracker.add_completion
+		      (gdb::unique_xmalloc_ptr<char>
+		       (concat (ematch.match, " -", (char *) NULL)));
+		    completion->tracker.set_suppress_append_ws (true);
+		  }
+		else if (ematch.nmatches > 1)
+		  {
+		    complete_on_enum (completion->tracker,
+				      match->enums, *args, *args);
+		  }
 		return {};
 	      }
 	  }
@@ -268,6 +301,8 @@ parse_option (const option_def *options, size_t options_size,
 	       what are the valid options.  */
 	    args = NULL;
 	  }
+
+	option_value val;
 	val.enumeration = parse_cli_var_enum (args, match->enums);
 	return option_def_and_value {*match, val};
       }

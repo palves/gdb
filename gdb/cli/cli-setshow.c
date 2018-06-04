@@ -186,6 +186,30 @@ parse_cli_var_uinteger (var_types var_type, const char **arg)
   return val;
 }
 
+enum_match
+find_enum_match (const char *args, size_t len,
+		 const char *const *enums)
+{
+  int nmatches = 0;
+  const char *match = NULL;
+  for (size_t i = 0; enums[i]; i++)
+    if (strncmp (args, enums[i], len) == 0)
+      {
+	if (enums[i][len] == '\0')
+	  {
+	    match = enums[i];
+	    return {1, match};
+	  }
+	else
+	  {
+	    match = enums[i];
+	    nmatches++;
+	  }
+      }
+
+  return {nmatches, match};
+}
+
 const char *
 parse_cli_var_enum (const char **args, const char *const *enums)
 {
@@ -216,32 +240,16 @@ parse_cli_var_enum (const char **args, const char *const *enums)
   const char *p = skip_to_space (*args);
   size_t len = p - *args;
 
-  int nmatches = 0;
-  const char *match = NULL;
-  for (size_t i = 0; enums[i]; i++)
-    if (strncmp (*args, enums[i], len) == 0)
-      {
-	if (enums[i][len] == '\0')
-	  {
-	    match = enums[i];
-	    nmatches = 1;
-	    break; /* Exact match.  */
-	  }
-	else
-	  {
-	    match = enums[i];
-	    nmatches++;
-	  }
-      }
+  enum_match ematch = find_enum_match (*args, len, enums);
 
-  if (nmatches <= 0)
+  if (ematch.nmatches == 0)
     error (_("Undefined item: \"%.*s\"."), (int) len, *args);
 
-  if (nmatches > 1)
+  if (ematch.nmatches > 1)
     error (_("Ambiguous item \"%.*s\"."), (int) len, *args);
 
   *args += len;
-  return match;
+  return ematch.match;
 }
 
 /* Do a "set" command.  ARG is NULL if no argument, or the
