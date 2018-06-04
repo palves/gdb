@@ -69,9 +69,29 @@ show_compile_debug (struct ui_file *file, int from_tty,
 
 
 
-static const gdb::option::switch_option_def<> raw_option_def = {
+static const gdb::option::switch_option_def<> compile_option_raw = {
   "raw",
   N_("Suppress automatic 'void _gdb_expr () { CODE }' wrapping."),
+};
+
+struct compile_options
+{
+  int raw = false;
+
+  void process (const char **args)
+  {
+    const gdb::option::option_def_group options
+      = {compile_option_raw.def (), &raw};
+    gdb::option::process_options (args, options);
+  }
+
+  static bool complete (completion_tracker &tracker,
+			const char **args)
+  {
+    const gdb::option::option_def_group options
+      = {compile_option_raw.def (), NULL};
+    return gdb::option::complete_options (tracker, args, options);
+  }
 };
 
 /* Handle the input from the 'compile file' command.  The "compile
@@ -88,13 +108,12 @@ compile_file_command (const char *args, int from_tty)
     error (_("You must provide a filename for this command."));
 
   /* Check if a raw (-r|-raw) argument is provided.  */
-  int raw = false;
-  const gdb::option::option_def_group options
-    = {raw_option_def.def (), &raw};
-  gdb::option::process_options (&args, options);
+  compile_options options;
+
+  options.process (&args);
 
   enum compile_i_scope_types scope
-    = raw ? COMPILE_I_RAW_SCOPE : COMPILE_I_SIMPLE_SCOPE;
+    = options.raw ? COMPILE_I_RAW_SCOPE : COMPILE_I_SIMPLE_SCOPE;
 
   args = skip_spaces (args);
 
@@ -117,8 +136,7 @@ compile_file_command_completer (struct cmd_list_element *ignore,
 				completion_tracker &tracker,
 				const char *text, const char *word)
 {
-  const gdb::option::option_def_group options = {raw_option_def.def ()};
-  if (gdb::option::complete_options (tracker, &text, options))
+  if (compile_options::complete (tracker, &text))
     return;
 
   word = advance_to_filename_complete_word_point (tracker, text);
@@ -135,13 +153,11 @@ compile_code_command (const char *args, int from_tty)
 {
   scoped_restore save_async = make_scoped_restore (&current_ui->async, 0);
 
-  int raw = false;
-  const gdb::option::option_def_group options
-    = {raw_option_def.def (), &raw};
-  gdb::option::process_options (&args, options);
+  compile_options options;
+  options.process (&args);
 
   enum compile_i_scope_types scope
-    = raw ? COMPILE_I_RAW_SCOPE : COMPILE_I_SIMPLE_SCOPE;
+    = options.raw ? COMPILE_I_RAW_SCOPE : COMPILE_I_SIMPLE_SCOPE;
 
   if (args && *args)
     eval_compile_command (NULL, args, scope, NULL);
@@ -159,8 +175,7 @@ compile_code_command_completer (struct cmd_list_element *ignore,
 				completion_tracker &tracker,
 				const char *text, const char *word)
 {
-  const gdb::option::option_def_group options = {raw_option_def.def ()};
-  if (gdb::option::complete_options (tracker, &text, options))
+   if (compile_options::complete (tracker, &text))
     return;
 
   word = advance_to_expression_complete_word_point (tracker, text);
