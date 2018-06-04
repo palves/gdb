@@ -87,6 +87,12 @@ complete_on_all_options (const option_def *options, size_t options_size,
   complete_on_options (options, options_size, tracker, opt + 1, opt);
 }
 
+static gdb::unique_xmalloc_ptr<char>
+make_unique_xstrdup (const char *str)
+{
+  return gdb::unique_xmalloc_ptr<char> (xstrdup (str));
+}
+
 static gdb::optional<option_def_and_value>
 parse_option (const option_def *options, size_t options_size,
 	      const char **args,
@@ -166,8 +172,24 @@ parse_option (const option_def *options, size_t options_size,
 				     completion->tracker);
 	    return {};
 	  }
-	else if (**args == '-' || **args == '\0')
-	  res = 1;
+	else if (**args == '-')
+	  {
+	    /* Treat:
+	         "p -boolean-option -another-opt..."
+	       as:
+	         "p -boolean-option on -another-opt..."
+	     */
+	    res = 1;
+	  }
+	else if (**args == '\0')
+	  {
+	    /* Treat:
+	         (1) "p -boolean-option "
+	       as:
+	         (1) "p -boolean-option on"
+	     */
+	    res = 1;
+	  }
 	else
 	  {
 	    res = parse_cli_boolean_value (args);
@@ -201,6 +223,24 @@ parse_option (const option_def *options, size_t options_size,
       }
     case var_uinteger:
       {
+	if (completion != NULL)
+	  {
+	    if (**args == '\0')
+	      {
+		completion->tracker.add_completion
+		  (make_unique_xstrdup ("NUMBER"));
+		completion->tracker.add_completion
+		  (make_unique_xstrdup ("unlimited"));
+		return {};
+	      }
+	    else if (startswith ("unlimited", *args))
+	      {
+		completion->tracker.add_completion
+		  (make_unique_xstrdup ("unlimited"));
+		return {};
+	      }
+	  }
+
 	option_value val;
 	val.uinteger = parse_cli_var_uinteger (match->type, args);
 	return option_def_and_value {*match, val};
@@ -211,18 +251,23 @@ parse_option (const option_def *options, size_t options_size,
 
 	if (completion != NULL)
 	  {
-	    const char *val_str = *args;
-	    *args = skip_to_space (*args);
-	    if (**args == '\0')
+	    const char *after = skip_to_space (*args);
+	    if (*after == '\0')
 	      {
 		complete_on_enum (completion->tracker,
-				  match->enums, val_str, val_str);
+				  match->enums, *args, *args);
 		return {};
 	      }
 	  }
 
 	if (check_for_argument (args, "--"))
-	  args = NULL;
+	  {
+	    /* Treat e.g., "backtrace -entry-values --" as if there
+	       was no argument after "-entry-values".  This makes
+	       parse_cli_var_enum throw an error with a suggestion of
+	       what are the valid options.  */
+	    args = NULL;
+	  }
 	val.enumeration = parse_cli_var_enum (args, match->enums);
 	return option_def_and_value {*match, val};
       }
