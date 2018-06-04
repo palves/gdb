@@ -45,10 +45,12 @@
 #include "charset.h"
 #include "arch-utils.h"
 #include "cli/cli-utils.h"
+#include "cli/cli-option.h"
 #include "cli/cli-script.h"
 #include "format.h"
 #include "source.h"
 #include "common/byte-vector.h"
+#include "common/gdb_optional.h"
 
 /* Last specified output format.  */
 
@@ -1160,10 +1162,10 @@ print_command_parse_format (const char **expp, const char *cmdname,
 /* Print VAL to console according to *FMTP, including recording it to
    the history.  */
 
-void
-print_value (struct value *val, const struct format_data *fmtp)
+static void
+print_value (value *val, const value_print_options &opts,
+	     const format_data &fmt)
 {
-  struct value_print_options opts;
   int histindex = record_latest_value (val);
 
   annotate_value_history_begin (histindex, value_type (val));
@@ -1172,13 +1174,19 @@ print_value (struct value *val, const struct format_data *fmtp)
 
   annotate_value_history_value ();
 
-  get_formatted_print_options (&opts, fmtp->format);
-  opts.raw = fmtp->raw;
-
-  print_formatted (val, fmtp->size, &opts, gdb_stdout);
+  print_formatted (val, fmt.size, &opts, gdb_stdout);
   printf_filtered ("\n");
 
   annotate_value_history_end ();
+}
+
+void
+print_value (struct value *val, const struct format_data *fmtp)
+{
+  value_print_options opts;
+  get_formatted_print_options (&opts, fmtp->format);
+  opts.raw = fmtp->raw;
+  print_value (val, opts, *fmtp);
 }
 
 /* Evaluate string EXP as an expression in the current language and
@@ -1186,14 +1194,24 @@ print_value (struct value *val, const struct format_data *fmtp)
    first argument ("/x myvar" for example, to print myvar in hex).  */
 
 static void
-print_command_1 (const char *exp, int voidprint)
+print_command_1 (const char *args, int voidprint)
 {
   struct value *val;
   struct format_data fmt;
+  value_print_options opts;
 
-  print_command_parse_format (&exp, "print", &fmt);
+  get_user_print_options (&opts);
+  /* Override global settings with explicit options, if any.  */
+  value_print_options_process (opts, &args);
 
-  if (exp && *exp)
+  print_command_parse_format (&args, "print", &fmt);
+
+  opts.format = fmt.format;
+  opts.raw = fmt.raw;
+
+  const char *exp = args;
+
+  if (exp != NULL && *exp)
     {
       expression_up expr = parse_expression (exp);
       val = evaluate_expression (expr.get ());
@@ -1203,7 +1221,35 @@ print_command_1 (const char *exp, int voidprint)
 
   if (voidprint || (val && value_type (val) &&
 		    TYPE_CODE (value_type (val)) != TYPE_CODE_VOID))
-    print_value (val, &fmt);
+    print_value (val, opts, fmt);
+}
+
+
+static void
+print_command_completer (struct cmd_list_element *ignore,
+			 completion_tracker &tracker,
+			 const char *text, const char *word)
+{
+  if (value_print_options_complete (tracker, text, word))
+    return;
+
+  if (word == NULL)
+    {
+      auto handle_brkchars
+	= completer_handle_brkchars_func_for_completer (expression_completer);
+      return handle_brkchars (ignore, tracker, text, word);
+    }
+  else
+    return expression_completer (ignore, tracker, text, word);
+}
+
+static void
+print_command_completer_handle_brkchars (struct cmd_list_element *ignore,
+					 completion_tracker &tracker,
+					 const char *text,
+					 const char *word_ignored)
+{
+  print_command_completer (ignore, tracker, text, NULL);
 }
 
 static void
@@ -2719,7 +2765,8 @@ Call a function in the program.\n\
 The argument is the function name and arguments, in the notation of the\n\
 current working language.  The result is printed and saved in the value\n\
 history, if it is not void."));
-  set_cmd_completer (c, expression_completer);
+  set_cmd_completer (c, print_command_completer);
+  set_cmd_completer_handle_brkchars (c, print_command_completer_handle_brkchars);
 
   add_cmd ("variable", class_vars, set_command, _("\
 Evaluate expression EXP and assign result to variable VAR, using assignment\n\
@@ -2731,29 +2778,50 @@ This may usually be abbreviated to simply \"set\"."),
 	   &setlist);
   add_alias_cmd ("var", "variable", class_vars, 0, &setlist);
 
-  c = add_com ("print", class_vars, print_command, _("\
-Print value of expression EXP.\n\
-Variables accessible are those of the lexical environment of the selected\n\
-stack frame, plus all those whose scope is global or an entire file.\n\
-\n\
-$NUM gets previous value number NUM.  $ and $$ are the last two values.\n\
-$$NUM refers to NUM'th value back from the last one.\n\
-Names starting with $ refer to registers (with the values they would have\n\
-if the program were to return to the stack frame now selected, restoring\n\
-all registers saved by frames farther in) or else to debugger\n\
-\"convenience\" variables (any such name not a known register).\n\
-Use assignment expressions to give values to convenience variables.\n\
-\n\
-{TYPE}ADREXP refers to a datum of data type TYPE, located at address ADREXP.\n\
-@ is a binary operator for treating consecutive data objects\n\
-anywhere in memory as an array.  FOO@NUM gives an array whose first\n\
-element is FOO, whose second element is stored in the space following\n\
-where FOO is stored, etc.  FOO must be an expression whose value\n\
-resides in memory.\n\
-\n\
-EXP may be preceded with /FMT, where FMT is a format letter\n\
-but no count or size letter (see \"x\" command)."));
-  set_cmd_completer (c, expression_completer);
+  const char *print_help
+    = N_(R"(Print value of expression EXP.
+Usage: print [[OPTION]... --] [EXP]
+
+Variables accessible are those of the lexical environment of the selected
+stack frame, plus all those whose scope is global or an entire file.
+
+Options:
+%OPTIONS%
+
+$NUM gets previous value number NUM.  $ and $$ are the last two values.
+$$NUM refers to NUM'th value back from the last one.
+Names starting with $ refer to registers (with the values they would have
+if the program were to return to the stack frame now selected, restoring
+all registers saved by frames farther in) or else to debugger
+"convenience" variables (any such name not a known register).
+Use assignment expressions to give values to convenience variables.
+
+{TYPE}ADREXP refers to a datum of data type TYPE, located at address ADREXP.
+@ is a binary operator for treating consecutive data objects
+anywhere in memory as an array.  FOO@NUM gives an array whose first
+element is FOO, whose second element is stored in the space following
+where FOO is stored, etc.  FOO must be an expression whose value
+resides in memory.
+
+EXP may be preceded with /FMT, where FMT is a format letter
+but no count or size letter (see \"x\" command).)");
+
+  std::string print_help_str;
+
+  {
+    const char *p = strstr (print_help, "%OPTIONS%");
+    print_help_str.assign (print_help, p);
+
+    value_print_options_build_help (print_help_str);
+
+    p += strlen ("%OPTIONS%\n\n");
+    print_help_str.append (p);
+  }
+
+  c = add_com ("print", class_vars, print_command,
+	       xstrdup (print_help_str.c_str ()));
+  set_cmd_completer (c, print_command_completer);
+  set_cmd_completer_handle_brkchars (c, print_command_completer_handle_brkchars);
   add_com_alias ("p", "print", class_vars, 1);
   add_com_alias ("inspect", "print", class_vars, 1);
 

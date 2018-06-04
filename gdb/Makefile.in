@@ -243,6 +243,7 @@ SUBDIR_CLI_SRCS = \
 	cli/cli-dump.c \
 	cli/cli-interp.c \
 	cli/cli-logging.c \
+	cli/cli-option.c \
 	cli/cli-script.c \
 	cli/cli-setshow.c \
 	cli/cli-utils.c

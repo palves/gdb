@@ -20,6 +20,8 @@
 #ifndef VALPRINT_H
 #define VALPRINT_H
 
+#include <string>
+
 /* This is used to pass formatting options to various value-printing
    functions.  */
 struct value_print_options
@@ -93,6 +95,14 @@ struct value_print_options
      points, if any.  */
   int symbol_print;
 };
+
+extern void value_print_options_process (value_print_options &opts,
+					 const char **args);
+
+extern bool value_print_options_complete (completion_tracker &tracker,
+					  const char *text, const char *word);
+
+extern void value_print_options_build_help (std::string &help);
 
 /* The global print options set by the user.  In general this should
    not be directly accessed, except by set/show commands.  Ordinary

@@ -39,6 +39,9 @@ extern int get_number (const char **);
 
 extern int get_number (char **);
 
+extern ULONGEST get_ulongest (const char **pp,
+			      int trailer = '\0');
+
 /* Parse a number or a range.
    A number will be of the form handled by get_number.
    A range will be of the form <number1> - <number2>, and
@@ -164,6 +167,12 @@ extern std::string extract_arg (const char **arg);
    0 otherwise.  If the argument is found, it updates *STR.  */
 extern int check_for_argument (const char **str, const char *arg, int arg_len);
 
+static inline int
+check_for_argument (const char **str, const char *arg)
+{
+  return check_for_argument (str, arg, strlen (arg));
+}
+
 /* Same, for non-const STR.  */
 
 static inline int
@@ -171,6 +180,12 @@ check_for_argument (char **str, const char *arg, int arg_len)
 {
   return check_for_argument (const_cast<const char **> (str),
 			     arg, arg_len);
+}
+
+static inline int
+check_for_argument (char **str, const char *arg)
+{
+  return check_for_argument (str, arg, strlen (arg));
 }
 
 #endif /* CLI_UTILS_H */
