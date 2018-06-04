@@ -3186,28 +3186,24 @@ static const gdb::option::option_def value_print_option_defs[] = {
 };
 
 static inline gdb::option::option_def_group
-make_option_def_group (value_print_options *opts)
+make_value_print_options_def_group (value_print_options *opts)
 {
-  return {{value_print_option_defs}, &opts};
+  return {{value_print_option_defs}, opts};
 }
 
 void
 value_print_options_process (value_print_options &opts, const char **args)
 {
-  static gdb::option::option_def_group group = {
-    {value_print_option_defs}, &opts
-  };
-  gdb::option::process_options (args, group);
+  gdb::option::process_options (args,
+				make_value_print_options_def_group (&opts));
 }
 
 bool
 value_print_options_complete (completion_tracker &tracker,
 			      const char **args)
 {
-  static const gdb::option::option_def_group group = {
-    {value_print_option_defs}
-  };
-  return gdb::option::complete_options (tracker, args, group);
+  return (gdb::option::complete_options
+	  (tracker, args, make_value_print_options_def_group (NULL)));
 }
 
 void
