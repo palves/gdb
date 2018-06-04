@@ -1224,8 +1224,7 @@ print_command_1 (const char *args, int voidprint)
     print_value (val, opts, fmt);
 }
 
-
-static void
+void
 print_command_completer (struct cmd_list_element *ignore,
 			 completion_tracker &tracker,
 			 const char *text, const char *word)
