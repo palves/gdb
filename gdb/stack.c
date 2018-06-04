@@ -1921,12 +1921,12 @@ backtrace_command (const char *arg, int from_tty)
   frame_print_options fp_opts = user_frame_print_options;
   backtrace_cmd_options bt_opts;
 
-  gdb::option::option_def_group grp[] = {
+  const gdb::option::option_def_group grp[] = {
     { {frame_print_option_defs}, &fp_opts },
     { {backtrace_command_option_defs}, &bt_opts },
   };
 
-  gdb::option::process_options (grp, &arg);
+  gdb::option::process_options (&arg, grp);
 
   if (arg != NULL)
     {
@@ -1966,12 +1966,12 @@ backtrace_command_completer (struct cmd_list_element *ignore,
 			     completion_tracker &tracker,
 			     const char *text, const char *word)
 {
-  gdb::option::option_def_group grp[] = {
+  static const gdb::option::option_def_group grp[] = {
     { {frame_print_option_defs} },
     { {backtrace_command_option_defs} },
   };
 
-  if (gdb::option::complete_options (grp, tracker, &text))
+  if (gdb::option::complete_options (tracker, &text, grp))
     return;
 
   if (word == NULL)

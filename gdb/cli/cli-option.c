@@ -331,9 +331,9 @@ complete_on_options (gdb::array_view<const option_def_group> options_group,
 }
 
 bool
-complete_options (gdb::array_view<const option_def_group> options_group,
-		  completion_tracker &tracker,
-		  const char **args)
+complete_options (completion_tracker &tracker,
+		  const char **args,
+		  gdb::array_view<const option_def_group> options_group)
 {
   const char *text = *args;
 
@@ -410,8 +410,8 @@ complete_options (gdb::array_view<const option_def_group> options_group,
 }
 
 void
-process_options (gdb::array_view<const option_def_group> options_group,
-		 const char **args)
+process_options (const char **args,
+		 gdb::array_view<const option_def_group> options_group)
 {
   if (*args == NULL)
     return;

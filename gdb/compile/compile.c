@@ -106,7 +106,9 @@ compile_file_command (const char *args, int from_tty)
 
   /* Check if a raw (-r|-raw) argument is provided.  */
   int raw = false;
-  gdb::option::process_options ({{raw_option_def, &raw}}, &args);
+  gdb::option::process_options (&args, {
+      {raw_option_def, &raw}
+    });
 
   if (raw)
     scope = COMPILE_I_RAW_SCOPE;
@@ -154,8 +156,9 @@ compile_file_command_completer (struct cmd_list_element *ignore,
 				completion_tracker &tracker,
 				const char *text, const char *word)
 {
-  if (gdb::option::complete_options ({{raw_option_def}},
-				     tracker, &text))
+  if (gdb::option::complete_options (tracker, &text, {
+	{raw_option_def}
+      }))
     return;
 
   word = advance_to_filename_complete_word_point (tracker, text);

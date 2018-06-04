@@ -209,16 +209,16 @@ struct option_def_group
   void *ctx;
 };
 
-extern bool complete_options (gdb::array_view<const option_def_group> options_group,
-			      completion_tracker &tracker,
-			      const char **args);
+extern bool complete_options (completion_tracker &tracker,
+			      const char **args,
+			      gdb::array_view<const option_def_group> options_group);
 
 extern void build_help (gdb::array_view<const option_def> options,
 			std::string &help);
 
 extern void process_options
-  (gdb::array_view<const option_def_group> options_group,
-   const char **args);
+  (const char **args,
+   gdb::array_view<const option_def_group> options_group);
 
 extern void add_setshow_cmds_for_options (command_class cmd_class, void *ctx,
 					  gdb::array_view<const option_def> options,
