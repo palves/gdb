@@ -39,6 +39,7 @@
 #include "observable.h"
 #include "annotate.h"
 #include "cli/cli-decode.h"
+#include "cli/cli-option.h"
 #include "gdb_regex.h"
 #include "cli/cli-utils.h"
 #include "thread-fsm.h"
@@ -1558,7 +1559,7 @@ print_thread_id (struct thread_info *thr)
 /* If true, tp_array_compar should sort in ascending order, otherwise
    in descending order.  */
 
-static bool tp_array_compar_ascending;
+static int tp_array_compar_ascending;
 
 /* Sort an array for struct thread_info pointers by thread ID (first
    by inferior number, and then by per-inferior thread number).  The
@@ -1581,6 +1582,31 @@ tp_array_compar (const thread_info *a, const thread_info *b)
     return (a->per_inf_num > b->per_inf_num);
 }
 
+
+#if 0
+struct info_thread_cmd_options
+{
+  int gid = 0;
+};
+
+static const gdb::option::option_def info_threads_cmd_option_defs[] = {
+  it_switch_option_def {
+    "gid",
+    [] (auto *opt) { return &opt->gid; },
+    N_("-gid: Show global thread IDs."),
+  },
+};
+#endif
+
+static const gdb::option::option_def thread_apply_cmd_option_defs[] = {
+  gdb::option::switch_option_def<int> {
+    "ascending",
+    [] (int *opt) { return opt; },
+    N_(R"(Call <command> for all threads in ascending order.
+            The default is descending order.)"),
+  },
+};
+
 /* Apply a GDB command to a list of threads.  List syntax is a whitespace
    separated list of numbers, or ranges, or the keyword `all'.  Ranges consist
    of two numbers separated by a hyphen.  Examples:
@@ -1593,12 +1619,10 @@ static void
 thread_apply_all_command (const char *cmd, int from_tty)
 {
   tp_array_compar_ascending = false;
-  if (cmd != NULL
-      && check_for_argument (&cmd, "-ascending", strlen ("-ascending")))
-    {
-      cmd = skip_spaces (cmd);
-      tp_array_compar_ascending = true;
-    }
+
+  gdb::option::process_options ({thread_apply_cmd_option_defs},
+				&tp_array_compar_ascending,
+				&cmd);
 
   if (cmd == NULL || *cmd == '\000')
     error (_("Please specify a command following the thread ID list"));
