@@ -185,8 +185,21 @@ struct enum_option_def : option_def
   }
 };
 
+
+struct option_def_group
+{
+  const option_def *options;
+  size_t options_size;
+  void *ctx;
+};
+
 extern bool complete_options (const option_def *options, size_t options_size,
 			      completion_tracker &tracker,
+			      const char *text, const char *word);
+
+extern bool complete_options (const option_def_group *options_group,
+			      size_t options_group_size,
+			     completion_tracker &tracker,
 			      const char *text, const char *word);
 
 extern void build_help (const option_def *options, size_t options_size,
@@ -194,6 +207,10 @@ extern void build_help (const option_def *options, size_t options_size,
 
 extern void process_options (const option_def *options, size_t options_size,
 			     void *ctx, const char **args);
+
+extern void process_options (const option_def_group *options_group,
+			     size_t options_group_size,
+			     const char **args);
 
 extern void add_setshow_cmds_for_options
   (command_class cmd_class, void *ctx,

@@ -37,6 +37,7 @@ union option_value
 struct option_def_and_value
 {
   const option_def &option;
+  void *ctx;
   option_value value;
 };
 
@@ -74,17 +75,19 @@ find_end_options_marker (const char *args)
   return NULL;
 }
 
-static void complete_on_options (const option_def *options,
-				 size_t options_size,
+static void complete_on_options (const option_def_group *options_group,
+				 size_t options_group_size,
 				 completion_tracker &tracker,
 				 const char *text, const char *word);
 
 static void
-complete_on_all_options (const option_def *options, size_t options_size,
+complete_on_all_options (const option_def_group *options_group,
+			 size_t options_group_size,
 			 completion_tracker &tracker)
 {
   static const char opt[] = "-";
-  complete_on_options (options, options_size, tracker, opt + 1, opt);
+  complete_on_options (options_group, options_group_size,
+		       tracker, opt + 1, opt);
 }
 
 static gdb::unique_xmalloc_ptr<char>
@@ -94,7 +97,8 @@ make_unique_xstrdup (const char *str)
 }
 
 static gdb::optional<option_def_and_value>
-parse_option (const option_def *options, size_t options_size,
+parse_option (const option_def_group *options_group,
+	      size_t options_group_size,
 	      bool have_marker,
 	      const char **args,
 	      parse_option_completion_info *completion = NULL)
@@ -113,29 +117,38 @@ parse_option (const option_def *options, size_t options_size,
   const char *after = skip_to_space (arg);
   size_t len = after - arg;
   const option_def *match = NULL;
-  for (size_t i = 0; i < options_size; i++)
-    {
-      const auto &o = options[i];
+  void *match_ctx;
 
-      if (strncmp (o.name, arg, len) == 0)
+  for (size_t j = 0; j < options_group_size; j++)
+    {
+      const option_def_group &grp = options_group[j];
+
+      for (size_t i = 0; i < grp.options_size; i++)
 	{
-	  if (match != NULL)
+	  const auto &o = grp.options[i];
+
+	  if (strncmp (o.name, arg, len) == 0)
 	    {
-	      if (completion != NULL && arg[len] == '\0')
+	      if (match != NULL)
 		{
-		  complete_on_options (options, options_size,
-				       completion->tracker,
-				       arg, completion->word);
-		  return {};
+		  if (completion != NULL && arg[len] == '\0')
+		    {
+		      complete_on_options (options_group,
+					   options_group_size,
+					   completion->tracker,
+					   arg, completion->word);
+		      return {};
+		    }
+
+		  error (_("Ambiguous option at: -%s"), arg);
 		}
 
-	      error (_("Ambiguous option at: -%s"), arg);
+	      match = &o;
+	      match_ctx = grp.ctx;
+
+	      if (isspace (arg[len]) || arg[len] == '\0')
+		break; /* Exact match.  */
 	    }
-
-	  match = &o;
-
-	  if (isspace (arg[len]) || arg[len] == '\0')
-	    break; /* Exact match.  */
 	}
     }
 
@@ -149,7 +162,7 @@ parse_option (const option_def *options, size_t options_size,
 
   if (completion != NULL && arg[len] == '\0')
     {
-      complete_on_options (options, options_size,
+      complete_on_options (options_group, options_group_size,
 			   completion->tracker,
 			   arg, completion->word);
       return {};
@@ -159,8 +172,6 @@ parse_option (const option_def *options, size_t options_size,
   *args = skip_spaces (*args);
   if (completion != NULL)
     completion->word = *args;
-
-
   
   switch (match->type)
     {
@@ -170,7 +181,7 @@ parse_option (const option_def *options, size_t options_size,
 	  {
 	    option_value val;
 	    val.boolean = true;
-	    return option_def_and_value {*match, val};
+	    return option_def_and_value {*match, match_ctx, val};
 	  }
 
 	const char *val_str = *args;
@@ -182,7 +193,7 @@ parse_option (const option_def *options, size_t options_size,
 
 	    complete_on_enum (completion->tracker,
 			      boolean_enums, val_str, val_str);
-	    complete_on_all_options (options, options_size,
+	    complete_on_all_options (options_group, options_group_size,
 				     completion->tracker);
 	    return {};
 	  }
@@ -249,7 +260,7 @@ parse_option (const option_def *options, size_t options_size,
 
 	option_value val;
 	val.boolean = res;
-	return option_def_and_value {*match, val};
+	return option_def_and_value {*match, match_ctx, val};
       }
     case var_uinteger:
       {
@@ -277,7 +288,7 @@ parse_option (const option_def *options, size_t options_size,
 
 	option_value val;
 	val.uinteger = parse_cli_var_uinteger (match->type, args);
-	return option_def_and_value {*match, val};
+	return option_def_and_value {*match, match_ctx, val};
       }
     case var_enum:
       {
@@ -303,7 +314,7 @@ parse_option (const option_def *options, size_t options_size,
 
 	option_value val;
 	val.enumeration = parse_cli_var_enum (args, match->enums);
-	return option_def_and_value {*match, val};
+	return option_def_and_value {*match, match_ctx, val};
       }
 
     default:
@@ -315,21 +326,27 @@ parse_option (const option_def *options, size_t options_size,
 }
 
 static void
-complete_on_options (const option_def *options, size_t options_size,
+complete_on_options (const option_def_group *options_group,
+		     size_t options_group_size,
 		     completion_tracker &tracker,
 		     const char *text, const char *word)
 {
   size_t textlen = strlen (text);
-  for (size_t i = 0; i < options_size; i++)
+  for (size_t j = 0; j < options_group_size; j++)
     {
-      const char *oname = options[i].name;
-      if (strncmp (oname, text, textlen) == 0)
-	tracker.add_completion (make_completion_match_str (oname, text, word));
+      const option_def_group &grp = options_group[j];
+      for (size_t i = 0; i < grp.options_size; i++)
+	{
+	  const char *oname = grp.options[i].name;
+	  if (strncmp (oname, text, textlen) == 0)
+	    tracker.add_completion (make_completion_match_str (oname, text, word));
+	}
     }
 }
 
 bool
-complete_options (const option_def *options, size_t options_size,
+complete_options (const option_def_group *options_group,
+		  size_t options_group_size,
 		  completion_tracker &tracker,
 		  const char *text, const char *word)
 {
@@ -351,8 +368,9 @@ complete_options (const option_def *options, size_t options_size,
 
 	  if (strcmp (args, "-") == 0)
 	    {
-	      complete_on_options (options, options_size,
-				   tracker, args + 1, completion_info.word);
+	      complete_on_options (options_group, options_group_size,
+				   tracker, args + 1,
+				   completion_info.word);
 	    }
 	  else if (strcmp (args, "--") == 0)
 	    {
@@ -361,11 +379,12 @@ complete_options (const option_def *options, size_t options_size,
 	    }
 	  else if (args > text && *args == '\0' && isspace (args[-1]))
 	    {
-	      complete_on_all_options (options, options_size, tracker);
+	      complete_on_all_options (options_group, options_group_size,
+				       tracker);
 	    }
 	  else
 	    {
-	      auto ov = parse_option (options, options_size,
+	      auto ov = parse_option (options_group, options_group_size,
 				      true, &args, &completion_info);
 	      if (!ov && !tracker.have_completions ())
 		return true;
@@ -384,9 +403,23 @@ complete_options (const option_def *options, size_t options_size,
   return false;
 }
 
+bool
+complete_options (const option_def *options, size_t options_size,
+		  completion_tracker &tracker,
+		  const char *text, const char *word)
+{
+  const option_def_group options_group[] = {
+    { options, options_size }
+  };
+
+  return complete_options (options_group, ARRAY_SIZE (options_group),
+			   tracker, text, word);
+}
+
 void
-process_options (const option_def *options, size_t options_size,
-		 void *ctx, const char **args)
+process_options (const option_def_group *options_group,
+		 size_t options_group_size,
+		 const char **args)
 {
   if (*args == NULL)
     return;
@@ -402,29 +435,40 @@ process_options (const option_def *options, size_t options_size,
     {
       *args = skip_spaces (*args);
 
-      auto ov = parse_option (options, options_size, have_marker,
-			      args);
+      auto ov = parse_option (options_group, options_group_size,
+			      have_marker, args);
       if (!ov)
 	break;
 
       switch (ov->option.type)
 	{
 	case var_boolean:
-	  *ov->option.var_address.boolean (ov->option, ctx)
+	  *ov->option.var_address.boolean (ov->option, ov->ctx)
 	    = ov->value.boolean;
 	  break;
 	case var_uinteger:
-	  *ov->option.var_address.uinteger (ov->option, ctx)
+	  *ov->option.var_address.uinteger (ov->option, ov->ctx)
 	    = ov->value.uinteger;
 	  break;
 	case var_enum:
-	  *ov->option.var_address.enumeration (ov->option, ctx)
+	  *ov->option.var_address.enumeration (ov->option, ov->ctx)
 	    = ov->value.enumeration;
 	  break;
 	default:
 	  gdb_assert_not_reached ("unhandled option type");
 	}
     }
+}
+
+void
+process_options (const option_def *options, size_t options_size,
+		 void *ctx, const char **args)
+{
+  const option_def_group options_group[] = {
+    { options, options_size, ctx }
+  };
+
+  process_options (options_group, ARRAY_SIZE (options_group), args);
 }
 
 static const char *

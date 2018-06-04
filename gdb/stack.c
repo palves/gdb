@@ -100,8 +100,6 @@ using uinteger_option_def
   = gdb::option::uinteger_option_def<frame_print_options>;
 using enum_option_def
   = gdb::option::enum_option_def<frame_print_options>;
-using switch_option_def
-  = gdb::option::switch_option_def<frame_print_options>;
 
 static const gdb::option::option_def frame_print_option_defs[] = {
 
@@ -139,19 +137,28 @@ pretty-printers for that value.)")
   },
 };
 
+struct backtrace_cmd_options
+{
+  int full = 0;
+  int no_filters = 0;
+};
+
+using bt_switch_option_def
+  = gdb::option::switch_option_def<backtrace_cmd_options>;
+
 static const gdb::option::option_def backtrace_command_option_defs[] = {
-  switch_option_def {
+  bt_switch_option_def {
     "full",
-    [] (frame_print_options *opt) { return &opt->full; },
+    [] (backtrace_cmd_options *opt) { return &opt->full; },
     NULL, /* show_cmd_cb */
     N_("Print values of local variables."),
     NULL, /* show_doc */
     NULL, /* help_doc */
   },
 
-  switch_option_def {
+  bt_switch_option_def {
     "no-filters",
-    [] (frame_print_options *opt) { return &opt->no_filters; },
+    [] (backtrace_cmd_options *opt) { return &opt->no_filters; },
     NULL, /* show_cmd_cb */
     N_("Prohibit frame filters from executing on a backtrace."),
     NULL, /* show_doc */
@@ -1917,11 +1924,18 @@ backtrace_command (const char *arg, int from_tty)
   bool filters = true;
   frame_filter_flags flags = 0;
 
-  frame_print_options opts = user_frame_print_options;
+  frame_print_options fp_opts = user_frame_print_options;
+  backtrace_cmd_options bt_opts;
 
-  gdb::option::process_options (frame_print_option_defs,
-				ARRAY_SIZE (frame_print_option_defs),
-				&opts, &arg);
+  gdb::option::option_def_group grp[] = {
+    { frame_print_option_defs, ARRAY_SIZE (frame_print_option_defs),
+      &fp_opts },
+
+    { backtrace_command_option_defs, ARRAY_SIZE (backtrace_command_option_defs),
+      &bt_opts },
+  };
+
+  gdb::option::process_options (grp, ARRAY_SIZE (grp), &arg);
 
   if (arg != NULL)
     {
@@ -1953,7 +1967,7 @@ backtrace_command (const char *arg, int from_tty)
 	arg = NULL;
     }
 
-  backtrace_command_1 (opts, arg, flags, !filters /* no frame-filters */, from_tty);
+  backtrace_command_1 (fp_opts, arg, flags, !filters /* no frame-filters */, from_tty);
 }
 
 static void
@@ -1961,8 +1975,14 @@ backtrace_command_completer (struct cmd_list_element *ignore,
 			     completion_tracker &tracker,
 			     const char *text, const char *word)
 {
-  if (gdb::option::complete_options (frame_print_option_defs,
-				     ARRAY_SIZE (frame_print_option_defs),
+  gdb::option::option_def_group grp[] = {
+    { frame_print_option_defs,
+      ARRAY_SIZE (frame_print_option_defs) },
+    { backtrace_command_option_defs,
+      ARRAY_SIZE (backtrace_command_option_defs) },
+  };
+
+  if (gdb::option::complete_options (grp, ARRAY_SIZE (grp),
 				     tracker, text, word))
     return;
 
