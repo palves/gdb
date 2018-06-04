@@ -76,8 +76,8 @@ find_end_options_marker (const char *args)
 
 static void complete_on_options (const option_def *options,
 				 size_t options_size,
-				 const char *text, const char *word,
-				 completion_tracker &tracker);
+				 completion_tracker &tracker,
+				 const char *text, const char *word);
 
 static gdb::optional<option_def_and_value>
 parse_option (const option_def *options, size_t options_size,
@@ -109,8 +109,8 @@ parse_option (const option_def *options, size_t options_size,
 	      if (completion != NULL && arg[len] == '\0')
 		{
 		  complete_on_options (options, options_size,
-				       arg, completion->word,
-				       completion->tracker);
+				       completion->tracker,
+				       arg, completion->word);
 		  return {};
 		}
 
@@ -129,8 +129,8 @@ parse_option (const option_def *options, size_t options_size,
   if (completion != NULL && arg[len] == '\0')
     {
       complete_on_options (options, options_size,
-			   arg, completion->word,
-			   completion->tracker);
+			   completion->tracker,
+			   arg, completion->word);
       return {};
     }
 
@@ -217,19 +217,16 @@ parse_option (const option_def *options, size_t options_size,
 
 static void
 complete_on_options (const option_def *options, size_t options_size,
-		     const char *text, const char *word,
-		     completion_tracker &tracker)
+		     completion_tracker &tracker,
+		     const char *text, const char *word)
 {
-  /* To keep it simple build the options enum array on demand.  We
-     could get rid of this by inlining complete_on_enum here.  */
-  std::vector<const char *> enum_options;
-
+  size_t textlen = strlen (text);
   for (size_t i = 0; i < options_size; i++)
-    enum_options.push_back (options[i].name);
-
-  /* complete_on_enum wants a NULL-terminated array.  */
-  enum_options.push_back (NULL);
-  complete_on_enum (tracker, enum_options.data (), text, word);
+    {
+      const char *oname = options[i].name;
+      if (strncmp (oname, text, textlen) == 0)
+	tracker.add_completion (make_completion_match_str (oname, text, word));
+    }
 }
 
 bool
@@ -253,17 +250,21 @@ complete_options (const option_def *options, size_t options_size,
 	  args = skip_spaces (args);
 	  completion_info.word = args;
 
-	  if (strcmp (args, "-") == 0 || strcmp (args, "--") == 0)
+	  if (strcmp (args, "-") == 0)
 	    {
 	      complete_on_options (options, options_size,
-				   args + 1, completion_info.word,
-				   tracker);
+				   tracker, args + 1, completion_info.word);
+	    }
+	  else if (strcmp (args, "--") == 0)
+	    {
+	      tracker.add_completion
+		(gdb::unique_xmalloc_ptr<char> (xstrdup (args)));
 	    }
 	  else if (args > text && *args == '\0' && isspace (args[-1]))
 	    {
 	      static const char opt[] = "-";
 	      complete_on_options (options, options_size,
-				   opt + 1, opt, tracker);
+				   tracker, opt + 1, opt);
 	    }
 	  else
 	    {
