@@ -227,9 +227,6 @@ complete_on_options (const option_def *options, size_t options_size,
   for (size_t i = 0; i < options_size; i++)
     enum_options.push_back (options[i].name);
 
-  /* This entry is for "--".  */
-  enum_options.push_back ("-");
-
   /* complete_on_enum wants a NULL-terminated array.  */
   enum_options.push_back (NULL);
   complete_on_enum (tracker, enum_options.data (), text, word);
