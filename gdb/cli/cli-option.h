@@ -136,7 +136,7 @@ struct boolean_option_def : option_def
 };
 
 /* A boolean command line option.  */
-template<typename Context>
+template<typename Context = int>
 struct switch_option_def : boolean_option_def<Context>
 {
   switch_option_def (const char *long_option_,
@@ -211,11 +211,11 @@ struct option_def_group
 
 extern bool complete_options (gdb::array_view<const option_def> options,
 			      completion_tracker &tracker,
-			      const char *text, const char *word);
+			      const char **args);
 
 extern bool complete_options (gdb::array_view<const option_def_group> options_group,
 			      completion_tracker &tracker,
-			      const char *text, const char *word);
+			      const char **args);
 
 extern void build_help (gdb::array_view<const option_def> options,
 			std::string &help);

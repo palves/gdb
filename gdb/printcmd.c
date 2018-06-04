@@ -1230,26 +1230,11 @@ print_command_completer (struct cmd_list_element *ignore,
 			 completion_tracker &tracker,
 			 const char *text, const char *word)
 {
-  if (value_print_options_complete (tracker, text, word))
+  if (value_print_options_complete (tracker, &text))
     return;
 
-  if (word == NULL)
-    {
-      auto handle_brkchars
-	= completer_handle_brkchars_func_for_completer (expression_completer);
-      return handle_brkchars (ignore, tracker, text, word);
-    }
-  else
-    return expression_completer (ignore, tracker, text, word);
-}
-
-static void
-print_command_completer_handle_brkchars (struct cmd_list_element *ignore,
-					 completion_tracker &tracker,
-					 const char *text,
-					 const char *word_ignored)
-{
-  print_command_completer (ignore, tracker, text, NULL);
+  word = advance_to_expression_complete_word_point (tracker, text);
+  expression_completer (ignore, tracker, text, word);
 }
 
 static void
@@ -2766,7 +2751,7 @@ The argument is the function name and arguments, in the notation of the\n\
 current working language.  The result is printed and saved in the value\n\
 history, if it is not void."));
   set_cmd_completer (c, print_command_completer);
-  set_cmd_completer_handle_brkchars (c, print_command_completer_handle_brkchars);
+  set_cmd_completer_handle_brkchars (c, print_command_completer);
 
   add_cmd ("variable", class_vars, set_command, _("\
 Evaluate expression EXP and assign result to variable VAR, using assignment\n\
@@ -2821,7 +2806,7 @@ but no count or size letter (see \"x\" command).");
   c = add_com ("print", class_vars, print_command,
 	       xstrdup (print_help_str.c_str ()));
   set_cmd_completer (c, print_command_completer);
-  set_cmd_completer_handle_brkchars (c, print_command_completer_handle_brkchars);
+  set_cmd_completer_handle_brkchars (c, print_command_completer);
   add_com_alias ("p", "print", class_vars, 1);
   add_com_alias ("inspect", "print", class_vars, 1);
 

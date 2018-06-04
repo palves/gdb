@@ -333,44 +333,59 @@ complete_on_options (gdb::array_view<const option_def_group> options_group,
 bool
 complete_options (gdb::array_view<const option_def_group> options_group,
 		  completion_tracker &tracker,
-		  const char *text, const char *word)
+		  const char **args)
 {
-  const char *marker;
+  const char *text = *args;
+
+  const char *marker = NULL;
+
+  tracker.set_use_custom_word_point (true);
+
   if (text[0] == '-'
       && ((marker = find_end_options_marker (text)) == NULL
 	  || *marker == '\0'))
     {
-      tracker.set_use_custom_word_point (true);
-
-      const char *args = text;
 
       parse_option_completion_info completion_info {NULL, tracker};
 
       while (1)
 	{
-	  args = skip_spaces (args);
-	  completion_info.word = args;
+	  *args = skip_spaces (*args);
+	  completion_info.word = *args;
 
-	  if (strcmp (args, "-") == 0)
+	  if (strcmp (*args, "-") == 0)
 	    {
-	      complete_on_options (options_group, tracker, args + 1,
+	      complete_on_options (options_group, tracker, *args + 1,
 				   completion_info.word);
 	    }
-	  else if (strcmp (args, "--") == 0)
+	  else if (strcmp (*args, "--") == 0)
 	    {
 	      tracker.add_completion
-		(gdb::unique_xmalloc_ptr<char> (xstrdup (args)));
+		(gdb::unique_xmalloc_ptr<char> (xstrdup (*args)));
 	    }
-	  else if (args > text && *args == '\0' && isspace (args[-1]))
+#if 0
+	  /* Disabled otherwise for commands with only one available
+	     option you get:
+	      compile file -raw [TAB]
+	      compile file -raw -raw [TAB]
+	      compile file -raw -raw -raw [TAB]
+	     etc.
+	   */
+	  else if (*args > text && *args == '\0' && isspace (args[-1]))
 	    {
 	      complete_on_all_options (options_group, tracker);
 	    }
+#endif
 	  else
 	    {
 	      auto ov = parse_option (options_group, true,
-				      &args, &completion_info);
+				      args, &completion_info);
 	      if (!ov && !tracker.have_completions ())
-		return true;
+		{
+		  tracker.advance_custom_word_point_by
+		    (completion_info.word - text);
+		  return false;
+		}
 	    }
 
 	  if (tracker.have_completions ())
@@ -381,21 +396,29 @@ complete_options (gdb::array_view<const option_def_group> options_group,
 	    }
 	}
     }
+  else if (marker != NULL)
+    {
+      marker = skip_to_space (marker);
+      tracker.advance_custom_word_point_by
+	(marker - text);
+      *args = marker;
+      return false;
+    }
 
-  tracker.set_use_custom_word_point (false);
+  //  tracker.set_use_custom_word_point (false);
   return false;
 }
 
 bool
 complete_options (gdb::array_view<const option_def> options,
 		  completion_tracker &tracker,
-		  const char *text, const char *word)
+		  const char **args)
 {
   const option_def_group options_group[] = {
     { options }
   };
 
-  return complete_options (options_group, tracker, text, word);
+  return complete_options (options_group, tracker, args);
 }
 
 void

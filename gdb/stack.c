@@ -1971,7 +1971,7 @@ backtrace_command_completer (struct cmd_list_element *ignore,
     { {backtrace_command_option_defs} },
   };
 
-  if (gdb::option::complete_options (grp, tracker, text, word))
+  if (gdb::option::complete_options (grp, tracker, &text))
     return;
 
   if (word == NULL)

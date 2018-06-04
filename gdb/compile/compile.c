@@ -23,6 +23,7 @@
 #include "command.h"
 #include "cli/cli-script.h"
 #include "cli/cli-utils.h"
+#include "cli/cli-option.h"
 #include "completer.h"
 #include "gdbcmd.h"
 #include "compile.h"
@@ -83,40 +84,82 @@ check_raw_argument (const char **arg)
   return 0;
 }
 
+static const gdb::option::switch_option_def<> raw_option_def = {
+  "raw",
+  N_("Suppress automatic 'void _gdb_expr () { CODE }' wrapping."),
+};
+
 /* Handle the input from the 'compile file' command.  The "compile
    file" command is used to evaluate an expression contained in a file
    that may contain calls to the GCC compiler.  */
 
 static void
-compile_file_command (const char *arg, int from_tty)
+compile_file_command (const char *args, int from_tty)
 {
   enum compile_i_scope_types scope = COMPILE_I_SIMPLE_SCOPE;
 
   scoped_restore save_async = make_scoped_restore (&current_ui->async, 0);
 
   /* Check the user did not just <enter> after command.  */
-  if (arg == NULL)
+  if (args == NULL)
     error (_("You must provide a filename for this command."));
 
   /* Check if a raw (-r|-raw) argument is provided.  */
-  if (arg != NULL && check_raw_argument (&arg))
-    {
-      scope = COMPILE_I_RAW_SCOPE;
-      arg = skip_spaces (arg);
-    }
+  int raw = false;
+  gdb::option::process_options ({{raw_option_def, &raw}}, &args);
+
+  if (raw)
+    scope = COMPILE_I_RAW_SCOPE;
+
+  args = skip_spaces (args);
 
   /* After processing arguments, check there is a filename at the end
      of the command.  */
-  if (arg[0] == '\0')
+  if (args[0] == '\0')
     error (_("You must provide a filename with the raw option set."));
 
-  if (arg[0] == '-')
+  if (args[0] == '-')
     error (_("Unknown argument specified."));
 
-  arg = skip_spaces (arg);
-  gdb::unique_xmalloc_ptr<char> abspath = gdb_abspath (arg);
+  args = skip_spaces (args);
+  gdb::unique_xmalloc_ptr<char> abspath = gdb_abspath (args);
   std::string buffer = string_printf ("#include \"%s\"\n", abspath.get ());
   eval_compile_command (NULL, buffer.c_str (), scope, NULL);
+}
+
+#if 0
+static void
+defer_completer (struct cmd_list_element *cmd,
+		 completion_tracker &tracker,
+		 const char *text, const char *word,
+		 completer_ftype *fn)
+{
+  if (word == NULL)
+    {
+      auto handle_brkchars
+	= completer_handle_brkchars_func_for_completer (fn);
+      handle_brkchars (cmd, tracker, text, word);
+    }
+  else
+    fn (cmd, tracker, text, word);
+}
+#endif
+
+const char *
+advance_to_filename_complete_word_point (completion_tracker &tracker,
+					 const char *text);
+
+static void
+compile_file_command_completer (struct cmd_list_element *ignore,
+				completion_tracker &tracker,
+				const char *text, const char *word)
+{
+  if (gdb::option::complete_options ({{raw_option_def, NULL}},
+				     tracker, &text))
+    return;
+
+  word = advance_to_filename_complete_word_point (tracker, text);
+  filename_completer (ignore, tracker, text, word);
 }
 
 /* Handle the input from the 'compile code' command.  The
@@ -728,7 +771,8 @@ Evaluate a file containing source code.\n\
 Usage: compile file [-r|-raw] [filename]\n\
 -r|-raw: Suppress automatic 'void _gdb_expr () { CODE }' wrapping."),
 	       &compile_command_list);
-  set_cmd_completer (c, filename_completer);
+  set_cmd_completer (c, compile_file_command_completer);
+  set_cmd_completer_handle_brkchars (c, compile_file_command_completer);
 
   add_cmd ("print", class_obscure, compile_print_command,
 	   _("\

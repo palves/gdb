@@ -3193,10 +3193,10 @@ value_print_options_process (value_print_options &opts, const char **args)
 
 bool
 value_print_options_complete (completion_tracker &tracker,
-			      const char *text, const char *word)
+			      const char **text)
 {
   return gdb::option::complete_options (value_print_option_defs,
-					tracker, text, word);
+					tracker, text);
 }
 
 void

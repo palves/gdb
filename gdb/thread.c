@@ -1315,7 +1315,7 @@ print_thread_info (struct ui_out *uiout, char *requested_threads, int pid)
   print_thread_info_1 (uiout, requested_threads, 1, pid, 0);
 }
 
-static const gdb::option::switch_option_def<int> gid_option_def = {
+static const gdb::option::switch_option_def<> gid_option_def = {
   "gid",
   N_("Show global thread IDs."),
 };
@@ -1578,7 +1578,7 @@ tp_array_compar_descending (const thread_info *a, const thread_info *b)
   return (a->per_inf_num > b->per_inf_num);
 }
 
-static const gdb::option::switch_option_def<int> ascending_option_def = {
+static const gdb::option::switch_option_def<> ascending_option_def = {
   "ascending",
   N_("Call <command> for all threads in ascending order.\n\
 		The default is descending order."),

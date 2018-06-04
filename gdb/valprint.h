@@ -100,7 +100,7 @@ extern void value_print_options_process (value_print_options &opts,
 					 const char **args);
 
 extern bool value_print_options_complete (completion_tracker &tracker,
-					  const char *text, const char *word);
+					  const char **text);
 
 extern void value_print_options_build_help (std::string &help);
 
