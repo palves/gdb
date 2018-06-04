@@ -182,18 +182,18 @@ parse_option (const option_def *options, size_t options_size,
 	else if (**args == '-')
 	  {
 	    /* Treat:
-	         "p -boolean-option -another-opt..."
+	         "cmd -boolean-option -another-opt..."
 	       as:
-	         "p -boolean-option on -another-opt..."
+	         "cmd -boolean-option on -another-opt..."
 	     */
 	    res = 1;
 	  }
 	else if (**args == '\0')
 	  {
 	    /* Treat:
-	         (1) "p -boolean-option "
+	         (1) "cmd -boolean-option "
 	       as:
-	         (1) "p -boolean-option on"
+	         (1) "cmd -boolean-option on"
 	     */
 	    res = 1;
 	  }
@@ -213,7 +213,7 @@ parse_option (const option_def *options, size_t options_size,
 		      }
 		  }
 
-		error (_("Unrecognized option value for -%s: %.*s"),
+		error (_("Value given for `-%s' is not a boolean: %.*s"),
 		       match->name, (int) (end - val_str), val_str);
 	      }
 	    else if (completion != NULL && **args == '\0')
