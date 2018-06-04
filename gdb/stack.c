@@ -100,6 +100,8 @@ using uinteger_option_def
   = gdb::option::uinteger_option_def<frame_print_options>;
 using enum_option_def
   = gdb::option::enum_option_def<frame_print_options>;
+using switch_option_def
+  = gdb::option::switch_option_def<frame_print_options>;
 
 static const gdb::option::option_def frame_print_option_defs[] = {
 
@@ -135,22 +137,24 @@ or both.  Note that one or both of these values may be <optimized out>.)"),
     N_(R"(If set, frame arguments are printed in raw form, bypassing any
 pretty-printers for that value.)")
   },
+};
 
-  boolean_option_def {
+static const gdb::option::option_def backtrace_command_option_defs[] = {
+  switch_option_def {
     "full",
     [] (frame_print_options *opt) { return &opt->full; },
     NULL, /* show_cmd_cb */
-    N_("Set whether to print the values of the local variables."),
-    N_("Show whether to print the values of the local variables."),
+    N_("Print values of local variables."),
+    NULL, /* show_doc */
     NULL, /* help_doc */
   },
 
-  boolean_option_def {
+  switch_option_def {
     "no-filters",
     [] (frame_print_options *opt) { return &opt->no_filters; },
     NULL, /* show_cmd_cb */
-    N_("Set whether to prohibit frame filters from executing on a backtrace."),
-    N_("Show whether to prohibit frame filters from executing on a backtrace."),
+    N_("Prohibit frame filters from executing on a backtrace."),
+    NULL, /* show_doc */
     NULL, /* help_doc */
   },
 };

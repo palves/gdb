@@ -79,6 +79,7 @@ public:
      argv).  */
   const char *const *enums = NULL;
 
+  bool have_argument = true;
 public:
   /* The "show" callback to use in the associated command.  E.g.,
      "show print elements".  */
@@ -123,6 +124,25 @@ struct boolean_option_def : option_def
 		  set_doc_, show_doc_, help_doc_)
   {
     var_address.boolean = detail::get_var_address<int, Context>;
+  }
+};
+
+/* A boolean command line option.  */
+template<typename Context>
+struct switch_option_def : boolean_option_def<Context>
+{
+  switch_option_def (const char *long_option_,
+		     int *(*var_address_cb_) (Context *),
+		     show_value_ftype *show_cmd_cb_,
+		     const char *set_doc_,
+		     const char *show_doc_,
+		     const char *help_doc_)
+    : boolean_option_def<Context> (long_option_,
+				   var_address_cb_,
+				   show_cmd_cb_,
+				   set_doc_, show_doc_, help_doc_)
+  {
+    this->have_argument = false;
   }
 };
 

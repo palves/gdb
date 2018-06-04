@@ -166,6 +166,13 @@ parse_option (const option_def *options, size_t options_size,
     {
     case var_boolean:
       {
+	if (!match->have_argument)
+	  {
+	    option_value val;
+	    val.boolean = true;
+	    return option_def_and_value {*match, val};
+	  }
+
 	const char *val_str = *args;
 	int res;
 
@@ -421,9 +428,12 @@ process_options (const option_def *options, size_t options_size,
 }
 
 static const char *
-get_val_type_str (var_types type)
+get_val_type_str (const option_def &opt)
 {
-  switch (type)
+  if (!opt.have_argument)
+    return NULL;
+
+  switch (opt.type)
     {
     case var_boolean:
       return "[on|off]";
@@ -447,7 +457,7 @@ build_help (const option_def *options, size_t options_size,
       help += "  -";
       help += o.name;
 
-      const char *val_type_str = get_val_type_str (o.type);
+      const char *val_type_str = get_val_type_str (o);
       if (val_type_str != NULL)
 	{
 	  help += ' ';
