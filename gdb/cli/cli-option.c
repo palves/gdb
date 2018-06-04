@@ -76,12 +76,12 @@ find_end_options_marker (const char *args)
 }
 
 static void complete_on_options
-  (gdb::array_view<option_def_group> options_group,
+  (gdb::array_view<const option_def_group> options_group,
    completion_tracker &tracker,
    const char *text, const char *word);
 
 static void
-complete_on_all_options (gdb::array_view<option_def_group > options_group,
+complete_on_all_options (gdb::array_view<const option_def_group> options_group,
 			 completion_tracker &tracker)
 {
   static const char opt[] = "-";
@@ -95,7 +95,7 @@ make_unique_xstrdup (const char *str)
 }
 
 static gdb::optional<option_def_and_value>
-parse_option (gdb::array_view<option_def_group> options_group,
+parse_option (gdb::array_view<const option_def_group> options_group,
 	      bool have_marker,
 	      const char **args,
 	      parse_option_completion_info *completion = NULL)
@@ -163,7 +163,7 @@ parse_option (gdb::array_view<option_def_group> options_group,
   *args = skip_spaces (*args);
   if (completion != NULL)
     completion->word = *args;
-  
+
   switch (match->type)
     {
     case var_boolean:
@@ -190,18 +190,18 @@ parse_option (gdb::array_view<option_def_group> options_group,
 	else if (**args == '-')
 	  {
 	    /* Treat:
-	         "cmd -boolean-option -another-opt..."
+		 "cmd -boolean-option -another-opt..."
 	       as:
-	         "cmd -boolean-option on -another-opt..."
+		 "cmd -boolean-option on -another-opt..."
 	     */
 	    res = 1;
 	  }
 	else if (**args == '\0')
 	  {
 	    /* Treat:
-	         (1) "cmd -boolean-option "
+		 (1) "cmd -boolean-option "
 	       as:
-	         (1) "cmd -boolean-option on"
+		 (1) "cmd -boolean-option on"
 	     */
 	    res = 1;
 	  }
@@ -316,7 +316,7 @@ parse_option (gdb::array_view<option_def_group> options_group,
 }
 
 static void
-complete_on_options (gdb::array_view<option_def_group> options_group,
+complete_on_options (gdb::array_view<const option_def_group> options_group,
 		     completion_tracker &tracker,
 		     const char *text, const char *word)
 {
@@ -331,7 +331,7 @@ complete_on_options (gdb::array_view<option_def_group> options_group,
 }
 
 bool
-complete_options (gdb::array_view<option_def_group> options_group,
+complete_options (gdb::array_view<const option_def_group> options_group,
 		  completion_tracker &tracker,
 		  const char *text, const char *word)
 {
@@ -387,7 +387,7 @@ complete_options (gdb::array_view<option_def_group> options_group,
 }
 
 bool
-complete_options (gdb::array_view<option_def> options,
+complete_options (gdb::array_view<const option_def> options,
 		  completion_tracker &tracker,
 		  const char *text, const char *word)
 {
@@ -399,7 +399,7 @@ complete_options (gdb::array_view<option_def> options,
 }
 
 void
-process_options (gdb::array_view<option_def_group> options_group,
+process_options (gdb::array_view<const option_def_group> options_group,
 		 const char **args)
 {
   if (*args == NULL)
@@ -441,7 +441,7 @@ process_options (gdb::array_view<option_def_group> options_group,
 }
 
 void
-process_options (gdb::array_view<option_def> options, void *ctx,
+process_options (gdb::array_view<const option_def> options, void *ctx,
 		 const char **args)
 {
   const option_def_group options_group[] = {
@@ -469,7 +469,7 @@ get_val_type_str (const option_def &opt)
 }
 
 void
-build_help (gdb::array_view<option_def> options, std::string &help)
+build_help (gdb::array_view<const option_def> options, std::string &help)
 {
   for (const auto &o : options)
     {
@@ -501,7 +501,7 @@ build_help (gdb::array_view<option_def> options, std::string &help)
 void
 add_setshow_cmds_for_options (command_class cmd_class,
 			      void *ctx,
-			      gdb::array_view<option_def> options,
+			      gdb::array_view<const option_def> options,
 			      struct cmd_list_element **set_list,
 			      struct cmd_list_element **show_list)
 {

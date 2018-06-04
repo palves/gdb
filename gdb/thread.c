@@ -1593,7 +1593,7 @@ static const gdb::option::option_def info_threads_cmd_option_defs[] = {
 };
 #endif
 
-static gdb::option::switch_option_def<int> ascending_option_def {
+static const gdb::option::switch_option_def<int> ascending_option_def {
   "ascending",
     [] (int *opt) { return opt; },
     N_(R"(Call <command> for all threads in ascending order.
