@@ -116,7 +116,11 @@ parse_option (const option_def *options, size_t options_size,
 
 	      error (_("Ambiguous option at: -%s"), arg);
 	    }
+
 	  match = &o;
+
+	  if (isspace (arg[len]) || arg[len] == '\0')
+	    break; /* Exact match.  */
 	}
     }
   if (match == NULL)
@@ -140,28 +144,35 @@ parse_option (const option_def *options, size_t options_size,
     case var_boolean:
       {
 	const char *val_str = *args;
-	int res = parse_cli_boolean_value (args);
-	if (res < 0)
-	  {
-	    if (completion != NULL)
-	      {
-		*args = skip_to_space (*args);
-		if (**args == '\0')
-		  {
-		    complete_on_enum (completion->tracker,
-				      boolean_enums, val_str, val_str);
-		    return {};
-		  }
-	      }
+	int res;
 
-	    error (_("Unrecognized option value for -%s: %s"),
-		   match->name, val_str);
-	  }
-	else if (completion != NULL && **args == '\0')
+	if (**args == '-' || **args == '\0')
+	  res = 1;
+	else
 	  {
-	    complete_on_enum (completion->tracker, boolean_enums,
-			      val_str, val_str);
-	    return {};
+	    res = parse_cli_boolean_value (args);
+	    if (res < 0)
+	      {
+		if (completion != NULL)
+		  {
+		    *args = skip_to_space (*args);
+		    if (**args == '\0')
+		      {
+			complete_on_enum (completion->tracker,
+					  boolean_enums, val_str, val_str);
+			return {};
+		      }
+		  }
+
+		error (_("Unrecognized option value for -%s: %s"),
+		       match->name, val_str);
+	      }
+	    else if (completion != NULL && **args == '\0')
+	      {
+		complete_on_enum (completion->tracker, boolean_enums,
+				  val_str, val_str);
+		return {};
+	      }
 	  }
 
 	option_value val;
@@ -324,9 +335,9 @@ get_val_type_str (var_types type)
   switch (type)
     {
     case var_boolean:
-      return "<boolean>";
+      return "[on|off]";
     case var_uinteger:
-      return "<unsigned | unlimited>";
+      return "NUMBER | unlimited";
     default:
       return NULL;
     }
