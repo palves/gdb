@@ -134,14 +134,12 @@ struct switch_option_def : boolean_option_def<Context>
 {
   switch_option_def (const char *long_option_,
 		     int *(*var_address_cb_) (Context *),
-		     show_value_ftype *show_cmd_cb_,
 		     const char *set_doc_,
-		     const char *show_doc_,
-		     const char *help_doc_)
+		     const char *help_doc_ = NULL)
     : boolean_option_def<Context> (long_option_,
 				   var_address_cb_,
-				   show_cmd_cb_,
-				   set_doc_, show_doc_, help_doc_)
+				   NULL,
+				   set_doc_, NULL, help_doc_)
   {
     this->have_argument = false;
   }

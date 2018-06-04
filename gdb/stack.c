@@ -150,19 +150,13 @@ static const gdb::option::option_def backtrace_command_option_defs[] = {
   bt_switch_option_def {
     "full",
     [] (backtrace_cmd_options *opt) { return &opt->full; },
-    NULL, /* show_cmd_cb */
-    N_("Print values of local variables."),
-    NULL, /* show_doc */
-    NULL, /* help_doc */
+    N_("Print values of local variables.")
   },
 
   bt_switch_option_def {
     "no-filters",
     [] (backtrace_cmd_options *opt) { return &opt->no_filters; },
-    NULL, /* show_cmd_cb */
     N_("Prohibit frame filters from executing on a backtrace."),
-    NULL, /* show_doc */
-    NULL, /* help_doc */
   },
 };
 
