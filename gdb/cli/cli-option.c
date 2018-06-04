@@ -95,6 +95,7 @@ make_unique_xstrdup (const char *str)
 
 static gdb::optional<option_def_and_value>
 parse_option (const option_def *options, size_t options_size,
+	      bool have_marker,
 	      const char **args,
 	      parse_option_completion_info *completion = NULL)
 {
@@ -137,8 +138,14 @@ parse_option (const option_def *options, size_t options_size,
 	    break; /* Exact match.  */
 	}
     }
+
   if (match == NULL)
-    error (_("Unrecognized option at: -%s"), arg);
+    {
+      if (!have_marker)
+	return {};
+
+      error (_("Unrecognized option at: -%s"), arg);
+    }
 
   if (completion != NULL && arg[len] == '\0')
     {
@@ -217,8 +224,8 @@ parse_option (const option_def *options, size_t options_size,
 		   VAL_STR instead of BOOLEAN_ENUMS here to make these
 		   work:
 
-		    "p -object 1[TAB]" -> "p -object 1 -"
-		    "p -object yes[TAB]" -> "p -object yes -"
+		    "p -object 1[TAB]" -> "p -object 1 "
+		    "p -object yes[TAB]" -> "p -object yes "
 
 		   Etc.  Most importantly, the space is auto-appended.
 
@@ -228,8 +235,7 @@ parse_option (const option_def *options, size_t options_size,
 		    "p -object 1[TAB]" -> "p -object 1" (i.e., nothing happens).
 		*/
 		completion->tracker.add_completion
-		  (gdb::unique_xmalloc_ptr<char> (concat (val_str, " -", (char *) NULL)));
-		completion->tracker.set_suppress_append_ws (true);
+		  (make_unique_xstrdup (val_str));
 		return {};
 	      }
 	  }
@@ -257,8 +263,7 @@ parse_option (const option_def *options, size_t options_size,
 	    else if (startswith ("unlimited", *args))
 	      {
 		completion->tracker.add_completion
-		  (make_unique_xstrdup ("unlimited -"));
-		completion->tracker.set_suppress_append_ws (true);
+		  (make_unique_xstrdup ("unlimited"));
 		return {};
 	      }
 	  }
@@ -274,21 +279,8 @@ parse_option (const option_def *options, size_t options_size,
 	    const char *after = skip_to_space (*args);
 	    if (*after == '\0')
 	      {
-		size_t textlen = after - *args;
-		enum_match ematch
-		  = find_enum_match (*args, textlen, match->enums);
-		if (ematch.nmatches == 1)
-		  {
-		    completion->tracker.add_completion
-		      (gdb::unique_xmalloc_ptr<char>
-		       (concat (ematch.match, " -", (char *) NULL)));
-		    completion->tracker.set_suppress_append_ws (true);
-		  }
-		else if (ematch.nmatches > 1)
-		  {
-		    complete_on_enum (completion->tracker,
-				      match->enums, *args, *args);
-		  }
+		complete_on_enum (completion->tracker,
+				  match->enums, *args, *args);
 		return {};
 	      }
 	  }
@@ -367,7 +359,7 @@ complete_options (const option_def *options, size_t options_size,
 	  else
 	    {
 	      auto ov = parse_option (options, options_size,
-				      &args, &completion_info);
+				      true, &args, &completion_info);
 	      if (!ov && !tracker.have_completions ())
 		return true;
 	    }
@@ -389,19 +381,22 @@ void
 process_options (const option_def *options, size_t options_size,
 		 void *ctx, const char **args)
 {
+  if (*args == NULL)
+    return;
+
   /* If ARGS starts with "-", look for a "--" sequence.  If one is
      found, then interpret everything up until the "--" as
      'gdb::option'-style command line options.  Otherwise, interpret
      ARGS as an expression.  We need this because otherwise e.g., the
      "-1" in "(gdb) print -1" would be interpreted as an option.  */
-  if (*args == NULL || find_end_options_marker (*args) == NULL)
-    return;
+  bool have_marker = find_end_options_marker (*args) != NULL;
 
   while (1)
     {
       *args = skip_spaces (*args);
 
-      auto ov = parse_option (options, options_size, args);
+      auto ov = parse_option (options, options_size, have_marker,
+			      args);
       if (!ov)
 	break;
 
