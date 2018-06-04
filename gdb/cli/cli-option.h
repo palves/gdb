@@ -93,6 +93,11 @@ public:
   const char *set_doc;
   const char *show_doc;
   const char *help_doc;
+
+  const option_def &def () const
+  {
+    return *this;
+  }
 };
 
 namespace detail

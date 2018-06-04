@@ -1331,7 +1331,9 @@ info_threads_command (const char *arg, int from_tty)
 {
   int show_global_ids = 0;
 
-  gdb::option::process_options (&arg, {{gid_option_def, &show_global_ids}});
+  const gdb::option::option_def_group group
+    = {gid_option_def.def (), &show_global_ids};
+  gdb::option::process_options (&arg, group);
 
   print_thread_info_1 (current_uiout, arg, 0, -1, show_global_ids);
 }
@@ -1597,7 +1599,9 @@ thread_apply_all_command (const char *cmd, int from_tty)
 {
   int ascending = false;
 
-  gdb::option::process_options (&cmd, {{ascending_option_def, &ascending}});
+  const gdb::option::option_def_group group
+    = {ascending_option_def.def (), &ascending};
+  gdb::option::process_options (&cmd, group);
 
   if (cmd == NULL || *cmd == '\000')
     error (_("Please specify a command following the thread ID list"));

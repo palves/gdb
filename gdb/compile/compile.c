@@ -81,8 +81,6 @@ static const gdb::option::switch_option_def<> raw_option_def = {
 static void
 compile_file_command (const char *args, int from_tty)
 {
-  enum compile_i_scope_types scope = COMPILE_I_SIMPLE_SCOPE;
-
   scoped_restore save_async = make_scoped_restore (&current_ui->async, 0);
 
   /* Check the user did not just <enter> after command.  */
@@ -91,7 +89,9 @@ compile_file_command (const char *args, int from_tty)
 
   /* Check if a raw (-r|-raw) argument is provided.  */
   int raw = false;
-  gdb::option::process_options (&args, {{raw_option_def, &raw}});
+  const gdb::option::option_def_group options
+    = {raw_option_def.def (), &raw};
+  gdb::option::process_options (&args, options);
 
   enum compile_i_scope_types scope
     = raw ? COMPILE_I_RAW_SCOPE : COMPILE_I_SIMPLE_SCOPE;
@@ -117,7 +117,8 @@ compile_file_command_completer (struct cmd_list_element *ignore,
 				completion_tracker &tracker,
 				const char *text, const char *word)
 {
-  if (gdb::option::complete_options (tracker, &text, {{raw_option_def}}))
+  const gdb::option::option_def_group options = {raw_option_def.def ()};
+  if (gdb::option::complete_options (tracker, &text, options))
     return;
 
   word = advance_to_filename_complete_word_point (tracker, text);
@@ -135,7 +136,9 @@ compile_code_command (const char *args, int from_tty)
   scoped_restore save_async = make_scoped_restore (&current_ui->async, 0);
 
   int raw = false;
-  gdb::option::process_options (&args, {{raw_option_def, &raw}});
+  const gdb::option::option_def_group options
+    = {raw_option_def.def (), &raw};
+  gdb::option::process_options (&args, options);
 
   enum compile_i_scope_types scope
     = raw ? COMPILE_I_RAW_SCOPE : COMPILE_I_SIMPLE_SCOPE;
@@ -156,7 +159,8 @@ compile_code_command_completer (struct cmd_list_element *ignore,
 				completion_tracker &tracker,
 				const char *text, const char *word)
 {
-  if (gdb::option::complete_options (tracker, &text, {{raw_option_def}}))
+  const gdb::option::option_def_group options = {raw_option_def.def ()};
+  if (gdb::option::complete_options (tracker, &text, options))
     return;
 
   word = advance_to_expression_complete_word_point (tracker, text);
