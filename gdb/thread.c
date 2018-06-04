@@ -1556,32 +1556,27 @@ print_thread_id (struct thread_info *thr)
   return s;
 }
 
-/* If true, tp_array_compar should sort in ascending order, otherwise
-   in descending order.  */
-
-static int tp_array_compar_ascending;
-
 /* Sort an array for struct thread_info pointers by thread ID (first
    by inferior number, and then by per-inferior thread number).  The
    order is determined by TP_ARRAY_COMPAR_ASCENDING.  */
 
 static bool
-tp_array_compar (const thread_info *a, const thread_info *b)
+tp_array_compar_ascending (const thread_info *a, const thread_info *b)
 {
   if (a->inf->num != b->inf->num)
-    {
-      if (tp_array_compar_ascending)
-	return a->inf->num < b->inf->num;
-      else
-	return a->inf->num > b->inf->num;
-    }
+    return a->inf->num < b->inf->num;
 
-  if (tp_array_compar_ascending)
-    return (a->per_inf_num < b->per_inf_num);
-  else
-    return (a->per_inf_num > b->per_inf_num);
+  return (a->per_inf_num < b->per_inf_num);
 }
 
+static bool
+tp_array_compar_descending (const thread_info *a, const thread_info *b)
+{
+  if (a->inf->num != b->inf->num)
+    return a->inf->num > b->inf->num;
+
+  return (a->per_inf_num > b->per_inf_num);
+}
 
 #if 0
 struct info_thread_cmd_options
@@ -1598,13 +1593,11 @@ static const gdb::option::option_def info_threads_cmd_option_defs[] = {
 };
 #endif
 
-static const gdb::option::option_def thread_apply_cmd_option_defs[] = {
-  gdb::option::switch_option_def<int> {
-    "ascending",
+static gdb::option::switch_option_def<int> ascending_option_def {
+  "ascending",
     [] (int *opt) { return opt; },
     N_(R"(Call <command> for all threads in ascending order.
-            The default is descending order.)"),
-  },
+		The default is descending order.)"),
 };
 
 /* Apply a GDB command to a list of threads.  List syntax is a whitespace
@@ -1618,11 +1611,13 @@ static const gdb::option::option_def thread_apply_cmd_option_defs[] = {
 static void
 thread_apply_all_command (const char *cmd, int from_tty)
 {
-  tp_array_compar_ascending = false;
+  int ascending = false;
 
-  gdb::option::process_options ({thread_apply_cmd_option_defs},
-				&tp_array_compar_ascending,
-				&cmd);
+  const gdb::option::option_def_group options[] = {
+    {{ascending_option_def}, &ascending },
+  };
+
+  gdb::option::process_options (options, &cmd);
 
   if (cmd == NULL || *cmd == '\000')
     error (_("Please specify a command following the thread ID list"));
@@ -1655,7 +1650,10 @@ thread_apply_all_command (const char *cmd, int from_tty)
 	 exit.  */
       scoped_inc_dec_ref inc_dec_ref (thr_list_cpy);
 
-      std::sort (thr_list_cpy.begin (), thr_list_cpy.end (), tp_array_compar);
+      auto *sorter = (ascending
+		      ? tp_array_compar_ascending
+		      : tp_array_compar_descending);
+      std::sort (thr_list_cpy.begin (), thr_list_cpy.end (), sorter);
 
       scoped_restore_current_thread restore_thread;
 
