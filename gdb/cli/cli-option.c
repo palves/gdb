@@ -80,9 +80,9 @@ static void complete_on_options
    completion_tracker &tracker,
    const char *text, const char *word);
 
-static void
-complete_on_all_options (gdb::array_view<const option_def_group> options_group,
-			 completion_tracker &tracker)
+void
+complete_on_all_options (completion_tracker &tracker,
+			 gdb::array_view<const option_def_group> options_group)
 {
   static const char opt[] = "-";
   complete_on_options (options_group, tracker, opt + 1, opt);
@@ -184,7 +184,7 @@ parse_option (gdb::array_view<const option_def_group> options_group,
 
 	    complete_on_enum (completion->tracker,
 			      boolean_enums, val_str, val_str);
-	    complete_on_all_options (options_group, completion->tracker);
+	    complete_on_all_options (completion->tracker, options_group);
 	    return {};
 	  }
 	else if (**args == '-')
@@ -373,7 +373,7 @@ complete_options (completion_tracker &tracker,
 	   */
 	  else if (*args > text && *args == '\0' && isspace (args[-1]))
 	    {
-	      complete_on_all_options (options_group, tracker);
+	      complete_on_all_options (tracker, options_group);
 	    }
 #endif
 	  else

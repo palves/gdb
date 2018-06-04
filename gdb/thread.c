@@ -1315,9 +1315,20 @@ print_thread_info (struct ui_out *uiout, char *requested_threads, int pid)
   print_thread_info_1 (uiout, requested_threads, 1, pid, 0);
 }
 
-static const gdb::option::switch_option_def<> gid_option_def = {
-  "gid",
-  N_("Show global thread IDs."),
+struct info_threads_opts
+{
+  /* For "-gid".  */
+  int show_global_ids = 0;
+};
+
+static const gdb::option::option_def info_thread_option_defs[] = {
+
+  gdb::option::switch_option_def<info_threads_opts> {
+    "gid",
+    [] (info_threads_opts *opts) { return &opts->show_global_ids; },
+    N_("Show global thread IDs."),
+  },
+
 };
 
 /* Implementation of the "info threads" command.
@@ -1329,13 +1340,31 @@ static const gdb::option::switch_option_def<> gid_option_def = {
 static void
 info_threads_command (const char *arg, int from_tty)
 {
-  int show_global_ids = 0;
+  info_threads_opts it_opts;
 
-  const gdb::option::option_def_group group
-    = {gid_option_def.def (), &show_global_ids};
-  gdb::option::process_options (&arg, group);
+  const gdb::option::option_def_group grp[]
+    = {info_thread_option_defs, &it_opts};
+  gdb::option::process_options (&arg, grp);
 
-  print_thread_info_1 (current_uiout, arg, 0, -1, show_global_ids);
+  print_thread_info_1 (current_uiout, arg, 0, -1, it_opts.show_global_ids);
+}
+
+static void
+info_threads_command_completer (struct cmd_list_element *ignore,
+				completion_tracker &tracker,
+				const char *text, const char *word_ignored)
+{
+  static const gdb::option::option_def_group grp[]
+    = {info_thread_option_defs};
+
+  if (gdb::option::complete_options (tracker, &text, grp))
+    return;
+
+  /* Convenience to let the user know what the option can accept.  XXX
+     is this a good idea?  */
+  gdb::option::complete_on_all_options (tracker, grp);
+  tracker.add_completion
+    (gdb::unique_xmalloc_ptr<char> (xstrdup ("THREAD_ID_LIST")));
 }
 
 /* See gdbthread.h.  */
@@ -2021,12 +2050,14 @@ _initialize_thread (void)
 {
   static struct cmd_list_element *thread_apply_list = NULL;
 
-  add_info ("threads", info_threads_command,
-	    _("Display currently known threads.\n\
+  cmd_list_element *c
+    = add_info ("threads", info_threads_command, _("\
+Display currently known threads.\n		    \
 Usage: info threads [-gid] [ID]...\n\
 -gid: Show global thread IDs.\n\
 If ID is given, it is a space-separated list of IDs of threads to display.\n\
 Otherwise, all threads are displayed."));
+  set_cmd_completer_handle_brkchars (c, info_threads_command_completer);
 
   add_prefix_cmd ("thread", class_run, thread_command, _("\
 Use this command to switch between threads.\n\

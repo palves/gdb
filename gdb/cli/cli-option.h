@@ -218,6 +218,10 @@ extern bool complete_options (completion_tracker &tracker,
 			      const char **args,
 			      gdb::array_view<const option_def_group> options_group);
 
+extern void
+  complete_on_all_options (completion_tracker &tracker,
+			   gdb::array_view<const option_def_group> options_group);
+
 extern void build_help (gdb::array_view<const option_def> options,
 			std::string &help);
 
