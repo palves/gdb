@@ -141,6 +141,7 @@ struct backtrace_cmd_options
 {
   int full = 0;
   int no_filters = 0;
+  int hide = 0;
 };
 
 using bt_switch_option_def
@@ -158,8 +159,13 @@ static const gdb::option::option_def backtrace_command_option_defs[] = {
     [] (backtrace_cmd_options *opt) { return &opt->no_filters; },
     N_("Prohibit frame filters from executing on a backtrace."),
   },
-};
 
+  bt_switch_option_def {
+    "hide",
+    [] (backtrace_cmd_options *opt) { return &opt->hide; },
+    N_("Causes Python frame filter elided frames to not be printed."),
+  },
+};
 
 /* Prototypes for local functions.  */
 
@@ -1777,8 +1783,9 @@ info_frame_command (const char *addr_exp, int from_tty)
 
 static void
 backtrace_command_1 (const frame_print_options &fp_opts,
-		     const char *count_exp, frame_filter_flags flags,
-		     int no_filters, int from_tty)
+		     const backtrace_cmd_options &bt_opts,
+		     const char *count_exp, int from_tty)
+
 {
   struct frame_info *fi;
   int count;
@@ -1807,7 +1814,14 @@ backtrace_command_1 (const frame_print_options &fp_opts,
       count = -1;
     }
 
-  if (! no_filters)
+  frame_filter_flags flags = 0;
+
+  if (bt_opts.full)
+    flags |= PRINT_LOCALS;
+  if (bt_opts.hide)
+    flags |= PRINT_HIDE;
+
+  if (!bt_opts.no_filters)
     {
       enum ext_lang_frame_args arg_type;
 
@@ -1828,8 +1842,8 @@ backtrace_command_1 (const frame_print_options &fp_opts,
     }
 
   /* Run the inbuilt backtrace if there are no filters registered, or
-     "no-filters" has been specified from the command.  */
-  if (no_filters ||  result == EXT_LANG_BT_NO_FILTERS)
+     "-no-filters" has been specified from the command.  */
+  if (bt_opts.no_filters || result == EXT_LANG_BT_NO_FILTERS)
     {
       struct frame_info *trailing;
 
@@ -1915,9 +1929,6 @@ backtrace_command_1 (const frame_print_options &fp_opts,
 static void
 backtrace_command (const char *arg, int from_tty)
 {
-  bool filters = true;
-  frame_filter_flags flags = 0;
-
   frame_print_options fp_opts = user_frame_print_options;
   backtrace_cmd_options bt_opts;
 
@@ -1928,11 +1939,11 @@ backtrace_command (const char *arg, int from_tty)
 
   gdb::option::process_options (&arg, grp);
 
+  /* Parse non-'-'-prefixed qualifiers, for backwards
+     compatibility.  */
   if (arg != NULL)
     {
-      bool done = false;
-
-      while (!done)
+      while (true)
 	{
 	  const char *save_arg = arg;
 	  std::string this_arg = extract_arg (&arg);
@@ -1941,16 +1952,16 @@ backtrace_command (const char *arg, int from_tty)
 	    break;
 
 	  if (subset_compare (this_arg.c_str (), "no-filters"))
-	    filters = false;
+	    bt_opts.no_filters = true;
 	  else if (subset_compare (this_arg.c_str (), "full"))
-	    flags |= PRINT_LOCALS;
+	    bt_opts.full = true;
 	  else if (subset_compare (this_arg.c_str (), "hide"))
-	    flags |= PRINT_HIDE;
+	    bt_opts.hide = true;
 	  else
 	    {
 	      /* Not a recognized argument, so stop.  */
 	      arg = save_arg;
-	      done = true;
+	      break;
 	    }
 	}
 
@@ -1958,7 +1969,7 @@ backtrace_command (const char *arg, int from_tty)
 	arg = NULL;
     }
 
-  backtrace_command_1 (fp_opts, arg, flags, !filters /* no frame-filters */, from_tty);
+  backtrace_command_1 (fp_opts, bt_opts, arg, from_tty);
 }
 
 static void
