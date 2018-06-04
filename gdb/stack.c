@@ -110,10 +110,10 @@ static const gdb::option::option_def frame_print_option_defs[] = {
     NULL, /* show_cmd_cb */
     N_("Set printing of function arguments at function entry"),
     N_("Show printing of function arguments at function entry"),
-    N_(R"(GDB can sometimes determine the values of function arguments at entry,
-in addition to their current values.  This option tells GDB whether
-to print the current value, the value at entry (marked as val@entry),
-or both.  Note that one or both of these values may be <optimized out>.)"),
+    N_("GDB can sometimes determine the values of function arguments at entry,\n\
+in addition to their current values.  This option tells GDB whether\n\
+to print the current value, the value at entry (marked as val@entry),\n\
+or both.  Note that one or both of these values may be <optimized out>."),
   },
 
   enum_option_def {
@@ -132,8 +132,8 @@ or both.  Note that one or both of these values may be <optimized out>.)"),
     NULL, /* show_cmd_cb */
     N_("Set whether to print frame arguments in raw form."),
     N_("Show whether to print frame arguments in raw form."),
-    N_(R"(If set, frame arguments are printed in raw form, bypassing any
-pretty-printers for that value.)")
+    N_("If set, frame arguments are printed in raw form, bypassing any\n\
+pretty-printers for that value.")
   },
 };
 

@@ -107,6 +107,13 @@ get_var_address (const option_def &option, void *ctx)
   return fun ((Context *) ctx);
 }
 
+template<typename T>
+static T *
+return_self (T *self)
+{
+  return self;
+}
+
 } /* namespace detail */
 
 /* A boolean command line option.  */
@@ -138,6 +145,17 @@ struct switch_option_def : boolean_option_def<Context>
 		     const char *help_doc_ = NULL)
     : boolean_option_def<Context> (long_option_,
 				   var_address_cb_,
+				   NULL,
+				   set_doc_, NULL, help_doc_)
+  {
+    this->have_argument = false;
+  }
+
+  switch_option_def (const char *long_option_,
+		     const char *set_doc_,
+		     const char *help_doc_ = NULL)
+    : boolean_option_def<Context> (long_option_,
+				   detail::return_self,
 				   NULL,
 				   set_doc_, NULL, help_doc_)
   {

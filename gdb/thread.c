@@ -1315,6 +1315,11 @@ print_thread_info (struct ui_out *uiout, char *requested_threads, int pid)
   print_thread_info_1 (uiout, requested_threads, 1, pid, 0);
 }
 
+static const gdb::option::switch_option_def<int> gid_option_def = {
+  "gid",
+  N_("Show global thread IDs."),
+};
+
 /* Implementation of the "info threads" command.
 
    Note: this has the drawback that it _really_ switches
@@ -1326,12 +1331,7 @@ info_threads_command (const char *arg, int from_tty)
 {
   int show_global_ids = 0;
 
-  if (arg != NULL
-      && check_for_argument (&arg, "-gid", sizeof ("-gid") - 1))
-    {
-      arg = skip_spaces (arg);
-      show_global_ids = 1;
-    }
+  gdb::option::process_options ({{gid_option_def, &show_global_ids}}, &arg);
 
   print_thread_info_1 (current_uiout, arg, 0, -1, show_global_ids);
 }
@@ -1578,26 +1578,10 @@ tp_array_compar_descending (const thread_info *a, const thread_info *b)
   return (a->per_inf_num > b->per_inf_num);
 }
 
-#if 0
-struct info_thread_cmd_options
-{
-  int gid = 0;
-};
-
-static const gdb::option::option_def info_threads_cmd_option_defs[] = {
-  it_switch_option_def {
-    "gid",
-    [] (auto *opt) { return &opt->gid; },
-    N_("-gid: Show global thread IDs."),
-  },
-};
-#endif
-
-static const gdb::option::switch_option_def<int> ascending_option_def {
+static const gdb::option::switch_option_def<int> ascending_option_def = {
   "ascending",
-    [] (int *opt) { return opt; },
-    N_(R"(Call <command> for all threads in ascending order.
-		The default is descending order.)"),
+  N_("Call <command> for all threads in ascending order.\n\
+		The default is descending order."),
 };
 
 /* Apply a GDB command to a list of threads.  List syntax is a whitespace
@@ -1613,11 +1597,18 @@ thread_apply_all_command (const char *cmd, int from_tty)
 {
   int ascending = false;
 
+#if 0
   const gdb::option::option_def_group options[] = {
-    {{ascending_option_def}, &ascending },
+    {ascending_option_def, &ascending },
   };
 
   gdb::option::process_options (options, &cmd);
+
+#else
+
+  gdb::option::process_options ({{ascending_option_def, &ascending}}, &cmd);
+
+#endif
 
   if (cmd == NULL || *cmd == '\000')
     error (_("Please specify a command following the thread ID list"));

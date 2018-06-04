@@ -2779,32 +2779,32 @@ This may usually be abbreviated to simply \"set\"."),
   add_alias_cmd ("var", "variable", class_vars, 0, &setlist);
 
   const char *print_help
-    = N_(R"(Print value of expression EXP.
-Usage: print [[OPTION]... --] [EXP]
-
-Variables accessible are those of the lexical environment of the selected
-stack frame, plus all those whose scope is global or an entire file.
-
-Options:
-%OPTIONS%
-
-$NUM gets previous value number NUM.  $ and $$ are the last two values.
-$$NUM refers to NUM'th value back from the last one.
-Names starting with $ refer to registers (with the values they would have
-if the program were to return to the stack frame now selected, restoring
-all registers saved by frames farther in) or else to debugger
-"convenience" variables (any such name not a known register).
-Use assignment expressions to give values to convenience variables.
-
-{TYPE}ADREXP refers to a datum of data type TYPE, located at address ADREXP.
-@ is a binary operator for treating consecutive data objects
-anywhere in memory as an array.  FOO@NUM gives an array whose first
-element is FOO, whose second element is stored in the space following
-where FOO is stored, etc.  FOO must be an expression whose value
-resides in memory.
-
-EXP may be preceded with /FMT, where FMT is a format letter
-but no count or size letter (see \"x\" command).)");
+    = N_("Print value of expression EXP.\n\
+Usage: print [[OPTION]... --] [EXP]\n\
+\n\
+Variables accessible are those of the lexical environment of the selected\n\
+stack frame, plus all those whose scope is global or an entire file.\n\
+\n\
+Options:\n\
+%OPTIONS%\n\
+\n\
+$NUM gets previous value number NUM.  $ and $$ are the last two values.\n\
+$$NUM refers to NUM'th value back from the last one.\n\
+Names starting with $ refer to registers (with the values they would have\n\
+if the program were to return to the stack frame now selected, restoring\n\
+all registers saved by frames farther in) or else to debugger\n\
+\"convenience\" variables (any such name not a known register).\n\
+Use assignment expressions to give values to convenience variables.\n\
+\n\
+{TYPE}ADREXP refers to a datum of data type TYPE, located at address ADREXP.\n\
+@ is a binary operator for treating consecutive data objects\n\
+anywhere in memory as an array.  FOO@NUM gives an array whose first\n\
+element is FOO, whose second element is stored in the space following\n\
+where FOO is stored, etc.  FOO must be an expression whose value\n\
+resides in memory.\n\
+\n\
+EXP may be preceded with /FMT, where FMT is a format letter\n\
+but no count or size letter (see \"x\" command).");
 
   std::string print_help_str;
 
