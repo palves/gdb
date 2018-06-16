@@ -557,8 +557,15 @@ default_execution_direction (struct target_ops *self)
 to_execution_direction must be implemented for reverse async");
 }
 
-extern std::map<int, target_ops *> process_targets;
-extern int highest_target_connection_num;;
+static std::map<int, target_ops *> g_process_targets;
+
+static int highest_target_connection_num;;
+
+const std::map<int, target_ops *> &
+process_targets ()
+{
+  return g_process_targets;
+}
 
 /* Decref a target and close if, if there are no references left.  */
 
@@ -571,7 +578,7 @@ decref_target (target_ops *t)
       if (t->to_stratum == process_stratum)
 	{
 	  /* Drop it from the connection list.  */
-	  process_targets.erase (t->connection_number);
+	  g_process_targets.erase (t->connection_number);
 	  t->connection_number = 0;
 	}
       target_close (t);
@@ -588,7 +595,7 @@ target_stack::push (target_ops *t)
   if (t->to_stratum == process_stratum && t->connection_number == 0)
     {
       t->connection_number = ++highest_target_connection_num;
-      process_targets[t->connection_number] = t;
+      g_process_targets[t->connection_number] = t;
     }
 
   /* If there's already a target at this stratum, remove it.  */

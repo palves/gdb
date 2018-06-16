@@ -23,11 +23,6 @@
 #include "gdbcmd.h"
 #include "cli/cli-utils.h"
 #include "inferior.h"
-#include <map>
-
-int highest_target_connection_num;
-
-std::map<int, target_ops *> process_targets;
 
 /* Prints the list of target connections and their details on UIOUT.
 
@@ -42,7 +37,7 @@ print_connection (struct ui_out *uiout, const char *requested_connections)
   size_t name_len = 0;
 
   /* Compute number of lines we will print.  */
-  for (const auto &it : process_targets)
+  for (const auto &it : process_targets ())
     {
       if (!number_is_in_list (requested_connections, it.first))
 	continue;
@@ -65,7 +60,7 @@ print_connection (struct ui_out *uiout, const char *requested_connections)
       return;
     }
 
-  ui_out_emit_table table_emitter (uiout, 4, process_targets.size (),
+  ui_out_emit_table table_emitter (uiout, 4, process_targets ().size (),
 				   "connections");
 
   uiout->table_header (1, ui_left, "current", "");
@@ -75,7 +70,7 @@ print_connection (struct ui_out *uiout, const char *requested_connections)
 
   uiout->table_body ();
 
-  for (const auto &it : process_targets)
+  for (const auto &it : process_targets ())
     {
       target_ops *t = it.second;
 
@@ -113,7 +108,7 @@ info_connections_command (const char *args, int from_tty)
 }
 
 void
-_initialize_target_connections ()
+_initialize_target_connection ()
 {
   add_info ("connections", info_connections_command,
 	    _("\

@@ -20,4 +20,10 @@
 #if !defined (TARGET_CONNECTION_H)
 #define TARGET_CONNECTION_H
 
+#include <map>
+
+struct target_ops;
+
+extern const std::map<int, target_ops *> &process_targets ();
+
 #endif /* !defined (TARGET_CONNECTION_H) */
