@@ -4462,11 +4462,11 @@ get_inferior_stop_soon (execution_control_state *ecs)
   return inf->control.stop_soon;
 }
 
-/* Wait for one event.  Store the resulting waitstatus in WS, and
-   return the event ptid.  */
+/* Poll for one event out of the current target.  Store the resulting
+   waitstatus in WS, and return the event ptid.  Does not block.  */
 
 static ptid_t
-do_wait_one (ptid_t wait_ptid, struct target_waitstatus *ws)
+poll_one_curr_target (struct target_waitstatus *ws)
 {
   ptid_t event_ptid;
 
@@ -4479,22 +4479,31 @@ do_wait_one (ptid_t wait_ptid, struct target_waitstatus *ws)
   target_dcache_invalidate ();
 
   if (deprecated_target_wait_hook)
-    event_ptid = deprecated_target_wait_hook (wait_ptid, ws, TARGET_WNOHANG);
+    event_ptid = deprecated_target_wait_hook (minus_one_ptid, ws, TARGET_WNOHANG);
   else
-    event_ptid = target_wait (wait_ptid, ws, TARGET_WNOHANG);
+    event_ptid = target_wait (minus_one_ptid, ws, TARGET_WNOHANG);
 
   if (debug_infrun)
-    print_target_wait_results (wait_ptid, event_ptid, ws);
+    print_target_wait_results (minus_one_ptid, event_ptid, ws);
 
   return event_ptid;
 }
 
+/* An event reported by wait_one.  */
+
 struct wait_one_event
 {
+  /* The target the event came out of.  */
   target_ops *target;
+
+  /* The PTID the event was for.  */
   ptid_t ptid;
+
+  /* The waitstatus.  */
   target_waitstatus ws;
 };
+
+/* Wait for one event out of any target.  */
 
 static wait_one_event
 wait_one ()
@@ -4512,11 +4521,15 @@ wait_one ()
 	  switch_to_inferior_no_thread (inf);
 
 	  wait_one_event event;
-	  event.target = inf->process_target ();
-	  event.ptid = do_wait_one (minus_one_ptid, &event.ws);
+	  event.target = target;
+	  event.ptid = poll_one_curr_target (&event.ws);
 
 	  if (event.ws.kind == TARGET_WAITKIND_NO_RESUMED)
-	    target_async (0);
+	    {
+	      /* If nothing is resumed, remove the target from the
+		 event loop.  */
+	      target_async (0);
+	    }
 	  else if (event.ws.kind != TARGET_WAITKIND_IGNORE)
 	    return event;
 	}
@@ -4551,15 +4564,12 @@ wait_one ()
       QUIT;
 
       int numfds = interruptible_select (nfds, &readfds, 0, NULL, 0);
-      if (numfds == 0)
-	error ("boo!");
-      else if (numfds < 0)
+      if (numfds < 0)
 	{
 	  if (errno == EINTR)
 	    continue;
 	  else
-	    error ("bah!");	/* Got an error from select or
-					   poll.  */
+	    perror_with_name ("interruptible_select");
 	}
     }
 }
@@ -7320,7 +7330,7 @@ switch_back_to_stepped_thread (struct execution_control_state *ecs)
 	  switch_to_thread_no_regs (tp);
 
 	  /* Ignore threads of processes the caller is not
-	     resuming.  XXX */
+	     resuming.  */
 	  if (!sched_multi
 	      && (tp->inf->process_target () != ecs->target
 		  || tp->inf->pid != ecs->ptid.pid ()))
