@@ -4184,7 +4184,10 @@ nullify_last_target_wait_ptid (void)
 static void
 context_switch (execution_control_state *ecs)
 {
-  if (debug_infrun && ecs->ptid != inferior_ptid)
+  if (debug_infrun
+      && ecs->ptid != inferior_ptid
+      && (inferior_ptid == null_ptid
+	  || ecs->event_thread != inferior_thread ()))
     {
       fprintf_unfiltered (gdb_stdlog, "infrun: Switching context from %s ",
 			  target_pid_to_str (inferior_ptid));
