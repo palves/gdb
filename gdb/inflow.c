@@ -925,6 +925,42 @@ child_terminal_on_sigwinch ()
 
 #endif
 
+#ifdef SIGTSTP
+
+void
+child_terminal_on_sigtstp (int)
+{
+  if (!target_terminal::is_ours ())
+    {
+      bool any = false;
+
+      inferior *inf;
+      ALL_INFERIORS (inf)
+        {
+	  if (inf->terminal_state == target_terminal_state::is_ours)
+	    continue;
+
+	  terminal_info *info
+	    = (terminal_info *) inferior_data (inf, inflow_inferior_data);
+	  if (info == NULL
+	      || info->run_terminal == NULL
+	      || info->run_terminal->master_fd == -1)
+	    continue;
+
+	  kill (inf->pid, SIGTSTP);
+	  any = true;
+	}
+
+      if (any)
+	return;
+    }
+
+  signal (SIGTSTP, SIG_DFL);
+  raise (SIGTSTP);
+}
+
+#endif /* SIGTTOU */
+
 /* This is a "inferior_exit" observer.  Releases the TERMINAL_INFO member
    of the inferior structure.  This field is private to inflow.c, and
    its type is opaque to the rest of GDB.  PID is the target pid of
@@ -1393,4 +1429,6 @@ _initialize_inflow (void)
 
   inflow_inferior_data
     = register_inferior_data_with_cleanup (NULL, inflow_inferior_data_cleanup);
+
+  signal (SIGTSTP, child_terminal_on_sigtstp);
 }

@@ -1211,9 +1211,11 @@ command_line_input (const char *prompt_arg, int repeat,
   /* Starting a new command line.  */
   cmd_line_buffer.used_size = 0;
 
+#if 0
 #ifdef SIGTSTP
   if (job_control)
     signal (SIGTSTP, handle_sigtstp);
+#endif
 #endif
 
   while (1)
@@ -1271,11 +1273,12 @@ command_line_input (const char *prompt_arg, int repeat,
       prompt = NULL;
     }
 
+#if 0
 #ifdef SIGTSTP
   if (job_control)
     signal (SIGTSTP, SIG_DFL);
 #endif
-
+#endif
   return cmd;
 }
 
