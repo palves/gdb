@@ -165,6 +165,15 @@ get_lines_to_list (void)
   return lines_to_list;
 }
 
+std::pair<int, int>
+get_lines_to_list_around_sal (const symtab_and_line &sal)
+{
+  int first_line = sal.line - get_lines_to_list () / 2;
+  if (first_line < 1)
+    first_line = 1;
+  return {first_line, first_line + get_lines_to_list ()};
+}
+
 /* Return the current source file for listing and next line to list.
    NOTE: The returned sal pc and end fields are not valid.  */
    
@@ -1376,6 +1385,15 @@ print_source_lines_base (struct symtab *s, int line, int stopline,
       if (c == EOF)
 	break;
       last_line_listed = current_source_line;
+
+      if (flags & PRINT_SOURCE_LINES_CURRENT_LINE
+	  && target_has_stack
+	  && (find_frame_sal (get_selected_frame (NULL)).line
+	      == current_source_line))
+	uiout->text ("-> ");
+      else
+	uiout->text ("   ");
+
       if (flags & PRINT_SOURCE_LINES_FILENAME)
         {
           uiout->text (symtab_to_filename_for_display (s));

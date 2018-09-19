@@ -170,6 +170,8 @@ print_stack_frame (struct frame_info *frame, int print_level,
   /* For mi, alway print location and address.  */
   if (current_uiout->is_mi_like_p ())
     print_what = LOC_AND_ADDRESS;
+  else if (print_what == SRC_LINE)
+    print_what = SRC_AND_LOC;
 
   TRY
     {
@@ -904,7 +906,9 @@ print_frame_info (struct frame_info *frame, int print_level,
 		  uiout->text ("\t");
 		}
 
-	      print_source_lines (sal.symtab, sal.line, sal.line + 1, 0);
+	      std::pair<int, int> range = get_lines_to_list_around_sal (sal);
+	      print_source_lines (sal.symtab, range.first, range.second,
+				  PRINT_SOURCE_LINES_CURRENT_LINE);
 	    }
 	}
 
