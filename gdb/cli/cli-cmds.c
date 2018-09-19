@@ -865,23 +865,25 @@ edit_command (const char *arg, int from_tty)
 static bool
 get_sal_end (event_location *location,
 	     const symtab_and_line &default_sal,
-	     symtab_and_line &sal_end, const char *end_arg)
+	     std::vector<symtab_and_line> &sals_end,
+	     const char *end_arg)
 {
-  std::vector<symtab_and_line> sals_end
+  std::vector<symtab_and_line> decoded
     = decode_line_1 (location, DECODE_LINE_LIST_MODE,
 		     NULL, default_sal.symtab, default_sal.line);
 
-  filter_sals (sals_end);
-  if (sals_end.empty ())
+  filter_sals (decoded);
+  if (decoded.empty ())
     return false;
-  if (sals_end.size () > 1)
+  if (decoded.size () > 1)
     {
-      ambiguous_line_spec (sals_end,
+      ambiguous_line_spec (decoded,
 			   _("Specified last line '%s' is ambiguous:\n"),
 			   end_arg);
       return false;
     }
 
+  sals_end.push_back (decoded[0]);
   return true;
 }
 
@@ -951,7 +953,6 @@ list_command (const char *arg, int from_tty)
     error (_("No symbol table is loaded.  Use the \"file\" command."));
 
   std::vector<symtab_and_line> sals;
-  symtab_and_line sal, sal_end;
 
   arg1 = arg;
   if (*arg1 == ',')
@@ -1016,27 +1017,27 @@ list_command (const char *arg, int from_tty)
 
 	  if (dummy_beg)
 	    {
-	      if (!get_sal_end (location.get (), {}, sal_end, end_arg))
+	      sals_end.reserve (1);
+	      if (!get_sal_end (location.get (), {}, sals_end, end_arg))
 		return;
 	    }
 	  else
 	    {
 	      sals_end.reserve (sals.size ());
 
-	      for (symtab_and_line &sal : sals)
+	      for (size_t i = 0; i < sals.size (); i++)
 		{
-		  symtab_and_line sal_end;
-		  if (!get_sal_end (location.get (), sal, sal_end, end_arg))
+		  const symtab_and_line &sal = sals[i];
+		  if (!get_sal_end (location.get (), sal, sals_end, end_arg))
 		    return;
-		  sals_end.push_back (sal_end);
 
+		  const symtab_and_line &sal_end = sals_end[i];
 		  if (sal.symtab != sal_end.symtab)
-		    error (_("Specified starting and ending lines are in "
+		    error (_("Specified first and last lines are in "
 			     "different files."));
 		}
-
-	      gdb_assert (!sals_end.empty ());
 	    }
+	  gdb_assert (!sals_end.empty ());
 	}
     }
 
@@ -1075,7 +1076,7 @@ list_command (const char *arg, int from_tty)
      imply a symtab, it must be an undebuggable symbol which means no
      source code.  */
 
-  if (!linenum_beg && sal.symtab == 0)
+  if (!linenum_beg && sals.empty ())
     error (_("No line number known for %s."), arg);
 
   /* If this command is repeated with RET,
@@ -1084,19 +1085,23 @@ list_command (const char *arg, int from_tty)
   if (from_tty)
     set_repeat_arguments ("");
 
-  if (dummy_beg && sal_end.symtab == 0)
+  if (dummy_beg && sals_end.empty ())
     error (_("No default source file yet.  Do \"help list\"."));
   if (dummy_beg)
-    print_source_lines (sal_end.symtab,
-			std::max (sal_end.line - (get_lines_to_list () - 1), 1),
-			sal_end.line + 1, 0);
-  else if (sal.symtab == 0)
+    {
+      gdb_assert (sals_end.size () == 1);
+      const auto &sal_end = sals_end[0];
+      print_source_lines (sal_end.symtab,
+			  std::max (sal_end.line - (get_lines_to_list () - 1), 1),
+			  sal_end.line + 1, 0);
+    }
+  else if (sals.empty ())
     error (_("No default source file yet.  Do \"help list\"."));
   else if (no_end)
     {
       for (int i = 0; i < sals.size (); i++)
 	{
-	  sal = sals[i];
+	  const auto &sal = sals[i];
 	  int first_line = sal.line - get_lines_to_list () / 2;
 	  if (first_line < 1)
 	    first_line = 1;
