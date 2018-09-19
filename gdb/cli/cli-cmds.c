@@ -961,22 +961,54 @@ list_command (const char *arg, int from_tty)
   const char *beg = arg;
   size_t beg_len = arg1 - beg;
 
-  while (*arg1 == ' ' || *arg1 == '\t')
-    arg1++;
+  auto relative_line = [] (const char *s)
+    {
+      return *s == '+' || *s == '-';
+    };
+
+  std::vector<symtab_and_line> sals_end;
+
+  auto get_sal_end = [] (event_location *location,
+			 const symtab_and_line &sal,
+			 std::vector<symtab_and_line> &sals_end,
+			 symtab_and_line &sal_end,
+			 const char *end_arg)
+    {
+      sals_end = decode_line_1 (location, DECODE_LINE_LIST_MODE,
+				NULL, sal.symtab, sal.line);
+
+      filter_sals (sals_end);
+      if (sals_end.empty ())
+	return false;
+      if (sals_end.size () > 1)
+	{
+	  ambiguous_line_spec (sals_end,
+			       _("Specified last line '%s' is ambiguous:\n"),
+			       end_arg);
+	  return false;
+	}
+
+      sal_end = sals_end[0];
+      return true;
+    };
+
+  arg1 = skip_spaces (arg1);
+
   if (*arg1 == ',')
     {
+      arg1++;
+      arg1 = skip_spaces (arg1);
+
       no_end = 0;
-      if (sals.size () > 1)
+
+      if (!relative_line (arg1) && sals.size () > 1)
 	{
 	  ambiguous_line_spec (sals,
 			       _("Specified first line '%.*s' is ambiguous:\n"),
 			       (int) beg_len, beg);
 	  return;
 	}
-      arg1++;
-      while (*arg1 == ' ' || *arg1 == '\t')
-	arg1++;
-      if (*arg1 == 0)
+      if (*arg1 == '\0')
 	dummy_end = 1;
       else
 	{
@@ -987,33 +1019,39 @@ list_command (const char *arg, int from_tty)
 	  event_location_up location
 	    = string_to_event_location (&arg1, current_language);
 
-	  std::vector<symtab_and_line> sals_end
-	    = (dummy_beg
-	       ? decode_line_1 (location.get (), DECODE_LINE_LIST_MODE,
-				NULL, NULL, 0)
-	       : decode_line_1 (location.get (), DECODE_LINE_LIST_MODE,
-				NULL, sal.symtab, sal.line));
-
-	  filter_sals (sals_end);
-	  if (sals_end.empty ())
-	    return;
-	  if (sals_end.size () > 1)
+	  if (dummy_beg)
 	    {
-	      ambiguous_line_spec (sals_end,
-				   _("Specified last line '%s' is ambiguous:\n"),
-				   end_arg);
-	      return;
+	      if (!get_sal_end (location.get (), sal, sals_end, sal_end,
+				end_arg))
+		return;
 	    }
-	  sal_end = sals_end[0];
+	  else
+	    {
+	      sals_end.reserve (sals.size ());
+
+	      std::vector<symtab_and_line> tmp_sals_end;
+	      for (symtab_and_line &sal : sals)
+		{
+		  if (!get_sal_end (location.get (), sal,
+				    tmp_sals_end, sal_end,
+				    end_arg))
+		    return;
+		  sals_end.push_back (sal_end);
+
+		  if (sal.symtab != sal_end.symtab)
+		    error (_("Specified start and end are in "
+			     "different files."));
+		}
+
+	      gdb_assert (!sals_end.empty ());
+	      sal_end = sals_end[0];
+	    }
 	}
     }
 
   if (*arg1)
     error (_("Junk at end of line specification."));
 
-  if (!no_end && !dummy_beg && !dummy_end
-      && sal.symtab != sal_end.symtab)
-    error (_("Specified first and last lines are in different files."));
   if (dummy_beg && dummy_end)
     error (_("Two empty args do not say what lines to list."));
 
@@ -1081,11 +1119,25 @@ list_command (const char *arg, int from_tty)
 	}
     }
   else
-    print_source_lines (sal.symtab, sal.line,
-			(dummy_end
-			 ? sal.line + get_lines_to_list ()
-			 : sal_end.line + 1),
-			0);
+    {
+      gdb_assert (sals.size () == sals_end.size ());
+      for (size_t i = 0; i < sals.size (); i++)
+	{
+	  const auto &sal = sals[i];
+	  const auto &sal_end = sals_end[i];
+	  if (sals.size () > 1)
+	    {
+	      printf_filtered (_("file: \"%s\", line number: %d\n"),
+			       symtab_to_filename_for_display (sal.symtab),
+			       sal.line);
+	    }
+	  print_source_lines (sal.symtab, sal.line,
+			      (dummy_end
+			       ? sal.line + get_lines_to_list ()
+			       : sal_end.line + 1),
+			      0);
+	}
+    }
 }
 
 /* Subroutine of disassemble_command to simplify it.
