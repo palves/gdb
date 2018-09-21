@@ -5524,7 +5524,7 @@ remote_target::open_1 (const char *name, int from_tty, int extended_p)
   /* If we're connected to a running target, target_preopen will kill it.
      Ask this question first, before target_preopen has a chance to kill
      anything.  */
-  if (curr_remote != NULL)
+  if (curr_remote != NULL && !target_has_execution)
     {
       if (from_tty
 	  && !query (_("Already connected to a remote target.  Disconnect? ")))
