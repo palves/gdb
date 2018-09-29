@@ -4037,13 +4037,6 @@ remote_target::close ()
   /* Make sure we leave stdin registered in the event loop.  */
   terminal_ours ();
 
-  /* We don't have a connection to the remote stub anymore.  Get rid
-     of all the inferiors and their threads we were controlling.
-     Reset inferior_ptid to null_ptid first, as otherwise has_stack_frame
-     will be unable to find the thread corresponding to (pid, 0, 0).  */
-  inferior_ptid = null_ptid;
-  discard_all_inferiors ();
-
   trace_reset_local_state ();
 
   delete this;
