@@ -160,6 +160,7 @@ static unsigned int targetdebug = 0;
 static void
 set_targetdebug  (const char *args, int from_tty, struct cmd_list_element *c)
 {
+  /* XXX go through all connections?  */
   if (targetdebug)
     push_target (the_debug_target);
   else
@@ -3953,6 +3954,8 @@ set_write_memory_permission (const char *args, int from_tty,
   may_write_memory = may_write_memory_1;
   update_observer_mode ();
 }
+
+void initialize_target_connections ();
 
 void
 _initialize_target (void)

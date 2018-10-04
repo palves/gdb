@@ -462,9 +462,10 @@ print_inferior (struct ui_out *uiout, const char *requested_inferiors)
       return;
     }
 
-  ui_out_emit_table table_emitter (uiout, 4, inf_count, "inferiors");
+  ui_out_emit_table table_emitter (uiout, 5, inf_count, "inferiors");
   uiout->table_header (1, ui_left, "current", "");
   uiout->table_header (4, ui_left, "number", "Num");
+  uiout->table_header (17, ui_left, "connection-id", "Connection ID");
   uiout->table_header (17, ui_left, "target-id", "Description");
   uiout->table_header (17, ui_left, "exec", "Executable");
 
@@ -482,6 +483,9 @@ print_inferior (struct ui_out *uiout, const char *requested_inferiors)
 	uiout->field_skip ("current");
 
       uiout->field_int ("number", inf->num);
+
+      // XXX
+      uiout->field_int ("connection-id", 0);
 
       uiout->field_string ("target-id", inferior_pid_to_str (inf->pid));
 
@@ -703,6 +707,7 @@ add_inferior_command (const char *args, int from_tty)
   int i, copies = 1;
   gdb::unique_xmalloc_ptr<char> exec;
   symfile_add_flags add_flags = 0;
+  bool new_connection = false;
 
   if (from_tty)
     add_flags |= SYMFILE_VERBOSE;
@@ -722,6 +727,10 @@ add_inferior_command (const char *args, int from_tty)
 		    error (_("No argument to -copies"));
 		  copies = parse_and_eval_long (*argv);
 		}
+	      else if (strcmp (*argv, "-new-connection") == 0)
+		{
+		  new_connection = true;
+		}
 	      else if (strcmp (*argv, "-exec") == 0)
 		{
 		  ++argv;
@@ -736,6 +745,8 @@ add_inferior_command (const char *args, int from_tty)
     }
 
   scoped_restore_current_pspace_and_thread restore_pspace_thread;
+
+  (void) new_connection;
 
   for (i = 0; i < copies; ++i)
     {
