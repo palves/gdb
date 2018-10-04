@@ -113,10 +113,6 @@ static std::unordered_map<const target_info *, target_open_ftype *>
 static struct target_ops *the_dummy_target;
 static struct target_ops *the_debug_target;
 
-/* The target stack.  */
-
-static target_stack g_target_stack;
-
 /* Top of target stack.  */
 /* The target structure we are currently using to talk to a process
    or file or whatever "inferior" we have.  */
@@ -124,7 +120,7 @@ static target_stack g_target_stack;
 target_ops *
 current_top_target ()
 {
-  return g_target_stack.top ();
+  return current_inferior ()->top_target ();
 }
 
 /* Command list for target.  */
@@ -583,15 +579,13 @@ target_stack::push (target_ops *t)
 void
 push_target (struct target_ops *t)
 {
-  g_target_stack.push (t);
+  current_inferior ()->push_target (t);
 }
-
-/* See target.h.  */
 
 int
 unpush_target (struct target_ops *t)
 {
-  return g_target_stack.unpush (t);
+  return current_inferior ()->unpush_target (t);
 }
 
 /* See target.h.  */
@@ -673,7 +667,7 @@ pop_all_targets (void)
 int
 target_is_pushed (struct target_ops *t)
 {
-  return g_target_stack.is_pushed (t);
+  return current_inferior ()->target_is_pushed (t);
 }
 
 /* Default implementation of to_get_thread_local_address.  */
@@ -2530,7 +2524,7 @@ target_thread_address_space (ptid_t ptid)
 target_ops *
 target_ops::beneath () const
 {
-  return g_target_stack.find_beneath (this);
+  return current_inferior ()->find_target_beneath (this);
 }
 
 void
@@ -3126,7 +3120,7 @@ target_stack::find_beneath (const target_ops *t) const
 struct target_ops *
 find_target_at (enum strata stratum)
 {
-  return g_target_stack.at (stratum);
+  return current_inferior ()->target_at (stratum);
 }
 
 
@@ -3221,6 +3215,11 @@ dummy_make_corefile_notes (struct target_ops *self,
 
 #include "target-delegates.c"
 
+target_ops *
+get_dummy_target ()
+{
+  return the_dummy_target;
+}
 
 static const target_info dummy_target_info = {
   "None",
@@ -3956,11 +3955,9 @@ set_write_memory_permission (const char *args, int from_tty,
 }
 
 void
-initialize_targets (void)
+_initialize_target (void)
 {
   the_dummy_target = new dummy_target ();
-  push_target (the_dummy_target);
-
   the_debug_target = new debug_target ();
 
   add_info ("target", info_target_command, targ_desc);

@@ -83,6 +83,8 @@ inferior::~inferior ()
   target_desc_info_free (inf->tdesc_info);
 }
 
+extern target_ops *get_dummy_target ();
+
 inferior::inferior (int pid_)
   : num (++highest_inferior_num),
     pid (pid_),
@@ -90,6 +92,8 @@ inferior::inferior (int pid_)
     registry_data ()
 {
   inferior_alloc_data (this);
+
+  m_stack.push (get_dummy_target ());
 }
 
 struct inferior *
