@@ -990,7 +990,7 @@ linux_nat_switch_fork (ptid_t new_ptid)
   /* This changes the thread's ptid while preserving the gdb thread
      num.  Also changes the inferior pid, while preserving the
      inferior num.  */
-  thread_change_ptid (inferior_ptid, new_ptid);
+  thread_change_ptid (linux_target, inferior_ptid, new_ptid);
 
   /* We've just told GDB core that the thread changed target id, but,
      in fact, it really is a different thread, with different register
@@ -1003,7 +1003,7 @@ linux_nat_switch_fork (ptid_t new_ptid)
 static void
 exit_lwp (struct lwp_info *lp)
 {
-  struct thread_info *th = find_thread_ptid (lp->ptid);
+  struct thread_info *th = find_thread_ptid (linux_target, lp->ptid);
 
   if (th)
     {
@@ -1162,9 +1162,9 @@ attach_proc_task_lwp_callback (ptid_t ptid)
 	  /* Also add the LWP to gdb's thread list, in case a
 	     matching libthread_db is not found (or the process uses
 	     raw clone).  */
-	  add_thread (lp->ptid);
-	  set_running (lp->ptid, 1);
-	  set_executing (lp->ptid, 1);
+	  add_thread (linux_target, lp->ptid);
+	  set_running (linux_target, lp->ptid, 1);
+	  set_executing (linux_target, lp->ptid, 1);
 	}
 
       return 1;
@@ -1203,7 +1203,7 @@ linux_nat_target::attach (const char *args, int from_tty)
   ptid = ptid_t (inferior_ptid.pid (),
 		 inferior_ptid.pid (),
 		 0);
-  thread_change_ptid (inferior_ptid, ptid);
+  thread_change_ptid (linux_target, inferior_ptid, ptid);
 
   /* Add the initial process as the first LWP to the list.  */
   lp = add_initial_lwp (ptid);
@@ -1304,7 +1304,7 @@ get_detach_signal (struct lwp_info *lp)
     signo = gdb_signal_from_host (WSTOPSIG (lp->status));
   else
     {
-      struct thread_info *tp = find_thread_ptid (lp->ptid);
+      struct thread_info *tp = find_thread_ptid (linux_target, lp->ptid);
 
       if (target_is_non_stop_p () && !tp->executing)
 	{
@@ -1517,7 +1517,7 @@ linux_resume_one_lwp_throw (struct lwp_info *lp, int step,
      handle the case of stepping a breakpoint instruction).  */
   if (step)
     {
-      struct regcache *regcache = get_thread_regcache (lp->ptid);
+      struct regcache *regcache = get_thread_regcache (linux_target, lp->ptid);
 
       lp->stop_pc = regcache_read_pc (regcache);
     }
@@ -1536,7 +1536,7 @@ linux_resume_one_lwp_throw (struct lwp_info *lp, int step,
   lp->stopped = 0;
   lp->core = -1;
   lp->stop_reason = TARGET_STOPPED_BY_NO_REASON;
-  registers_changed_ptid (lp->ptid);
+  registers_changed_ptid (linux_target, lp->ptid);
 }
 
 /* Called when we try to resume a stopped LWP and that errors out.  If
@@ -1596,7 +1596,7 @@ resume_lwp (struct lwp_info *lp, int step, enum gdb_signal signo)
 {
   if (lp->stopped)
     {
-      struct inferior *inf = find_inferior_ptid (lp->ptid);
+      struct inferior *inf = find_inferior_ptid (linux_target, lp->ptid);
 
       if (inf->vfork_child != NULL)
 	{
@@ -1650,7 +1650,7 @@ linux_nat_resume_callback (struct lwp_info *lp, void *except)
     {
       struct thread_info *thread;
 
-      thread = find_thread_ptid (lp->ptid);
+      thread = find_thread_ptid (linux_target, lp->ptid);
       if (thread != NULL)
 	{
 	  signo = thread->suspend.stop_signal;
@@ -1804,7 +1804,7 @@ linux_handle_syscall_trap (struct lwp_info *lp, int stopping)
 {
   struct target_waitstatus *ourstatus = &lp->waitstatus;
   struct gdbarch *gdbarch = target_thread_architecture (lp->ptid);
-  thread_info *thread = find_thread_ptid (lp->ptid);
+  thread_info *thread = find_thread_ptid (linux_target, lp->ptid);
   int syscall_number = (int) gdbarch_get_syscall_number (gdbarch, thread);
 
   if (stopping)
@@ -2024,15 +2024,15 @@ linux_handle_extended_wait (struct lwp_info *lp, int status)
 	      /* The process is not using thread_db.  Add the LWP to
 		 GDB's list.  */
 	      target_post_attach (new_lp->ptid.lwp ());
-	      add_thread (new_lp->ptid);
+	      add_thread (linux_target, new_lp->ptid);
 	    }
 
 	  /* Even if we're stopping the thread for some reason
 	     internal to this module, from the perspective of infrun
 	     and the user/frontend, this new thread is running until
 	     it next reports a stop.  */
-	  set_running (new_lp->ptid, 1);
-	  set_executing (new_lp->ptid, 1);
+	  set_running (linux_target, new_lp->ptid, 1);
+	  set_executing (linux_target, new_lp->ptid, 1);
 
 	  if (WSTOPSIG (status) != SIGSTOP)
 	    {
@@ -2255,7 +2255,7 @@ wait_lwp (struct lwp_info *lp)
 
   if (lp->must_set_ptrace_flags)
     {
-      struct inferior *inf = find_inferior_pid (lp->ptid.pid ());
+      inferior *inf = find_inferior_pid (linux_target, lp->ptid.pid ());
       int options = linux_nat_ptrace_options (inf->attach_flag);
 
       linux_enable_event_reporting (lp->ptid.lwp (), options);
@@ -2479,7 +2479,7 @@ linux_nat_target::low_status_is_event (int status)
 static int
 stop_wait_callback (struct lwp_info *lp, void *data)
 {
-  struct inferior *inf = find_inferior_ptid (lp->ptid);
+  inferior *inf = find_inferior_ptid (linux_target, lp->ptid);
 
   /* If this is a vfork parent, bail out, it is not going to report
      any SIGSTOP until the vfork is done with.  */
@@ -2572,7 +2572,7 @@ status_callback (struct lwp_info *lp, void *data)
   if (lp->stop_reason == TARGET_STOPPED_BY_SW_BREAKPOINT
       || lp->stop_reason == TARGET_STOPPED_BY_HW_BREAKPOINT)
     {
-      struct regcache *regcache = get_thread_regcache (lp->ptid);
+      struct regcache *regcache = get_thread_regcache (linux_target, lp->ptid);
       CORE_ADDR pc;
       int discard = 0;
 
@@ -2697,7 +2697,7 @@ save_stop_reason (struct lwp_info *lp)
   if (!linux_target->low_status_is_event (lp->status))
     return;
 
-  regcache = get_thread_regcache (lp->ptid);
+  regcache = get_thread_regcache (linux_target, lp->ptid);
   gdbarch = regcache->arch ();
 
   pc = regcache_read_pc (regcache);
@@ -2951,7 +2951,7 @@ linux_nat_filter_event (int lwpid, int status)
       lp = add_lwp (ptid_t (lwpid, lwpid, 0));
       lp->stopped = 1;
       lp->resumed = 1;
-      add_thread (lp->ptid);
+      add_thread (linux_target, lp->ptid);
     }
 
   if (WIFSTOPPED (status) && !lp)
@@ -2977,7 +2977,7 @@ linux_nat_filter_event (int lwpid, int status)
 
   if (WIFSTOPPED (status) && lp->must_set_ptrace_flags)
     {
-      struct inferior *inf = find_inferior_pid (lp->ptid.pid ());
+      inferior *inf = find_inferior_pid (linux_target, lp->ptid.pid ());
       int options = linux_nat_ptrace_options (inf->attach_flag);
 
       linux_enable_event_reporting (lp->ptid.lwp (), options);
@@ -3260,7 +3260,7 @@ linux_nat_wait_1 (ptid_t ptid, struct target_waitstatus *ourstatus,
   if (inferior_ptid.is_pid ())
     {
       /* Upgrade the main thread's ptid.  */
-      thread_change_ptid (inferior_ptid,
+      thread_change_ptid (linux_target, inferior_ptid,
 			  ptid_t (inferior_ptid.pid (),
 				  inferior_ptid.pid (), 0));
 
@@ -3402,7 +3402,7 @@ linux_nat_wait_1 (ptid_t ptid, struct target_waitstatus *ourstatus,
   if (lp->stop_reason == TARGET_STOPPED_BY_SW_BREAKPOINT
       && !USE_SIGTRAP_SIGINFO)
     {
-      struct regcache *regcache = get_thread_regcache (lp->ptid);
+      struct regcache *regcache = get_thread_regcache (linux_target, lp->ptid);
       struct gdbarch *gdbarch = regcache->arch ();
       int decr_pc = gdbarch_decr_pc_after_break (gdbarch);
 
@@ -3505,7 +3505,7 @@ resume_stopped_resumed_lwps (struct lwp_info *lp, void *data)
     }
   else
     {
-      struct regcache *regcache = get_thread_regcache (lp->ptid);
+      struct regcache *regcache = get_thread_regcache (linux_target, lp->ptid);
       struct gdbarch *gdbarch = regcache->arch ();
 
       TRY
@@ -4450,7 +4450,7 @@ linux_nat_stop_lwp (struct lwp_info *lwp, void *data)
 
       if (debug_linux_nat)
 	{
-	  if (find_thread_ptid (lwp->ptid)->stop_requested)
+	  if (find_thread_ptid (linux_target, lwp->ptid)->stop_requested)
 	    fprintf_unfiltered (gdb_stdlog,
 				"LNSL: already stopped/stop_requested %s\n",
 				target_pid_to_str (lwp->ptid));
@@ -4507,7 +4507,7 @@ linux_nat_target::thread_address_space (ptid_t ptid)
       pid = ptid.pid ();
     }
 
-  inf = find_inferior_pid (pid);
+  inf = find_inferior_pid (this, pid);
   gdb_assert (inf != NULL);
   return inf->aspace;
 }

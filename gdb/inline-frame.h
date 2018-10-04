@@ -42,7 +42,9 @@ void skip_inline_frames (thread_info *thread, struct bpstats *stop_chain);
    about to be resumed.  If PTID is minus_one_ptid, forget about all
    hidden inlined functions.  */
 
-void clear_inline_frame_state (ptid_t ptid);
+void clear_inline_frame_state (target_ops *proc_target, ptid_t ptid);
+
+void clear_inline_frame_state (thread_info *thread);
 
 /* Step into an inlined function by unhiding it.  */
 

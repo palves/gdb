@@ -654,7 +654,8 @@ run_command_1 (const char *args, int from_tty, enum run_how run_how)
   ptid_t finish_ptid = (non_stop
 			? ptid_t (current_inferior ()->pid)
 			: minus_one_ptid);
-  scoped_finish_thread_state finish_state (finish_ptid);
+  target_ops *proc_target = current_inferior ()->process_target ();
+  scoped_finish_thread_state finish_state (proc_target, finish_ptid);
 
   /* Pass zero for FROM_TTY, because at this point the "run" command
      has done its thing; now we are setting up the running program.  */
@@ -856,11 +857,9 @@ continue_command (const char *args, int from_tty)
 	tp = inferior_thread ();
       else
 	{
-	  ptid_t last_ptid;
-	  struct target_waitstatus ws;
-
-	  get_last_target_status (&last_ptid, &ws);
-	  tp = find_thread_ptid (last_ptid);
+	  ALL_THREADS (tp)
+	    if (tp->control.stop_bpstat != NULL)
+	      break;
 	}
       if (tp != NULL)
 	bs = tp->control.stop_bpstat;
@@ -1152,7 +1151,7 @@ prepare_one_step (struct step_command_fsm *sm)
 
 	      /* Pretend that we've ran.  */
 	      resume_ptid = user_visible_resume_ptid (1);
-	      set_running (resume_ptid, 1);
+	      tp->set_running (true);
 
 	      step_into_inline_frame (tp);
 	      sm->count--;
@@ -2065,6 +2064,9 @@ finish_command (const char *arg, int from_tty)
 }
 
 
+/* Move to infrun.h.  */
+extern ptid_t previous_inferior_ptid;
+
 static void
 info_program_command (const char *args, int from_tty)
 {
@@ -2081,16 +2083,12 @@ info_program_command (const char *args, int from_tty)
   if (non_stop)
     ptid = inferior_ptid;
   else
-    {
-      struct target_waitstatus ws;
-
-      get_last_target_status (&ptid, &ws);
-    }
+    ptid = previous_inferior_ptid;
 
   if (ptid == null_ptid || ptid == minus_one_ptid)
     error (_("No selected thread."));
 
-  thread_info *tp = find_thread_ptid (ptid);
+  thread_info *tp = inferior_thread ();
 
   if (tp->state == THREAD_EXITED)
     error (_("Invalid selected thread."));
@@ -3037,7 +3035,7 @@ interrupt_target_1 (int all_threads)
      all-stop mode, we will only get one stop event --- it's undefined
      which thread will report the event.  */
   if (non_stop)
-    set_stop_requested (ptid, 1);
+    set_stop_requested (current_inferior ()->process_target (), ptid, 1);
 }
 
 /* interrupt [-a]

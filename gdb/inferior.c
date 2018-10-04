@@ -221,9 +221,9 @@ exit_inferior (inferior *inf)
 }
 
 void
-exit_inferior_silent (int pid)
+exit_inferior_silent (target_ops *targ, int pid)
 {
-  struct inferior *inf = find_inferior_pid (pid);
+  struct inferior *inf = find_inferior_pid (targ, pid);
 
   exit_inferior_1 (inf, 1);
 }
@@ -283,7 +283,7 @@ find_inferior_id (int num)
 }
 
 struct inferior *
-find_inferior_pid (int pid)
+find_inferior_pid (target_ops *targ, int pid)
 {
   /* Looking for inferior pid == 0 is always wrong, and indicative of
      a bug somewhere else.  There may be more than one with pid == 0,
@@ -291,7 +291,7 @@ find_inferior_pid (int pid)
   gdb_assert (pid != 0);
 
   for (inferior *inf : all_inferiors ())
-    if (inf->pid == pid)
+    if (inf->process_target () == targ && inf->pid == pid)
       return inf;
 
   return NULL;
@@ -300,9 +300,9 @@ find_inferior_pid (int pid)
 /* See inferior.h */
 
 struct inferior *
-find_inferior_ptid (ptid_t ptid)
+find_inferior_ptid (target_ops *targ, ptid_t ptid)
 {
-  return find_inferior_pid (ptid.pid ());
+  return find_inferior_pid (targ, ptid.pid ());
 }
 
 /* See inferior.h.  */

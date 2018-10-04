@@ -20,6 +20,6 @@
 #define COMMON_GDBTHREAD_H
 
 /* Switch from one thread to another.  */
-extern void switch_to_thread (ptid_t ptid);
+extern void switch_to_thread (target_ops *proc_target, ptid_t ptid);
 
 #endif /* ! COMMON_GDBTHREAD_H */

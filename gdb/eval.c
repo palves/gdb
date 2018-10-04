@@ -41,6 +41,7 @@
 #include "objfiles.h"
 #include "typeprint.h"
 #include <ctype.h>
+#include "common/gdb_optional.h"
 
 /* This is defined in valops.c */
 extern int overload_resolution;

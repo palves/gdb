@@ -2399,7 +2399,7 @@ remote_target::remote_add_inferior (int fake_pid_p, int pid, int attached,
 }
 
 static remote_thread_info *get_remote_thread_info (thread_info *thread);
-static remote_thread_info *get_remote_thread_info (ptid_t ptid);
+static remote_thread_info *get_remote_thread_info (target_ops *target, ptid_t ptid);
 
 /* Add thread PTID to GDB's thread list.  Tag it as executing/running
    according to RUNNING.  */
@@ -2417,13 +2417,13 @@ remote_target::remote_add_thread (ptid_t ptid, bool running, bool executing)
      might be confusing to the user.  Be silent then, preserving the
      age old behavior.  */
   if (rs->starting_up)
-    thread = add_thread_silent (ptid);
+    thread = add_thread_silent (this, ptid);
   else
-    thread = add_thread (ptid);
+    thread = add_thread (this, ptid);
 
   get_remote_thread_info (thread)->vcont_resumed = executing;
-  set_executing (ptid, executing);
-  set_running (ptid, running);
+  set_executing (this, ptid, executing);
+  set_running (this, ptid, running);
 
   return thread;
 }
@@ -2446,7 +2446,7 @@ remote_target::remote_notice_new_inferior (ptid_t currthread, int executing)
   /* If this is a new thread, add it to GDB's thread list.
      If we leave it up to WFI to do this, bad things will happen.  */
 
-  thread_info *tp = find_thread_ptid (currthread);
+  thread_info *tp = find_thread_ptid (this, currthread);
   if (tp != NULL && tp->state == THREAD_EXITED)
     {
       /* We're seeing an event on a thread id we knew had exited.
@@ -2455,7 +2455,7 @@ remote_target::remote_notice_new_inferior (ptid_t currthread, int executing)
       return;
     }
 
-  if (!in_thread_list (currthread))
+  if (!in_thread_list (this, currthread))
     {
       struct inferior *inf = NULL;
       int pid = currthread.pid ();
@@ -2468,8 +2468,8 @@ remote_target::remote_notice_new_inferior (ptid_t currthread, int executing)
 	     stub doesn't support qC.  This is the first stop reported
 	     after an attach, so this is the main thread.  Update the
 	     ptid in the thread list.  */
-	  if (in_thread_list (ptid_t (pid)))
-	    thread_change_ptid (inferior_ptid, currthread);
+	  if (in_thread_list (this, ptid_t (pid)))
+	    thread_change_ptid (this, inferior_ptid, currthread);
 	  else
 	    {
 	      remote_add_thread (currthread, running, executing);
@@ -2485,7 +2485,7 @@ remote_target::remote_notice_new_inferior (ptid_t currthread, int executing)
 	     doesn't support qC.  This is the first stop reported
 	     after an attach, so this is the main thread.  Update the
 	     ptid in the thread list.  */
-	  thread_change_ptid (inferior_ptid, currthread);
+	  thread_change_ptid (this, inferior_ptid, currthread);
 	  return;
 	}
 
@@ -2493,7 +2493,7 @@ remote_target::remote_notice_new_inferior (ptid_t currthread, int executing)
 	 extended-remote which already was debugging an inferior, we
 	 may not know about it yet.  Add it before adding its child
 	 thread, so notifications are emitted in a sensible order.  */
-      if (find_inferior_pid (currthread.pid ()) == NULL)
+      if (find_inferior_pid (this, currthread.pid ()) == NULL)
 	{
 	  struct remote_state *rs = get_remote_state ();
 	  int fake_pid_p = !remote_multi_process_p (rs);
@@ -2533,10 +2533,12 @@ get_remote_thread_info (thread_info *thread)
   return static_cast<remote_thread_info *> (thread->priv.get ());
 }
 
+/* Return PTID's private thread data, creating it if necessary.  */
+
 static remote_thread_info *
-get_remote_thread_info (ptid_t ptid)
+get_remote_thread_info (target_ops *target, ptid_t ptid)
 {
-  thread_info *thr = find_thread_ptid (ptid);
+  thread_info *thr = find_thread_ptid (target, ptid);
   return get_remote_thread_info (thr);
 }
 
@@ -3820,7 +3822,7 @@ remote_target::update_thread_list ()
 
 	      remote_notice_new_inferior (item.ptid, executing);
 
-	      thread_info *tp = find_thread_ptid (item.ptid);
+	      thread_info *tp = find_thread_ptid (this, item.ptid);
 	      remote_thread_info *info = get_remote_thread_info (tp);
 	      info->core = item.core;
 	      info->extra = std::move (item.extra);
@@ -4338,7 +4340,7 @@ remote_target::add_current_inferior_and_thread (char *wait_status)
   /* Add the main thread and switch to it.  Don't try reading
      registers yet, since we haven't fetched the target description
      yet.  */
-  thread_info *tp = add_thread_silent (curr_ptid);
+  thread_info *tp = add_thread_silent (this, curr_ptid);
   switch_to_thread_no_regs (tp);
 }
 
@@ -4382,15 +4384,14 @@ remote_target::process_initial_stop_replies (int from_tty)
   /* Consume the initial pending events.  */
   while (pending_stop_replies-- > 0)
     {
-      ptid_t waiton_ptid = minus_one_ptid;
       ptid_t event_ptid;
       struct target_waitstatus ws;
       int ignore_event = 0;
 
       memset (&ws, 0, sizeof (ws));
-      event_ptid = target_wait (waiton_ptid, &ws, TARGET_WNOHANG);
+      event_ptid = target_wait (minus_one_ptid, &ws, TARGET_WNOHANG);
       if (remote_debug)
-	print_target_wait_results (waiton_ptid, event_ptid, &ws);
+	print_target_wait_results (minus_one_ptid, event_ptid, &ws);
 
       switch (ws.kind)
 	{
@@ -4414,7 +4415,7 @@ remote_target::process_initial_stop_replies (int from_tty)
       if (ignore_event)
 	continue;
 
-      struct thread_info *evthread = find_thread_ptid (event_ptid);
+      thread_info *evthread = find_thread_ptid (this, event_ptid);
 
       if (ws.kind == TARGET_WAITKIND_STOPPED)
 	{
@@ -4434,8 +4435,8 @@ remote_target::process_initial_stop_replies (int from_tty)
 	  || ws.value.sig != GDB_SIGNAL_0)
 	evthread->suspend.waitstatus_pending_p = 1;
 
-      set_executing (event_ptid, 0);
-      set_running (event_ptid, 0);
+      set_executing (this, event_ptid, 0);
+      set_running (this, event_ptid, 0);
       get_remote_thread_info (evthread)->vcont_resumed = 0;
     }
 
@@ -5688,7 +5689,7 @@ remote_target::remote_detach_1 (inferior *inf, int from_tty)
   if (from_tty && !rs->extended && number_of_live_inferiors () == 1)
     puts_filtered (_("Ending remote debugging.\n"));
 
-  struct thread_info *tp = find_thread_ptid (inferior_ptid);
+  thread_info *tp = find_thread_ptid (this, inferior_ptid);
 
   /* Check to see if we are detaching a fork parent.  Note that if we
      are detaching a fork child, tp == NULL.  */
@@ -5883,10 +5884,10 @@ extended_remote_target::attach (const char *args, int from_tty)
       inferior_ptid = remote_current_thread (inferior_ptid);
 
       /* Add the main thread to the thread list.  */
-      thread_info *thr = add_thread_silent (inferior_ptid);
+      thread_info *thr = add_thread_silent (this, inferior_ptid);
       /* Don't consider the thread stopped until we've processed the
 	 saved stop reply.  */
-      set_executing (thr->ptid, true);
+      set_executing (this, thr->ptid, true);
     }
 
   /* Next, if the target can specify a description, read it.  We do
@@ -6025,10 +6026,10 @@ remote_target::append_resumption (char *p, char *endp,
 	{
 	  /* If we don't know about the target thread's tid, then
 	     we're resuming magic_null_ptid (see caller).  */
-	  tp = find_thread_ptid (magic_null_ptid);
+	  tp = find_thread_ptid (this, magic_null_ptid);
 	}
       else
-	tp = find_thread_ptid (ptid);
+	tp = find_thread_ptid (this, ptid);
       gdb_assert (tp != NULL);
 
       if (tp->control.may_range_step)
@@ -6260,9 +6261,9 @@ remote_target::resume (ptid_t ptid, int step, enum gdb_signal siggnal)
       remote_thread_info *remote_thr;
 
       if (minus_one_ptid == ptid || ptid.is_pid ())
-	remote_thr = get_remote_thread_info (inferior_ptid);
+	remote_thr = get_remote_thread_info (this, inferior_ptid);
       else
-	remote_thr = get_remote_thread_info (ptid);
+	remote_thr = get_remote_thread_info (this, ptid);
 
       remote_thr->last_resume_step = step;
       remote_thr->last_resume_sig = siggnal;
@@ -7038,7 +7039,7 @@ remote_target::check_pending_events_prevent_wildcard_vcont
 	  || event->ws.kind == TARGET_WAITKIND_VFORKED)
 	*may_global_wildcard = 0;
 
-      struct inferior *inf = find_inferior_ptid (event->ptid);
+      struct inferior *inf = find_inferior_ptid (this, event->ptid);
 
       /* This may be the first time we heard about this process.
 	 Regardless, we must not do a global wildcard resume, otherwise
@@ -7403,9 +7404,10 @@ Packet: '%s'\n"),
 
 		  if (rsa == NULL)
 		    {
-		      inferior *inf = (event->ptid == null_ptid
-				       ? NULL
-				       : find_inferior_ptid (event->ptid));
+		      inferior *inf
+			= (event->ptid == null_ptid
+			   ? NULL
+			   : find_inferior_ptid (this, event->ptid));
 		      /* If this is the first time we learn anything
 			 about this process, skip the registers
 			 included in this packet, since we don't yet
@@ -7664,7 +7666,7 @@ remote_target::process_stop_reply (struct stop_reply *stop_reply,
       if (stop_reply->regcache)
 	{
 	  struct regcache *regcache
-	    = get_thread_arch_regcache (ptid, stop_reply->arch);
+	    = get_thread_arch_regcache (this, ptid, stop_reply->arch);
 	  cached_reg_t *reg;
 	  int ix;
 
@@ -7680,7 +7682,7 @@ remote_target::process_stop_reply (struct stop_reply *stop_reply,
 	}
 
       remote_notice_new_inferior (ptid, 0);
-      remote_thread_info *remote_thr = get_remote_thread_info (ptid);
+      remote_thread_info *remote_thr = get_remote_thread_info (this, ptid);
       remote_thr->core = stop_reply->core;
       remote_thr->stop_reason = stop_reply->stop_reason;
       remote_thr->watch_data_address = stop_reply->watch_data_address;
@@ -13962,7 +13964,7 @@ remote_target::pid_to_exec_file (int pid)
   if (packet_support (PACKET_qXfer_exec_file) != PACKET_ENABLE)
     return NULL;
 
-  inf = find_inferior_pid (pid);
+  inf = find_inferior_pid (this, pid);
   if (inf == NULL)
     internal_error (__FILE__, __LINE__,
 		    _("not currently attached to process %d"), pid);

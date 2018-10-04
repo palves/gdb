@@ -314,7 +314,7 @@ add_to_thread_list (bfd *abfd, asection *asect, void *reg_sect_arg)
 
   ptid = ptid_t (pid, lwpid, 0);
 
-  add_thread (ptid);
+  add_thread (inf->process_target (), ptid);
 
 /* Warning, Will Robinson, looking at BFD private data! */
 
@@ -453,7 +453,7 @@ core_target_open (const char *arg, int from_tty)
 	{
 	  inferior_appeared (current_inferior (), CORELOW_PID);
 	  inferior_ptid = ptid_t (CORELOW_PID);
-	  add_thread_silent (inferior_ptid);
+	  add_thread_silent (target, inferior_ptid);
 	}
       else
 	switch_to_thread (thread);
@@ -1012,7 +1012,7 @@ core_target::pid_to_str (ptid_t ptid)
 
   /* Otherwise, this isn't a "threaded" core -- use the PID field, but
      only if it isn't a fake PID.  */
-  inf = find_inferior_ptid (ptid);
+  inf = find_inferior_ptid (this, ptid);
   if (inf != NULL && !inf->fake_pid_p)
     return normal_pid_to_str (ptid);
 

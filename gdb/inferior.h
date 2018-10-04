@@ -563,10 +563,10 @@ extern void inferior_appeared (struct inferior *inf, int pid);
 extern void discard_all_inferiors (void);
 
 /* Search function to lookup an inferior by target 'pid'.  */
-extern struct inferior *find_inferior_pid (int pid);
+extern struct inferior *find_inferior_pid (target_ops *targ, int pid);
 
 /* Search function to lookup an inferior whose pid is equal to 'ptid.pid'. */
-extern struct inferior *find_inferior_ptid (ptid_t ptid);
+extern struct inferior *find_inferior_ptid (target_ops *targ, ptid_t ptid);
 
 /* Search function to lookup an inferior by GDB 'num'.  */
 extern struct inferior *find_inferior_id (int num);

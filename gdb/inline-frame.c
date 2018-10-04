@@ -34,7 +34,7 @@
 /* We need to save a few variables for every thread stopped at the
    virtual call site of an inlined function.  If there was always a
    "struct thread_info", we could hang it off that; in the mean time,
-   keep our own list.  */
+   keep our own list.  XXX */
 struct inline_state
 {
   inline_state (thread_info *thread_, int skipped_frames_, CORE_ADDR saved_pc_,
@@ -101,13 +101,16 @@ find_inline_frame_state (thread_info *thread)
    or a PID (all threads in this process).  */
 
 void
-clear_inline_frame_state (ptid_t ptid)
+clear_inline_frame_state (target_ops *proc_target, ptid_t filter_ptid)
 {
   if (ptid == minus_one_ptid)
     {
-      inline_states.clear ();
-      return;
-    }
+      auto matcher = [proc_target, &filter_ptid] (const inline_state &state)
+	{
+	  thread_info *t = state.thread;
+	  return (t->inf->proc_target () == proc_target
+		  && t->ptid.matches (filter_ptid));
+	};
 
   if (ptid.is_pid ())
     {
@@ -123,6 +126,25 @@ clear_inline_frame_state (ptid_t ptid)
       return;
     }
 
+
+  auto matcher = [proc_target, &filter_ptid] (const inline_state &state)
+    {
+      thread_info *t = state.thread;
+      return (t->inf->proc_target () == proc_target && filter_ptid == t->ptid);
+    };
+
+  auto it = std::find_if (inline_states.begin (), inline_states.end (),
+			  matcher);
+
+  if (it != inline_states.end ())
+    unordered_remove (inline_states, it);
+}
+
+/* See inline-frame.h.  */
+
+void
+clear_inline_frame_state (thread_info *thread)
+{
   auto it = std::find_if (inline_states.begin (), inline_states.end (),
 			  [&ptid] (const inline_state &state)
 			    {
@@ -131,6 +153,12 @@ clear_inline_frame_state (ptid_t ptid)
 
   if (it != inline_states.end ())
     unordered_remove (inline_states, it);
+}
+
+void
+clear_inline_frame_state (thread_info *thread)
+{
+  clear_inline_frame_state (thread->inf->process_target (), thread->ptid);
 }
 
 static void

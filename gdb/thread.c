@@ -89,7 +89,7 @@ private:
 struct thread_info*
 inferior_thread (void)
 {
-  struct thread_info *tp = find_thread_ptid (inferior_ptid);
+  struct thread_info *tp = find_thread_ptid (current_inferior (), inferior_ptid);
   gdb_assert (tp);
   return tp;
 }
@@ -235,6 +235,7 @@ init_thread_list (void)
 
       inf->thread_list = NULL;
     }
+  threads_executing = 0;
 }
 
 /* Allocate a new thread of inferior INF with target id PTID and add
@@ -260,12 +261,12 @@ new_thread (struct inferior *inf, ptid_t ptid)
 }
 
 struct thread_info *
-add_thread_silent (ptid_t ptid)
+add_thread_silent (target_ops *targ, ptid_t ptid)
 {
-  struct inferior *inf = find_inferior_ptid (ptid);
+  inferior *inf = find_inferior_ptid (targ, ptid);
   gdb_assert (inf != NULL);
 
-  thread_info *tp = find_thread_ptid (inf, ptid);
+  thread_info *tp = find_thread_ptid (targ, ptid);
   if (tp)
     /* Found an old thread with the same id.  It has to be dead,
        otherwise we wouldn't be adding a new thread with the same id.
@@ -312,9 +313,9 @@ add_thread_silent (ptid_t ptid)
 }
 
 struct thread_info *
-add_thread_with_info (ptid_t ptid, private_thread_info *priv)
+add_thread_with_info (target_ops *targ, ptid_t ptid, private_thread_info *priv)
 {
-  struct thread_info *result = add_thread_silent (ptid);
+  thread_info *result = add_thread_silent (targ, ptid);
 
   result->priv.reset (priv);
 
@@ -326,9 +327,9 @@ add_thread_with_info (ptid_t ptid, private_thread_info *priv)
 }
 
 struct thread_info *
-add_thread (ptid_t ptid)
+add_thread (target_ops *targ, ptid_t ptid)
 {
-  return add_thread_with_info (ptid, NULL);
+  return add_thread_with_info (targ, ptid, NULL);
 }
 
 private_thread_info::~private_thread_info () = default;
@@ -470,7 +471,7 @@ delete_thread_1 (thread_info *thr, bool silent)
   if (tpprev)
     tpprev->next = tp->next;
   else
-    tp->inf->thread_list = tp->next;
+    thr->inf->thread_list = tp->next;
 
   delete tp;
 }
@@ -515,17 +516,6 @@ find_thread_id (struct inferior *inf, int thr_num)
 /* Find a thread_info by matching PTID.  */
 
 struct thread_info *
-find_thread_ptid (ptid_t ptid)
-{
-  inferior *inf = find_inferior_ptid (ptid);
-  if (inf == NULL)
-    return NULL;
-  return find_thread_ptid (inf, ptid);
-}
-
-/* See gdbthread.h.  */
-
-struct thread_info *
 find_thread_ptid (inferior *inf, ptid_t ptid)
 {
   for (thread_info *tp : inf->threads ())
@@ -544,6 +534,14 @@ find_thread_by_handle (struct value *thread_handle, struct inferior *inf)
 	   (value_contents_all (thread_handle),
 	    TYPE_LENGTH (value_type (thread_handle)),
 	    inf);
+}
+
+/* Find a thread_info by matching PTID.  */
+struct thread_info *
+find_thread_ptid (target_ops *targ, ptid_t ptid)
+{
+  inferior *inf = find_inferior_ptid (targ, ptid);
+  return find_thread_ptid (inf, ptid);
 }
 
 /*
@@ -607,10 +605,10 @@ valid_global_thread_id (int global_id)
   return 0;
 }
 
-int
-in_thread_list (ptid_t ptid)
+bool
+in_thread_list (target_ops *targ, ptid_t ptid)
 {
-  return find_thread_ptid (ptid) != nullptr;
+  return find_thread_ptid (targ, ptid) != nullptr;
 }
 
 /* Finds the first thread of the inferior.  */
@@ -756,7 +754,7 @@ get_last_thread_stack_temporary (thread_info *tp)
 }
 
 void
-thread_change_ptid (ptid_t old_ptid, ptid_t new_ptid)
+thread_change_ptid (target_ops *targ, ptid_t old_ptid, ptid_t new_ptid)
 {
   struct inferior *inf;
   struct thread_info *tp;
@@ -764,7 +762,7 @@ thread_change_ptid (ptid_t old_ptid, ptid_t new_ptid)
   /* It can happen that what we knew as the target inferior id
      changes.  E.g, target remote may only discover the remote process
      pid after adding the inferior to GDB's list.  */
-  inf = find_inferior_ptid (old_ptid);
+  inf = find_inferior_ptid (targ, old_ptid);
   inf->pid = new_ptid.pid ();
 
   tp = find_thread_ptid (inf, old_ptid);
@@ -776,9 +774,9 @@ thread_change_ptid (ptid_t old_ptid, ptid_t new_ptid)
 /* See gdbthread.h.  */
 
 void
-set_resumed (ptid_t ptid, int resumed)
+set_resumed (target_ops *targ, ptid_t ptid, bool resumed)
 {
-  for (thread_info *tp : all_non_exited_threads (ptid))
+  for (thread_info *tp : all_non_exited_threads (targ, ptid))
     tp->resumed = resumed;
 }
 
@@ -816,7 +814,7 @@ thread_info::set_running (bool running)
 }
 
 void
-set_running (ptid_t ptid, int running)
+set_running (target_ops *targ, ptid_t ptid, bool running)
 {
   /* We try not to notify the observer if no thread has actually
      changed the running state -- merely to reduce the number of
@@ -824,7 +822,7 @@ set_running (ptid_t ptid, int running)
      multiple *running notifications just fine.  */
   bool any_started = false;
 
-  for (thread_info *tp : all_non_exited_threads (ptid))
+  for (thread_info *tp : all_non_exited_threads (targ, ptid))
     if (set_running_thread (tp, running))
       any_started = true;
 
@@ -846,9 +844,9 @@ set_executing_thread (thread_info *thr, bool executing)
 }
 
 void
-set_executing (ptid_t ptid, int executing)
+set_executing (target_ops *targ, ptid_t ptid, bool executing)
 {
-  for (thread_info *tp : all_non_exited_threads (ptid))
+  for (thread_info *tp : all_non_exited_threads (targ, ptid))
     set_executing_thread (tp, executing);
 
   /* It only takes one running thread to spawn more threads.  */
@@ -869,9 +867,9 @@ threads_are_executing (void)
 }
 
 void
-set_stop_requested (ptid_t ptid, int stop)
+set_stop_requested (target_ops *targ, ptid_t ptid, bool stop)
 {
-  for (thread_info *tp : all_non_exited_threads (ptid))
+  for (thread_info *tp : all_non_exited_threads (targ, ptid))
     tp->stop_requested = stop;
 
   /* Call the stop requested observer so other components of GDB can
@@ -881,11 +879,11 @@ set_stop_requested (ptid_t ptid, int stop)
 }
 
 void
-finish_thread_state (ptid_t ptid)
+finish_thread_state (target_ops *targ, ptid_t ptid)
 {
   bool any_started = false;
 
-  for (thread_info *tp : all_non_exited_threads (ptid))
+  for (thread_info *tp : all_non_exited_threads (targ, ptid))
     if (set_running_thread (tp, tp->executing))
       any_started = true;
 
@@ -1257,9 +1255,9 @@ switch_to_thread (thread_info *thr)
 /* See common/common-gdbthread.h.  */
 
 void
-switch_to_thread (ptid_t ptid)
+switch_to_thread (target_ops *proc_target, ptid_t ptid)
 {
-  thread_info *thr = find_thread_ptid (ptid);
+  thread_info *thr = find_thread_ptid (proc_target, ptid);
   switch_to_thread (thr);
 }
 

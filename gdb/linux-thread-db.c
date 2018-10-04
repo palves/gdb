@@ -212,7 +212,7 @@ static void thread_db_find_new_threads_2 (thread_info *stopped,
 static void check_thread_signals (void);
 
 static struct thread_info *record_thread
-  (struct thread_db_info *info, struct thread_info *tp,
+  (struct thread_db_info *info, inferior *inf, thread_info *tp,
    ptid_t ptid, const td_thrhandle_t *th_p, const td_thrinfo_t *ti_p);
 
 /* Add the current inferior to the list of processes using libpthread.
@@ -407,8 +407,8 @@ thread_from_lwp (thread_info *stopped, ptid_t ptid)
 	   thread_db_err_str (err));
 
   /* Fill the cache.  */
-  tp = find_thread_ptid (ptid);
-  return record_thread (info, tp, ptid, &th, &ti);
+  tp = find_thread_ptid (current_inferior ()->process_target (), ptid);
+  return record_thread (info, current_inferior (), tp, ptid, &th, &ti);
 }
 
 
@@ -424,7 +424,7 @@ thread_db_notice_clone (ptid_t parent, ptid_t child)
   if (info == NULL)
     return 0;
 
-  thread_info *stopped = find_thread_ptid (parent);
+  thread_info *stopped = find_thread_ptid (linux_target, parent);
 
   thread_from_lwp (stopped, child);
 
@@ -1316,7 +1316,7 @@ update_thread_state (thread_db_thread_info *priv,
 
 static struct thread_info *
 record_thread (struct thread_db_info *info,
-	       struct thread_info *tp,
+	       inferior *inf, struct thread_info *tp,
 	       ptid_t ptid, const td_thrhandle_t *th_p,
 	       const td_thrinfo_t *ti_p)
 {
@@ -1337,7 +1337,7 @@ record_thread (struct thread_db_info *info,
      thread with this PTID, but it's marked exited, then the kernel
      reused the tid of an old thread.  */
   if (tp == NULL || tp->state == THREAD_EXITED)
-    tp = add_thread_with_info (ptid, priv);
+    tp = add_thread_with_info (inf->process_target (), ptid, priv);
   else
     tp->priv.reset (priv);
 
@@ -1397,7 +1397,7 @@ thread_db_target::wait (ptid_t ptid, struct target_waitstatus *ourstatus,
     }
 
   /* Fill in the thread's user-level thread id and status.  */
-  thread_from_lwp (find_thread_ptid (ptid), ptid);
+  thread_from_lwp (find_thread_ptid (beneath (), ptid), ptid);
 
   return ptid;
 }
@@ -1416,6 +1416,7 @@ thread_db_target::mourn_inferior ()
 
 struct callback_data
 {
+  inferior *inf;
   struct thread_db_info *info;
   int new_threads;
 };
@@ -1476,9 +1477,9 @@ find_new_threads_callback (const td_thrhandle_t *th_p, void *data)
     }
 
   ptid_t ptid (info->pid, ti.ti_lid);
-  tp = find_thread_ptid (ptid);
+  tp = find_thread_ptid (cb_data->inf->process_target (), ptid);
   if (tp == NULL || tp->priv == NULL)
-    record_thread (info, tp, ptid, th_p, &ti);
+    record_thread (info, cb_data->inf, tp, ptid, th_p, &ti);
 
   return 0;
 }
@@ -1495,6 +1496,7 @@ find_new_threads_once (struct thread_db_info *info, int iteration,
 
   data.info = info;
   data.new_threads = 0;
+  data.inf = current_inferior ();
 
   /* See comment in thread_db_update_thread_list.  */
   gdb_assert (info->td_ta_thr_iter_p != NULL);
@@ -1624,7 +1626,7 @@ thread_db_target::update_thread_list ()
 const char *
 thread_db_target::pid_to_str (ptid_t ptid)
 {
-  struct thread_info *thread_info = find_thread_ptid (ptid);
+  thread_info *thread_info = find_thread_ptid (current_inferior (), ptid);
 
   if (thread_info != NULL && thread_info->priv != NULL)
     {
@@ -1699,7 +1701,7 @@ thread_db_target::get_thread_local_address (ptid_t ptid,
   struct thread_info *thread_info;
 
   /* Find the matching thread.  */
-  thread_info = find_thread_ptid (ptid);
+  thread_info = find_thread_ptid (this->beneath (), ptid);
 
   /* We may not have discovered the thread yet.  */
   if (thread_info != NULL && thread_info->priv == NULL)

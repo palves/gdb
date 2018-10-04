@@ -2070,16 +2070,18 @@ target_thread_handle_to_thread_info (const gdb_byte *thread_handle,
 void
 target_resume (ptid_t ptid, int step, enum gdb_signal signal)
 {
+  target_ops *curr_target = current_inferior ()->process_target ();
+
   target_dcache_invalidate ();
 
   current_top_target ()->resume (ptid, step, signal);
 
-  registers_changed_ptid (ptid);
+  registers_changed_ptid (curr_target, ptid);
   /* We only set the internal executing state here.  The user/frontend
      running state is set at a higher level.  This also clears the
      thread's stop_pc as side effect.  */
-  set_executing (ptid, 1);
-  clear_inline_frame_state (ptid);
+  set_executing (curr_target, ptid, 1);
+  clear_inline_frame_state (curr_target, ptid);
 }
 
 /* If true, target_commit_resume is a nop.  */
@@ -2503,7 +2505,6 @@ target_get_osdata (const char *type)
 
   return target_read_stralloc (t, TARGET_OBJECT_OSDATA, type);
 }
-
 
 /* Determine the current address space of thread PTID.  */
 

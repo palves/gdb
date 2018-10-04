@@ -556,7 +556,8 @@ record_btrace_target::info_record ()
 
   DEBUG ("info");
 
-  tp = find_thread_ptid (inferior_ptid);
+  tp = find_thread_ptid (current_inferior ()->process_target (),
+			 inferior_ptid);
   if (tp == NULL)
     error (_("No thread."));
 
@@ -1528,7 +1529,7 @@ record_btrace_target::fetch_registers (struct regcache *regcache, int regno)
   struct btrace_insn_iterator *replay;
   struct thread_info *tp;
 
-  tp = find_thread_ptid (regcache->ptid ());
+  tp = find_thread_ptid (current_inferior (), regcache->ptid ());
   gdb_assert (tp != NULL);
 
   replay = tp->btrace.replay;
@@ -1971,6 +1972,8 @@ get_thread_current_frame_id (struct thread_info *tp)
 
   switch_to_thread (tp);
 
+  target_ops *proc_target = tp->inf->process_target ();
+
   /* Clear the executing flag to allow changes to the current frame.
      We are not actually running, yet.  We just started a reverse execution
      command or a record goto command.
@@ -1979,7 +1982,7 @@ get_thread_current_frame_id (struct thread_info *tp)
      move the thread.  Since we need to recompute the stack, we temporarily
      set EXECUTING to flase.  */
   executing = tp->executing;
-  set_executing (inferior_ptid, false);
+  set_executing (proc_target, inferior_ptid, false);
 
   id = null_frame_id;
   TRY
@@ -1989,14 +1992,14 @@ get_thread_current_frame_id (struct thread_info *tp)
   CATCH (except, RETURN_MASK_ALL)
     {
       /* Restore the previous execution state.  */
-      set_executing (inferior_ptid, executing);
+      set_executing (proc_target, inferior_ptid, executing);
 
       throw_exception (except);
     }
   END_CATCH
 
   /* Restore the previous execution state.  */
-  set_executing (inferior_ptid, executing);
+  set_executing (proc_target, inferior_ptid, executing);
 
   return id;
 }

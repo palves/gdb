@@ -39,7 +39,7 @@ target_ops *make_dummy_target ();
 target_connection::target_connection ()
 {
   this->num = highest_target_connection_num++;
-  this->top_target = make_dummy_target ();
+  this->top_target = NULL;
 }
 
 /* Prints the list of inferiors and their details on UIOUT.  This is a
