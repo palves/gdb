@@ -43,6 +43,7 @@ struct inferior;
 #include "infrun.h" /* For enum exec_direction_kind.  */
 #include "breakpoint.h" /* For enum bptype.  */
 #include "common/scoped_restore.h"
+#include "common/refcounted-object.h"
 
 /* This include file defines the interface between the main part
    of the debugger, and the part which is target-specific, or
@@ -430,6 +431,7 @@ struct target_info
 };
 
 struct target_ops
+  : public refcounted_object
   {
     /* Return this target's stratum.  */
     virtual strata stratum () const = 0;
