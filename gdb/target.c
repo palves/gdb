@@ -227,7 +227,9 @@ target_has_registers_1 (void)
 bool
 target_has_execution_1 (inferior *inf)
 {
-  for (target_ops *t = current_top_target (); t != NULL; t = t->beneath ())
+  for (target_ops *t = inf->top_target ();
+       t != nullptr;
+       t = inf->find_target_beneath (t))
     if (t->has_execution (inf))
       return true;
 

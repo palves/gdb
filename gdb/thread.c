@@ -49,12 +49,6 @@
 
 /* Definition of struct thread_info exported to gdbthread.h.  */
 
-bool
-thread_info::has_execution ()
-{
-  return inf->has_execution ();
-}
-
 /* Prototypes for local functions.  */
 
 static int highest_thread_num;

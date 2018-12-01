@@ -735,7 +735,7 @@ proceed_thread_callback (struct thread_info *thread, void *arg)
   if (thread->state != THREAD_STOPPED)
     return 0;
 
-  if (!thread->has_execution ())
+  if (!thread->inf->has_execution ())
     return 0;
 
   switch_to_thread (thread);

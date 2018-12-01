@@ -371,14 +371,7 @@ public:
   { return m_stack.at (stratum); }
 
   bool has_execution ()
-  {
-    /* If there's no process_stratum target yet, then there can't be
-       execution.  */
-    target_ops *proc_target = process_target ();
-    if (proc_target == NULL)
-      return false;
-    return process_target ()->has_execution (this);
-  }
+  { return target_has_execution_1 (this); }
 
   /* Pointer to next inferior in singly-linked list of inferiors.  */
   struct inferior *next = NULL;

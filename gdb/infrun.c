@@ -3176,15 +3176,15 @@ proceed (CORE_ADDR addr, enum gdb_signal siggnal)
 	  {
 	    switch_to_thread_no_regs (tp);
 
-	    if (!tp->has_execution ())
-	      {
-		if (debug_infrun)
-		  fprintf_unfiltered (gdb_stdlog,
-				      "infrun: proceed: [%s] target has "
-				      "no execution\n",
-				      target_pid_to_str (tp->ptid));
-		return;
-	      }
+	  if (!tp->inf->has_execution ())
+	    {
+	      if (debug_infrun)
+		fprintf_unfiltered (gdb_stdlog,
+				    "infrun: proceed: [%s] target has "
+				    "no execution\n",
+				    target_pid_to_str (thr->ptid));
+	      return;
+	    }
 
 	  if (tp->resumed)
 	    {
