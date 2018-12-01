@@ -489,12 +489,21 @@ print_inferior (struct ui_out *uiout, const char *requested_inferiors)
       return;
     }
 
-  ui_out_emit_table table_emitter (uiout, 5, inf_count, "inferiors");
+//#define SHOW_CONNECTION
+
+  int ncols = 4;
+#ifdef SHOW_CONNECTION
+  ncols++;
+#endif
+
+  ui_out_emit_table table_emitter (uiout, ncols, inf_count, "inferiors");
   uiout->table_header (1, ui_left, "current", "");
   uiout->table_header (4, ui_left, "number", "Num");
   uiout->table_header (17, ui_left, "target-id", "Description");
+#ifdef SHOW_CONNECTION
   uiout->table_header (connection_id_len, ui_left,
 		       "connection-id", "Connection");
+#endif
   uiout->table_header (17, ui_left, "exec", "Executable");
 
   uiout->table_body ();
@@ -515,8 +524,10 @@ print_inferior (struct ui_out *uiout, const char *requested_inferiors)
 
       uiout->field_string ("target-id", inferior_pid_to_str (inf->pid));
 
+#ifdef SHOW_CONNECTION
       std::string conn = uiout_field_connection (inf->process_target ());
       uiout->field_string ("connection-id", conn.c_str ());
+#endif
 
       if (inf->pspace->pspace_exec_filename != NULL)
 	uiout->field_string ("exec", inf->pspace->pspace_exec_filename);
@@ -797,6 +808,7 @@ add_inferior_command (const char *args, int from_tty)
       if (!new_connection && proc_target != NULL)
 	{
 	  push_target (proc_target);
+#ifdef SHOW_CONNECTION
 	  if (proc_target->connection_string () != NULL)
 	    printf_filtered (_("Added inferior %d on target %d (%s %s)\n"),
 			     inf->num,
@@ -808,6 +820,9 @@ add_inferior_command (const char *args, int from_tty)
 			     inf->num,
 			     proc_target->connection_number,
 			     proc_target->shortname ());
+#else
+	  printf_filtered (_("Added inferior %d\n"), inf->num);
+#endif
 	}
       else
 	printf_filtered (_("Added inferior %d\n"), inf->num);
