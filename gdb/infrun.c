@@ -67,6 +67,7 @@
 #include "progspace-and-thread.h"
 #include "common/gdb_optional.h"
 #include "arch-utils.h"
+#include "gdb_select.h"
 
 /* Prototypes for local functions */
 
@@ -4489,24 +4490,69 @@ struct wait_one_event
 static wait_one_event
 wait_one ()
 {
-  inferior *inf;
+  while (1)
+    {
+      for (inferior *inf : inferiors ())
+	{
+	  target_ops *target = inf->process_target ();
+	  if (target == NULL
+	      || !target->is_async_p ()
+	      || !target->threads_executing)
+	    continue;
 
-  ALL_INFERIORS (inf)
-    if (inf->pid != 0)
-      {
-	thread_info *thr = any_thread_of_inferior (inf);
-	switch_to_thread (thr);
+	  switch_to_inferior_no_thread (inf);
 
-	wait_one_event event;
-	ptid_t wait_ptid (inf->pid);
-	event.target = inf->process_target ();
-	event.ptid = do_wait_one (wait_ptid, &event.ws);
-	if (event.ws.kind != TARGET_WAITKIND_IGNORE
-	    && event.ws.kind != TARGET_WAITKIND_NO_RESUMED)
-	  return event;
-      }
+	  wait_one_event event;
+	  event.target = inf->process_target ();
+	  event.ptid = do_wait_one (minus_one_ptid, &event.ws);
 
-  return {NULL, minus_one_ptid, {TARGET_WAITKIND_IGNORE}};
+	  if (event.ws.kind == TARGET_WAITKIND_NO_RESUMED)
+	    target_async (0);
+	  else if (event.ws.kind != TARGET_WAITKIND_IGNORE)
+	    return event;
+	}
+
+      /* Block waiting for some event.  */
+
+      fd_set readfds;
+      int nfds = 0;
+
+      FD_ZERO (&readfds);
+
+      for (inferior *inf : inferiors ())
+	{
+	  target_ops *target = inf->process_target ();
+	  if (target == NULL
+	      || !target->is_async_p ()
+	      || !target->threads_executing)
+	    continue;
+
+	  int fd = target->async_wait_fd ();
+	  FD_SET (fd, &readfds);
+	  if (nfds <= fd)
+	    nfds = fd + 1;
+	}
+
+      if (nfds == 0)
+	{
+	  /* No waitable targets left.  All must be stopped.  */
+	  return {NULL, minus_one_ptid, {TARGET_WAITKIND_NO_RESUMED}};
+	}
+
+      QUIT;
+
+      int numfds = interruptible_select (nfds, &readfds, 0, NULL, 0);
+      if (numfds == 0)
+	error ("boo!");
+      else if (numfds < 0)
+	{
+	  if (errno == EINTR)
+	    continue;
+	  else
+	    error ("bah!");	/* Got an error from select or
+					   poll.  */
+	}
+    }
 }
 
 /* Generate a wrapper for target_stopped_by_REASON that works on PTID
@@ -4704,13 +4750,6 @@ stop_all_threads (void)
 	  if (ws.kind == TARGET_WAITKIND_NO_RESUMED)
 	    {
 	      /* All resumed threads exited.  */
-	    }
-	  else if (ws.kind == TARGET_WAITKIND_IGNORE)
-	    {
-	      /* No events yet.  */
-	      /* Major hack.  Should be waiting for event in all
-		 target's file descriptors.  */
-	      usleep (1000);
 	    }
 	  else if (ws.kind == TARGET_WAITKIND_THREAD_EXITED
 		   || ws.kind == TARGET_WAITKIND_EXITED

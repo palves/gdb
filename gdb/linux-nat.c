@@ -4396,6 +4396,12 @@ linux_async_pipe (int enable)
   return previous;
 }
 
+int
+linux_nat_target::async_wait_fd ()
+{
+  return linux_nat_event_pipe[0];
+}
+
 /* target_async implementation.  */
 
 void

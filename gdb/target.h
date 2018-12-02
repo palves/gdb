@@ -708,6 +708,8 @@ struct target_ops
       TARGET_DEFAULT_RETURN (false);
     virtual void async (int)
       TARGET_DEFAULT_NORETURN (tcomplain ());
+    virtual int async_wait_fd ()
+      TARGET_DEFAULT_NORETURN (noprocess ());
     virtual void thread_events (int)
       TARGET_DEFAULT_IGNORE ();
     /* This method must be implemented in some situations.  See the
