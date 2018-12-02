@@ -143,7 +143,9 @@ static struct regcache *
 get_ps_regcache (struct ps_prochandle *ph, lwpid_t lwpid)
 {
   inferior *inf = ph->thread->inf;
-  return get_thread_arch_regcache (ptid_t (inf->pid, lwpid), inf->gdbarch);
+  return get_thread_arch_regcache (inf->process_target (),
+				   ptid_t (inf->pid, lwpid),
+				   inf->gdbarch);
 }
 
 /* Get the general registers of LWP LWPID within the target process PH

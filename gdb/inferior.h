@@ -670,7 +670,7 @@ all_inferiors (target_ops *proc_target = nullptr)
 inline all_non_exited_inferiors_range
 all_non_exited_inferiors (target_ops *proc_target = nullptr)
 {
-  return non_exited_inferiors_range (proc_target);
+  return all_non_exited_inferiors_range (proc_target);
 }
 
 /* Prune away automatically added inferiors that aren't required

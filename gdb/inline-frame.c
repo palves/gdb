@@ -34,7 +34,7 @@
 /* We need to save a few variables for every thread stopped at the
    virtual call site of an inlined function.  If there was always a
    "struct thread_info", we could hang it off that; in the mean time,
-   keep our own list.  XXX */
+   keep our own list.  */
 struct inline_state
 {
   inline_state (thread_info *thread_, int skipped_frames_, CORE_ADDR saved_pc_,
@@ -103,23 +103,20 @@ find_inline_frame_state (thread_info *thread)
 void
 clear_inline_frame_state (target_ops *proc_target, ptid_t filter_ptid)
 {
-  if (ptid == minus_one_ptid)
+  gdb_assert (proc_target != NULL
+	      && proc_target->stratum () == process_stratum);
+
+  if (filter_ptid == minus_one_ptid || filter_ptid.is_pid ())
     {
       auto matcher = [proc_target, &filter_ptid] (const inline_state &state)
 	{
 	  thread_info *t = state.thread;
-	  return (t->inf->proc_target () == proc_target
+	  return (t->inf->process_target () == proc_target
 		  && t->ptid.matches (filter_ptid));
 	};
 
-  if (ptid.is_pid ())
-    {
-      int pid = ptid.pid ();
       auto it = std::remove_if (inline_states.begin (), inline_states.end (),
-				[pid] (const inline_state &state)
-				  {
-				    return pid == state.thread->inf->pid;
-				  });
+				matcher);
 
       inline_states.erase (it, inline_states.end ());
 
@@ -130,7 +127,8 @@ clear_inline_frame_state (target_ops *proc_target, ptid_t filter_ptid)
   auto matcher = [proc_target, &filter_ptid] (const inline_state &state)
     {
       thread_info *t = state.thread;
-      return (t->inf->proc_target () == proc_target && filter_ptid == t->ptid);
+      return (t->inf->process_target () == proc_target
+	      && filter_ptid == t->ptid);
     };
 
   auto it = std::find_if (inline_states.begin (), inline_states.end (),
@@ -146,19 +144,13 @@ void
 clear_inline_frame_state (thread_info *thread)
 {
   auto it = std::find_if (inline_states.begin (), inline_states.end (),
-			  [&ptid] (const inline_state &state)
+			  [thread] (const inline_state &state)
 			    {
-			      return ptid == state.thread->ptid;
+			      return thread == state.thread;
 			    });
 
   if (it != inline_states.end ())
     unordered_remove (inline_states, it);
-}
-
-void
-clear_inline_frame_state (thread_info *thread)
-{
-  clear_inline_frame_state (thread->inf->process_target (), thread->ptid);
 }
 
 static void

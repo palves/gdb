@@ -46,7 +46,7 @@ extern void clear_section_table (struct target_section_table *table);
 
 /* The current inferior is a child vforked and its program space is
    shared with its parent.  This pushes the exec target on the
-   current/child inferior target stack if there are sections in
+   current/child inferior's target stack if there are sections in the
    program space's section table.  */
 
 extern void exec_on_vfork ();

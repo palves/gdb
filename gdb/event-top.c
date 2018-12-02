@@ -1099,7 +1099,7 @@ async_disconnect (gdb_client_data arg)
     }
   END_CATCH
 
-  for (inferior *inf : inferiors ())
+  for (inferior *inf : all_inferiors ())
     {
       switch_to_inferior_no_thread (inf);
       TRY

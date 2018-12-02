@@ -1033,7 +1033,7 @@ static void remote_console_output (char *msg);
 
 static void remote_btrace_reset (remote_state *rs);
 
-static void remote_unpush_and_throw (void);
+static void remote_unpush_and_throw (remote_target *target);
 
 /* For "remote".  */
 
@@ -5496,13 +5496,12 @@ remote_unpush_target (remote_target *target)
      those that aren't running.  */
   scoped_restore_current_inferior restore_current_inferior;
 
-  for (inferior *inf : inferiors ())
-    if (inf->process_target () == target)
-      {
-	switch_to_inferior_no_thread (inf);
-	pop_all_targets_at_and_above (process_stratum);
-	generic_mourn_inferior ();
-      }
+  for (inferior *inf : all_inferiors (target))
+    {
+      switch_to_inferior_no_thread (inf);
+      pop_all_targets_at_and_above (process_stratum);
+      generic_mourn_inferior ();
+    }
 }
 
 static void
@@ -5525,7 +5524,7 @@ remote_target::open_1 (const char *name, int from_tty, int extended_p)
   /* If we're connected to a running target, target_preopen will kill it.
      Ask this question first, before target_preopen has a chance to kill
      anything.  */
-  if (prev_remote != NULL)
+  if (curr_remote != NULL)
     {
       if (from_tty
 	  && !query (_("Already connected to a remote target.  Disconnect? ")))
@@ -13509,7 +13508,7 @@ remote_target::set_disconnected_tracing (int val)
 int
 remote_target::core_of_thread (ptid_t ptid)
 {
-  struct thread_info *info = find_thread_ptid (ptid);
+  struct thread_info *info = find_thread_ptid (this, ptid);
 
   if (info != NULL && info->priv != NULL)
     return get_remote_thread_info (info)->core;
@@ -14067,7 +14066,7 @@ remote_target::thread_handle_to_thread_info (const gdb_byte *thread_handle,
 					     int handle_len,
 					     inferior *inf)
 {
-  for (thread_info *tp : all_non_exited_threads ())
+  for (thread_info *tp : all_non_exited_threads (this))
     {
       remote_thread_info *priv = get_remote_thread_info (tp);
 

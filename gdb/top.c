@@ -1622,7 +1622,7 @@ quit_force (int *exit_arg, int from_tty)
 
   /* Give all pushed targets a chance to do minimal cleanup, and pop
      them all out.  */
-  for (inferior *inf : inferiors ())
+  for (inferior *inf : all_inferiors ())
     {
       switch_to_inferior_no_thread (inf);
       TRY

@@ -290,8 +290,8 @@ find_inferior_pid (target_ops *targ, int pid)
      for instance.  */
   gdb_assert (pid != 0);
 
-  for (inferior *inf : all_inferiors ())
-    if (inf->process_target () == targ && inf->pid == pid)
+  for (inferior *inf : all_inferiors (targ))
+    if (inf->pid == pid)
       return inf;
 
   return NULL;

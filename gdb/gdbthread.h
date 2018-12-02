@@ -513,33 +513,34 @@ extern struct thread_info *iterate_over_threads (thread_callback_func, void *);
    iterators.  Must be done after struct thread_info is defined.  */
 #include "thread-iter.h"
 
-/* Return a range that can be used to walk over all threads of all
-   inferiors, with range-for.  Used like this:
-
-       for (thread_info *thr : all_threads ())
-	 { .... }
-*/
-inline all_threads_range
-all_threads ()
-{
-  return {};
-}
-
 /* Likewise, but accept a filter PTID.  */
 
 inline all_matching_threads_range
-all_threads (target_ops *proc_target, ptid_t filter_ptid)
+all_threads (target_ops *proc_target = nullptr,
+	     ptid_t filter_ptid = minus_one_ptid)
 {
   return all_matching_threads_range (proc_target, filter_ptid);
 }
 
 /* Return a range that can be used to walk over all non-exited threads
    of all inferiors, with range-for.  FILTER_PTID can be used to
-   filter out thread that don't match.  */
+   filter out thread that don't match.
 
-inline non_exited_threads_range
-non_exited_threads (target_ops *proc_target = nullptr,
-		    ptid_t filter_ptid = minus_one_ptid)
+   PTID can be:
+
+   - minus_one_ptid: meaning call callback for all threads of TARG (if
+     TARG is NULL, then of all targets).
+
+   - A process ptid, in which case call callback for all threads of
+     given process.  TARG must be non-NULL in this case.
+
+   - A thread ptid, in which case call callback for that thread only.
+     TARG must be non-NULL in this case.
+*/
+
+inline all_non_exited_threads_range
+all_non_exited_threads (target_ops *proc_target = nullptr,
+			ptid_t filter_ptid = minus_one_ptid)
 {
   return all_non_exited_threads_range (proc_target, filter_ptid);
 }

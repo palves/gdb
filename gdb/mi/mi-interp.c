@@ -990,7 +990,7 @@ mi_on_resume_1 (struct mi_interp *mi, target_ops *targ, ptid_t ptid)
      only one inferior, output "all", otherwise, output each resumed
      thread individually.  */
   if ((ptid == minus_one_ptid || ptid.is_pid ())
-      && !multiple_inferiors_p (targ))
+      && !multiple_inferiors_p ())
     fprintf_unfiltered (mi->raw_stdout, "*running,thread-id=\"all\"\n");
   else
     for (thread_info *tp : all_non_exited_threads (targ, ptid))

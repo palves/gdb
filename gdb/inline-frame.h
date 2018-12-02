@@ -39,10 +39,13 @@ extern const struct frame_unwind inline_frame_unwind;
 void skip_inline_frames (thread_info *thread, struct bpstats *stop_chain);
 
 /* Forget about any hidden inlined functions in PTID, which is new or
-   about to be resumed.  If PTID is minus_one_ptid, forget about all
-   hidden inlined functions.  */
+   about to be resumed.  PTID may be minus_one_ptid (all processes of
+   PROC_TARGET) or a PID (all threads in this process).  */
 
 void clear_inline_frame_state (target_ops *proc_target, ptid_t ptid);
+
+/* Forget about any hidden inlined functions in THREAD, which is new
+   or about to be resumed.  */
 
 void clear_inline_frame_state (thread_info *thread);
 

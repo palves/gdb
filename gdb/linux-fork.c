@@ -741,7 +741,7 @@ checkpoint_command (const char *args, int from_tty)
       /* Special case -- if this is the first fork in the list (the
 	 list was hitherto empty), then add inferior_ptid first, as a
 	 special zeroeth fork id.  */
-      fork_info *first = new_fork (ptid_get_pid (inferior_ptid));
+      fork_info *first = new_fork (inferior_ptid.pid ());
       first->next = fork_list;
       fork_list = first;
     }

@@ -188,7 +188,7 @@ clear_thread_inferior_resources (struct thread_info *tp)
 
   thread_cancel_execution_command (tp);
 
-  clear_inline_frame_state (tp->ptid);
+  clear_inline_frame_state (tp);
 }
 
 /* Set the TP's state as exited.  */
@@ -255,8 +255,9 @@ new_thread (struct inferior *inf, ptid_t ptid)
 struct thread_info *
 add_thread_silent (target_ops *targ, ptid_t ptid)
 {
-  inferior *inf = find_inferior_ptid (targ, ptid);
-  gdb_assert (inf != NULL);
+  gdb_assert (targ->stratum () == process_stratum);
+
+  inferior *inf;
 
   thread_info *tp = find_thread_ptid (targ, ptid);
   if (tp)
@@ -274,7 +275,7 @@ add_thread_silent (target_ops *targ, ptid_t ptid)
 
       if (inferior_ptid == ptid)
 	{
-	  thread_info *new_thr = new_thread (inf, null_ptid);
+	  thread_info *new_thr = new_thread (tp->inf, null_ptid);
 
 	  /* Make switch_to_thread not read from the thread.  */
 	  new_thr->state = THREAD_EXITED;
@@ -295,10 +296,14 @@ add_thread_silent (target_ops *targ, ptid_t ptid)
 	  /* All done.  */
 	  return new_thr;
 	}
-      else
-	/* Just go ahead and delete it.  */
-	delete_thread (tp);
+
+      inf = tp->inf;
+
+      /* Just go ahead and delete it.  */
+      delete_thread (tp);
     }
+  else
+    inf = find_inferior_ptid (targ, ptid);
 
   tp = new_thread (inf, ptid);
   gdb::observers::new_thread.notify (tp);
@@ -347,6 +352,16 @@ thread_info::~thread_info ()
   xfree (this->name);
 }
 
+/* Returns true if THR is the current thread.  */
+
+static bool
+is_current_thread (const thread_info *thr)
+{
+  return ((thr->inf->process_target ()
+	   == current_inferior ()->process_target ())
+	  && thr->ptid == inferior_ptid);
+}
+
 /* See gdbthread.h.  */
 
 bool
@@ -354,7 +369,7 @@ thread_info::deletable () const
 {
   /* If this is the current thread, or there's code out there that
      relies on it existing (refcount > 0) we can't delete yet.  */
-  return refcount () == 0 && ptid != inferior_ptid;
+  return refcount () == 0 && !is_current_thread (this);
 }
 
 /* Add TP to the end of the step-over chain LIST_P.  */
@@ -534,6 +549,8 @@ find_thread_by_handle (struct value *thread_handle, struct inferior *inf)
 struct thread_info *
 find_thread_ptid (target_ops *targ, ptid_t ptid)
 {
+  gdb_assert (targ->stratum () == process_stratum);
+
   inferior *inf = find_inferior_ptid (targ, ptid);
   if (inf == NULL)
     return NULL;
@@ -566,14 +583,6 @@ iterate_over_threads (int (*callback) (struct thread_info *, void *),
 }
 
 /* See gdbthread.h.  */
-
-bool
-any_thread_p ()
-{
-  for (thread_info *tp ATTRIBUTE_UNUSED : all_threads ())
-    return true;
-  return false;
-}
 
 bool
 any_thread_p ()
@@ -1925,7 +1934,7 @@ update_threads_executing (void)
 
   targ->threads_executing = false;
 
-  for (inferior *inf : non_exited_inferiors (targ))
+  for (inferior *inf : all_non_exited_inferiors (targ))
     {
       if (!inf->has_execution ())
 	continue;

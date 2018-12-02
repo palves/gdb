@@ -508,15 +508,12 @@ post_create_inferior (struct target_ops *target, int from_tty)
 static void
 kill_if_already_running (int from_tty)
 {
-  if (! ptid_equal (inferior_ptid, null_ptid) && target_has_execution)
+  if (inferior_ptid != null_ptid && target_has_execution)
     {
       /* Bail out before killing the program if we will not be able to
 	 restart it.  */
       target_require_runnable ();
-    }
 
-  if (inferior_ptid != null_ptid && target_has_execution)
-    {
       if (from_tty
 	  && !query (_("The program being debugged has been started already.\n\
 Start it from the beginning? ")))
@@ -653,7 +650,7 @@ run_command_1 (const char *args, int from_tty, enum run_how run_how)
       /* Pass zero for FROM_TTY, because at this point the "run"
 	 command has done its thing; now we are setting up the running
 	 program.  */
-      post_create_inferior (target_stack, 0);
+      post_create_inferior (current_top_target (), 0);
 
       /* Queue a pending event so that the program stops
 	 immediately.  */
@@ -831,7 +828,7 @@ static void
 continue_command (const char *args, int from_tty)
 {
   int async_exec;
-  int all_threads = 0;
+  bool all_threads_p = false;
 
   ERROR_NO_INFERIOR;
 
@@ -843,17 +840,17 @@ continue_command (const char *args, int from_tty)
     {
       if (startswith (args, "-a"))
 	{
-	  all_threads = 1;
+	  all_threads_p = true;
 	  args += sizeof ("-a") - 1;
 	  if (*args == '\0')
 	    args = NULL;
 	}
     }
 
-  if (!non_stop && all_threads)
+  if (!non_stop && all_threads_p)
     error (_("`-a' is meaningless in all-stop mode."));
 
-  if (args != NULL && all_threads)
+  if (args != NULL && all_threads_p)
     error (_("Can't resume all threads and specify "
 	     "proceed count simultaneously."));
 
@@ -870,9 +867,12 @@ continue_command (const char *args, int from_tty)
 	tp = inferior_thread ();
       else
 	{
-	  ALL_THREADS (tp)
-	    if (tp->control.stop_bpstat != NULL)
-	      break;
+	  for (thread_info *it : all_threads ())
+	    if (it->control.stop_bpstat != NULL)
+	      {
+		tp = it;
+		break;
+	      }
 	}
       if (tp != NULL)
 	bs = tp->control.stop_bpstat;
@@ -900,7 +900,7 @@ continue_command (const char *args, int from_tty)
   ERROR_NO_INFERIOR;
   ensure_not_tfind_mode ();
 
-  if (!non_stop || !all_threads)
+  if (!non_stop || !all_threads_p)
     {
       ensure_valid_thread ();
       ensure_not_running ();
@@ -911,7 +911,7 @@ continue_command (const char *args, int from_tty)
   if (from_tty)
     printf_filtered (_("Continuing.\n"));
 
-  continue_1 (all_threads);
+  continue_1 (all_threads_p);
 }
 
 /* Record the starting point of a "step" or "next" command.  */
@@ -1305,6 +1305,8 @@ jump_command (const char *arg, int from_tty)
 
 /* Continue program giving it specified signal.  */
 
+target_ops *user_visible_resume_target (ptid_t resume_ptid, inferior *cur_inf);
+
 static void
 signal_command (const char *signum_exp, int from_tty)
 {
@@ -1356,10 +1358,14 @@ signal_command (const char *signum_exp, int from_tty)
       /* This indicates what will be resumed.  Either a single thread,
 	 a whole process, or all threads of all processes.  */
       ptid_t resume_ptid = user_visible_resume_ptid (0);
+      target_ops *resume_target = user_visible_resume_target (resume_ptid,
+							      current_inferior ());
 
-      for (thread_info *tp : all_non_exited_threads (resume_ptid))
+      thread_info *current = inferior_thread ();
+
+      for (thread_info *tp : all_non_exited_threads (resume_target, resume_ptid))
 	{
-	  if (tp->ptid == inferior_ptid)
+	  if (tp == current)
 	    continue;
 
 	  if (tp->suspend.stop_signal != GDB_SIGNAL_0
@@ -3040,7 +3046,7 @@ interrupt_target_1 (bool all_threads)
 	{
 	  scoped_restore_current_thread restore_thread;
 
-	  for (inferior *inf : inferiors ())
+	  for (inferior *inf : all_inferiors ())
 	    {
 	      switch_to_inferior_no_thread (inf);
 	      stop_current_target_threads_ns (minus_one_ptid);

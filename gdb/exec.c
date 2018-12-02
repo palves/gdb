@@ -125,9 +125,8 @@ exec_close (void)
     }
 }
 
-/* This is the target_ops::close implementation.  Clears all target
-   sections and closes all executable bfds from all program
-   spaces.  */
+/* This is the target_close implementation.  Clears all target
+   sections and closes all executable bfds from all program spaces.  */
 
 void
 exec_target::close ()
@@ -562,15 +561,18 @@ add_target_sections (void *owner,
       program_space *curr_pspace = current_program_space;
 
       /* If these are the first file sections we can provide memory
-	 from, push the file_stratum target.  */
-      for (inferior *inf : inferiors ())
+	 from, push the file_stratum target.  Must do this in all
+	 inferiors sharing the program space.  */
+      for (inferior *inf : all_inferiors ())
 	{
 	  if (inf->pspace != curr_pspace)
 	    continue;
 
+	  if (inf->target_is_pushed (&exec_ops))
+	    continue;
+
 	  switch_to_inferior_no_thread (inf);
-	  if (!target_is_pushed (&exec_ops))
-	    push_target (&exec_ops);
+	  push_target (&exec_ops);
 	}
     }
 }
@@ -649,23 +651,24 @@ remove_target_sections (void *owner)
       old_count = resize_section_table (table, dest - src);
 
       /* If we don't have any more sections to read memory from,
-	 remove the file_stratum target from the stack.  */
+	 remove the file_stratum target from the stack of each
+	 inferior sharing the program space.  */
       if (old_count + (dest - src) == 0)
 	{
 	  scoped_restore_current_thread restore_thread;
 	  program_space *curr_pspace = current_program_space;
 
-	  for (inferior *inf : inferiors ())
+	  for (inferior *inf : all_inferiors ())
 	    {
 	      if (inf->pspace != curr_pspace)
 		continue;
 
 	      if (inf->pspace->target_sections.sections
-		  == inf->pspace->target_sections.sections_end)
-		{
-		  switch_to_inferior_no_thread (inf);
-		  unpush_target (&exec_ops);
-		}
+		  != inf->pspace->target_sections.sections_end)
+		continue;
+
+	      switch_to_inferior_no_thread (inf);
+	      unpush_target (&exec_ops);
 	    }
 	}
     }

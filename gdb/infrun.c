@@ -2283,7 +2283,7 @@ user_visible_resume_ptid (int step)
   return resume_ptid;
 }
 
-static target_ops *
+target_ops *
 user_visible_resume_target (ptid_t resume_ptid, inferior *cur_inf)
 {
   return (resume_ptid == minus_one_ptid
@@ -2974,7 +2974,7 @@ commit_resume_all_targets ()
 {
   scoped_restore_current_thread restore_thread;
 
-  for (inferior *inf : inferiors ())
+  for (inferior *inf : all_inferiors ())
     {
       if (inf->pid != 0
 	  && inf->process_target () != NULL)
@@ -3111,12 +3111,10 @@ proceed (CORE_ADDR addr, enum gdb_signal siggnal)
      threads.  */
   if (!non_stop && !schedlock_applies (cur_thr))
     {
-      target_ops *resume_target = tp->inf->process_target ();
-
       for (thread_info *tp : all_non_exited_threads (resume_target,
 						     resume_ptid))
 	{
-	  switch_to_thread_no_regs (thr);
+	  switch_to_thread_no_regs (tp);
 
 	  /* Ignore the current thread here.  It's handled
 	     afterwards.  */
@@ -3136,7 +3134,7 @@ proceed (CORE_ADDR addr, enum gdb_signal siggnal)
 	  thread_step_over_chain_enqueue (tp);
 	}
 
-      switch_to_thread (tp);
+      switch_to_thread (cur_thr);
     }
 
   /* Enqueue the current thread last, so that we move all other
@@ -3182,8 +3180,8 @@ proceed (CORE_ADDR addr, enum gdb_signal siggnal)
 		fprintf_unfiltered (gdb_stdlog,
 				    "infrun: proceed: [%s] target has "
 				    "no execution\n",
-				    target_pid_to_str (thr->ptid));
-	      return;
+				    target_pid_to_str (tp->ptid));
+	      continue;
 	    }
 
 	  if (tp->resumed)
@@ -3217,7 +3215,7 @@ proceed (CORE_ADDR addr, enum gdb_signal siggnal)
 	    error (_("Command aborted."));
 	}
 
-	switch_to_thread (tp);
+	switch_to_thread (cur_thr);
       }
     else if (!cur_thr->resumed && !thread_is_in_step_over_chain (cur_thr))
       {
@@ -3317,11 +3315,13 @@ static int switch_back_to_stepped_thread (struct execution_control_state *ecs);
 static void
 infrun_thread_stop_requested (ptid_t ptid)
 {
+  target_ops *curr_target = current_inferior ()->process_target ();
+
   /* PTID was requested to stop.  If the thread was already stopped,
      but the user/frontend doesn't know about that yet (e.g., the
      thread had been temporarily paused for some step-over), set up
      for reporting the stop now.  */
-  for (thread_info *tp : all_threads (ptid))
+  for (thread_info *tp : all_threads (curr_target, ptid))
     {
       if (tp->state != THREAD_RUNNING)
 	continue;
@@ -3347,7 +3347,7 @@ infrun_thread_stop_requested (ptid_t ptid)
 
       /* Clear the inline-frame state, since we're re-processing the
 	 stop.  */
-      clear_inline_frame_state (tp->ptid);
+      clear_inline_frame_state (tp);
 
       /* If this thread was paused because some other thread was
 	 doing an inline-step over, let that finish first.  Once
@@ -3474,15 +3474,16 @@ random_pending_event_thread (inferior *inf, ptid_t waiton_ptid)
 {
   int num_events = 0;
 
-  auto has_event = [] (thread_info *tp)
+  auto has_event = [&] (thread_info *tp)
     {
-      return (tp->resumed
+      return (tp->ptid.matches (waiton_ptid)
+	      && tp->resumed
 	      && tp->suspend.waitstatus_pending_p);
     };
 
   /* First see how many events we have.  Count only resumed threads
      that have an event pending.  */
-  for (thread_info *tp : inf->non_exited_threads (waiton_ptid))
+  for (thread_info *tp : inf->non_exited_threads ())
     if (has_event (tp))
       num_events++;
 
@@ -3499,7 +3500,7 @@ random_pending_event_thread (inferior *inf, ptid_t waiton_ptid)
 			num_events, random_selector);
 
   /* Select the Nth thread that has had an event.  */
-  for (thread_info *tp : inf->non_exited_threads (waiton_ptid))
+  for (thread_info *tp : inf->non_exited_threads ())
     if (has_event (tp))
       if (random_selector-- == 0)
 	return tp;
@@ -3645,9 +3646,7 @@ do_target_wait_1 (inferior *inf, ptid_t ptid,
 static bool
 threads_are_resumed_pending_p (inferior *inf)
 {
-  thread_info *tp;
-
-  ALL_NON_EXITED_THREADS_INF (inf, tp)
+  for (thread_info *tp : inf->non_exited_threads ())
     if (tp->resumed
 	&& tp->suspend.waitstatus_pending_p)
       return true;
@@ -4025,13 +4024,10 @@ fetch_inferior_event (void *client_data)
   gdb_assert (ecs->ws.kind != TARGET_WAITKIND_IGNORE);
 
   /* XXX: Quick&dirty hack.  */
-  for (inferior *inf : inferiors ())
+  for (inferior *inf : all_inferiors (ecs->target))
     {
-      if (inf->process_target () == ecs->target)
-	{
-	  switch_to_inferior_no_thread (inf);
-	  break;
-	}
+      switch_to_inferior_no_thread (inf);
+      break;
     }
 
   if (debug_infrun)
@@ -4502,7 +4498,7 @@ wait_one ()
 {
   while (1)
     {
-      for (inferior *inf : inferiors ())
+      for (inferior *inf : all_inferiors ())
 	{
 	  target_ops *target = inf->process_target ();
 	  if (target == NULL
@@ -4529,7 +4525,7 @@ wait_one ()
 
       FD_ZERO (&readfds);
 
-      for (inferior *inf : inferiors ())
+      for (inferior *inf : all_inferiors ())
 	{
 	  target_ops *target = inf->process_target ();
 	  if (target == NULL
@@ -4940,7 +4936,7 @@ handle_no_resumed (struct execution_control_state *ecs)
      the synchronous command show "no unwaited-for " to the user.  */
   update_thread_list ();
 
-  for (thread_info *thread : non_exited_threads (ecs->target))
+  for (thread_info *thread : all_non_exited_threads (ecs->target))
     {
       if (thread->executing
 	  || thread->suspend.waitstatus_pending_p)
@@ -4960,7 +4956,7 @@ handle_no_resumed (struct execution_control_state *ecs)
      process exited meanwhile (thus updating the thread list results
      in an empty thread list).  In this case we know we'll be getting
      a process exit event shortly.  */
-  for (inferior *inf : non_exited_inferiors (ecs->target))
+  for (inferior *inf : all_non_exited_inferiors (ecs->target))
     {
       thread_info *thread = any_live_thread_of_inferior (inf);
       if (thread == NULL)

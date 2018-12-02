@@ -556,10 +556,10 @@ record_btrace_target::info_record ()
 
   DEBUG ("info");
 
-  tp = find_thread_ptid (current_inferior ()->process_target (),
-			 inferior_ptid);
-  if (tp == NULL)
+  if (inferior_ptid == null_ptid)
     error (_("No thread."));
+
+  tp = inferior_thread ();
 
   validate_registers_access ();
 
@@ -1377,7 +1377,8 @@ record_btrace_target::call_history_from (ULONGEST from, int size,
 enum record_method
 record_btrace_target::record_method (ptid_t ptid)
 {
-  struct thread_info * const tp = find_thread_ptid (ptid);
+  target_ops *proc_target = current_inferior ()->process_target ();
+  struct thread_info * const tp = find_thread_ptid (proc_target, ptid);
 
   if (tp == NULL)
     error (_("No thread."));
@@ -1393,7 +1394,8 @@ record_btrace_target::record_method (ptid_t ptid)
 bool
 record_btrace_target::record_is_replaying (ptid_t ptid)
 {
-  for (thread_info *tp : all_non_exited_threads (ptid))
+  target_ops *proc_target = current_inferior ()->process_target ();
+  for (thread_info *tp : all_non_exited_threads (proc_target, ptid))
     if (btrace_is_replaying (tp))
       return true;
 
@@ -1529,7 +1531,7 @@ record_btrace_target::fetch_registers (struct regcache *regcache, int regno)
   struct btrace_insn_iterator *replay;
   struct thread_info *tp;
 
-  tp = find_thread_ptid (current_inferior (), regcache->ptid ());
+  tp = find_thread_ptid (regcache->target (), regcache->ptid ());
   gdb_assert (tp != NULL);
 
   replay = tp->btrace.replay;
@@ -2163,12 +2165,15 @@ record_btrace_target::resume (ptid_t ptid, int step, enum gdb_signal signal)
   /* We just indicate the resume intent here.  The actual stepping happens in
      record_btrace_wait below.
 
-     For all-stop targets, we only step INFERIOR_PTID and continue others.  */
+      For all-stop targets, we only step INFERIOR_PTID and continue others.  */
+
+  target_ops *proc_target = current_inferior ()->process_target ();
+
   if (!target_is_non_stop_p ())
     {
       gdb_assert (inferior_ptid.matches (ptid));
 
-      for (thread_info *tp : all_non_exited_threads (ptid))
+      for (thread_info *tp : all_non_exited_threads (proc_target, ptid))
 	{
 	  if (tp->ptid.matches (inferior_ptid))
 	    record_btrace_resume_thread (tp, flag);
@@ -2178,7 +2183,7 @@ record_btrace_target::resume (ptid_t ptid, int step, enum gdb_signal signal)
     }
   else
     {
-      for (thread_info *tp : all_non_exited_threads (ptid))
+      for (thread_info *tp : all_non_exited_threads (proc_target, ptid))
 	record_btrace_resume_thread (tp, flag);
     }
 
@@ -2536,7 +2541,8 @@ record_btrace_target::wait (ptid_t ptid, struct target_waitstatus *status,
     }
 
   /* Keep a work list of moving threads.  */
-  for (thread_info *tp : all_non_exited_threads (ptid))
+  target_ops *proc_target = current_inferior ()->process_target ();
+  for (thread_info *tp : all_non_exited_threads (proc_target, ptid))
     if ((tp->btrace.flags & (BTHR_MOVE | BTHR_STOP)) != 0)
       moving.push_back (tp);
 
@@ -2656,7 +2662,9 @@ record_btrace_target::stop (ptid_t ptid)
     }
   else
     {
-      for (thread_info *tp : all_non_exited_threads (ptid))
+      target_ops *proc_target = current_inferior ()->process_target ();
+
+      for (thread_info *tp : all_non_exited_threads (proc_target, ptid))
 	{
 	  tp->btrace.flags &= ~BTHR_MOVE;
 	  tp->btrace.flags |= BTHR_STOP;

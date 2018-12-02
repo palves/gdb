@@ -161,7 +161,6 @@ static unsigned int targetdebug = 0;
 static void
 set_targetdebug  (const char *args, int from_tty, struct cmd_list_element *c)
 {
-  /* XXX go through all connections?  */
   if (targetdebug)
     push_target (the_debug_target);
   else
@@ -577,7 +576,7 @@ decref_target (target_ops *t)
   t->decref ();
   if (t->refcount () == 0)
     {
-      if (t->to_stratum == process_stratum)
+      if (t->stratum () == process_stratum)
 	{
 	  /* Drop it from the connection list.  */
 	  g_process_targets.erase (t->connection_number);
@@ -594,14 +593,15 @@ target_stack::push (target_ops *t)
 {
   t->incref ();
 
-  if (t->to_stratum == process_stratum && t->connection_number == 0)
+  strata stratum = t->stratum ();
+
+  if (stratum == process_stratum && t->connection_number == 0)
     {
       t->connection_number = ++highest_target_connection_num;
       g_process_targets[t->connection_number] = t;
     }
 
   /* If there's already a target at this stratum, remove it.  */
-  strata stratum = t->stratum ();
 
   if (m_stack[stratum] != NULL)
     {
@@ -1994,7 +1994,7 @@ dispose_inferior (inferior *inf)
      inferior list.  Killed inferiors clearly don't need to be killed
      again, so, we're done.  */
   if (inf->pid == 0)
-    return 0;
+    return;
 
   thread_info *thread = any_thread_of_inferior (inf);
   if (thread != NULL)
@@ -3357,7 +3357,7 @@ target_pass_ctrlc (void)
 {
   /* Pass the Ctrl-C to the first inferior that has a thread
      running.  */
-  for (inferior *inf : inferiors ())
+  for (inferior *inf : all_inferiors ())
     {
       target_ops *proc_target = inf->process_target ();
       if (proc_target == NULL)

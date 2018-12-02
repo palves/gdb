@@ -372,7 +372,9 @@ get_thread_arch_aspace_regcache (target_ops *target,
 struct regcache *
 get_thread_arch_regcache (target_ops *target, ptid_t ptid, struct gdbarch *gdbarch)
 {
-  address_space *aspace = find_inferior_ptid (target, ptid)->aspace;
+  scoped_restore_current_inferior restore_current_inferior;
+  set_current_inferior (find_inferior_ptid (target, ptid));
+  address_space *aspace = target_thread_address_space (ptid);
 
   return get_thread_arch_aspace_regcache (target, ptid, gdbarch, aspace);
 }
@@ -421,8 +423,11 @@ get_current_regcache (void)
 struct regcache *
 get_thread_regcache_for_ptid (ptid_t ptid)
 {
-  inferior *inf = current_inferior ();
-  return get_thread_regcache (inf->process_target (), ptid);
+  /* This method doesn't take a target_ops parameter because it's a
+     common/ routine implemented by both gdb and gdbserver.  It always
+     refers to a ptid of the current target. */
+  target_ops *proc_target = current_inferior ()->process_target ();
+  return get_thread_regcache (proc_target, ptid);
 }
 
 /* Observer for the target_changed event.  */

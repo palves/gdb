@@ -407,7 +407,7 @@ breakpoints_should_be_inserted_now (void)
 	  return 1;
 	}
 
-      for (inferior *inf : inferiors ())
+      for (inferior *inf : all_inferiors ())
 	if (inf->has_execution ()
 	    && threads_are_executing (inf->process_target ()))
 	  return 1;

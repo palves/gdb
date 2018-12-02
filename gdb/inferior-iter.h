@@ -36,18 +36,24 @@ public:
   typedef int difference_type;
 
   /* Create an iterator pointing at HEAD.  */
-  explicit all_inferiors_iterator (inferior *head)
-    : m_inf (head)
-  {}
+  explicit all_inferiors_iterator (target_ops *proc_target,
+				   inferior *head)
+    : m_proc_target (proc_target)
+  {
+    /* Advance M_INF to the first inferior's position.  */
+    for (m_inf = head; m_inf != NULL; m_inf = m_inf->next)
+      if (m_inf_matches ())
+	return;
+  }
 
   /* Create a one-past-end iterator.  */
   all_inferiors_iterator ()
-    : m_inf (nullptr)
+    : m_proc_target (nullptr), m_inf (nullptr)
   {}
 
   all_inferiors_iterator &operator++ ()
   {
-    m_inf = m_inf->next;
+    advance ();
     return *this;
   }
 
@@ -58,6 +64,30 @@ public:
   { return m_inf != other.m_inf; }
 
 private:
+  /* Advance to next inferior, skipping filtered inferiors.  */
+  void advance ()
+  {
+    /* The loop below is written in the natural way as-if we'd always
+       start at the beginning of the inferior list.  This fast forwards
+       the algorithm to the actual current position.  */
+    goto start;
+
+    while (m_inf != NULL)
+      {
+	if (m_inf_matches ())
+	  return;
+      start:
+	m_inf = m_inf->next;
+      }
+  }
+
+  bool m_inf_matches ()
+  {
+    return (m_proc_target == nullptr
+	    || m_proc_target == m_inf->process_target ());
+  }
+
+  target_ops *m_proc_target;
   inferior *m_inf;
 };
 
@@ -80,10 +110,17 @@ using all_non_exited_inferiors_iterator
    inferiors with range-for.  */
 struct all_inferiors_range
 {
+  all_inferiors_range (target_ops *proc_target = nullptr)
+    : m_filter_target (proc_target)
+  {}
+
   all_inferiors_iterator begin () const
-  { return all_inferiors_iterator (inferior_list); }
+  { return all_inferiors_iterator (m_filter_target, inferior_list); }
   all_inferiors_iterator end () const
   { return all_inferiors_iterator (); }
+
+private:
+  target_ops *m_filter_target;
 };
 
 /* Iterate over all inferiors, safely.  */
@@ -97,10 +134,22 @@ using all_inferiors_safe_iterator
 
 struct all_inferiors_safe_range
 {
+  explicit all_inferiors_safe_range (target_ops *filter_target)
+    : m_filter_target (filter_target)
+  {}
+
+  all_inferiors_safe_range ()
+    : m_filter_target (nullptr)
+  {}
+
   all_inferiors_safe_iterator begin () const
-  { return all_inferiors_safe_iterator (inferior_list); }
+  { return all_inferiors_safe_iterator (m_filter_target, inferior_list); }
   all_inferiors_safe_iterator end () const
   { return all_inferiors_safe_iterator (); }
+
+private:
+  /* The filter.  */
+  target_ops *m_filter_target;
 };
 
 /* A range adapter that makes it possible to iterate over all
@@ -108,10 +157,22 @@ struct all_inferiors_safe_range
 
 struct all_non_exited_inferiors_range
 {
+  explicit all_non_exited_inferiors_range (target_ops *filter_target)
+    : m_filter_target (filter_target)
+  {}
+
+  all_non_exited_inferiors_range ()
+    : m_filter_target (nullptr)
+  {}
+
   all_non_exited_inferiors_iterator begin () const
-  { return all_non_exited_inferiors_iterator (inferior_list); }
+  { return all_non_exited_inferiors_iterator (m_filter_target, inferior_list); }
   all_non_exited_inferiors_iterator end () const
   { return all_non_exited_inferiors_iterator (); }
+
+private:
+  /* The filter.  */
+  target_ops *m_filter_target;
 };
 
 #endif /* !defined (INFERIOR_ITER_H) */
