@@ -29,6 +29,7 @@ struct regcache;
 struct regset;
 struct gdbarch;
 struct address_space;
+struct thread_info;
 
 extern struct regcache *get_current_regcache (void);
 extern struct regcache *get_thread_regcache (ptid_t ptid);
