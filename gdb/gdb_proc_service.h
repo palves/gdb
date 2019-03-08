@@ -21,13 +21,17 @@
 
 #include "common/gdb_proc_service.h"
 
+namespace gdb {
+
 struct thread_info;
+
+} /* namespace gdb */
 
 /* GDB specific structure that identifies the target process.  */
 struct ps_prochandle
 {
   /* The LWP we use for memory reads.  */
-  thread_info *thread;
+  gdb::thread_info *thread;
 };
 
 #endif /* gdb_proc_service.h */
