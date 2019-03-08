@@ -217,7 +217,7 @@ class lookup_name_info final
     if (!m_demangled_hashes_p[lang])
       {
 	m_demangled_hashes[lang]
-	  = ::search_name_hash (lang, language_lookup_name (lang).c_str ());
+	  = gdb::search_name_hash (lang, language_lookup_name (lang).c_str ());
 	m_demangled_hashes_p[lang] = true;
       }
     return m_demangled_hashes[lang];
