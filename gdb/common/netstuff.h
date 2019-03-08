@@ -21,6 +21,8 @@
 
 #include <string>
 
+struct addrinfo;
+
 namespace gdb {
 
 /* Like NI_MAXHOST/NI_MAXSERV, but enough for numeric forms.  */
