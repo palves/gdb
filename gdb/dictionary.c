@@ -911,14 +911,16 @@ struct multidictionary
   unsigned short n_allocated_dictionaries;
 };
 
+} /* namespace gdb */
+
 /* A hasher for enum language.  Injecting this into std is a convenience
    when using unordered_map with C++11.  */
 
 namespace std
 {
-  template<> struct hash<enum language>
+  template<> struct hash<gdb::language>
   {
-    typedef enum language argument_type;
+    typedef gdb::language argument_type;
     typedef std::size_t result_type;
 
     result_type operator() (const argument_type &l) const noexcept
@@ -927,6 +929,8 @@ namespace std
     }
   };
 } /* namespace std */
+
+namespace gdb {
 
 /* A helper function to collate symbols on the pending list by language.  */
 
