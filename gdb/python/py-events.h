@@ -24,6 +24,8 @@
 #include "python-internal.h"
 #include "inferior.h"
 
+namespace gdb {
+
 /* Stores a list of objects to be notified when the event for which this
    registry tracks occurs.  */
 
@@ -53,5 +55,7 @@ extern events_object gdb_py_events;
 
 extern eventregistry_object *create_eventregistry_object (void);
 extern int evregpy_no_listeners_p (eventregistry_object *registry);
+
+} /* namespace gdb */
 
 #endif /* PYTHON_PY_EVENTS_H */
