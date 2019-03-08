@@ -86,6 +86,11 @@ ps_xfer_memory (const struct ps_prochandle *ph, psaddr_t addr,
 
   return (ret == 0 ? PS_OK : PS_ERR);
 }
+
+} /* namespace gdb */
+
+using namespace gdb;
+
 
 
 /* Search for the symbol named NAME within the object named OBJ within
@@ -210,6 +215,8 @@ ps_getpid (struct ps_prochandle *ph)
 {
   return ph->thread->ptid.pid ();
 }
+
+namespace gdb {
 
 void
 _initialize_proc_service (void)
