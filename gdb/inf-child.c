@@ -346,7 +346,7 @@ inf_child_target::fileio_close (int fd, int *target_errno)
 {
   int ret;
 
-  ret = ::close (fd);
+  ret = gdb::close (fd);
   if (ret == -1)
     *target_errno = host_to_fileio_error (errno);
 
