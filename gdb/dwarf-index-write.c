@@ -128,7 +128,7 @@ public:
      as a target-format integer which is LEN bytes long.  */
   void append_uint (size_t len, bfd_endian byte_order, ULONGEST val)
   {
-    ::store_unsigned_integer (grow (len), len, byte_order, val);
+    store_unsigned_integer (grow (len), len, byte_order, val);
   }
 
   /* Return the size of the buffer.  */
@@ -146,7 +146,7 @@ public:
   /* Write the buffer to FILE.  */
   void file_write (FILE *file) const
   {
-    ::file_write (file, m_vec);
+    gdb::file_write (file, m_vec);
   }
 
 private:
@@ -872,8 +872,8 @@ public:
   {
     /* Verify the build method has been already called.  */
     gdb_assert (!m_abbrev_table.empty ());
-    ::file_write (file_names, m_bucket_table);
-    ::file_write (file_names, m_hash_table);
+    gdb::file_write (file_names, m_bucket_table);
+    gdb::file_write (file_names, m_hash_table);
     m_name_table_string_offs.file_write (file_names);
     m_name_table_entry_offs.file_write (file_names);
     m_abbrev_table.file_write (file_names);
@@ -1098,7 +1098,7 @@ private:
     /* Implement offset_vec::file_write.  */
     void file_write (FILE *file) const override
     {
-      ::file_write (file, m_vec);
+      gdb::file_write (file, m_vec);
     }
 
   private:
