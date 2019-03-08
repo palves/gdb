@@ -24,6 +24,8 @@
 
 #include "gcc-cp-interface.h"
 
+namespace gdb {
+
 class gcc_cp_plugin
 {
 public:
@@ -86,5 +88,7 @@ private:
   /* The GCC C++ context.  */
   struct gcc_cp_context *m_context;
 };
+
+} /* namespace gdb */
 
 #endif /* COMPILE_GCC_CP_PLUGIN_H */
