@@ -24,6 +24,8 @@
 #include "compile-c.h"
 #include "objfiles.h"
 
+namespace gdb {
+
 /* Convert a pointer type to its gcc representation.  */
 
 static gcc_type
@@ -389,9 +391,6 @@ compile_c_instance::convert_type (struct type *type)
   { return FORWARD (N, a, b, c, d, e, f, g); }
 
 #include "gcc-c-fe.def"
-
-namespace gdb {
-
 
 #undef GCC_METHOD0
 #undef GCC_METHOD1
