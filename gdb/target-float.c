@@ -22,6 +22,21 @@
 #include "floatformat.h"
 #include "target-float.h"
 
+#include <cmath>
+#include <limits>
+
+/* The order of the following headers is important for making sure
+   decNumber structure is large enough to hold decimal128 digits.  */
+
+#include "dpd/decimal128.h"
+#include "dpd/decimal64.h"
+#include "dpd/decimal32.h"
+
+#ifdef HAVE_LIBMPFR
+# include <mpfr.h>
+#endif
+
+namespace gdb {
 
 /* Target floating-point operations.
 
@@ -62,9 +77,6 @@ public:
 
 
 /* Helper routines operating on binary floating-point data.  */
-
-#include <cmath>
-#include <limits>
 
 /* Different kinds of floatformat numbers recognized by
    floatformat_classify.  To avoid portability issues, we use local
@@ -1155,8 +1167,6 @@ host_float_ops<T>::compare (const gdb_byte *x, const struct type *type_x,
 
 #define MPFR_USE_INTMAX_T
 
-#include <mpfr.h>
-
 class mpfr_float_ops : public target_float_ops
 {
 public:
@@ -1719,16 +1729,6 @@ mpfr_float_ops::compare (const gdb_byte *x, const struct type *type_x,
    described in http://grouper.ieee.org/groups/754/revision.html and
    http://www2.hursley.ibm.com/decimal/.  It completes binary floating
    point by representing floating point more exactly.  */
-
-/* The order of the following headers is important for making sure
-   decNumber structure is large enough to hold decimal128 digits.  */
-
-#include "dpd/decimal128.h"
-#include "dpd/decimal64.h"
-#include "dpd/decimal32.h"
-
-namespace gdb {
-
 
 /* When using decimal128, this is the maximum string length + 1
    (value comes from libdecnumber's DECIMAL128_String constant).  */
