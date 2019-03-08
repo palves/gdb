@@ -22,15 +22,15 @@
 
 #include "common/observable.h"
 
+namespace gdb
+{
+
 struct bpstats;
 struct so_list;
 struct objfile;
 struct thread_info;
 struct inferior;
 struct trace_state_variable;
-
-namespace gdb
-{
 
 namespace observers
 {
