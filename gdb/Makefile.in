@@ -2506,7 +2506,7 @@ po/$(PACKAGE).pot: force
 	        -e 's/\([ \t;,(]\)free$$/\1xfree/g' \
 	        -e 's/\([ \t;,(]\)fprintf/\1parser_fprintf/g' \
 		-e 's/yy_flex_xrealloc/yyxrealloc/g' \
-		-e 's/static \(void yy_fatal_error\)/\1/g' \
+		-e 's/static \(void \(yynoreturn \)\?yy_fatal_error\)/\1/g' \
 	      > $@.new && \
 	    mv $@.new $@
 
