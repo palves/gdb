@@ -21,8 +21,6 @@
 #ifndef GDBTHREAD_H
 #define GDBTHREAD_H
 
-struct symtab;
-
 #include "breakpoint.h"
 #include "frame.h"
 #include "ui-out.h"
@@ -34,7 +32,10 @@ struct symtab;
 #include "common/common-gdbthread.h"
 #include "common/forward-scope-exit.h"
 
+namespace gdb {
+
 struct inferior;
+struct symtab;
 
 /* Frontend view of the thread state.  Possible extensions: stepping,
    finishing, until(ling),...
@@ -507,6 +508,8 @@ void thread_change_ptid (ptid_t old_ptid, ptid_t new_ptid);
    once for each known thread.  */
 typedef int (*thread_callback_func) (struct thread_info *, void *);
 extern struct thread_info *iterate_over_threads (thread_callback_func, void *);
+
+} /* namespace gdb */
 
 /* Pull in the internals of the inferiors/threads ranges and
    iterators.  Must be done after struct thread_info is defined.  */

@@ -43,6 +43,8 @@
 #include "common/common-inferior.h"
 #include "gdbthread.h"
 
+namespace gdb {
+
 struct target_waitstatus;
 struct frame_info;
 struct ui_file;
@@ -602,6 +604,8 @@ private:
 /* Traverse all inferiors.  */
 
 extern struct inferior *inferior_list;
+
+} /* namespace gdb */
 
 /* Pull in the internals of the inferiors ranges and iterators.  Must
    be done after struct inferior is defined.  */
