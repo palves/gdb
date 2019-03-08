@@ -23,8 +23,6 @@
 #include "traits.h"
 #include "obstack.h"
 
-namespace gdb {
-
 /* Poison memset of non-POD types.  The idea is catching invalid
    initialization of non-POD structs that is easy to be introduced as
    side effect of refactoring.  For example, say this:
@@ -102,6 +100,8 @@ using IsFreeable = gdb::Or<std::is_trivially_destructible<T>, std::is_void<T>>;
 
 template <typename T, typename = gdb::Requires<gdb::Not<IsFreeable<T>>>>
 void free (T *ptr) = delete;
+
+namespace gdb {
 
 template<typename T>
 static T *
