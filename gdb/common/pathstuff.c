@@ -27,6 +27,8 @@
 #include <windows.h>
 #endif
 
+namespace gdb {
+
 /* See common/pathstuff.h.  */
 
 gdb::unique_xmalloc_ptr<char>
@@ -288,3 +290,5 @@ make_temp_filename (const std::string &f)
   strcat (filename_temp.data () + f.size (), "-XXXXXX");
   return filename_temp;
 }
+
+} /* namespace gdb */
