@@ -21,6 +21,7 @@
 #include "common/selftest.h"
 #include "common/scoped_restore.h"
 
+namespace gdb {
 namespace selftests {
 namespace scoped_restore_tests {
 
@@ -109,3 +110,5 @@ _initialize_scoped_restore_selftests ()
   selftests::register_test ("scoped_restore",
 			    selftests::scoped_restore_tests::run_tests);
 }
+
+} /* namespace gdb */

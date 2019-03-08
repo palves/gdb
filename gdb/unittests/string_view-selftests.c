@@ -21,8 +21,6 @@
    the "real" version.  */
 #if __cplusplus < 201703L
 
-#define GNULIB_NAMESPACE gnulib
-
 #include "defs.h"
 #include "common/selftest.h"
 #include "common/gdb_string_view.h"
@@ -41,6 +39,7 @@
    gdb::string_view.  */
 #define GDB_STRING_VIEW
 
+namespace gdb {
 namespace selftests {
 namespace string_view {
 
@@ -175,5 +174,7 @@ _initialize_string_view_selftests ()
 {
   selftests::register_test ("string_view", selftests::string_view::run_tests);
 }
+
+} /* namespace gdb */
 
 #endif /* __cplusplus < 201703L */

@@ -21,6 +21,7 @@
 #include "common/selftest.h"
 #include "ui-style.h"
 
+namespace gdb {
 namespace selftests {
 namespace style {
 
@@ -107,3 +108,5 @@ _initialize_style_selftest ()
   selftests::register_test ("style",
 			    selftests::style::run_tests);
 }
+
+} /* namespace gdb */

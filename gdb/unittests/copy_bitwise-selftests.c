@@ -21,6 +21,7 @@
 #include "common/selftest.h"
 #include "utils.h"
 
+namespace gdb {
 namespace selftests {
 
 /* Helper function for the unit test of copy_bitwise.  Convert NBITS bits
@@ -157,3 +158,5 @@ _initialize_copy_bitwise_utils_selftests ()
 {
   selftests::register_test ("copy_bitwise", selftests::copy_bitwise_tests);
 }
+
+} /* namespace gdb */

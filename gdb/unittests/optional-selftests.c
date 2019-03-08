@@ -27,6 +27,8 @@
 #include <string>
 #include <memory>
 
+namespace gdb {
+
 /* libstdc++'s testsuite uses VERIFY.  */
 #define VERIFY SELF_CHECK
 
@@ -92,3 +94,6 @@ _initialize_optional_selftests ()
 {
   selftests::register_test ("optional", selftests::optional::run_tests);
 }
+
+} /* namespace gdb */
+

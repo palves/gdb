@@ -37,16 +37,17 @@ struct B { };
 } // namespace capacity_1
 } // namespace string_view
 } // namespace selftests
+} // namespace gdb
 
 // char_traits specialization
 namespace std
 {
   template<>
-    struct char_traits<selftests::string_view::capacity_1::A<
-	selftests::string_view::capacity_1::B> >
+    struct char_traits<gdb::selftests::string_view::capacity_1::A<
+	gdb::selftests::string_view::capacity_1::B> >
     {
-      typedef selftests::string_view::capacity_1::A<
-	  selftests::string_view::capacity_1::B> char_type;
+      typedef gdb::selftests::string_view::capacity_1::A<
+	  gdb::selftests::string_view::capacity_1::B> char_type;
       // Unsigned as wint_t in unsigned.
       typedef unsigned long  	int_type;
       typedef streampos 	pos_type;
@@ -127,6 +128,7 @@ namespace std
     };
 } // namespace std
 
+namespace gdb {
 namespace selftests {
 namespace string_view {
 namespace capacity_1 {

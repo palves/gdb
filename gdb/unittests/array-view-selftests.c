@@ -22,6 +22,7 @@
 #include "common/array-view.h"
 #include <array>
 
+namespace gdb {
 namespace selftests {
 namespace array_view_tests {
 
@@ -529,3 +530,5 @@ _initialize_array_view_selftests ()
   selftests::register_test ("array_view",
 			    selftests::array_view_tests::run_tests);
 }
+
+} /* namespace gdb */

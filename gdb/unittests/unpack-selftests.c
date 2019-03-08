@@ -24,6 +24,7 @@
 #include "gdbtypes.h"
 #include "arch-utils.h"
 
+namespace gdb {
 namespace selftests {
 namespace unpack {
 
@@ -59,3 +60,5 @@ _initialize_unpack_selftests ()
   selftests::register_test_foreach_arch
     ("unpack_field_as_long", selftests::unpack::unpack_field_as_long_tests);
 }
+
+} /* namespace gdb */

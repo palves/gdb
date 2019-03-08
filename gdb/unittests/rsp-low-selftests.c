@@ -21,6 +21,7 @@
 #include "common/selftest.h"
 #include "common/rsp-low.h"
 
+namespace gdb {
 namespace selftests {
 namespace rsp_low {
 
@@ -69,3 +70,5 @@ _initialize_rsp_low_selftests ()
   selftests::register_test ("hex2str",
 			    selftests::rsp_low::test_hex2str);
 }
+
+} /* namespace gdb */

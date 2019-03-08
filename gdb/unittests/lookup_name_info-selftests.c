@@ -21,6 +21,7 @@
 #include "common/selftest.h"
 #include "symtab.h"
 
+namespace gdb {
 namespace selftests {
 namespace lookup_name {
 
@@ -109,3 +110,5 @@ _initialize_lookup_name_info_selftests ()
   selftests::register_test ("lookup_name_info",
 			    selftests::lookup_name::run_tests);
 }
+
+} /* namespace gdb */

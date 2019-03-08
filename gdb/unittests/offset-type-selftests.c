@@ -23,6 +23,7 @@
 #include "common/underlying.h"
 #include "common/valid-expr.h"
 
+namespace gdb {
 namespace selftests {
 namespace offset_type {
 
@@ -176,3 +177,5 @@ _initialize_offset_type_selftests ()
 {
   selftests::register_test ("offset_type", selftests::offset_type::run_tests);
 }
+
+} /* namespace gdb */

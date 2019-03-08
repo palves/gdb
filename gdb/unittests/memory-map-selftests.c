@@ -21,6 +21,8 @@
 #include "common/selftest.h"
 #include "memory-map.h"
 
+namespace gdb {
+
 #if defined(HAVE_LIBEXPAT)
 
 namespace selftests {
@@ -85,3 +87,5 @@ _initialize_memory_map_selftests ()
      selftests::memory_map_tests::parse_memory_map_tests);
 #endif
 }
+
+} /* namespace gdb */

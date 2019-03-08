@@ -21,6 +21,7 @@
 #include "common/format.h"
 #include "common/selftest.h"
 
+namespace gdb {
 namespace selftests {
 namespace format_pieces {
 
@@ -29,7 +30,7 @@ namespace format_pieces {
 static void
 check (const char *str, const std::vector<format_piece> &expected_pieces)
 {
-  ::format_pieces pieces (&str);
+  gdb::format_pieces pieces (&str);
 
   SELF_CHECK ((pieces.end () - pieces.begin ()) == expected_pieces.size ());
   SELF_CHECK (std::equal (pieces.begin (), pieces.end (),
@@ -74,3 +75,5 @@ _initialize_format_pieces_selftests ()
   selftests::register_test ("format_pieces",
 			    selftests::format_pieces::run_tests);
 }
+
+} /* namespace gdb */

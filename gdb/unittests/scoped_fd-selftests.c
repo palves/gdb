@@ -24,6 +24,7 @@
 #include "config.h"
 #include "common/selftest.h"
 
+namespace gdb {
 namespace selftests {
 namespace scoped_fd {
 
@@ -38,7 +39,7 @@ test_destroy ()
   unlink (filename);
   errno = 0;
   {
-    ::scoped_fd sfd (fd);
+    gdb::scoped_fd sfd (fd);
 
     SELF_CHECK (sfd.get () == fd);
   }
@@ -57,7 +58,7 @@ test_release ()
   unlink (filename);
   errno = 0;
   {
-    ::scoped_fd sfd (fd);
+    gdb::scoped_fd sfd (fd);
 
     SELF_CHECK (sfd.release () == fd);
   }
@@ -71,7 +72,7 @@ test_to_file ()
 {
   char filename[] = "scoped_fd-selftest-XXXXXX";
 
-  ::scoped_fd sfd (gdb_mkostemp_cloexec (filename));
+  gdb::scoped_fd sfd (gdb_mkostemp_cloexec (filename));
   SELF_CHECK (sfd.get () >= 0);
 
   unlink (filename);
@@ -99,3 +100,5 @@ _initialize_scoped_fd_selftests ()
   selftests::register_test ("scoped_fd",
 			    selftests::scoped_fd::run_tests);
 }
+
+} /* namespace gdb */

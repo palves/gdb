@@ -21,6 +21,7 @@
 #include "common/selftest.h"
 #include "common/observable.h"
 
+namespace gdb {
 namespace selftests {
 namespace observers {
 
@@ -133,3 +134,5 @@ _initialize_observer_selftest ()
   selftests::register_test ("gdb::observers",
 			    selftests::observers::run_tests);
 }
+
+} /* namespace gdb */

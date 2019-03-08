@@ -30,6 +30,7 @@
 
 #include <unistd.h>
 
+namespace gdb {
 namespace selftests {
 namespace scoped_mmap {
 
@@ -41,8 +42,8 @@ test_destroy ()
 
   errno = 0;
   {
-    ::scoped_mmap smmap (nullptr, sysconf (_SC_PAGESIZE), PROT_WRITE,
-			 MAP_ANONYMOUS | MAP_PRIVATE, 0, 0);
+    gdb::scoped_mmap smmap (nullptr, sysconf (_SC_PAGESIZE), PROT_WRITE,
+			    MAP_ANONYMOUS | MAP_PRIVATE, 0, 0);
 
     mem = smmap.get ();
     SELF_CHECK (mem != nullptr);
@@ -59,8 +60,8 @@ test_release ()
 
   errno = 0;
   {
-    ::scoped_mmap smmap (nullptr, sysconf (_SC_PAGESIZE), PROT_WRITE,
-			 MAP_ANONYMOUS | MAP_PRIVATE, 0, 0);
+    gdb::scoped_mmap smmap (nullptr, sysconf (_SC_PAGESIZE), PROT_WRITE,
+			    MAP_ANONYMOUS | MAP_PRIVATE, 0, 0);
 
     mem = smmap.release ();
     SELF_CHECK (mem != nullptr);
@@ -98,7 +99,7 @@ test_normal ()
   gdb::unlinker unlink_test_file (filename);
 
   {
-    ::scoped_mmap m = ::mmap_file (filename);
+    gdb::scoped_mmap m = gdb::mmap_file (filename);
 
     SELF_CHECK (m.get () != MAP_FAILED);
     SELF_CHECK (m.size () == 7);
@@ -113,7 +114,7 @@ test_invalid_filename ()
   bool threw = false;
 
   try {
-      ::scoped_mmap m = ::mmap_file ("/this/file/should/not/exist");
+      gdb::scoped_mmap m = gdb::mmap_file ("/this/file/should/not/exist");
   } catch (gdb_exception &e) {
       threw = true;
   }
@@ -145,3 +146,5 @@ _initialize_scoped_mmap_selftests ()
 			    selftests::mmap_file::run_tests);
 #endif
 }
+
+} /* namespace gdb */

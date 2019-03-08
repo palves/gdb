@@ -21,6 +21,7 @@
 #include "common/ptid.h"
 #include <type_traits>
 
+namespace gdb {
 namespace selftests {
 namespace ptid {
 
@@ -151,3 +152,4 @@ static_assert (!ptid_t (2, 2, 2).matches (both),
 
 } /* namespace ptid */
 } /* namespace selftests */
+} /* namespace gdb */

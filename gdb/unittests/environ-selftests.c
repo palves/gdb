@@ -22,6 +22,8 @@
 #include "common/environ.h"
 #include "diagnostics.h"
 
+namespace gdb {
+
 static const char gdb_selftest_env_var[] = "GDB_SELFTEST_ENVIRON";
 
 static bool
@@ -304,3 +306,5 @@ _initialize_environ_selftests ()
   selftests::register_test ("gdb_environ",
 			    selftests::gdb_environ_tests::run_tests);
 }
+
+} /* namespace gdb */

@@ -21,6 +21,7 @@
 #include "common/selftest.h"
 #include "memrange.h"
 
+namespace gdb {
 namespace selftests {
 namespace memrange_tests {
 
@@ -113,3 +114,5 @@ _initialize_memrange_selftests ()
     ("normalize_mem_ranges",
      selftests::memrange_tests::normalize_mem_ranges_tests);
 }
+
+} /* namespace gdb */

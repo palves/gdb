@@ -35,6 +35,7 @@
 #include <netinet/tcp.h>
 #endif
 
+namespace gdb {
 namespace selftests {
 namespace parse_connection_spec_tests {
 
@@ -250,3 +251,5 @@ _initialize_parse_connection_spec_selftests ()
   selftests::register_test ("parse_connection_spec",
 			    selftests::parse_connection_spec_tests::run_tests);
 }
+
+} /* namespace gdb */

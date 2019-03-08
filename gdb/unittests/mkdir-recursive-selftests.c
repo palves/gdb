@@ -24,6 +24,7 @@
 #include "common/byte-vector.h"
 #include "common/pathstuff.h"
 
+namespace gdb {
 namespace selftests {
 namespace mkdir_recursive {
 
@@ -32,7 +33,7 @@ namespace mkdir_recursive {
 static bool
 create_dir_and_check (const char *dir)
 {
-  ::mkdir_recursive (dir);
+  gdb::mkdir_recursive (dir);
 
   struct stat st;
   if (stat (dir, &st) != 0)
@@ -88,3 +89,4 @@ _initialize_mkdir_recursive_selftests ()
 			    selftests::mkdir_recursive::test);
 }
 
+} /* namespace gdb */

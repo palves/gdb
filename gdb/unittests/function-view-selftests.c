@@ -21,6 +21,7 @@
 #include "common/selftest.h"
 #include "common/function-view.h"
 
+namespace gdb {
 namespace selftests {
 namespace function_view {
 
@@ -177,3 +178,5 @@ _initialize_function_view_selftests ()
   selftests::register_test ("function_view",
 			    selftests::function_view::run_tests);
 }
+
+} /* namespace gdb */

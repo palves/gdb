@@ -21,6 +21,7 @@
 #include "cli/cli-utils.h"
 #include "common/selftest.h"
 
+namespace gdb {
 namespace selftests {
 namespace cli_utils {
 
@@ -251,3 +252,5 @@ _initialize_cli_utils_selftests ()
   selftests::register_test ("cli_utils",
 			    selftests::cli_utils::test_cli_utils);
 }
+
+} /* namespace gdb */

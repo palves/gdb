@@ -21,6 +21,7 @@
 #include "utils.h"
 #include "common/selftest.h"
 
+namespace gdb {
 namespace selftests {
 namespace utils {
 
@@ -57,3 +58,5 @@ _initialize_utils_selftests ()
   selftests::register_test ("substitute_path_component",
 			    selftests::utils::test_substitute_path_component);
 }
+
+} /* namespace gdb */

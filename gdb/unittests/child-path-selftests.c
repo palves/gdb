@@ -21,6 +21,7 @@
 #include "common/pathstuff.h"
 #include "common/selftest.h"
 
+namespace gdb {
 namespace selftests {
 namespace child_path {
 
@@ -29,7 +30,7 @@ namespace child_path {
 static bool
 child_path_check (const char *parent, const char *child, const char *expected)
 {
-  const char *result = ::child_path (parent, child);
+  const char *result = gdb::child_path (parent, child);
   if (result == NULL || expected == NULL)
     return result == expected;
   return strcmp (result, expected) == 0;
@@ -66,3 +67,4 @@ _initialize_child_path_selftests ()
 			    selftests::child_path::test);
 }
 
+} /* namespace gdb */

@@ -21,6 +21,7 @@
 #include "common/xml-utils.h"
 #include "common/selftest.h"
 
+namespace gdb {
 namespace selftests {
 namespace xml_utils {
 
@@ -56,3 +57,5 @@ _initialize_xml_utils ()
   selftests::register_test ("xml_escape_text_append",
 			    selftests::xml_utils::test_xml_escape_text_append);
 }
+
+} /* namespace gdb */

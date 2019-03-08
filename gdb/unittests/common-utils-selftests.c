@@ -20,6 +20,7 @@
 #include "common/common-defs.h"
 #include "common/selftest.h"
 
+namespace gdb {
 namespace selftests {
 
 /* Type of both 'string_printf' and the 'format' function below.  Used
@@ -134,3 +135,5 @@ _initialize_common_utils_selftests ()
   selftests::register_test ("string_vappendf",
 			    selftests::string_vappendf_tests);
 }
+
+} /* namespace gdb */
