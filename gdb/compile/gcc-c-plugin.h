@@ -22,6 +22,8 @@
 
 #include "compile-internal.h"
 
+namespace gdb {
+
 /* A class representing the C plug-in.  */
 
 class gcc_c_plugin
@@ -67,5 +69,7 @@ private:
   /* The GCC C context.  */
   struct gcc_c_context *m_context;
 };
+
+} /* namespace gdb */
 
 #endif /* COMPILE_GCC_C_PLUGIN_H */
