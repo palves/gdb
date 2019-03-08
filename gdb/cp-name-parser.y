@@ -251,11 +251,7 @@ cpname_state::make_name (const char *name, int len)
 static int yylex (YYSTYPE *, cpname_state *);
 static void yyerror (cpname_state *, const char *);
 
-} /* namespace gdb */
-
 int yyparse (void);
-
-using namespace gdb;
 
 %}
 
@@ -1189,8 +1185,6 @@ exp     :       FALSEKEYWORD
 /* end of C++.  */
 
 %%
-
-namespace gdb {
 
 /* Apply QUALIFIERS to LHS and return a qualified component.  IS_METHOD
    is set if LHS is a method, in which case the qualifiers are logically
