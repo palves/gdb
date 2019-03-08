@@ -44,8 +44,6 @@
 #include "cli/cli-utils.h"
 #include "cli/cli-setshow.h"
 
-static void maintenance_do_deprecate (const char *, int);
-
 #ifdef HAVE__ETEXT
 extern char _etext;
 # define TEXTEND &_etext
@@ -66,6 +64,8 @@ extern int main ();
 #endif
 
 namespace gdb {
+
+static void maintenance_do_deprecate (const char *, int);
 
 /* Set this to the maximum number of seconds to wait instead of waiting forever
    in target_wait().  If this timer times out, then it generates an error and
