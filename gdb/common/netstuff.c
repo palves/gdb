@@ -34,6 +34,8 @@
 #include <netinet/tcp.h>
 #endif
 
+namespace gdb {
+
 /* See common/netstuff.h.  */
 
 scoped_free_addrinfo::~scoped_free_addrinfo ()
@@ -156,3 +158,5 @@ parse_connection_spec (const char *spec, struct addrinfo *hint)
 
   return parse_connection_spec_without_prefix (spec, hint);
 }
+
+} /* namespace gdb */
