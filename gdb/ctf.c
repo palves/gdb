@@ -32,6 +32,17 @@
 #include <ctype.h>
 #include <algorithm>
 #include "common/filestuff.h"
+#if HAVE_LIBBABELTRACE
+/* Use libbabeltrace to read CTF data.  The libbabeltrace provides
+   iterator to iterate over each event in CTF data and APIs to get
+   details of event and packet, so it is very convenient to use
+   libbabeltrace to access events in CTF.  */
+#include <babeltrace/babeltrace.h>
+#include <babeltrace/ctf/events.h>
+#include <babeltrace/ctf/iterator.h>
+#endif
+
+namespace gdb {
 
 /* The CTF target.  */
 
@@ -63,17 +74,6 @@ public:
   traceframe_info_up traceframe_info () override;
 };
 
-#if HAVE_LIBBABELTRACE
-/* Use libbabeltrace to read CTF data.  The libbabeltrace provides
-   iterator to iterate over each event in CTF data and APIs to get
-   details of event and packet, so it is very convenient to use
-   libbabeltrace to access events in CTF.  */
-#include <babeltrace/babeltrace.h>
-#include <babeltrace/ctf/events.h>
-#include <babeltrace/ctf/iterator.h>
-#endif
-
-namespace gdb {
 
 /* GDB saves trace buffers and other information (such as trace
    status) got from the remote target into Common Trace Format (CTF).
