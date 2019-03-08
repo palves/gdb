@@ -333,10 +333,6 @@ struct rust_op
   RUSTSTYPE right;
 };
 
-} /* namespace gdb */
-
-using namespace gdb;
-
 %}
 
 %token <sval> GDBVAR
@@ -947,8 +943,6 @@ type_list:
 ;
 
 %%
-
-namespace gdb {
 
 /* A struct of this type is used to describe a token.  */
 
