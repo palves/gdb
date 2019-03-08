@@ -22,14 +22,14 @@
 #if !defined (GDBCORE_H)
 #define GDBCORE_H 1
 
-struct type;
-struct regcache;
-
 #include "bfd.h"
 #include "exec.h"
 #include "target.h"
 
 namespace gdb {
+
+struct type;
+struct regcache;
 
 /* Nonzero if there is a core file.  */
 
