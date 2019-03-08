@@ -20,6 +20,8 @@
 #include "defs.h"
 #include "py-events.h"
 
+namespace gdb {
+
 #ifdef IS_PY3K
 static struct PyModuleDef EventModuleDef =
 {
@@ -66,8 +68,6 @@ gdbpy_initialize_py_events (void)
   if (add_new_registry (&gdb_py_events.name, #name) < 0)	\
     return -1;
 #include "py-all-events.def"
-
-namespace gdb {
 
 #undef GDB_PY_DEFINE_EVENT
 
