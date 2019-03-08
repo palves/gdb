@@ -183,7 +183,7 @@ operator+ (scope_exit_lhs, EF &&rhs)
    scope exit runs.  */
 
 #define SCOPE_EXIT \
-  auto CONCAT(scope_exit_, __LINE__) = ::detail::scope_exit_lhs () + [&] ()
+  auto CONCAT(scope_exit_, __LINE__) = ::gdb::detail::scope_exit_lhs () + [&] ()
 
 } /* namespace gdb */
 
