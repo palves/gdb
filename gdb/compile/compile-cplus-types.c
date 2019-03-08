@@ -35,6 +35,8 @@
 #include "compile-c.h"
 #include <algorithm>
 
+namespace gdb {
+
 /* Default compile flags for C++.  */
 
 const char *compile_cplus_instance::m_default_cflags = "-std=gnu++11";
@@ -1350,9 +1352,6 @@ compile_cplus_debug_output (T arg, Targs... Args)
   }
 
 #include "gcc-cp-fe.def"
-
-namespace gdb {
-
 
 #undef GCC_METHOD0
 #undef GCC_METHOD1
