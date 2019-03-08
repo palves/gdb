@@ -399,7 +399,7 @@ inf_child_target::use_agent (bool use)
 {
   if (agent_loaded_p ())
     {
-      ::use_agent = use;
+      gdb::use_agent = use;
       return true;
     }
   else
