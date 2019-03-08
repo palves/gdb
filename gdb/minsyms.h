@@ -23,6 +23,7 @@
 namespace gdb {
 
 struct type;
+struct lookup_name_info;
 
 /* Classification types for a minimal symbol.  These should be taken as
    "advisory only", since if gdb can't easily figure out a
