@@ -251,7 +251,7 @@ number_or_range_parser::get_number ()
 
 	  temp = &m_end_ptr;
 	  m_end_ptr = skip_spaces (m_cur_tok + 1);
-	  m_end_value = ::get_number (temp);
+	  m_end_value = ::gdb::get_number (temp);
 	  if (m_end_value < m_last_retval)
 	    {
 	      error (_("inverted range"));
@@ -274,7 +274,7 @@ number_or_range_parser::get_number ()
       if (*(m_cur_tok + 1) == '$')
 	{
 	  /* Convenience variable.  */
-	  m_last_retval = ::get_number (&m_cur_tok);
+	  m_last_retval = ::gdb::get_number (&m_cur_tok);
 	  if (m_last_retval < 0)
 	    error (_("negative value"));
 	}
