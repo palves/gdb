@@ -76,7 +76,6 @@ DEFINE_OBSERVABLE (register_changed);
 DEFINE_OBSERVABLE (user_selected_context_changed);
 
 } /* namespace observers */
-} /* namespace gdb */
 
 static void
 show_observer_debug (struct ui_file *file, int from_tty,
@@ -97,3 +96,5 @@ When non-zero, observer debugging is enabled."),
 			     show_observer_debug,
 			     &setdebuglist, &showdebuglist);
 }
+
+} /* namespace gdb */
