@@ -23,6 +23,11 @@
 #include "tracepoint.h"
 #include "linux-x86-tdesc.h"
 #include "common/x86-xstate.h"
+#ifdef HAVE_UST
+# include <ust/processor.h>
+#endif
+
+namespace gdb {
 
 /* GDB register numbers.  */
 
@@ -112,11 +117,6 @@ get_raw_reg (const unsigned char *raw_regs, int regnum)
 }
 
 #ifdef HAVE_UST
-
-#include <ust/processor.h>
-
-namespace gdb {
-
 
 /* "struct registers" is the UST object type holding the registers at
    the time of the static tracepoint marker call.  This doesn't
