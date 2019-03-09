@@ -23,6 +23,8 @@
 
 #include "arch/riscv.h"
 
+namespace gdb {
+
 /* RiscV register numbers.  */
 enum
 {
@@ -47,8 +49,6 @@ enum
 #define DECLARE_CSR(name, num) \
   RISCV_ ## num ## _REGNUM = RISCV_FIRST_CSR_REGNUM + num,
 #include "opcode/riscv-opc.h"
-
-namespace gdb {
 #undef DECLARE_CSR
   RISCV_LAST_CSR_REGNUM = 4160,
   RISCV_CSR_LEGACY_MISA_REGNUM = 0xf10 + RISCV_FIRST_CSR_REGNUM,

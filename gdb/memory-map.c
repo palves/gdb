@@ -19,6 +19,9 @@
 
 #include "defs.h"
 #include "memory-map.h"
+#include "xml-support.h"
+
+namespace gdb {
 
 #if !defined(HAVE_LIBEXPAT)
 
@@ -38,11 +41,6 @@ parse_memory_map (const char *memory_map)
 }
 
 #else /* HAVE_LIBEXPAT */
-
-#include "xml-support.h"
-
-namespace gdb {
-
 
 /* Internal parsing data passed to all XML callbacks.  */
 struct memory_map_parsing_data

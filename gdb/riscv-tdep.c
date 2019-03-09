@@ -57,6 +57,8 @@
 #include "prologue-value.h"
 #include "arch/riscv.h"
 
+namespace gdb {
+
 /* The stack must be 16-byte aligned.  */
 #define SP_ALIGNMENT 16
 
@@ -864,9 +866,6 @@ riscv_is_regnum_a_named_csr (int regnum)
     {
 #define DECLARE_CSR(name, num) case RISCV_ ## num ## _REGNUM:
 #include "opcode/riscv-opc.h"
-
-namespace gdb {
-
 #undef DECLARE_CSR
       return true;
 
