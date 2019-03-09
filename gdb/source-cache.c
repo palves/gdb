@@ -27,10 +27,9 @@
 #include <sstream>
 #include <srchilite/sourcehighlight.h>
 #include <srchilite/langmap.h>
+#endif
 
 namespace gdb {
-
-#endif
 
 /* The number of source files we'll cache.  */
 
