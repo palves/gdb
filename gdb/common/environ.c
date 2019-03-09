@@ -20,6 +20,8 @@
 #include <algorithm>
 #include <utility>
 
+extern char **environ;
+
 namespace gdb {
 
 /* See common/environ.h.  */
@@ -45,7 +47,6 @@ gdb_environ::operator= (gdb_environ &&e)
 
 gdb_environ gdb_environ::from_host_environ ()
 {
-  extern char **environ;
   gdb_environ e;
 
   if (environ == NULL)
