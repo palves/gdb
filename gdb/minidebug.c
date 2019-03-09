@@ -25,11 +25,12 @@
 #include <algorithm>
 
 #ifdef HAVE_LIBLZMA
-
-#include <lzma.h>
+# include <lzma.h>
+#endif
 
 namespace gdb {
 
+#ifdef HAVE_LIBLZMA
 
 /* Allocator function for LZMA.  */
 
