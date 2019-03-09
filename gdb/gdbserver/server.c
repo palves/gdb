@@ -3951,10 +3951,10 @@ captured_main (int argc, char *argv[])
     }
 }
 
-/* Main function.  */
+/* Main function, in gdb namespace.  */
 
-int
-main (int argc, char *argv[])
+static int
+gdbserver_main (int argc, char *argv[])
 {
 
   TRY
@@ -4519,3 +4519,11 @@ reset ()
 #endif /* GDB_SELF_TEST */
 
 } /* namespace gdb */
+
+/* Main function.  */
+
+int
+main (int argc, char *argv[])
+{
+  return gdb::gdbserver_main (argc, argv);
+}
