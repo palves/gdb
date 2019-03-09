@@ -567,7 +567,7 @@ record_btrace_target::info_record ()
 
   btinfo = &tp->btrace;
 
-  conf = ::btrace_conf (btinfo);
+  conf = gdb::btrace_conf (btinfo);
   if (conf != NULL)
     record_btrace_print_conf (conf);
 
@@ -2131,21 +2131,21 @@ record_btrace_target::resume (ptid_t ptid, int step, enum gdb_signal signal)
   enum btrace_thread_flag flag, cflag;
 
   DEBUG ("resume %s: %s%s", target_pid_to_str (ptid),
-	 ::execution_direction == EXEC_REVERSE ? "reverse-" : "",
+	 gdb::execution_direction == EXEC_REVERSE ? "reverse-" : "",
 	 step ? "step" : "cont");
 
   /* Store the execution direction of the last resume.
 
      If there is more than one resume call, we have to rely on infrun
      to not change the execution direction in-between.  */
-  record_btrace_resume_exec_dir = ::execution_direction;
+  record_btrace_resume_exec_dir = gdb::execution_direction;
 
   /* As long as we're not replaying, just forward the request.
 
      For non-stop targets this means that no thread is replaying.  In order to
      make progress, we may need to explicitly move replaying threads to the end
      of their execution history.  */
-  if ((::execution_direction != EXEC_REVERSE)
+  if ((gdb::execution_direction != EXEC_REVERSE)
       && !record_is_replaying (minus_one_ptid))
     {
       this->beneath ()->resume (ptid, step, signal);
@@ -2153,7 +2153,7 @@ record_btrace_target::resume (ptid_t ptid, int step, enum gdb_signal signal)
     }
 
   /* Compute the btrace thread flag for the requested move.  */
-  if (::execution_direction == EXEC_REVERSE)
+  if (gdb::execution_direction == EXEC_REVERSE)
     {
       flag = step == 0 ? BTHR_RCONT : BTHR_RSTEP;
       cflag = BTHR_RCONT;
@@ -2199,7 +2199,7 @@ record_btrace_target::resume (ptid_t ptid, int step, enum gdb_signal signal)
 void
 record_btrace_target::commit_resume ()
 {
-  if ((::execution_direction != EXEC_REVERSE)
+  if ((gdb::execution_direction != EXEC_REVERSE)
       && !record_is_replaying (minus_one_ptid))
     beneath ()->commit_resume ();
 }
@@ -2533,7 +2533,7 @@ record_btrace_target::wait (ptid_t ptid, struct target_waitstatus *status,
   DEBUG ("wait %s (0x%x)", target_pid_to_str (ptid), options);
 
   /* As long as we're not replaying, just forward the request.  */
-  if ((::execution_direction != EXEC_REVERSE)
+  if ((gdb::execution_direction != EXEC_REVERSE)
       && !record_is_replaying (minus_one_ptid))
     {
       return this->beneath ()->wait (ptid, status, options);
@@ -2653,7 +2653,7 @@ record_btrace_target::stop (ptid_t ptid)
   DEBUG ("stop %s", target_pid_to_str (ptid));
 
   /* As long as we're not replaying, just forward the request.  */
-  if ((::execution_direction != EXEC_REVERSE)
+  if ((gdb::execution_direction != EXEC_REVERSE)
       && !record_is_replaying (minus_one_ptid))
     {
       this->beneath ()->stop (ptid);
