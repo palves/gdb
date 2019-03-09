@@ -761,7 +761,7 @@ static void
 input_interrupt (int unused)
 {
   fd_set readset;
-  struct timeval immediate = { 0, 0 };
+  timeval immediate = { 0, 0 };
 
   /* Protect against spurious interrupts.  This has been observed to
      be a problem under NetBSD 1.4 and 1.5.  */
