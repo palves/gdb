@@ -1504,8 +1504,11 @@ add_insns (unsigned char *start, int len)
 #define EMIT_ASM(NAME, INSNS)						\
   do									\
     {									\
-      extern unsigned char start_ ## NAME, end_ ## NAME;		\
-      add_insns (&start_ ## NAME, &end_ ## NAME - &start_ ## NAME);	\
+      extern unsigned char						\
+	start asm (STRINGIFY (start_ ## NAME));				\
+      extern unsigned char						\
+	end asm (STRINGIFY (end_ ## NAME));				\
+      add_insns (&start, &end - &start);				\
       __asm__ ("jmp end_" #NAME "\n"					\
 	       "\t" "start_" #NAME ":"					\
 	       "\t" INSNS "\n"						\
@@ -1517,8 +1520,11 @@ add_insns (unsigned char *start, int len)
 #define EMIT_ASM32(NAME,INSNS)						\
   do									\
     {									\
-      extern unsigned char start_ ## NAME, end_ ## NAME;		\
-      add_insns (&start_ ## NAME, &end_ ## NAME - &start_ ## NAME);	\
+      extern unsigned char						\
+	start asm (STRINGIFY (start_ ## NAME));				\
+      extern unsigned char						\
+	end asm (STRINGIFY (end_ ## NAME));				\
+      add_insns (&start, &end - &start);				\
       __asm__ (".code32\n"						\
 	       "\t" "jmp end_" #NAME "\n"				\
 	       "\t" "start_" #NAME ":\n"				\
