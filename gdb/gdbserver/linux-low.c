@@ -60,9 +60,6 @@
 #endif
 #include "nat/linux-namespaces.h"
 
-namespace gdb {
-
-
 #ifndef SPUFS_MAGIC
 #define SPUFS_MAGIC 0x23c9b64e
 #endif
@@ -136,6 +133,8 @@ typedef struct
     } a_un;
 } Elf64_auxv_t;
 #endif
+
+namespace gdb {
 
 /* Does the current host support PTRACE_GETREGSET?  */
 int have_ptrace_getregset = -1;
