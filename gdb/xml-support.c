@@ -24,6 +24,11 @@
 #include "safe-ctype.h"
 #include <vector>
 #include <string>
+#ifdef HAVE_LIBEXPAT
+# include "gdb_expat.h"
+#endif
+
+namespace gdb {
 
 /* Debugging flag.  */
 static int debug_xml;
@@ -31,11 +36,6 @@ static int debug_xml;
 /* The contents of this file are only useful if XML support is
    available.  */
 #ifdef HAVE_LIBEXPAT
-
-#include "gdb_expat.h"
-
-namespace gdb {
-
 
 /* The maximum depth of <xi:include> nesting.  No need to be miserly,
    we just want to avoid running out of stack on loops.  */
