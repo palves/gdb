@@ -528,8 +528,8 @@ captured_main (int argc, char *argv[])
   exit (0);
 }
 
-int
-main (int argc, char *argv[])
+static int
+gdbreplay_main (int argc, char *argv[])
 {
   TRY
     {
@@ -551,3 +551,9 @@ main (int argc, char *argv[])
 }
 
 } /* namespace gdb */
+
+int
+main (int argc, char *argv[])
+{
+  return gdb::gdbreplay_main (argc, argv);
+}
