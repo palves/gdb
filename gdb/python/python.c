@@ -36,20 +36,20 @@
 #include <ctype.h>
 #include "location.h"
 #include "ser-event.h"
-#include "cli/cli-decode.h"
-#include "charset.h"
-#include "top.h"
-#include "linespec.h"
-#include "source.h"
-#include "common/version.h"
-#include "target.h"
-#include "gdbthread.h"
-#include "interps.h"
-#include "event-top.h"
-#include "py-event.h"
 
 #ifdef HAVE_PYTHON
-#include "python-internal.h"
+# include "cli/cli-decode.h"
+# include "charset.h"
+# include "top.h"
+# include "python-internal.h"
+# include "linespec.h"
+# include "source.h"
+# include "common/version.h"
+# include "target.h"
+# include "gdbthread.h"
+# include "interps.h"
+# include "event-top.h"
+# include "py-event.h"
 #endif
 
 namespace gdb {
