@@ -35,12 +35,11 @@
 #if HAVE_PYTHON
 #include "python/python.h"
 #include "python/python-internal.h"
-
-namespace gdb {
-
 #else
 typedef int PyObject;
 #endif
+
+namespace gdb {
 
 /* Non-zero if we want to see trace of varobj level stuff.  */
 
