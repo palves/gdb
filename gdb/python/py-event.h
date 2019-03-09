@@ -25,13 +25,14 @@
 #include "python-internal.h"
 #include "inferior.h"
 
+namespace gdb {
+
 /* Declare all event types.  */
 #define GDB_PY_DEFINE_EVENT_TYPE(name, py_name, doc, base) \
   extern PyTypeObject name##_event_object_type		    \
         CPYCHECKER_TYPE_OBJECT_FOR_TYPEDEF ("event_object");
 #include "py-event-types.def"
 
-namespace gdb {
 #undef GDB_PY_DEFINE_EVENT_TYPE
 
 typedef struct
