@@ -22,6 +22,8 @@
 #include "tracepoint.h"
 #include "common/rsp-low.h"
 
+namespace gdb {
+
 static void ax_vdebug (const char *, ...) ATTRIBUTE_PRINTF (1, 2);
 
 #ifdef IN_PROCESS_AGENT
@@ -75,9 +77,6 @@ static const unsigned char gdb_agent_op_sizes [gdb_agent_op_last] =
     0
 #define DEFOP(NAME, SIZE, DATA_SIZE, CONSUMED, PRODUCED, VALUE)  , SIZE
 #include "common/ax.def"
-
-namespace gdb {
-
 #undef DEFOP
   };
 #endif
