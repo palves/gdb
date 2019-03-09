@@ -30,6 +30,8 @@
 #include "regset.h"
 #include <forward_list>
 
+namespace gdb {
+
 /*
  * DATA STRUCTURE
  *
@@ -1386,14 +1388,14 @@ register_dump::dump (ui_file *file)
 			footnote_register_type_name_null);
 }
 
+} /* namespace gdb */
+
 #if GDB_SELF_TEST
 #include "common/selftest.h"
 #include "selftest-arch.h"
 #include "target-float.h"
 
 namespace gdb {
-
-
 namespace selftests {
 
 class regcache_access : public regcache
