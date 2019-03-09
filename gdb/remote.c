@@ -4746,7 +4746,7 @@ remote_target::start_remote (int from_tty, int extended_p)
       strcpy (rs->buf.data (), wait_status);
       rs->cached_wait_status = 1;
 
-      ::start_remote (from_tty); /* Initialize gdb process mechanisms.  */
+      gdb::start_remote (from_tty); /* Initialize gdb process mechanisms.  */
     }
   else
     {
@@ -6118,7 +6118,7 @@ remote_target::remote_resume_with_hc (ptid_t ptid, int step,
     resume_clear_thread_private_info (thread);
 
   buf = rs->buf.data ();
-  if (::execution_direction == EXEC_REVERSE)
+  if (gdb::execution_direction == EXEC_REVERSE)
     {
       /* We don't pass signals to the target in reverse exec mode.  */
       if (info_verbose && siggnal != GDB_SIGNAL_0)
@@ -6164,7 +6164,7 @@ remote_target::remote_resume_with_vcont (ptid_t ptid, int step,
   char *endp;
 
   /* No reverse execution actions defined for vCont.  */
-  if (::execution_direction == EXEC_REVERSE)
+  if (gdb::execution_direction == EXEC_REVERSE)
     return 0;
 
   if (packet_support (PACKET_vCont) == PACKET_SUPPORT_UNKNOWN)
@@ -6246,7 +6246,7 @@ remote_target::resume (ptid_t ptid, int step, enum gdb_signal siggnal)
      request; the actual remote resumption will be done in
      target_commit_resume / remote_commit_resume, where we'll be able
      to do vCont action coalescing.  */
-  if (target_is_non_stop_p () && ::execution_direction != EXEC_REVERSE)
+  if (target_is_non_stop_p () && gdb::execution_direction != EXEC_REVERSE)
     {
       remote_thread_info *remote_thr;
 
@@ -6269,7 +6269,7 @@ remote_target::resume (ptid_t ptid, int step, enum gdb_signal siggnal)
   if (!target_is_non_stop_p ())
     remote_notif_process (rs->notif_state, &notif_client_stop);
 
-  rs->last_resume_exec_dir = ::execution_direction;
+  rs->last_resume_exec_dir = gdb::execution_direction;
 
   /* Prefer vCont, and fallback to s/c/S/C, which use Hc.  */
   if (!remote_resume_with_vcont (ptid, step, siggnal))
@@ -6430,7 +6430,7 @@ remote_target::commit_resume ()
      request directly from remote_resume.  Likewise if
      reverse-debugging, as there are no defined vCont actions for
      reverse execution.  */
-  if (!target_is_non_stop_p () || ::execution_direction == EXEC_REVERSE)
+  if (!target_is_non_stop_p () || gdb::execution_direction == EXEC_REVERSE)
     return;
 
   /* Try to send wildcard actions ("vCont;c" or "vCont;c:pPID.-1")
@@ -8992,7 +8992,7 @@ remote_target::readchar (int timeout)
     scoped_restore restore_quit_target
       = make_scoped_restore (&curr_quit_handler_target, this);
     scoped_restore restore_quit
-      = make_scoped_restore (&quit_handler, ::remote_serial_quit_handler);
+      = make_scoped_restore (&quit_handler, gdb::remote_serial_quit_handler);
 
     rs->got_ctrlc_during_io = 0;
 
@@ -9035,7 +9035,7 @@ remote_target::remote_serial_write (const char *str, int len)
   scoped_restore restore_quit_target
     = make_scoped_restore (&curr_quit_handler_target, this);
   scoped_restore restore_quit
-    = make_scoped_restore (&quit_handler, ::remote_serial_quit_handler);
+    = make_scoped_restore (&quit_handler, gdb::remote_serial_quit_handler);
 
   rs->got_ctrlc_during_io = 0;
 
@@ -13595,7 +13595,7 @@ remote_target::use_agent (bool use)
 
       if (strcmp (rs->buf.data (), "OK") == 0)
 	{
-	  ::use_agent = use;
+	  gdb::use_agent = use;
 	  return true;
 	}
     }
