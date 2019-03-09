@@ -72,14 +72,13 @@
 
 #if __QNX__
 #include <sys/iomgr.h>
-
-namespace gdb {
-
 #endif /* __QNX__ */
 
 #ifndef HAVE_SOCKLEN_T
 typedef int socklen_t;
 #endif
+
+namespace gdb {
 
 #ifndef IN_PROCESS_AGENT
 
