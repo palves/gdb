@@ -625,7 +625,7 @@ tfile_target::close ()
   inferior_ptid = null_ptid;	/* Avoid confusion from thread stuff.  */
   exit_inferior_silent (current_inferior ());
 
-  ::close (trace_fd);
+  gdb::close (trace_fd);
   trace_fd = -1;
   xfree (trace_filename);
   trace_filename = NULL;
