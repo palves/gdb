@@ -47,6 +47,12 @@
 #include "nat/x86-linux-dregs.h"
 #include "linux-x86-tdesc.h"
 
+#include <sys/reg.h>
+#include <sys/procfs.h>
+#include <sys/uio.h>
+
+namespace gdb {
+
 #ifdef __x86_64__
 static struct target_desc *tdesc_amd64_linux_no_xml;
 #endif
@@ -69,13 +75,6 @@ static const char *xmltarget_amd64_linux_no_xml = "@<target>\
 <osabi>GNU/Linux</osabi>\
 </target>";
 #endif
-
-#include <sys/reg.h>
-#include <sys/procfs.h>
-#include <sys/uio.h>
-
-namespace gdb {
-
 
 #ifndef PTRACE_GET_THREAD_AREA
 #define PTRACE_GET_THREAD_AREA 25
