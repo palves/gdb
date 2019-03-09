@@ -32,6 +32,8 @@
 #define IPA_SYM_STRUCT_NAME ipa_sym_addresses
 #include "common/agent.h"
 
+namespace gdb {
+
 #define DEFAULT_TRACE_BUFFER_SIZE 5242880 /* 5*1024*1024 */
 
 /* This file is built for both GDBserver, and the in-process
@@ -7329,10 +7331,11 @@ gdb_agent_init (void)
 #endif
 }
 
+} /* namespace gdb */
+
 #include <sys/mman.h>
 
 namespace gdb {
-
 
 IP_AGENT_EXPORT_VAR char *gdb_tp_heap_buffer;
 IP_AGENT_EXPORT_VAR char *gdb_jump_pad_buffer;
