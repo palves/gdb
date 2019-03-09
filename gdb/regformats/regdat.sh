@@ -111,6 +111,8 @@ echo '#include "server.h"'
 echo '#include "regdef.h"'
 echo '#include "tdesc.h"'
 echo
+echo 'namespace gdb {'
+echo
 offset=0
 i=0
 name=x
@@ -193,6 +195,8 @@ cat <<EOF
 
   tdesc_${name} = result;
 }
+
+} /* namespace gdb */
 EOF
 
 # close things off
