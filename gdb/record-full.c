@@ -67,7 +67,7 @@ namespace gdb {
 #define DEFAULT_RECORD_FULL_INSN_MAX_NUM	200000
 
 #define RECORD_FULL_IS_REPLAY \
-  (record_full_list->next || ::execution_direction == EXEC_REVERSE)
+  (record_full_list->next || gdb::execution_direction == EXEC_REVERSE)
 
 #define RECORD_FULL_FILE_MAGIC	netorder32(0x20091016)
 
@@ -1071,7 +1071,7 @@ record_full_target::resume (ptid_t ptid, int step, enum gdb_signal signal)
 {
   record_full_resume_step = step;
   record_full_resumed = 1;
-  record_full_execution_dir = ::execution_direction;
+  record_full_execution_dir = gdb::execution_direction;
 
   if (!RECORD_FULL_IS_REPLAY)
     {
@@ -2072,7 +2072,7 @@ record_full_core_target::resume (ptid_t ptid, int step,
 {
   record_full_resume_step = step;
   record_full_resumed = 1;
-  record_full_execution_dir = ::execution_direction;
+  record_full_execution_dir = gdb::execution_direction;
 
   /* We are about to start executing the inferior (or simulate it),
      let's register it with the event loop.  */
