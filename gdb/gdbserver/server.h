@@ -21,8 +21,6 @@
 
 #include "common/common-defs.h"
 
-gdb_static_assert (sizeof (CORE_ADDR) >= sizeof (void *));
-
 #ifdef __MINGW32CE__
 #include "wincecompat.h"
 #endif
@@ -62,6 +60,10 @@ int vsnprintf(char *str, size_t size, const char *format, va_list ap);
 #include "mem-break.h"
 #include "common/environ.h"
 
+namespace gdb {
+
+gdb_static_assert (sizeof (CORE_ADDR) >= sizeof (void *));
+
 /* Target-specific functions */
 
 void initialize_low ();
@@ -78,14 +80,23 @@ extern int disable_packet_qfThreadInfo;
 extern int run_once;
 extern int non_stop;
 
+} /* namespace gdb */
+
 #if USE_WIN32API
 #include <winsock2.h>
+#endif
+
+namespace gdb {
+#if USE_WIN32API
 typedef SOCKET gdb_fildes_t;
 #else
 typedef int gdb_fildes_t;
 #endif
+}
 
 #include "event-loop.h"
+
+namespace gdb {
 
 /* Functions from server.c.  */
 extern void handle_v_requests (char *own_buf, int packet_len,
@@ -100,11 +111,15 @@ extern void discard_queued_stop_replies (ptid_t ptid);
    the vStopped notifications queue.  */
 extern int in_queued_stop_replies (ptid_t ptid);
 
+} /* namespace gdb */
+
 #include "remote-utils.h"
 
 #include "utils.h"
 #include "debug.h"
 #include "common/gdb_vecs.h"
+
+namespace gdb {
 
 /* Maximum number of bytes to read/write at once.  The value here
    is chosen to fill up a packet (the headers account for the 32).  */
@@ -202,11 +217,9 @@ struct client_state
 
 client_state &get_client_state ();
 
+} /* namespace gdb */
+
 #include "gdbthread.h"
 #include "inferiors.h"
-
-namespace gdb {
-
-} /* namespace gdb */
 
 #endif /* GDBSERVER_SERVER_H */
