@@ -494,6 +494,9 @@ m68k_linux_nat_target::store_registers (struct regcache *regcache, int regno)
   internal_error (__FILE__, __LINE__,
 		  _("Got request to store bad register number %d."), regno);
 }
+
+} /* namespace gdb */
+
 
 
 /* Fetch the thread-local storage pointer for libthread_db.  */
@@ -512,6 +515,8 @@ ps_get_thread_area (struct ps_prochandle *ph,
 
   return PS_OK;
 }
+
+namespace gdb {
 
 void
 _initialize_m68k_linux_nat (void)

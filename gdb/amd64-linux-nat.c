@@ -306,6 +306,9 @@ amd64_linux_nat_target::store_registers (struct regcache *regcache, int regnum)
 #endif
     }
 }
+
+} /* namespace gdb */
+
 
 
 /* This function is called by libthread_db as part of its handling of
@@ -315,6 +318,8 @@ ps_err_e
 ps_get_thread_area (struct ps_prochandle *ph,
                     lwpid_t lwpid, int idx, void **base)
 {
+  using namespace gdb;
+
   if (gdbarch_bfd_arch_info (target_gdbarch ())->bits_per_word == 32)
     {
       unsigned int base_addr;
@@ -383,6 +388,8 @@ ps_get_thread_area (struct ps_prochandle *ph,
   return PS_ERR;               /* ptrace failed.  */
 }
 
+
+namespace gdb {
 
 /* Convert a ptrace/host siginfo object, into/from the siginfo in the
    layout of the inferiors' architecture.  Returns true if any

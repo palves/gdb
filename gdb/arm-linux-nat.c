@@ -516,12 +516,16 @@ supply_fpregset (struct regcache *regcache, const gdb_fpregset_t *fpregsetp)
   arm_linux_supply_nwfpe (NULL, regcache, -1, fpregsetp, 0);
 }
 
+} /* namespace gdb */
+
 /* Fetch the thread-local storage pointer for libthread_db.  */
 
 ps_err_e
 ps_get_thread_area (struct ps_prochandle *ph,
                     lwpid_t lwpid, int idx, void **base)
 {
+  //  using namespace gdb;
+
   if (ptrace (PTRACE_GET_THREAD_AREA, lwpid, NULL, base) != 0)
     return PS_ERR;
 
@@ -532,6 +536,8 @@ ps_get_thread_area (struct ps_prochandle *ph,
 
   return PS_OK;
 }
+
+namespace gdb {
 
 const struct target_desc *
 arm_linux_nat_target::read_description ()

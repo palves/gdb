@@ -312,6 +312,8 @@ xtensa_linux_nat_target::store_registers (struct regcache *regcache,
     store_xtregs (regcache, regnum);
 }
 
+} /* namespace gdb */
+
 /* Called by libthread_db.  */
 
 ps_err_e
@@ -330,6 +332,8 @@ ps_get_thread_area (struct ps_prochandle *ph,
 
   return PS_OK;
 }
+
+namespace gdb {
 
 void
 _initialize_xtensa_linux_nat (void)

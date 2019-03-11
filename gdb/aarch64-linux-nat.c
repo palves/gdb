@@ -548,6 +548,9 @@ aarch64_linux_nat_target::low_new_fork (struct lwp_info *parent,
   child_state = aarch64_get_debug_reg_state (child_pid);
   *child_state = *parent_state;
 }
+
+} /* namespace gdb */
+
 
 
 /* Called by libthread_db.  Returns a pointer to the thread local
@@ -557,12 +560,16 @@ ps_err_e
 ps_get_thread_area (struct ps_prochandle *ph,
 		    lwpid_t lwpid, int idx, void **base)
 {
+  using namespace gdb;
+
   int is_64bit_p
     = (gdbarch_bfd_arch_info (target_gdbarch ())->bits_per_word == 64);
 
   return aarch64_ps_get_thread_area (ph, lwpid, idx, base, is_64bit_p);
 }
 
+
+namespace gdb {
 
 /* Implement the "post_startup_inferior" target_ops method.  */
 

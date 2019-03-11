@@ -186,6 +186,8 @@ mips64_linux_register_addr (struct gdbarch *gdbarch, int regno, int store)
   return regaddr;
 }
 
+} /* namespace gdb */
+
 /* Fetch the thread-local storage pointer for libthread_db.  */
 
 ps_err_e
@@ -202,6 +204,8 @@ ps_get_thread_area (struct ps_prochandle *ph,
 
   return PS_OK;
 }
+
+namespace gdb {
 
 /* Wrapper functions.  These are only used by libthread_db.  */
 

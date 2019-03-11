@@ -598,6 +598,9 @@ i386_linux_nat_target::store_registers (struct regcache *regcache, int regno)
   internal_error (__FILE__, __LINE__,
 		  _("Got request to store bad register number %d."), regno);
 }
+
+} /* namespace gdb */
+
 
 
 /* Called by libthread_db.  Returns a pointer to the thread local
@@ -607,6 +610,8 @@ ps_err_e
 ps_get_thread_area (struct ps_prochandle *ph,
 		    lwpid_t lwpid, int idx, void **base)
 {
+  using namespace gdb;
+
   unsigned int base_addr;
   ps_err_e result;
 
@@ -618,6 +623,8 @@ ps_get_thread_area (struct ps_prochandle *ph,
   return result;
 }
 
+
+namespace gdb {
 
 /* The instruction for a GNU/Linux system call is:
        int $0x80
