@@ -1,0 +1,109 @@
+function insert_namespace_c  {
+    ls $1 | while read line; do
+
+	if [ $line == "target-delegates.c" ]; then
+	    continue
+	fi
+
+	if [ $line == "common/new-op.c" ]; then
+	    continue
+	fi
+
+	if ! grep -q "namespace gdb" $line; then
+	    if $(grep -q "^#include" $line); then
+		tac $line | sed '0,/^#include/{s/\(^#include .*\)/\nnamespace gdb {\n\n\1/}' | tac > tmp && mv tmp $line
+	    else
+		sed '0,/#define/{s/\(#define .*\)/\1\n\nnamespace gdb {/}' -i $line
+	    fi
+	    echo "" >> $line
+	    echo "} /* namespace gdb */" >> $line
+	fi
+    done
+}
+
+function insert_namespace_h  {
+    ls $1 | while read line; do
+
+	if [ $line == "common/gdb_wait.h" ]; then
+	    continue
+	fi
+
+	if [ $line == "common/gdb_proc_service.h" ]; then
+	    continue
+	fi
+
+	if [ $line == "gdbserver/gdb_proc_service.h" ]; then
+	    continue
+	fi
+
+	if [ $line == "gdb_vfork.h" ]; then
+	    continue
+	fi
+
+	if [ $line == "nat/gdb_ptrace.h" ]; then
+	    continue
+	fi
+
+	if [ $line == "nat/x86-gcc-cpuid.h" ]; then
+	    continue
+	fi
+
+	if [ $line == "gdb_curses.h" ]; then
+	    continue
+	fi
+
+	if [ $line == "common/version.h" ]; then
+	    continue
+	fi
+
+	if ! grep -q "namespace gdb" $line; then
+	    if $(grep -q "^#include" $line); then
+		tac $line | sed '0,/^#include/{s/\(^#include .*\)/namespace gdb {\n\n\1/}' | tac > tmp && mv tmp $line
+	    else
+		sed '0,/#define/{s/\(#define .*\)/\1\n\nnamespace gdb {/}' -i $line
+	    fi
+
+	    tac $line | sed '0,/#endif/{s/\(#endif.*\)/\1\n\n} \/* namespace gdb *\//}' | tac > tmp && mv tmp $line
+	fi
+    done
+}
+
+insert_namespace_h "*.h"
+insert_namespace_c "*.c"
+insert_namespace_h "common/*.h"
+insert_namespace_c "common/*.c"
+insert_namespace_h "nat/*.h"
+insert_namespace_c "nat/*.c"
+insert_namespace_h "arch/*.h"
+insert_namespace_c "arch/*.c"
+
+insert_namespace_h "target/*.h"
+insert_namespace_c "target/*.c"
+
+insert_namespace_h "mi/*.h"
+insert_namespace_c "mi/*.c"
+
+insert_namespace_h "cli/*.h"
+insert_namespace_c "cli/*.c"
+
+insert_namespace_h "python/*.h"
+insert_namespace_c "python/*.c"
+
+insert_namespace_h "guile/*.h"
+insert_namespace_c "guile/*.c"
+
+insert_namespace_h "tui/*.h"
+insert_namespace_c "tui/*.c"
+
+insert_namespace_h "compile/*.h"
+insert_namespace_c "compile/*.c"
+
+insert_namespace_c "features/*.c"
+insert_namespace_c "features/arm/*.c"
+insert_namespace_c "features/i386/*.c"
+insert_namespace_c "features/rs6000/*.c"
+insert_namespace_c "features/riscv/*.c"
+insert_namespace_c "features/rs6000/*.c"
+
+insert_namespace_h "gdbserver/*.h"
+insert_namespace_c "gdbserver/*.c"
