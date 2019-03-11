@@ -31,6 +31,9 @@
 #include "linux-waitpid.h"
 #include "common/gdb_wait.h"
 
+namespace gdb {
+
+
 /* Print debugging output based on the format string FORMAT and
    its parameters.  */
 
@@ -96,3 +99,5 @@ my_waitpid (int pid, int *status, int flags)
   errno = out_errno;
   return ret;
 }
+
+} /* namespace gdb */

@@ -19,6 +19,8 @@
 #ifndef ARCH_AARCH64_INSN_H
 #define ARCH_AARCH64_INSN_H
 
+namespace gdb {
+
 extern int aarch64_debug;
 
 /* List of opcodes that we need for building the jump pad and relocating
@@ -320,5 +322,7 @@ int aarch64_emit_load_store (uint32_t *buf, uint32_t size,
 			     struct aarch64_register rt,
 			     struct aarch64_register rn,
 			     struct aarch64_memory_operand operand);
+
+} /* namespace gdb */
 
 #endif /* ARCH_AARCH64_INSN_H */

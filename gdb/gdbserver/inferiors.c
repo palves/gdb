@@ -22,6 +22,9 @@
 #include "gdbthread.h"
 #include "dll.h"
 
+namespace gdb {
+
+
 std::list<process_info *> all_processes;
 std::list<thread_info *> all_threads;
 
@@ -241,3 +244,5 @@ set_inferior_cwd (const char *cwd)
   else
     current_inferior_cwd = NULL;
 }
+
+} /* namespace gdb */

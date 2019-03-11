@@ -22,6 +22,8 @@
 
 #include "ppc-tdep.h"  /* For PPC_NUM_REGS.  */
 
+namespace gdb {
+
 struct regset;
 
 /* From ppc-linux-tdep.c ...  */
@@ -64,5 +66,7 @@ extern const struct regset ppc32_linux_cvsxregset;
 extern const struct regset ppc32_linux_cpprregset;
 extern const struct regset ppc32_linux_cdscrregset;
 extern const struct regset ppc32_linux_ctarregset;
+
+} /* namespace gdb */
 
 #endif /* PPC_LINUX_TDEP_H */

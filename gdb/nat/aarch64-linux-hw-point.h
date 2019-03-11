@@ -21,6 +21,8 @@
 
 #include "common/break-common.h" /* For enum target_hw_bp_type.  */
 
+namespace gdb {
+
 /* Macro definitions, data structures, and code for the hardware
    breakpoint and hardware watchpoint support follow.  We use the
    following abbreviations throughout the code:
@@ -196,5 +198,7 @@ void aarch64_linux_get_debug_reg_capacity (int tid);
 struct aarch64_debug_reg_state *aarch64_get_debug_reg_state (pid_t pid);
 
 int aarch64_linux_region_ok_for_watchpoint (CORE_ADDR addr, int len);
+
+} /* namespace gdb */
 
 #endif /* NAT_AARCH64_LINUX_HW_POINT_H */

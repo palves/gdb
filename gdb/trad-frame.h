@@ -22,6 +22,8 @@
 
 #include "frame.h"		/* For "struct frame_id".  */
 
+namespace gdb {
+
 struct frame_info;
 struct regcache_map_entry;
 struct trad_frame_cache;
@@ -123,5 +125,7 @@ struct trad_frame_saved_reg *trad_frame_alloc_saved_regs (struct gdbarch *);
 struct value *trad_frame_get_prev_register (struct frame_info *this_frame,
 					    struct trad_frame_saved_reg this_saved_regs[],
 					    int regnum);
+
+} /* namespace gdb */
 
 #endif

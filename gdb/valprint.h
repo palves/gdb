@@ -20,6 +20,8 @@
 #ifndef VALPRINT_H
 #define VALPRINT_H
 
+namespace gdb {
+
 /* This is used to pass formatting options to various value-printing
    functions.  */
 struct value_print_options
@@ -245,5 +247,7 @@ extern int build_address_symbolic (struct gdbarch *,
 				   std::string *filename,
 				   int *line,
 				   int *unmapped);
+
+} /* namespace gdb */
 
 #endif

@@ -22,6 +22,9 @@
 #include "scoped_fd.h"
 #include "common/filestuff.h"
 
+namespace gdb {
+
+
 #ifdef HAVE_SYS_MMAN_H
 
 scoped_mmap
@@ -47,3 +50,5 @@ mmap_file (const char *filename)
 }
 
 #endif /* HAVE_SYS_MMAN_H */
+
+} /* namespace gdb */

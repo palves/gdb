@@ -31,6 +31,8 @@
 #include "target/waitstatus.h" /* For enum target_stop_reason.  */
 #include "tracepoint.h"
 
+namespace gdb {
+
 #define PTRACE_XFER_TYPE long
 
 #ifdef HAVE_LINUX_REGSETS
@@ -433,5 +435,7 @@ void thread_db_notice_clone (struct thread_info *parent_thr, ptid_t child_ptid);
 bool thread_db_thread_handle (ptid_t ptid, gdb_byte **handle, int *handle_len);
 
 extern int have_ptrace_getregset;
+
+} /* namespace gdb */
 
 #endif /* GDBSERVER_LINUX_LOW_H */

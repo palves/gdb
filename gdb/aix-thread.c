@@ -56,6 +56,9 @@
 #include <sched.h>
 #include <sys/pthdebug.h>
 
+namespace gdb {
+
+
 #if !HAVE_DECL_GETTHRDS
 extern int getthrds (pid_t, struct thrdsinfo64 *, int, tid_t *, int);
 #endif
@@ -1850,3 +1853,5 @@ _initialize_aix_thread (void)
 			      module is \"%d\".  */
 			   &setdebuglist, &showdebuglist);
 }
+
+} /* namespace gdb */

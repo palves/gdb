@@ -31,6 +31,9 @@
 #include "regcache.h"
 #include "objfiles.h"
 
+namespace gdb {
+
+
 /* This module provides support for "Ravenscar" tasks (Ada) when
    debugging on bare-metal targets.
 
@@ -621,3 +624,5 @@ Ravenscar run-time library for bareboard configuration."),
 			   NULL, show_ravenscar_task_switching_command,
 			   &set_ravenscar_list, &show_ravenscar_list);
 }
+
+} /* namespace gdb */

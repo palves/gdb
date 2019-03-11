@@ -38,6 +38,9 @@
 #include <algorithm>
 #include "common/gdb_optional.h"
 
+namespace gdb {
+
+
 /* Class that implements the static probe methods for "any" probe.  */
 
 class any_static_probe_ops : public static_probe_ops
@@ -937,3 +940,5 @@ all defined probes."),
 	   &disablelist);
 
 }
+
+} /* namespace gdb */

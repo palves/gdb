@@ -47,6 +47,9 @@
 #include <mach/mach_init.h>
 #include <mach/mach_vm.h>
 
+namespace gdb {
+
+
 #define CHECK_ARGS(what, args) do { \
   if ((NULL == args) || ((args[0] != '0') && (args[1] != 'x'))) \
     error(_("%s must be specified with 0x..."), what);		\
@@ -863,3 +866,5 @@ _initialize_darwin_info_commands (void)
   add_info ("mach-exceptions", info_mach_exceptions_command,
             _("Disp mach exceptions."));
 }
+
+} /* namespace gdb */

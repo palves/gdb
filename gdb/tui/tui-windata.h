@@ -24,6 +24,8 @@
 
 #include "tui/tui-data.h"
 
+namespace gdb {
+
 extern void tui_erase_data_content (const char *);
 extern void tui_display_all_data (void);
 extern void tui_check_data_values (struct frame_info *);
@@ -35,5 +37,7 @@ extern void tui_refresh_data_win (void);
 extern void tui_display_data_from (int, int);
 extern void tui_vertical_data_scroll (enum tui_scroll_direction, 
 				      int);
+
+} /* namespace gdb */
 
 #endif /* TUI_TUI_WINDATA_H */

@@ -38,6 +38,9 @@
 
 #include "nat/mips-linux-watch.h"
 
+namespace gdb {
+
+
 #ifndef PTRACE_GET_THREAD_AREA
 #define PTRACE_GET_THREAD_AREA 25
 #endif
@@ -802,3 +805,5 @@ triggers a breakpoint or watchpoint."),
   linux_target = &the_mips_linux_nat_target;
   add_inf_child_target (&the_mips_linux_nat_target);
 }
+
+} /* namespace gdb */

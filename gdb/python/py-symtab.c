@@ -25,6 +25,9 @@
 #include "objfiles.h"
 #include "block.h"
 
+namespace gdb {
+
+
 typedef struct stpy_symtab_object {
   PyObject_HEAD
   /* The GDB Symbol table structure.  */
@@ -651,3 +654,5 @@ PyTypeObject sal_object_type = {
   0,				  /*tp_members */
   sal_object_getset		  /*tp_getset */
 };
+
+} /* namespace gdb */

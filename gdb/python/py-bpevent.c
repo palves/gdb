@@ -20,6 +20,9 @@
 #include "defs.h"
 #include "py-stopevent.h"
 
+namespace gdb {
+
+
 /* Create and initialize a BreakpointEvent object.  This acquires new
    references to BREAKPOINT_LIST and FIRST_BP.  */
 
@@ -43,3 +46,5 @@ create_breakpoint_event_object (PyObject *breakpoint_list, PyObject *first_bp)
 
   return breakpoint_event_obj;
 }
+
+} /* namespace gdb */

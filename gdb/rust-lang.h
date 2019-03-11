@@ -20,6 +20,8 @@
 #ifndef RUST_LANG_H
 #define RUST_LANG_H
 
+namespace gdb {
+
 struct parser_state;
 struct type;
 
@@ -47,5 +49,7 @@ extern const char *rust_last_path_segment (const char *path);
    is allocated.  */
 extern struct type *rust_slice_type (const char *name, struct type *elt_type,
 				     struct type *usize_type);
+
+} /* namespace gdb */
 
 #endif /* RUST_LANG_H */

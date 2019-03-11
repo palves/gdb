@@ -42,6 +42,9 @@
 #include "nat/x86-linux-dregs.h"
 #include "nat/linux-ptrace.h"
 
+namespace gdb {
+
+
 /* linux_nat_target::low_new_fork implementation.  */
 
 void
@@ -322,3 +325,5 @@ _initialize_x86_linux_nat ()
   x86_dr_low.get_control = x86_linux_dr_get_control;
   x86_set_debug_register_length (sizeof (void *));
 }
+
+} /* namespace gdb */

@@ -58,6 +58,9 @@
 #include <algorithm>
 #include <vector>
 
+namespace gdb {
+
+
 /* Control debugging information emitted in this file.  */
 static int csky_debug = 0;
 
@@ -2257,3 +2260,5 @@ _initialize_csky_tdep (void)
 			   NULL,
 			   &setdebuglist, &showdebuglist);
 }
+
+} /* namespace gdb */

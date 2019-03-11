@@ -20,6 +20,9 @@
 #include "common-defs.h"
 #include "vec.h"
 
+namespace gdb {
+
+
 struct vec_prefix
 {
   unsigned num;
@@ -116,3 +119,5 @@ typedef obj_t *ptr_t;
 DEF_VEC_P (ptr_t);
 DEF_VEC_O (obj_t);
 #endif
+
+} /* namespace gdb */

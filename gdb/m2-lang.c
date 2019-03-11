@@ -28,6 +28,9 @@
 #include "c-lang.h"
 #include "valprint.h"
 
+namespace gdb {
+
+
 static void m2_printchar (int, struct type *, struct ui_file *);
 static void m2_emit_char (int, struct type *, struct ui_file *, int);
 
@@ -440,3 +443,5 @@ _initialize_m2_language (void)
 {
   m2_type_data = gdbarch_data_register_post_init (build_m2_types);
 }
+
+} /* namespace gdb */

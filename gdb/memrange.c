@@ -21,6 +21,9 @@
 #include "memrange.h"
 #include <algorithm>
 
+namespace gdb {
+
+
 int
 mem_ranges_overlap (CORE_ADDR start1, int len1,
 		    CORE_ADDR start2, int len2)
@@ -74,3 +77,5 @@ normalize_mem_ranges (std::vector<mem_range> *memory)
       m.resize (a + 1);
     }
 }
+
+} /* namespace gdb */

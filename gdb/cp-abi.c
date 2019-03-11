@@ -23,6 +23,9 @@
 #include "command.h"
 #include "gdbcmd.h"
 #include "ui-out.h"
+
+namespace gdb {
+
 static struct cp_abi_ops *find_cp_abi (const char *short_name);
 
 static struct cp_abi_ops current_cp_abi = { "", NULL };
@@ -408,3 +411,5 @@ Set the ABI used for inspecting C++ objects.\n\
 	   _("Show the ABI used for inspecting C++ objects."),
 	   &showlist);
 }
+
+} /* namespace gdb */

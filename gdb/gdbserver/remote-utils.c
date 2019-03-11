@@ -72,6 +72,9 @@
 
 #if __QNX__
 #include <sys/iomgr.h>
+
+namespace gdb {
+
 #endif /* __QNX__ */
 
 #ifndef HAVE_SOCKLEN_T
@@ -1698,3 +1701,5 @@ monitor_output (const char *msg)
 }
 
 #endif
+
+} /* namespace gdb */

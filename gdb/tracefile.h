@@ -5,6 +5,8 @@
 #include "target.h"
 #include "process-stratum-target.h"
 
+namespace gdb {
+
 struct trace_file_writer;
 
 /* Operations to write trace frames to a specific trace format.  */
@@ -132,5 +134,7 @@ public:
 };
 
 extern void tracefile_fetch_registers (struct regcache *regcache, int regno);
+
+} /* namespace gdb */
 
 #endif /* TRACEFILE_H */

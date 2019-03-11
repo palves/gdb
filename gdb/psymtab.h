@@ -25,6 +25,8 @@
 #include "common/next-iterator.h"
 #include "bcache.h"
 
+namespace gdb {
+
 struct partial_symbol;
 
 /* An instance of this class manages the partial symbol tables and
@@ -149,5 +151,7 @@ extern const struct quick_symbol_functions dwarf2_debug_names_functions;
 
 extern psymtab_storage::partial_symtab_range require_partial_symbols
     (struct objfile *objfile, int verbose);
+
+} /* namespace gdb */
 
 #endif /* PSYMTAB_H */

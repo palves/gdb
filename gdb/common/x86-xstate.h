@@ -20,6 +20,8 @@
 #ifndef COMMON_X86_XSTATE_H
 #define COMMON_X86_XSTATE_H
 
+namespace gdb {
+
 /* The extended state feature bits.  */
 #define X86_XSTATE_X87		(1ULL << 0)
 #define X86_XSTATE_SSE		(1ULL << 1)
@@ -84,5 +86,7 @@
    mxcsr register.  */
 
 #define I387_MXCSR_INIT_VAL 0x1f80
+
+} /* namespace gdb */
 
 #endif /* COMMON_X86_XSTATE_H */

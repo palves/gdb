@@ -3,6 +3,9 @@
 
 #include "common/tdesc.h"
 
+namespace gdb {
+
+
 static int
 create_feature_i386_x32_core (struct target_desc *result, long regnum)
 {
@@ -71,3 +74,5 @@ create_feature_i386_x32_core (struct target_desc *result, long regnum)
   tdesc_create_reg (feature, "fop", regnum++, 1, "float", 32, "int");
   return regnum;
 }
+
+} /* namespace gdb */

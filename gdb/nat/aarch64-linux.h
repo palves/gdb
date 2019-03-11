@@ -24,6 +24,8 @@
 /* Defines ps_err_e, struct ps_prochandle.  */
 #include "gdb_proc_service.h"
 
+namespace gdb {
+
 typedef int compat_int_t;
 typedef unsigned int compat_uptr_t;
 
@@ -128,5 +130,7 @@ void aarch64_linux_delete_thread (struct arch_lwp_info *arch_lwp);
 ps_err_e aarch64_ps_get_thread_area (struct ps_prochandle *ph,
 				       lwpid_t lwpid, int idx, void **base,
 				       int is_64bit_p);
+
+} /* namespace gdb */
 
 #endif /* NAT_AARCH64_LINUX_H */

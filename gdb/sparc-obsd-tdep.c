@@ -31,6 +31,9 @@
 #include "solib-svr4.h"
 #include "bsd-uthread.h"
 
+namespace gdb {
+
+
 /* Signal trampolines.  */
 
 /* The OpenBSD kernel maps the signal trampoline at some random
@@ -251,3 +254,5 @@ _initialize_sparc32obsd_tdep (void)
   gdbarch_register_osabi (bfd_arch_sparc, 0, GDB_OSABI_OPENBSD,
 			  sparc32obsd_init_abi);
 }
+
+} /* namespace gdb */

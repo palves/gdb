@@ -33,6 +33,9 @@
 #include <sys/stat.h>
 #include "source.h"
 
+namespace gdb {
+
+
 static const char path_var_name[] = "PATH";
 static char *orig_path = NULL;
 
@@ -278,3 +281,5 @@ _initialize_mi_cmd_env (void)
     env = "";
   orig_path = xstrdup (env);
 }
+
+} /* namespace gdb */

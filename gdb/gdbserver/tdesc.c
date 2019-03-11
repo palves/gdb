@@ -19,6 +19,9 @@
 #include "tdesc.h"
 #include "regdef.h"
 
+namespace gdb {
+
+
 #ifndef IN_PROCESS_AGENT
 
 target_desc::~target_desc ()
@@ -186,3 +189,5 @@ tdesc_create_feature (struct target_desc *tdesc, const char *name)
   tdesc->features.emplace_back (new_feature);
   return new_feature;
 }
+
+} /* namespace gdb */

@@ -37,6 +37,9 @@
 #include "dwarf2-frame.h"
 #include "score-tdep.h"
 
+namespace gdb {
+
+
 #define G_FLD(_i,_ms,_ls) \
     ((unsigned)((_i) << (31 - (_ms))) >> (31 - (_ms) + (_ls)))
 
@@ -1536,3 +1539,5 @@ _initialize_score_tdep (void)
 {
   gdbarch_register (bfd_arch_score, score_gdbarch_init, NULL);
 }
+
+} /* namespace gdb */

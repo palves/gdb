@@ -33,6 +33,9 @@
 
 #include "bsd-kvm.h"
 
+namespace gdb {
+
+
 static int
 sparc64fbsd_kvm_supply_pcb (struct regcache *regcache, struct pcb *pcb)
 {
@@ -72,3 +75,5 @@ _initialize_sparc64fbsd_nat (void)
   /* Support debugging kernel virtual memory images.  */
   bsd_kvm_add_target (sparc64fbsd_kvm_supply_pcb);
 }
+
+} /* namespace gdb */

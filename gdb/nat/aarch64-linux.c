@@ -27,6 +27,9 @@
 #include <asm/ptrace.h>
 #include <sys/uio.h>
 
+namespace gdb {
+
+
 /* Called when resuming a thread LWP.
    The hardware debug registers are updated when there is any change.  */
 
@@ -250,3 +253,5 @@ aarch64_ps_get_thread_area (struct ps_prochandle *ph,
 
   return PS_OK;
 }
+
+} /* namespace gdb */

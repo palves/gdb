@@ -21,6 +21,9 @@
 #include "common/selftest.h"
 #include "common/x86-xstate.h"
 
+namespace gdb {
+
+
 /* Defined in auto-generated file i386-linux.c.  */
 void init_registers_i386_linux (void);
 extern const struct target_desc *tdesc_i386_linux;
@@ -181,3 +184,5 @@ initialize_low_tdesc ()
   selftests::register_test ("amd64-tdesc", selftests::tdesc::amd64_tdesc_test);
 #endif
 }
+
+} /* namespace gdb */

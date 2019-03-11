@@ -40,6 +40,9 @@
 #include "sparc-ravenscar-thread.h"
 #include <algorithm>
 
+namespace gdb {
+
+
 struct regset;
 
 /* This file implements the SPARC 32-bit ABI as defined by the section
@@ -2272,3 +2275,5 @@ _initialize_sparc_tdep (void)
 {
   register_gdbarch_init (bfd_arch_sparc, sparc32_gdbarch_init);
 }
+
+} /* namespace gdb */

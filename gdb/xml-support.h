@@ -26,6 +26,8 @@
 #include "common/xml-utils.h"
 #include "common/byte-vector.h"
 
+namespace gdb {
+
 struct gdb_xml_parser;
 struct gdb_xml_element;
 struct gdb_xml_attribute;
@@ -237,5 +239,7 @@ ULONGEST gdb_xml_parse_ulongest (struct gdb_xml_parser *parser,
 
 extern gdb::optional<gdb::char_vector> xml_fetch_content_from_file
     (const char *filename, void *baton);
+
+} /* namespace gdb */
 
 #endif

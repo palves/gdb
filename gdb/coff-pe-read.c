@@ -38,6 +38,9 @@
 
 #include <ctype.h>
 
+namespace gdb {
+
+
 /* Internal section information */
 
 /* Coff PE read debugging flag:
@@ -697,3 +700,5 @@ _initialize_coff_pe_read (void)
 			     NULL, show_debug_coff_pe_read,
 			     &setdebuglist, &showdebuglist);
 }
+
+} /* namespace gdb */

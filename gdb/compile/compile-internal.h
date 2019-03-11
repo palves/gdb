@@ -19,6 +19,8 @@
 
 #include "gcc-c-interface.h"
 
+namespace gdb {
+
 /* Debugging flag for the "compile" family of commands.  */
 
 extern int compile_debug;
@@ -206,5 +208,7 @@ private:
   std::string m_source_file;
   std::string m_object_file;
 };
+
+} /* namespace gdb */
 
 #endif /* COMPILE_COMPILE_INTERNAL_H */

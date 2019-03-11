@@ -21,6 +21,8 @@
 
 #include "buildsym.h"
 
+namespace gdb {
+
 /* This module provides definitions used for creating and adding to
    the symbol table.  These routines are called from various symbol-
    file-reading routines.  This file holds the legacy API, which
@@ -178,5 +180,7 @@ extern struct pending **get_global_symbols ();
 /* Return the current buildsym_compunit.  */
 
 extern struct buildsym_compunit *get_buildsym_compunit ();
+
+} /* namespace gdb */
 
 #endif /* BUILDSYM_LEGACY_H */

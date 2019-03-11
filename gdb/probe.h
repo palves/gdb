@@ -20,6 +20,8 @@
 #if !defined (PROBE_H)
 #define PROBE_H 1
 
+namespace gdb {
+
 struct event_location;
 struct linespec_result;
 
@@ -301,5 +303,7 @@ extern struct cmd_list_element **info_probes_cmdlist_get (void);
 
 extern struct value *probe_safe_evaluate_at_pc (struct frame_info *frame,
 						unsigned n);
+
+} /* namespace gdb */
 
 #endif /* !defined (PROBE_H) */

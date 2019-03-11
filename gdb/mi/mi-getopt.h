@@ -20,6 +20,8 @@
 #ifndef MI_MI_GETOPT_H
 #define MI_MI_GETOPT_H
 
+namespace gdb {
+
 /* The option list.  Terminated by NAME==NULL.  ARG_P that the option
    requires an argument.  INDEX is returned to identify the option.  */
 
@@ -74,5 +76,7 @@ extern int mi_getopt_allow_unknown (const char *prefix, int argc,
    and the appropriate error message is displayed by mi_getopt.  */
 
 extern int mi_valid_noargs (const char *prefix, int argc, char **argv);
+
+} /* namespace gdb */
 
 #endif /* MI_MI_GETOPT_H */

@@ -18,6 +18,8 @@
 #ifndef GDBSERVER_X86_TDESC_H
 #define GDBSERVER_X86_TDESC_H
 
+namespace gdb {
+
 /* The "expedite" registers for x86 targets.  Since whether the
    variable is used depends on host/configuration, we mark it
    ATTRIBUTE_UNUSED to keep it simple here.  */
@@ -28,5 +30,7 @@ static const char *i386_expedite_regs[] ATTRIBUTE_UNUSED
 /* The "expedite" registers for x86_64 targets.  */
 static const char *amd64_expedite_regs[] = {"rbp", "rsp", "rip", NULL};
 #endif
+
+} /* namespace gdb */
 
 #endif /* GDBSERVER_X86_TDESC_H */

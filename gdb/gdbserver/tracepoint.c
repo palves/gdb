@@ -7331,6 +7331,9 @@ gdb_agent_init (void)
 
 #include <sys/mman.h>
 
+namespace gdb {
+
+
 IP_AGENT_EXPORT_VAR char *gdb_tp_heap_buffer;
 IP_AGENT_EXPORT_VAR char *gdb_jump_pad_buffer;
 IP_AGENT_EXPORT_VAR char *gdb_jump_pad_buffer_end;
@@ -7451,3 +7454,5 @@ initialize_tracepoint (void)
   initialize_low_tracepoint ();
 #endif
 }
+
+} /* namespace gdb */

@@ -30,6 +30,9 @@
 #include "elf-bfd.h"
 #include "gdb_bfd.h"
 
+namespace gdb {
+
+
 #define GOT_MODULE_OFFSET 4
 
 /* Flag which indicates whether internal debug messages should be printed.  */
@@ -1066,3 +1069,5 @@ When non-zero, DSBT solib specific internal debugging is enabled."),
 			     show_dsbt_debug,
 			     &setdebuglist, &showdebuglist);
 }
+
+} /* namespace gdb */

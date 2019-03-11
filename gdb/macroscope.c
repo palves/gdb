@@ -27,6 +27,9 @@
 #include "inferior.h"
 #include "complaints.h"
 
+namespace gdb {
+
+
 /* A table of user-defined macros.  Unlike the macro tables used for
    symtabs, this one uses xmalloc for all its allocation, not an
    obstack, and it doesn't bcache anything; it just xmallocs things.  So
@@ -159,3 +162,5 @@ _initialize_macroscope (void)
   macro_set_main (macro_user_macros, "<user-defined>");
   macro_allow_redefinitions (macro_user_macros);
 }
+
+} /* namespace gdb */

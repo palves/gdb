@@ -3,6 +3,9 @@
 
 #include "common/tdesc.h"
 
+namespace gdb {
+
+
 static int
 create_feature_i386_32bit_pkeys (struct target_desc *result, long regnum)
 {
@@ -12,3 +15,5 @@ create_feature_i386_32bit_pkeys (struct target_desc *result, long regnum)
   tdesc_create_reg (feature, "pkru", regnum++, 1, NULL, 32, "uint32");
   return regnum;
 }
+
+} /* namespace gdb */

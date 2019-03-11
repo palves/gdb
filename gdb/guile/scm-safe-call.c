@@ -25,6 +25,9 @@
 #include "guile-internal.h"
 #include "common/pathstuff.h"
 
+namespace gdb {
+
+
 /* Struct to marshall args to scscm_safe_call_body.  */
 
 struct c_data
@@ -466,3 +469,5 @@ gdbscm_enter_repl (void)
   gdbscm_safe_call_1 (scm_c_public_ref ("system repl repl", "start-repl"),
 		      scm_from_latin1_symbol ("scheme"), NULL);
 }
+
+} /* namespace gdb */

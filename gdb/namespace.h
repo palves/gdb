@@ -23,6 +23,8 @@
 #include "common/gdb_vecs.h"
 #include "gdb_obstack.h"
 
+namespace gdb {
+
 /* This struct is designed to store data from using directives.  It
    says that names from namespace IMPORT_SRC should be visible within
    namespace IMPORT_DEST.  These form a linked list; NEXT is the next
@@ -114,5 +116,7 @@ extern void add_using_directive (struct using_direct **using_directives,
 				 const std::vector<const char *> &excludes,
 				 int copy_names,
                                  struct obstack *obstack);
+
+} /* namespace gdb */
 
 #endif /* NAMESPACE_H */

@@ -26,6 +26,8 @@
 #include "../opcodes/or1k-desc.h"
 #include "../opcodes/or1k-opc.h"
 
+namespace gdb {
+
 /* General Purpose Registers */
 #define OR1K_ZERO_REGNUM          0
 #define OR1K_SP_REGNUM            1
@@ -51,5 +53,7 @@
 #define OR1K_INSTBITLEN             (OR1K_INSTLEN * 8)
 #define OR1K_NUM_TAP_RECORDS         8
 #define OR1K_FRAME_RED_ZONE_SIZE     2536
+
+} /* namespace gdb */
 
 #endif /* OR1K_TDEP_H */

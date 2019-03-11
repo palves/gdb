@@ -20,6 +20,9 @@
 #include "defs.h"
 #include "py-event.h"
 
+namespace gdb {
+
+
 /* Construct either a gdb.InferiorCallPreEvent or a
    gdb.InferiorCallPostEvent. */
 
@@ -161,3 +164,5 @@ emit_register_changed_event (struct frame_info* frame, int regnum)
     return evpy_emit_event (event.get (), gdb_py_events.register_changed);
   return -1;
 }
+
+} /* namespace gdb */

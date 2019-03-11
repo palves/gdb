@@ -23,6 +23,9 @@
 #include "../features/aarch64-fpu.c"
 #include "../features/aarch64-sve.c"
 
+namespace gdb {
+
+
 /* See arch/aarch64.h.  */
 
 target_desc *
@@ -45,3 +48,5 @@ aarch64_create_target_description (uint64_t vq)
 
   return tdesc;
 }
+
+} /* namespace gdb */

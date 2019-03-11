@@ -45,6 +45,9 @@
 #include "common/underlying.h"
 #include "common/byte-vector.h"
 
+namespace gdb {
+
+
 extern int dwarf_always_disassemble;
 
 static struct value *dwarf2_evaluate_loc_desc_full (struct type *type,
@@ -4507,3 +4510,5 @@ _initialize_dwarf2loc (void)
 			     show_entry_values_debug,
 			     &setdebuglist, &showdebuglist);
 }
+
+} /* namespace gdb */

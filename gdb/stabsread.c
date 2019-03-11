@@ -48,6 +48,9 @@
 
 #include "stabsread.h"
 
+namespace gdb {
+
+
 /* See stabsread.h for these globals.  */
 unsigned int symnum;
 const char *(*next_symbol_text_func) (struct objfile *);
@@ -4815,3 +4818,5 @@ _initialize_stabsread (void)
   stab_regparm_index = register_symbol_register_impl (LOC_REGPARM_ADDR,
 						      &stab_register_funcs);
 }
+
+} /* namespace gdb */

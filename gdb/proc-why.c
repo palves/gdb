@@ -27,6 +27,9 @@
 
 #include "proc-utils.h"
 
+namespace gdb {
+
+
 /* Much of the information used in the /proc interface, particularly
    for printing status information, is kept as tables of structures of
    the following form.  These tables can be used to map numeric values
@@ -112,3 +115,5 @@ proc_prettyprint_why (unsigned long why, unsigned long what, int verbose)
 {
   proc_prettyfprint_why (stdout, why, what, verbose);
 }
+
+} /* namespace gdb */

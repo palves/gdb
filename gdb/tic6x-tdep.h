@@ -20,6 +20,8 @@
 #ifndef TIC6X_TDEP_H
 #define TIC6X_TDEP_H
 
+namespace gdb {
+
 enum
 {
   TIC6X_A4_REGNUM = 4,
@@ -54,5 +56,7 @@ struct gdbarch_tdep
 
   int has_gp; /* Has general purpose registers A16 - A31 and B16 - B31.  */
 };
+
+} /* namespace gdb */
 
 #endif /* TIC6X_TDEP_H */

@@ -20,6 +20,9 @@
 
 #include <windows.h>
 
+namespace gdb {
+
+
 void
 perror (const char *s)
 {
@@ -36,3 +39,5 @@ to_back_slashes (char *path)
     if ('/' == *path)
       *path = '\\';
 }
+
+} /* namespace gdb */

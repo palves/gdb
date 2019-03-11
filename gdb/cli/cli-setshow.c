@@ -29,6 +29,9 @@
 #include "cli/cli-setshow.h"
 #include "cli/cli-utils.h"
 
+namespace gdb {
+
+
 /* Return true if the change of command parameter should be notified.  */
 
 static int
@@ -690,3 +693,5 @@ cmd_show_list (struct cmd_list_element *list, int from_tty, const char *prefix)
     }
 }
 
+
+} /* namespace gdb */

@@ -32,6 +32,8 @@ struct gdb_get_next_pcs;
 
 #include <vector>
 
+namespace gdb {
+
 /* Say how long FP registers are.  Used for documentation purposes and
    code readability in this header.  IEEE extended doubles are 80
    bits.  DWORD aligned they use 96 bits.  */
@@ -296,5 +298,7 @@ extern struct target_desc *tdesc_arm_with_iwmmxt;
 extern struct target_desc *tdesc_arm_with_vfpv2;
 extern struct target_desc *tdesc_arm_with_vfpv3;
 extern struct target_desc *tdesc_arm_with_neon;
+
+} /* namespace gdb */
 
 #endif /* arm-tdep.h */

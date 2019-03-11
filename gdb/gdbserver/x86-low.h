@@ -22,7 +22,11 @@
 
 #include "nat/x86-dregs.h"
 
+namespace gdb {
+
 /* Initialize STATE.  */
 extern void x86_low_init_dregs (struct x86_debug_reg_state *state);
+
+} /* namespace gdb */
 
 #endif /* GDBSERVER_X86_LOW_H */

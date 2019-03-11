@@ -25,6 +25,8 @@
 #include "target.h"
 #include <signal.h>
 
+namespace gdb {
+
 /* A prototype generic GNU/Linux target.  A concrete instance should
    override it with local methods.  */
 
@@ -325,5 +327,7 @@ void linux_nat_switch_fork (ptid_t new_ptid);
    Return 1 if it was retrieved successfully, 0 otherwise (*SIGINFO is
    uninitialized in such case).  */
 int linux_nat_get_siginfo (ptid_t ptid, siginfo_t *siginfo);
+
+} /* namespace gdb */
 
 #endif /* LINUX_NAT_H */

@@ -22,6 +22,9 @@
 
 #include <windows.h>
 
+namespace gdb {
+
+
 #define context_offset(x) (offsetof (CONTEXT, x))
 static const int mappings[] =
 {
@@ -102,3 +105,5 @@ _initialize_amd64_windows_nat (void)
   windows_set_segment_register_p (amd64_windows_segment_register_p);
   x86_set_debug_register_length (8);
 }
+
+} /* namespace gdb */

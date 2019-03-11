@@ -29,6 +29,9 @@
 #include "top.h"
 #include "common/gdb_optional.h"
 
+namespace gdb {
+
+
 static void
 print_flush (void)
 {
@@ -155,3 +158,5 @@ exception_print_same (struct gdb_exception e1, struct gdb_exception e2)
 	  && e1.error == e2.error
 	  && strcmp (msg1, msg2) == 0);
 }
+
+} /* namespace gdb */

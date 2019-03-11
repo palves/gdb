@@ -33,6 +33,9 @@
 #include "python/python.h"
 #include "guile/guile.h"
 
+namespace gdb {
+
+
 /* Iterate over all external extension languages, regardless of whether the
    support has been compiled in or not.
    This does not include GDB's own scripting language.  */
@@ -936,3 +939,5 @@ _initialize_extension (void)
 {
   gdb::observers::before_prompt.attach (ext_lang_before_prompt);
 }
+
+} /* namespace gdb */

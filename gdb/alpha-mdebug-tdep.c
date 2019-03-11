@@ -28,6 +28,9 @@
 #include "alpha-tdep.h"
 #include "mdebugread.h"
 
+namespace gdb {
+
+
 /* FIXME: Some of this code should perhaps be merged with mips.  */
 
 /* *INDENT-OFF* */
@@ -405,3 +408,5 @@ alpha_mdebug_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
   frame_unwind_append_unwinder (gdbarch, &alpha_mdebug_frame_unwind);
   frame_base_append_sniffer (gdbarch, alpha_mdebug_frame_base_sniffer);
 }
+
+} /* namespace gdb */

@@ -21,6 +21,8 @@
 
 #include "common/def-vector.h"
 
+namespace gdb {
+
 /* If the target program uses a different character set than the host,
    GDB has some support for translating between the two; GDB converts
    characters and strings to the host character set before displaying
@@ -163,5 +165,7 @@ char host_letter_to_control_character (char c);
    converted to 15.  This function assumes that C is a valid hex
    digit.  Both upper- and lower-case letters are recognized.  */
 int host_hex_value (char c);
+
+} /* namespace gdb */
 
 #endif /* CHARSET_H */

@@ -23,6 +23,9 @@
 
 #include <ctype.h>
 
+namespace gdb {
+
+
 static std::string extract_arg_maybe_quoted (const char **arg);
 
 /* See documentation in cli-utils.h.  */
@@ -520,3 +523,5 @@ parse_flags_qcs (const char *which_command, const char **str,
 
   return true;
 }
+
+} /* namespace gdb */

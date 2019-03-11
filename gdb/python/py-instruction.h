@@ -22,9 +22,13 @@
 
 #include "python-internal.h"
 
+namespace gdb {
+
 /* Python type object for the abstract gdb.Instruction class.  This class
    contains getters for four elements: "pc" (int), "data" (buffer), "decode"
    (str) and "size" (int) that must be overriden by sub classes.  */
 extern PyTypeObject py_insn_type;
+
+} /* namespace gdb */
 
 #endif /* PYTHON_PY_INSTRUCTION_H */

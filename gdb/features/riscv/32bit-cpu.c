@@ -3,6 +3,9 @@
 
 #include "common/tdesc.h"
 
+namespace gdb {
+
+
 static int
 create_feature_riscv_32bit_cpu (struct target_desc *result, long regnum)
 {
@@ -44,3 +47,5 @@ create_feature_riscv_32bit_cpu (struct target_desc *result, long regnum)
   tdesc_create_reg (feature, "pc", regnum++, 1, NULL, 32, "code_ptr");
   return regnum;
 }
+
+} /* namespace gdb */

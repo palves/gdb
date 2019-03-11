@@ -20,6 +20,9 @@
 #include "common-defs.h"
 #include "format.h"
 
+namespace gdb {
+
+
 format_pieces::format_pieces (const char **arg)
 {
   const char *s;
@@ -348,3 +351,5 @@ format_pieces::format_pieces (const char **arg)
 
   m_pieces.emplace_back (sub_start, literal_piece);
 }
+
+} /* namespace gdb */

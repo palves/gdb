@@ -45,6 +45,9 @@
 /* Defines ps_err_e, struct ps_prochandle.  */
 #include "gdb_proc_service.h"
 
+namespace gdb {
+
+
 #ifndef PTRACE_GET_THREAD_AREA
 #define PTRACE_GET_THREAD_AREA 22
 #endif
@@ -1324,3 +1327,5 @@ _initialize_arm_linux_nat (void)
   linux_target = &the_arm_linux_nat_target;
   add_inf_child_target (&the_arm_linux_nat_target);
 }
+
+} /* namespace gdb */

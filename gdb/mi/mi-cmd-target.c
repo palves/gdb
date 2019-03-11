@@ -21,6 +21,9 @@
 #include "mi-getopt.h"
 #include "remote.h"
 
+namespace gdb {
+
+
 /* Get a file from the target.  */
 
 void
@@ -92,3 +95,5 @@ mi_cmd_target_file_delete (const char *command, char **argv, int argc)
   remote_file_delete (remote_file, 0);
 }
 
+
+} /* namespace gdb */

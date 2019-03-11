@@ -128,6 +128,9 @@ struct arch_lwp_info
 
 #ifdef HAVE_SYS_REG_H
 #include <sys/reg.h>
+
+namespace gdb {
+
 #endif
 
 #define arm_num_regs 26
@@ -1094,3 +1097,5 @@ initialize_low_arch (void)
 
   initialize_regsets_info (&arm_regsets_info);
 }
+
+} /* namespace gdb */

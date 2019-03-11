@@ -21,6 +21,9 @@
 #include "filename-seen-cache.h"
 #include "filenames.h"
 
+namespace gdb {
+
+
   /* Initial size of the table.  It automagically grows from here.  */
 #define INITIAL_FILENAME_SEEN_CACHE_SIZE 100
 
@@ -64,3 +67,5 @@ filename_seen_cache::seen (const char *file)
   *slot = (char *) file;
   return false;
 }
+
+} /* namespace gdb */

@@ -32,6 +32,9 @@
 #include <string>
 #include <stdlib.h>
 
+namespace gdb {
+
+
 /* When set to 1, show debug messages about the index cache.  */
 static int debug_index_cache = 0;
 
@@ -359,3 +362,5 @@ When non-zero, debugging output for the index cache is displayed."),
 			    NULL, NULL,
 			    &setdebuglist, &showdebuglist);
 }
+
+} /* namespace gdb */

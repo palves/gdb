@@ -26,6 +26,9 @@
 
 #include "i386-tdep.h"
 
+namespace gdb {
+
+
 /* Support for signal handlers.  */
 
 /* Assuming THIS_FRAME is for a BSD sigtramp routine, return the
@@ -86,3 +89,5 @@ i386bsd_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
 }
 
 
+
+} /* namespace gdb */

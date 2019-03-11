@@ -20,6 +20,9 @@
 #include "linux-low.h"
 #include "nat/gdb_ptrace.h"
 
+namespace gdb {
+
+
 /* Defined in auto-generated file reg-cris.c.  */
 void init_registers_cris (void);
 extern const struct target_desc *tdesc_cris;
@@ -130,3 +133,5 @@ initialize_low_arch (void)
 {
   init_registers_cris ();
 }
+
+} /* namespace gdb */

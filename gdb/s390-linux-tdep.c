@@ -58,6 +58,9 @@
 #include "features/s390x-tevx-linux64.c"
 #include "features/s390x-gs-linux64.c"
 
+namespace gdb {
+
+
 #define XML_SYSCALL_FILENAME_S390 "syscalls/s390-linux.xml"
 #define XML_SYSCALL_FILENAME_S390X "syscalls/s390x-linux.xml"
 
@@ -1204,3 +1207,5 @@ _initialize_s390_linux_tdep (void)
   initialize_tdesc_s390x_tevx_linux64 ();
   initialize_tdesc_s390x_gs_linux64 ();
 }
+
+} /* namespace gdb */

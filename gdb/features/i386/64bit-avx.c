@@ -3,6 +3,9 @@
 
 #include "common/tdesc.h"
 
+namespace gdb {
+
+
 static int
 create_feature_i386_64bit_avx (struct target_desc *result, long regnum)
 {
@@ -27,3 +30,5 @@ create_feature_i386_64bit_avx (struct target_desc *result, long regnum)
   tdesc_create_reg (feature, "ymm15h", regnum++, 1, NULL, 128, "uint128");
   return regnum;
 }
+
+} /* namespace gdb */

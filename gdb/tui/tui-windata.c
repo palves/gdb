@@ -27,6 +27,9 @@
 #include "tui/tui-windata.h"
 #include "gdb_curses.h"
 
+namespace gdb {
+
+
 
 /*****************************************
 ** STATIC LOCAL FUNCTIONS FORWARD DECLS    **
@@ -294,3 +297,5 @@ tui_vertical_data_scroll (enum tui_scroll_direction scroll_direction,
 /*****************************************
 ** STATIC LOCAL FUNCTIONS               **
 ******************************************/
+
+} /* namespace gdb */

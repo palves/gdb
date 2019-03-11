@@ -47,6 +47,9 @@
 #include <algorithm>
 #include "common/pathstuff.h"
 
+namespace gdb {
+
+
 void (*deprecated_file_changed_hook) (const char *);
 
 static const target_info exec_target_info = {
@@ -1086,3 +1089,5 @@ Show writing into executable and core files."), NULL,
 
   add_target (exec_target_info, exec_target_open, filename_completer);
 }
+
+} /* namespace gdb */

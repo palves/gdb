@@ -19,6 +19,8 @@
 #ifndef GDBSERVER_HOSTIO_H
 #define GDBSERVER_HOSTIO_H
 
+namespace gdb {
+
 /* Per-connection setup.  */
 extern void hostio_handle_new_gdb_connection (void);
 
@@ -27,5 +29,7 @@ extern int handle_vFile (char *, int, int *);
 
 /* Functions from hostio-errno.c.  */
 extern void hostio_last_error_from_errno (char *own_buf);
+
+} /* namespace gdb */
 
 #endif /* GDBSERVER_HOSTIO_H */

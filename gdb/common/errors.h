@@ -20,6 +20,8 @@
 #ifndef COMMON_ERRORS_H
 #define COMMON_ERRORS_H
 
+namespace gdb {
+
 /* A problem was detected, but the requested operation can still
    proceed.  A warning message is constructed using a printf- or
    vprintf-style argument list.  The function "vwarning" must be
@@ -86,5 +88,7 @@ extern void perror_with_name (const char *string) ATTRIBUTE_NORETURN;
    client.  */
 
 extern void malloc_failure (long size) ATTRIBUTE_NORETURN;
+
+} /* namespace gdb */
 
 #endif /* COMMON_ERRORS_H */

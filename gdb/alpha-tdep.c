@@ -44,6 +44,9 @@
 #include "alpha-tdep.h"
 #include <algorithm>
 
+namespace gdb {
+
+
 /* Instruction decoding.  The notations for registers, immediates and
    opcodes are the same as the one used in Compaq's Alpha architecture
    handbook.  */
@@ -1846,3 +1849,5 @@ search.  The only need to set it is when debugging a stripped executable."),
 				     the start of a function is \"%d\".  */
 			    &setlist, &showlist);
 }
+
+} /* namespace gdb */

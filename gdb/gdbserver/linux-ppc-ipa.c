@@ -26,6 +26,9 @@
 #include <elf.h>
 #ifdef HAVE_GETAUXVAL
 #include <sys/auxv.h>
+
+namespace gdb {
+
 #endif
 
 /* These macros define the position of registers in the buffer collected
@@ -263,3 +266,5 @@ initialize_low_tracepoint (void)
   init_registers_powerpc_e500l ();
 #endif
 }
+
+} /* namespace gdb */

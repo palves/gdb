@@ -39,6 +39,9 @@
 #include "opcode/msp430-decode.h"
 #include "elf-bfd.h"
 
+namespace gdb {
+
+
 /* Register Numbers.  */
 
 enum
@@ -1023,3 +1026,5 @@ _initialize_msp430_tdep (void)
 {
   register_gdbarch_init (bfd_arch_msp430, msp430_gdbarch_init);
 }
+
+} /* namespace gdb */

@@ -32,6 +32,9 @@
 #include "ppc-obsd-tdep.h"
 #include "solib-svr4.h"
 
+namespace gdb {
+
+
 /* Register offsets from <machine/reg.h>.  */
 struct ppc_reg_offsets ppcobsd_reg_offsets;
 struct ppc_reg_offsets ppcobsd_fpreg_offsets;
@@ -299,3 +302,5 @@ _initialize_ppcobsd_tdep (void)
       ppcobsd_reg_offsets.fpscr_size = 4;
     }
 }
+
+} /* namespace gdb */

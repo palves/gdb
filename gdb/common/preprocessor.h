@@ -18,6 +18,8 @@
 #ifndef COMMON_PREPROCESSOR_H
 #define COMMON_PREPROCESSOR_H
 
+namespace gdb {
+
 /* Generally useful preprocessor bits.  */
 
 /* Concatenate two tokens.  */
@@ -31,5 +33,7 @@
 /* Escape parens out.  Useful if you need to pass an argument that
    includes commas to another macro.  */
 #define ESC_PARENS(...) __VA_ARGS__
+
+} /* namespace gdb */
 
 #endif /* COMMON_PREPROCESSOR_H */

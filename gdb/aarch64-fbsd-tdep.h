@@ -22,6 +22,8 @@
 
 #include "regset.h"
 
+namespace gdb {
+
 /* The general-purpose regset consists of 30 X registers, plus LR, SP,
    ELR, and SPSR registers.  SPSR is 32 bits but the structure is
    padded to 64 bit alignment.  */
@@ -34,5 +36,7 @@
 
 extern const struct regset aarch64_fbsd_gregset;
 extern const struct regset aarch64_fbsd_fpregset;
+
+} /* namespace gdb */
 
 #endif /* AARCH64_FBSD_TDEP_H */

@@ -27,6 +27,9 @@
 #include "block.h"
 #include "guile-internal.h"
 
+namespace gdb {
+
+
 /* A <gdb:symtab> smob.  */
 
 typedef struct
@@ -694,3 +697,5 @@ gdbscm_initialize_symtabs (void)
   stscm_objfile_data_key
     = register_objfile_data_with_cleanup (NULL, stscm_del_objfile_symtabs);
 }
+
+} /* namespace gdb */

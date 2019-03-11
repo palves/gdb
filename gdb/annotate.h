@@ -22,6 +22,8 @@
 #include "symtab.h"
 #include "gdbtypes.h"
 
+namespace gdb {
+
 extern void annotate_breakpoint (int);
 extern void annotate_catchpoint (int);
 extern void annotate_watchpoint (int);
@@ -113,5 +115,7 @@ extern void annotate_array_section_end (void);
 
 extern void (*deprecated_annotate_signalled_hook) (void);
 extern void (*deprecated_annotate_signal_hook) (void);
+
+} /* namespace gdb */
 
 #endif /* ANNOTATE_H */

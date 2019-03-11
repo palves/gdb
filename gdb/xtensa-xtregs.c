@@ -31,9 +31,13 @@ typedef struct
 
 #define XTENSA_ELF_XTREG_SIZE 4
 
+namespace gdb {
+
 const xtensa_regtable_t xtensa_regmap_table[] =
 {
   /* gnum,gofs,cpofs,ofs,siz,cp, dbnum,  name */
   {   44, 176,   0,   0,  4, -1, 0x020c, "scompare1" },
   { 0 }
 };
+
+} /* namespace gdb */

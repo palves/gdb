@@ -28,6 +28,9 @@
 #include "cli/cli-utils.h"
 #include "language.h"
 
+namespace gdb {
+
+
 static const char mi_no_values[] = "--no-values";
 static const char mi_simple_values[] = "--simple-values";
 static const char mi_all_values[] = "--all-values";
@@ -400,3 +403,5 @@ mi_parse_print_values (const char *name)
 0 or \"%s\", 1 or \"%s\", 2 or \"%s\""),
 	    mi_no_values, mi_all_values, mi_simple_values);
 }
+
+} /* namespace gdb */

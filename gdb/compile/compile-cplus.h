@@ -20,6 +20,8 @@
 #include "common/enum-flags.h"
 #include "gcc-cp-plugin.h"
 
+namespace gdb {
+
 struct type;
 struct block;
 
@@ -201,5 +203,7 @@ private:
 
 enum gcc_cp_symbol_kind get_method_access_flag (const struct type *type,
 						int fni, int num);
+
+} /* namespace gdb */
 
 #endif /* COMPILE_COMPILE_CPLUS_H */

@@ -27,6 +27,8 @@
 #include "nat/x86-dregs.h"
 #include "target.h"
 
+namespace gdb {
+
 /* Hardware-assisted breakpoints and watchpoints.  */
 
 /* Use this function to set x86_dr_low debug_register_length field
@@ -108,5 +110,7 @@ struct x86_nat_target : public BaseTarget
   bool stopped_by_hw_breakpoint () override
   { return x86_stopped_by_hw_breakpoint (); }
 };
+
+} /* namespace gdb */
 
 #endif /* X86_NAT_H */

@@ -24,6 +24,8 @@
 #include "regdef.h"
 #include <vector>
 
+namespace gdb {
+
 /* A target description.  Inherit from tdesc_feature so that target_desc
    can be used as tdesc_feature.  */
 
@@ -92,5 +94,7 @@ void init_target_desc (struct target_desc *tdesc,
    NULL.  */
 
 const struct target_desc *current_target_desc (void);
+
+} /* namespace gdb */
 
 #endif /* GDBSERVER_TDESC_H */

@@ -27,6 +27,9 @@
 #endif
 #include "linux-aarch64-tdesc.h"
 
+namespace gdb {
+
+
 /* Each register saved by the jump pad is in a 16 byte cell.  */
 #define FT_CR_SIZE 16
 
@@ -207,3 +210,5 @@ initialize_low_tracepoint (void)
   /* SVE not yet supported.  */
   aarch64_linux_read_description (0);
 }
+
+} /* namespace gdb */

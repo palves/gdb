@@ -29,6 +29,9 @@
 #include "hostio.h"
 #include "nat/fork-inferior.h"
 
+namespace gdb {
+
+
 /* Some older glibc versions do not define this.  */
 #ifndef __WNOTHREAD
 #define __WNOTHREAD     0x20000000      /* Don't wait on children of other
@@ -730,3 +733,5 @@ initialize_low (void)
   set_target_ops (&spu_target_ops);
   init_registers_spu ();
 }
+
+} /* namespace gdb */

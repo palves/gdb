@@ -55,6 +55,9 @@
 #include "user-regs.h"
 #include <ctype.h>
 #include "elf/common.h"
+
+namespace gdb {
+
 extern int arm_apcs_32;
 
 /* Under ARM GNU/Linux the traditional way of performing a breakpoint
@@ -2009,3 +2012,5 @@ _initialize_arm_linux_tdep (void)
   gdbarch_register_osabi (bfd_arch_arm, 0, GDB_OSABI_LINUX,
 			  arm_linux_init_abi);
 }
+
+} /* namespace gdb */

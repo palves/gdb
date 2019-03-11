@@ -26,6 +26,9 @@
 #include "mi-getopt.h"
 #include "mi-cmd-break.h"
 
+namespace gdb {
+
+
 /* Handler for the -catch-assert command.  */
 
 void
@@ -288,3 +291,5 @@ mi_cmd_catch_unload (const char *cmd, char *argv[], int argc)
   mi_catch_load_unload (0, argv, argc);
 }
 
+
+} /* namespace gdb */

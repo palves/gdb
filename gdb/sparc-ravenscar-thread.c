@@ -25,6 +25,9 @@
 #include "ravenscar-thread.h"
 #include "sparc-ravenscar-thread.h"
 
+namespace gdb {
+
+
 struct sparc_ravenscar_ops : public ravenscar_arch_ops
 {
   void fetch_registers (struct regcache *, int) override;
@@ -178,3 +181,5 @@ register_sparc_ravenscar_ops (struct gdbarch *gdbarch)
 {
   set_gdbarch_ravenscar_ops (gdbarch, &sparc_ravenscar_ops);
 }
+
+} /* namespace gdb */

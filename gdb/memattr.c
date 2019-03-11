@@ -30,6 +30,9 @@
 #include "cli/cli-utils.h"
 #include <algorithm>
 
+namespace gdb {
+
+
 static std::vector<mem_region> user_mem_region_list, target_mem_region_list;
 static std::vector<mem_region> *mem_region_list = &target_mem_region_list;
 static int mem_number = 0;
@@ -648,3 +651,5 @@ memory addresses will be allowed."),
 				&mem_set_cmdlist,
 				&mem_show_cmdlist);
 }
+
+} /* namespace gdb */

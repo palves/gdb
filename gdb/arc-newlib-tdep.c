@@ -24,6 +24,9 @@
 #include "arc-tdep.h"
 #include "osabi.h"
 
+namespace gdb {
+
+
 /* Implement the 'init_osabi' method of struct gdb_osabi_handler.  */
 
 static void
@@ -64,3 +67,5 @@ _initialize_arc_newlib_tdep (void)
   gdbarch_register_osabi (bfd_arch_arc, 0, GDB_OSABI_NEWLIB,
 			  arc_newlib_init_osabi);
 }
+
+} /* namespace gdb */

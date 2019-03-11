@@ -22,11 +22,15 @@
 
 #include "inf-ptrace.h"
 
+namespace gdb {
+
 /* A prototype NetBSD target.  */
 
 struct nbsd_nat_target : public inf_ptrace_target
 {
   char *pid_to_exec_file (int pid) override;
 };
+
+} /* namespace gdb */
 
 #endif /* nbsd-nat.h */

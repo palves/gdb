@@ -33,6 +33,9 @@
 #include "symtab.h"
 #include "symfile.h"
 
+namespace gdb {
+
+
 /* We need to save a pointer to the real symbol functions.
    Plus, the debug versions are malloc'd because we have to NULL out the
    ones that are NULL in the real copy.  */
@@ -700,3 +703,5 @@ When enabled, all calls to the symfile functions are logged."),
   /* Note: We don't need a new-objfile observer because debug logging
      will be installed when objfile init'n calls objfile_set_sym_fns.  */
 }
+
+} /* namespace gdb */

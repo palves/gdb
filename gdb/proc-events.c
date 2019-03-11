@@ -39,6 +39,9 @@
 
 #include "proc-utils.h"
 
+namespace gdb {
+
+
 /* Much of the information used in the /proc interface, particularly
    for printing status information, is kept as tables of structures of
    the following form.  These tables can be used to map numeric values
@@ -767,3 +770,5 @@ _initialize_proc_events (void)
 {
   init_syscall_table ();
 }
+
+} /* namespace gdb */

@@ -19,6 +19,9 @@
 #include "defs.h"
 #include "buildsym-legacy.h"
 
+namespace gdb {
+
+
 /* The work-in-progress of the compunit we are building.
    This is created first, before any subfiles by start_symtab.  */
 
@@ -344,3 +347,5 @@ get_buildsym_compunit ()
   gdb_assert (buildsym_compunit != nullptr);
   return buildsym_compunit;
 }
+
+} /* namespace gdb */

@@ -20,6 +20,8 @@
 #ifndef COMMON_GDB_TILDE_EXPAND_H
 #define COMMON_GDB_TILDE_EXPAND_H
 
+namespace gdb {
+
 /* Perform path expansion (i.e., tilde expansion) on DIR, and return
    the full path.  */
 extern std::string gdb_tilde_expand (const char *dir);
@@ -27,5 +29,7 @@ extern std::string gdb_tilde_expand (const char *dir);
 /* Same as GDB_TILDE_EXPAND, but return the full path as a
    gdb::unique_xmalloc_ptr<char>.  */
 extern gdb::unique_xmalloc_ptr<char> gdb_tilde_expand_up (const char *dir);
+
+} /* namespace gdb */
 
 #endif /* COMMON_GDB_TILDE_EXPAND_H */

@@ -22,6 +22,9 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
+namespace gdb {
+
+
 /* See fileio.h.  */
 
 int
@@ -253,3 +256,5 @@ host_to_fileio_stat (struct stat *st, struct fio_stat *fst)
   host_to_fileio_time (st->st_mtime, fst->fst_mtime);
   host_to_fileio_time (st->st_ctime, fst->fst_ctime);
 }
+
+} /* namespace gdb */

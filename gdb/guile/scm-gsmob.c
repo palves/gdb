@@ -46,6 +46,9 @@
 #include "objfiles.h"
 #include "guile-internal.h"
 
+namespace gdb {
+
+
 /* We need to call this.  Undo our hack to prevent others from calling it.  */
 #undef scm_make_smob_type
 
@@ -291,3 +294,5 @@ gdbscm_initialize_smobs (void)
 
   gdbscm_define_functions (gsmob_functions, 1);
 }
+
+} /* namespace gdb */

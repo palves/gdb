@@ -22,6 +22,8 @@
 #ifndef MI_MI_CMDS_H
 #define MI_MI_CMDS_H
 
+namespace gdb {
+
 enum print_values {
    PRINT_NO_VALUES,
    PRINT_ALL_VALUES,
@@ -161,5 +163,7 @@ extern struct mi_cmd *mi_lookup (const char *command);
 extern int mi_debug_p;
 
 extern void mi_execute_command (const char *cmd, int from_tty);
+
+} /* namespace gdb */
 
 #endif /* MI_MI_CMDS_H */

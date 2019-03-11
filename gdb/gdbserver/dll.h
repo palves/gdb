@@ -20,6 +20,8 @@
 
 #include <list>
 
+namespace gdb {
+
 struct dll_info
 {
   dll_info (const std::string &name_, CORE_ADDR base_addr_)
@@ -36,5 +38,7 @@ extern int dlls_changed;
 extern void clear_dlls (void);
 extern void loaded_dll (const char *name, CORE_ADDR base_addr);
 extern void unloaded_dll (const char *name, CORE_ADDR base_addr);
+
+} /* namespace gdb */
 
 #endif /* GDBSERVER_DLL_H */

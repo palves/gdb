@@ -37,6 +37,8 @@ extern __typeof__ (mach_thread_info) mach_thread_info asm ("thread_info");
 
 #include "inf-child.h"
 
+namespace gdb {
+
 struct inf;
 
 extern struct inf *gnu_current_inf;
@@ -149,5 +151,7 @@ struct gnu_nat_target : public inf_child_target
   const char *pid_to_str (ptid_t) override;
   void stop (ptid_t) override;
 };
+
+} /* namespace gdb */
 
 #endif /* GNU_NAT_H */

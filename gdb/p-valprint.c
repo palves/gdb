@@ -39,6 +39,9 @@
 #include "cp-support.h"
 #include "objfiles.h"
 #include "common/byte-vector.h"
+
+namespace gdb {
+
 
 
 /* Decorations for Pascal.  */
@@ -901,3 +904,5 @@ Show printing of pascal static members."), NULL,
 			   show_pascal_static_field_print,
 			   &setprintlist, &showprintlist);
 }
+
+} /* namespace gdb */

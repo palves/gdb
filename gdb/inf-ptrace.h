@@ -22,6 +22,8 @@
 
 #include "inf-child.h"
 
+namespace gdb {
+
 /* An abstract prototype ptrace target.  The client can override it
    with local methods.  */
 
@@ -82,5 +84,7 @@ protected:
    tracee identified by PTID.  */
 
 extern pid_t get_ptrace_pid (ptid_t);
+
+} /* namespace gdb */
 
 #endif

@@ -22,6 +22,8 @@
 
 #include "linux-nat.h"
 
+namespace gdb {
+
 /* A prototype GNU/Linux target using traditional ptrace register
    access.  A concrete type should override REGISTER_U_OFFSET.  */
 
@@ -42,5 +44,7 @@ private:
   void fetch_register (struct regcache *regcache, int regnum);
   void store_register (const struct regcache *regcache, int regnum);
 };
+
+} /* namespace gdb */
 
 #endif /* LINUX_NAT_TRAD_H */

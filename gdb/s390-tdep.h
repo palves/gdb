@@ -22,6 +22,8 @@
 
 #include "prologue-value.h"
 
+namespace gdb {
+
 enum s390_abi_kind
 {
   ABI_NONE,
@@ -317,5 +319,7 @@ extern struct value *s390_trad_frame_prev_register
 
 extern struct target_desc *tdesc_s390_linux32;
 extern struct target_desc *tdesc_s390x_linux64;
+
+} /* namespace gdb */
 
 #endif /* S390_TDEP_H */

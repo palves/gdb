@@ -17,6 +17,9 @@
 
 #include "common/tdesc.h"
 
+namespace gdb {
+
+
 /* This function is NOT auto generated from xml.  Create the aarch64 with SVE
    feature into RESULT, where SCALE is the number of 128 bit chunks in a Z
    register.  */
@@ -156,3 +159,5 @@ create_feature_aarch64_sve (struct target_desc *result, long regnum,
   tdesc_create_reg (feature, "vg", regnum++, 1, NULL, 64, "int");
   return regnum;
 }
+
+} /* namespace gdb */

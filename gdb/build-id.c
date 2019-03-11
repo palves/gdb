@@ -27,6 +27,9 @@
 #include "filenames.h"
 #include "gdbcore.h"
 
+namespace gdb {
+
+
 /* See build-id.h.  */
 
 const struct bfd_build_id *
@@ -203,3 +206,5 @@ find_separate_debug_file_by_buildid (struct objfile *objfile)
 
   return std::string ();
 }
+
+} /* namespace gdb */

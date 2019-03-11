@@ -22,11 +22,15 @@
 
 #include "frame.h"
 
+namespace gdb {
+
 /* Mapping between the general-purpose registers in Darwin x86 thread_state
    struct and GDB's register cache layout.  */
 extern int i386_darwin_thread_state_reg_offset[];
 extern const int i386_darwin_thread_state_num_regs;
 
 int darwin_dwarf_signal_frame_p (struct gdbarch *, struct frame_info *);
+
+} /* namespace gdb */
 
 #endif /* I386_DARWIN_TDEP_H */

@@ -29,6 +29,9 @@
 #include "linux-tdep.h"
 #include "bfin-tdep.h"
 
+namespace gdb {
+
+
 /* From <asm/sigcontext.h>.  */
 
 #define SIGCONTEXT_OFFSET	168
@@ -167,3 +170,5 @@ _initialize_bfin_linux_tdep (void)
   gdbarch_register_osabi (bfd_arch_bfin, 0, GDB_OSABI_LINUX,
                           bfin_linux_init_abi);
 }
+
+} /* namespace gdb */

@@ -22,6 +22,9 @@
 #include "selftest.h"
 #include <map>
 
+namespace gdb {
+
+
 namespace selftests
 {
 /* All the tests that have been registered.  Using an std::map allows keeping
@@ -110,3 +113,5 @@ void for_each_selftest (for_each_selftest_ftype func)
 }
 
 } // namespace selftests
+
+} /* namespace gdb */

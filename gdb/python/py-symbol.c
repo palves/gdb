@@ -24,6 +24,9 @@
 #include "python-internal.h"
 #include "objfiles.h"
 
+namespace gdb {
+
+
 typedef struct sympy_symbol_object {
   PyObject_HEAD
   /* The GDB symbol structure this object is wrapping.  */
@@ -644,3 +647,5 @@ PyTypeObject symbol_object_type = {
   0,				  /*tp_members */
   symbol_object_getset		  /*tp_getset */
 };
+
+} /* namespace gdb */

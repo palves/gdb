@@ -22,6 +22,8 @@
 #ifndef BFIN_TDEP_H
 #define BFIN_TDEP_H
 
+namespace gdb {
+
 enum gdb_regnum {
   /* Core Registers */
   BFIN_R0_REGNUM = 0,
@@ -102,5 +104,7 @@ struct gdbarch_tdep
 
 /* Return the Blackfin ABI associated with GDBARCH.  */
 extern enum bfin_abi bfin_abi (struct gdbarch *gdbarch);
+
+} /* namespace gdb */
 
 #endif /* BFIN_TDEP_H */

@@ -48,6 +48,9 @@
 #include "common/filestuff.h"
 #include "source.h"
 
+namespace gdb {
+
+
 /* Architecture-specific operations.  */
 
 /* Per-architecture data key.  */
@@ -1650,3 +1653,5 @@ PATH and LD_LIBRARY_PATH."),
 				     show_solib_search_path,
 				     &setlist, &showlist);
 }
+
+} /* namespace gdb */

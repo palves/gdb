@@ -21,6 +21,8 @@
 
 #include "interps.h"
 
+namespace gdb {
+
 struct mi_console_file;
 
 /* Represents the reason why GDB is sending an asynchronous command to
@@ -89,5 +91,7 @@ public:
   /* MI's CLI builder (wraps OUT).  */
   struct ui_out *cli_uiout;
 };
+
+} /* namespace gdb */
 
 #endif /* MI_MI_COMMON_H */

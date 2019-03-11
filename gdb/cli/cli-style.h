@@ -22,6 +22,8 @@
 
 #include "ui-file.h"
 
+namespace gdb {
+
 /* A single CLI style option.  */
 class cli_style_option
 {
@@ -95,5 +97,7 @@ extern cli_style_option address_style;
 
 /* True if styling is enabled.  */
 extern int cli_styling;
+
+} /* namespace gdb */
 
 #endif /* CLI_CLI_STYLE_H */

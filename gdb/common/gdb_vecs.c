@@ -21,6 +21,9 @@
 #include "gdb_vecs.h"
 #include "host-defs.h"
 
+namespace gdb {
+
+
 /* Worker function to split character delimiter separated string of fields
    STR into a char pointer vector.  */
 
@@ -86,3 +89,5 @@ dirnames_to_char_ptr_vec (const char *dirnames)
 
   return retval;
 }
+
+} /* namespace gdb */

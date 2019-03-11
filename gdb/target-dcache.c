@@ -20,6 +20,9 @@
 #include "gdbcmd.h"
 #include "progspace.h"
 
+namespace gdb {
+
+
 /* The target dcache is kept per-address-space.  This key lets us
    associate the cache with the address space.  */
 
@@ -198,3 +201,5 @@ access is on."),
     = register_address_space_data_with_cleanup (NULL,
 						target_dcache_cleanup);
 }
+
+} /* namespace gdb */

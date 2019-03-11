@@ -34,6 +34,9 @@
 #include "gdb/fileio.h"
 #include "inferior.h"
 
+namespace gdb {
+
+
 /* An object of this type is stored in the section's user data when
    mapping a section.  */
 
@@ -995,3 +998,5 @@ When non-zero, bfd cache specific debugging is enabled."),
 			     &show_bfd_cache_debug,
 			     &setdebuglist, &showdebuglist);
 }
+
+} /* namespace gdb */

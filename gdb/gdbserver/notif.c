@@ -50,6 +50,9 @@
 #include "server.h"
 #include "notif.h"
 
+namespace gdb {
+
+
 static struct notif_server *notifs[] =
 {
   &notif_stop,
@@ -169,3 +172,5 @@ initialize_notif (void)
     notifs[i]->queue
       = QUEUE_alloc (notif_event_p, notif_event_xfree);
 }
+
+} /* namespace gdb */

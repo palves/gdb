@@ -21,6 +21,9 @@
 #include "x86-dregs.h"
 #include "common/break-common.h"
 
+namespace gdb {
+
+
 /* Support for hardware watchpoints and breakpoints using the x86
    debug registers.
 
@@ -694,3 +697,5 @@ x86_dr_stopped_by_hw_breakpoint (struct x86_debug_reg_state *state)
 
   return rc;
 }
+
+} /* namespace gdb */

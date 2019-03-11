@@ -54,6 +54,9 @@
 #include "elf/common.h"
 #include "gdb_bfd.h"
 
+namespace gdb {
+
+
 /* Verify parameters of target_read_memory_bfd and target_read_memory are
    compatible.  */
 
@@ -221,3 +224,5 @@ _initialize_symfile_mem (void)
      be extracted.  */
   gdb::observers::inferior_created.attach (add_vsyscall_page);
 }
+
+} /* namespace gdb */

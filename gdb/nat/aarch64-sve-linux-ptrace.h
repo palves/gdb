@@ -27,6 +27,8 @@
 
 #ifndef SVE_SIG_ZREGS_SIZE
 #include "aarch64-sve-linux-sigcontext.h"
+
+namespace gdb {
 #endif
 
 /* Indicates whether a SVE ptrace header is followed by SVE registers or a
@@ -54,5 +56,7 @@ extern void aarch64_sve_regs_copy_to_reg_buf (struct reg_buffer_common *reg_buf,
 extern void
 aarch64_sve_regs_copy_from_reg_buf (const struct reg_buffer_common *reg_buf,
 				    void *buf);
+
+} /* namespace gdb */
 
 #endif /* NAT_AARCH64_SVE_LINUX_PTRACE_H */

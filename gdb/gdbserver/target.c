@@ -21,6 +21,9 @@
 #include "server.h"
 #include "tracepoint.h"
 
+namespace gdb {
+
+
 struct target_ops *the_target;
 
 int
@@ -410,3 +413,5 @@ target_terminal::info (const char *arg, int from_tty)
 {
   /* Placeholder.  */
 }
+
+} /* namespace gdb */

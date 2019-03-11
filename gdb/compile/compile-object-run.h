@@ -19,6 +19,10 @@
 
 #include "compile-object-load.h"
 
+namespace gdb {
+
 extern void compile_object_run (struct compile_module *module);
+
+} /* namespace gdb */
 
 #endif /* COMPILE_COMPILE_OBJECT_RUN_H */

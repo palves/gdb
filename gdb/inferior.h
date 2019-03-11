@@ -607,6 +607,8 @@ extern struct inferior *inferior_list;
    be done after struct inferior is defined.  */
 #include "inferior-iter.h"
 
+namespace gdb {
+
 /* Return a range that can be used to walk over all inferiors
    inferiors, with range-for, safely.  I.e., it is safe to delete the
    currently-iterated inferior.  When combined with range-for, this
@@ -655,5 +657,7 @@ extern struct inferior *add_inferior_with_spaces (void);
 
 /* Print the current selected inferior.  */
 extern void print_selected_inferior (struct ui_out *uiout);
+
+} /* namespace gdb */
 
 #endif /* !defined (INFERIOR_H) */

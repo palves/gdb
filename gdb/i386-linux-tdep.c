@@ -49,6 +49,9 @@
 #include "arch/i386.h"
 #include "target-descriptions.h"
 
+namespace gdb {
+
+
 /* Return non-zero, when the register is in the corresponding register
    group.  Put the LINUX_ORIG_EAX register in the system group.  */
 static int
@@ -1107,3 +1110,5 @@ _initialize_i386_linux_tdep (void)
     }
 #endif /* GDB_SELF_TEST */
 }
+
+} /* namespace gdb */

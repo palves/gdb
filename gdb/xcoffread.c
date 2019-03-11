@@ -52,6 +52,9 @@
 /* For interface with stabsread.c.  */
 #include "aout/stab_gnu.h"
 
+namespace gdb {
+
+
 
 /* Key for XCOFF-associated data.  */
 
@@ -3159,3 +3162,5 @@ _initialize_xcoffread (void)
   xcoff_objfile_data_key = register_objfile_data_with_cleanup (NULL,
 							       xcoff_free_info);
 }
+
+} /* namespace gdb */

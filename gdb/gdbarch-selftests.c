@@ -28,6 +28,9 @@
 #include "target-float.h"
 #include "common/def-vector.h"
 
+namespace gdb {
+
+
 namespace selftests {
 
 /* Test gdbarch methods register_to_value and value_to_register.  */
@@ -172,3 +175,5 @@ _initialize_gdbarch_selftests (void)
 					 selftests::register_to_value_test);
 #endif
 }
+
+} /* namespace gdb */

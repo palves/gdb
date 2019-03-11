@@ -24,6 +24,8 @@
 
 #include "gdb_curses.h"
 
+namespace gdb {
+
 struct ui_out;
 class cli_ui_out;
 
@@ -50,5 +52,7 @@ extern char *tui_expand_tabs (const char *, int);
 
 extern struct ui_out *tui_out;
 extern cli_ui_out *tui_old_uiout;
+
+} /* namespace gdb */
 
 #endif /* TUI_TUI_IO_H */

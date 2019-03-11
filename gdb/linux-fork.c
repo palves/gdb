@@ -37,6 +37,9 @@
 
 #include <list>
 
+namespace gdb {
+
+
 /* Fork list data structure:  */
 struct fork_info
 {
@@ -786,3 +789,5 @@ Detach from a checkpoint (experimental)."),
   add_info ("checkpoints", info_checkpoints_command,
 	    _("IDs of currently known checkpoints."));
 }
+
+} /* namespace gdb */

@@ -21,10 +21,14 @@
 
 #include <windows.h>
 
+namespace gdb {
+
 #define errno (GetLastError ())
 
 /* in win32-low.c */
 extern char * strwinerror (DWORD error);
 #define strerror strwinerror
+
+} /* namespace gdb */
 
 #endif /* GDBSERVER_WINCECOMPAT_H */

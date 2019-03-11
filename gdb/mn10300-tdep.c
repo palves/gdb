@@ -36,6 +36,9 @@
 
 #include "mn10300-tdep.h"
 
+namespace gdb {
+
+
 
 /* The am33-2 has 64 registers.  */
 #define MN10300_MAX_NUM_REGS 64
@@ -1453,3 +1456,5 @@ _initialize_mn10300_tdep (void)
   gdbarch_register (bfd_arch_mn10300, mn10300_gdbarch_init, mn10300_dump_tdep);
 }
 
+
+} /* namespace gdb */

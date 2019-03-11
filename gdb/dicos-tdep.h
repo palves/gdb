@@ -20,7 +20,11 @@
 #ifndef DICOS_TDEP_H
 #define DICOS_TDEP_H
 
+namespace gdb {
+
 extern void dicos_init_abi (struct gdbarch *gdbarch);
 extern int dicos_load_module_p (bfd *abfd, int header_size);
+
+} /* namespace gdb */
 
 #endif /* dicos-tdep.h */

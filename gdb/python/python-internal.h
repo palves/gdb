@@ -296,6 +296,8 @@ gdb_PyArg_ParseTupleAndKeywords (PyObject *args, PyObject *kw,
 #include "command.h"
 #include "breakpoint.h"
 
+namespace gdb {
+
 enum gdbpy_iter_kind { iter_keys, iter_values, iter_items };
 
 struct block;
@@ -762,5 +764,7 @@ struct Py_buffer_deleter
 
 /* A unique_ptr specialization for Py_buffer.  */
 typedef std::unique_ptr<Py_buffer, Py_buffer_deleter> Py_buffer_up;
+
+} /* namespace gdb */
 
 #endif /* PYTHON_PYTHON_INTERNAL_H */

@@ -30,6 +30,9 @@
 #include "target.h"
 #include "linux-nat.h"
 
+namespace gdb {
+
+
 class sparc64_linux_nat_target final : public linux_nat_target
 {
 public:
@@ -99,3 +102,5 @@ _initialize_sparc64_linux_nat (void)
 
   sparc_gregmap = &sparc64_linux_ptrace_gregmap;
 }
+
+} /* namespace gdb */

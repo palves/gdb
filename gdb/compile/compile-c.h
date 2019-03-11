@@ -20,6 +20,8 @@
 #include "common/enum-flags.h"
 #include "gcc-c-plugin.h"
 
+namespace gdb {
+
 /* enum-flags wrapper.  */
 
 DEF_ENUM_FLAGS_TYPE (enum gcc_qualifiers, gcc_qualifiers_flags);
@@ -91,5 +93,7 @@ extern std::string c_get_range_decl_name (const struct dynamic_prop *prop);
 
 extern gdb::unique_xmalloc_ptr<char>
   c_symbol_substitution_name (struct symbol *sym);
+
+} /* namespace gdb */
 
 #endif /* COMPILE_COMPILE_C_H */

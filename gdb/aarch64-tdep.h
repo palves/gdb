@@ -24,6 +24,8 @@
 
 #include "arch/aarch64.h"
 
+namespace gdb {
+
 /* Forward declarations.  */
 struct gdbarch;
 struct regset;
@@ -106,5 +108,7 @@ void aarch64_displaced_step_fixup (struct gdbarch *gdbarch,
 
 int aarch64_displaced_step_hw_singlestep (struct gdbarch *gdbarch,
 					  struct displaced_step_closure *closure);
+
+} /* namespace gdb */
 
 #endif /* aarch64-tdep.h */

@@ -22,6 +22,8 @@
 #include "progspace.h"
 #include "gdbthread.h"
 
+namespace gdb {
+
 /* Save/restore the current program space, thread, inferior and frame.
    Use this when you need to call
    switch_to_program_space_and_thread.  */
@@ -36,5 +38,7 @@ class scoped_restore_current_pspace_and_thread
    first thread found bound to PSPACE, giving preference to the
    current thread, if there's one and it isn't executing.  */
 void switch_to_program_space_and_thread (program_space *pspace);
+
+} /* namespace gdb */
 
 #endif

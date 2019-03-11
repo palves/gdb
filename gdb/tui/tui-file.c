@@ -22,6 +22,9 @@
 #include "tui/tui-command.h"
 #include "tui.h"
 
+namespace gdb {
+
+
 tui_file::tui_file (FILE *stream)
   : stdio_file (stream)
 {}
@@ -62,3 +65,5 @@ tui_file::flush ()
     tui_refresh_cmd_win ();
   stdio_file::flush ();
 }
+
+} /* namespace gdb */

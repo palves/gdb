@@ -20,6 +20,8 @@
 
 #include "interps.h"
 
+namespace gdb {
+
 /* A console-like interpreter.  Implements functionality common to the
    CLI and the TUI.  */
 class cli_interp_base : public interp
@@ -59,5 +61,7 @@ extern void cli_interpreter_pre_command_loop (struct interp *self);
    CONSOLE_INTERP.  */
 extern int should_print_stop_to_console (struct interp *interp,
 					 struct thread_info *tp);
+
+} /* namespace gdb */
 
 #endif /* CLI_CLI_INTERP_H */

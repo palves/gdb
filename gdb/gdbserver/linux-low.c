@@ -60,6 +60,9 @@
 #endif
 #include "nat/linux-namespaces.h"
 
+namespace gdb {
+
+
 #ifndef SPUFS_MAGIC
 #define SPUFS_MAGIC 0x23c9b64e
 #endif
@@ -7560,3 +7563,5 @@ initialize_low (void)
 
   linux_check_ptrace_features ();
 }
+
+} /* namespace gdb */

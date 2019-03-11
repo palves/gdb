@@ -21,6 +21,8 @@
 
 #include <unistd.h>
 
+namespace gdb {
+
 /* Return the TGID of LWPID from /proc/pid/status.  Returns -1 if not
    found.  Failure to open the /proc file results in a warning.  */
 
@@ -84,5 +86,7 @@ extern char *linux_proc_pid_to_exec_file (int pid);
    per GDB execution.  */
 
 extern void linux_proc_init_warnings ();
+
+} /* namespace gdb */
 
 #endif /* NAT_LINUX_PROCFS_H */

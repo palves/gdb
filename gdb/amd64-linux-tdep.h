@@ -20,6 +20,8 @@
 #ifndef AMD64_LINUX_TDEP_H
 #define AMD64_LINUX_TDEP_H
 
+namespace gdb {
+
 /* Like for i386 GNU/Linux, there is an extra "register"
    used to control syscall restarting.  */
 
@@ -601,5 +603,7 @@ enum amd64_x32_syscall {
   amd64_x32_sys_setsockopt = (amd64_x32_syscall_bit + 541),
   amd64_x32_sys_getsockopt = (amd64_x32_syscall_bit + 542),
 };
+
+} /* namespace gdb */
 
 #endif /* amd64-linux-tdep.h */

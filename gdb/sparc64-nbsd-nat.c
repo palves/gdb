@@ -134,6 +134,9 @@ sparc64nbsd_fpregset_supplies_p (struct gdbarch *gdbarch, int regnum)
 
 #include "bsd-kvm.h"
 
+namespace gdb {
+
+
 static int
 sparc64nbsd_supply_pcb (struct regcache *regcache, struct pcb *pcb)
 {
@@ -185,3 +188,5 @@ _initialize_sparc64nbsd_nat (void)
   /* Support debugging kernel virtual memory images.  */
   bsd_kvm_add_target (sparc64nbsd_supply_pcb);
 }
+
+} /* namespace gdb */

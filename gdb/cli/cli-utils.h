@@ -20,6 +20,8 @@
 #ifndef CLI_CLI_UTILS_H
 #define CLI_CLI_UTILS_H
 
+namespace gdb {
+
 /* *PP is a string denoting a number.  Get the number.  Advance *PP
    after the string and any trailing whitespace.
 
@@ -238,5 +240,7 @@ struct qcs_flags
 
 extern bool parse_flags_qcs (const char *which_command, const char **str,
 			     qcs_flags *flags);
+
+} /* namespace gdb */
 
 #endif /* CLI_CLI_UTILS_H */

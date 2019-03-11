@@ -22,6 +22,8 @@
 
 #include "inf-ptrace.h"
 
+namespace gdb {
+
 class obsd_nat_target : public inf_ptrace_target
 {
   /* Override some methods to support threads.  */
@@ -29,5 +31,7 @@ class obsd_nat_target : public inf_ptrace_target
   void update_thread_list () override;
   ptid_t wait (ptid_t, struct target_waitstatus *, int) override;
 };
+
+} /* namespace gdb */
 
 #endif /* obsd-nat.h */

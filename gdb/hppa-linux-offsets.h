@@ -20,6 +20,8 @@
 #ifndef HPPA_LINUX_OFFSETS_H
 #define HPPA_LINUX_OFFSETS_H
 
+namespace gdb {
+
 #define PT_PSW offsetof(struct pt_regs, gr[ 0])
 #define PT_GR1 offsetof(struct pt_regs, gr[ 1])
 #define PT_GR2 offsetof(struct pt_regs, gr[ 2])
@@ -104,5 +106,7 @@
 #define PT_IIR offsetof(struct pt_regs, iir)
 #define PT_ISR offsetof(struct pt_regs, isr)
 #define PT_IOR offsetof(struct pt_regs, ior)
+
+} /* namespace gdb */
 
 #endif /* HPPA_LINUX_OFFSETS_H */

@@ -25,6 +25,9 @@
 #include "gdb_select.h"
 #include "common/filestuff.h"
 
+namespace gdb {
+
+
 null_file null_stream;
 
 ui_file::ui_file ()
@@ -326,3 +329,5 @@ tee_file::isatty ()
 {
   return m_one->isatty ();
 }
+
+} /* namespace gdb */

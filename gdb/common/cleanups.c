@@ -20,6 +20,9 @@
 #include "common-defs.h"
 #include "cleanups.h"
 
+namespace gdb {
+
+
 /* The cleanup list records things that have to be undone
    if an error happens (descriptors to be closed, memory to be freed, etc.)
    Each link in the chain records a function to call and an
@@ -142,3 +145,5 @@ do_final_cleanups ()
 {
   do_my_cleanups (&final_cleanup_chain, SENTINEL_CLEANUP);
 }
+
+} /* namespace gdb */

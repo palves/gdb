@@ -26,6 +26,9 @@
 #include "value.h"
 #include "xcoffread.h"
 
+namespace gdb {
+
+
 /* Implement the "push_dummy_call" gdbarch method.  */
 
 static CORE_ADDR
@@ -416,3 +419,5 @@ _initialize_rs6000_lynx178_tdep (void)
                           rs6000_lynx178_init_osabi);
 }
 
+
+} /* namespace gdb */

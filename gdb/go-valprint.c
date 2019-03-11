@@ -30,6 +30,9 @@
 #include "c-lang.h"
 #include "valprint.h"
 
+namespace gdb {
+
+
 /* Print a Go string.
 
    Note: We assume
@@ -121,3 +124,5 @@ go_val_print (struct type *type, int embedded_offset,
 	break;
     }
 }
+
+} /* namespace gdb */

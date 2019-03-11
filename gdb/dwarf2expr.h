@@ -25,6 +25,8 @@
 #include "leb128.h"
 #include "gdbtypes.h"
 
+namespace gdb {
+
 /* The location of a value.  */
 enum dwarf_value_location
 {
@@ -320,5 +322,7 @@ extern const gdb_byte *safe_read_sleb128 (const gdb_byte *buf,
 
 extern const gdb_byte *safe_skip_leb128 (const gdb_byte *buf,
 					 const gdb_byte *buf_end);
+
+} /* namespace gdb */
 
 #endif /* dwarf2expr.h */

@@ -39,6 +39,9 @@
 #include "tui/tui-layout.h"
 #include "gdb_curses.h"
 
+namespace gdb {
+
+
 /*******************************
 ** Static Local Decls
 ********************************/
@@ -984,3 +987,5 @@ show_source_or_disasm_and_command (enum tui_layout_type layout_type)
       tui_set_current_layout_to (layout_type);
     }
 }
+
+} /* namespace gdb */

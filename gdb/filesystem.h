@@ -19,6 +19,8 @@
 #ifndef FILESYSTEM_H
 #define FILESYSTEM_H
 
+namespace gdb {
+
 extern const char file_system_kind_auto[];
 extern const char file_system_kind_unix[];
 extern const char file_system_kind_dos_based[];
@@ -54,5 +56,7 @@ extern const char *target_lbasename (const char *kind, const char *name);
    resolved to the real kind.  That is, you never see "auto" as a
    result from this function.  */
 extern const char *effective_target_file_system_kind (void);
+
+} /* namespace gdb */
 
 #endif

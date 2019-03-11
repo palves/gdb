@@ -21,6 +21,9 @@
 #include "serial.h"
 #include "common/filestuff.h"
 
+namespace gdb {
+
+
 /* On POSIX hosts, a serial_event is basically an abstraction for the
    classical self-pipe trick.
 
@@ -217,3 +220,5 @@ serial_event_clear (struct serial_event *event)
   ResetEvent (state->event);
 #endif
 }
+
+} /* namespace gdb */

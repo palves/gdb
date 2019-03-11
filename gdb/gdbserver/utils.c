@@ -18,6 +18,9 @@
 
 #include "server.h"
 
+namespace gdb {
+
+
 #ifdef IN_PROCESS_AGENT
 #  define PREFIX "ipa: "
 #  define TOOLNAME "GDBserver in-process agent"
@@ -137,3 +140,5 @@ pfildes (gdb_fildes_t fd)
   return plongest (fd);
 #endif
 }
+
+} /* namespace gdb */

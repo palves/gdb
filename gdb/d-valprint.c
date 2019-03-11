@@ -23,6 +23,9 @@
 #include "d-lang.h"
 #include "c-lang.h"
 
+namespace gdb {
+
+
 /* Assuming that TYPE is a TYPE_CODE_STRUCT, verify that TYPE is a
    dynamic array, and then print its value to STREAM.  Return zero if
    TYPE is a dynamic array, non-zero otherwise.  */
@@ -94,3 +97,5 @@ d_val_print (struct type *type, int embedded_offset,
 		     recurse, val, options);
     }
 }
+
+} /* namespace gdb */

@@ -24,6 +24,8 @@
 
 #include "tui/tui-data.h"
 
+namespace gdb {
+
 struct tui_win_info;
 
 extern void tui_scroll_forward (struct tui_win_info *, int);
@@ -58,5 +60,7 @@ struct cmd_list_element **tui_get_cmd_list (void);
 
 /* Set a TUI variable.  */
 void tui_set_var_cmd (char *, int, struct cmd_list_element *);
+
+} /* namespace gdb */
 
 #endif /* TUI_TUI_WIN_H */

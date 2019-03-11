@@ -47,6 +47,8 @@ enum
 #define DECLARE_CSR(name, num) \
   RISCV_ ## num ## _REGNUM = RISCV_FIRST_CSR_REGNUM + num,
 #include "opcode/riscv-opc.h"
+
+namespace gdb {
 #undef DECLARE_CSR
   RISCV_LAST_CSR_REGNUM = 4160,
   RISCV_CSR_LEGACY_MISA_REGNUM = 0xf10 + RISCV_FIRST_CSR_REGNUM,
@@ -114,5 +116,7 @@ extern int riscv_abi_flen (struct gdbarch *gdbarch);
 /* Single step based on where the current instruction will take us.  */
 extern std::vector<CORE_ADDR> riscv_software_single_step
   (struct regcache *regcache);
+
+} /* namespace gdb */
 
 #endif /* RISCV_TDEP_H */

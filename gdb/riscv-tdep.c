@@ -864,6 +864,9 @@ riscv_is_regnum_a_named_csr (int regnum)
     {
 #define DECLARE_CSR(name, num) case RISCV_ ## num ## _REGNUM:
 #include "opcode/riscv-opc.h"
+
+namespace gdb {
+
 #undef DECLARE_CSR
       return true;
 
@@ -3463,3 +3466,5 @@ this option can be used."),
 				&setriscvcmdlist,
 				&showriscvcmdlist);
 }
+
+} /* namespace gdb */

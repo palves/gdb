@@ -21,6 +21,8 @@
 
 #include <setjmp.h>
 
+namespace gdb {
+
 #ifdef HAVE_SIGSETJMP
 #define SIGJMP_BUF		sigjmp_buf
 #define SIGSETJMP(buf)		sigsetjmp((buf), 1)
@@ -30,5 +32,7 @@
 #define SIGSETJMP(buf)		setjmp(buf)
 #define SIGLONGJMP(buf,val)	longjmp((buf), (val))
 #endif
+
+} /* namespace gdb */
 
 #endif /* COMMON_GDB_SETJMP_H */

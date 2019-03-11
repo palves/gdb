@@ -31,6 +31,9 @@
 #include "elf-bfd.h"
 #include "fbsd-tdep.h"
 
+namespace gdb {
+
+
 /* This enum is derived from FreeBSD's <sys/signal.h>.  */
 
 enum
@@ -1958,3 +1961,5 @@ _initialize_fbsd_tdep (void)
   fbsd_gdbarch_data_handle =
     gdbarch_data_register_post_init (init_fbsd_gdbarch_data);
 }
+
+} /* namespace gdb */

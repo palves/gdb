@@ -26,6 +26,9 @@
 #include "trad-frame.h"
 #include "tramp-frame.h"
 
+namespace gdb {
+
+
 /* Register maps.  */
 
 static const struct regcache_map_entry riscv_fbsd_gregmap[] =
@@ -201,3 +204,5 @@ _initialize_riscv_fbsd_tdep (void)
   gdbarch_register_osabi (bfd_arch_riscv, 0, GDB_OSABI_FREEBSD,
 			  riscv_fbsd_init_abi);
 }
+
+} /* namespace gdb */

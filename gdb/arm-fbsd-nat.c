@@ -29,6 +29,9 @@
 #include "arm-fbsd-tdep.h"
 #include "inf-ptrace.h"
 
+namespace gdb {
+
+
 struct arm_fbsd_nat_target : public fbsd_nat_target
 {
   void fetch_registers (struct regcache *, int) override;
@@ -150,3 +153,5 @@ _initialize_arm_fbsd_nat (void)
 {
   add_inf_child_target (&the_arm_fbsd_nat_target);
 }
+
+} /* namespace gdb */

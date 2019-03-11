@@ -24,6 +24,9 @@
 #include "server.h"
 #include "common/fileio.h"
 
+namespace gdb {
+
+
 void
 hostio_last_error_from_errno (char *buf)
 {
@@ -31,3 +34,5 @@ hostio_last_error_from_errno (char *buf)
   int fileio_error = host_to_fileio_error (error);
   sprintf (buf, "F-1,%x", fileio_error);
 }
+
+} /* namespace gdb */

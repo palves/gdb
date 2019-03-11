@@ -19,6 +19,8 @@
 #ifndef GDBSERVER_I387_FP_H
 #define GDBSERVER_I387_FP_H
 
+namespace gdb {
+
 void i387_cache_to_fsave (struct regcache *regcache, void *buf);
 void i387_fsave_to_cache (struct regcache *regcache, const void *buf);
 
@@ -29,5 +31,7 @@ void i387_cache_to_xsave (struct regcache *regcache, void *buf);
 void i387_xsave_to_cache (struct regcache *regcache, const void *buf);
 
 extern unsigned long long x86_xcr0;
+
+} /* namespace gdb */
 
 #endif /* GDBSERVER_I387_FP_H */

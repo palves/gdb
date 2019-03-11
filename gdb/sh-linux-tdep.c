@@ -30,6 +30,9 @@
 #include "sh-tdep.h"
 #include "linux-tdep.h"
 
+namespace gdb {
+
+
 #define REGSx16(base) \
   {(base),      0}, \
   {(base) +  1, 4}, \
@@ -212,3 +215,5 @@ _initialize_sh_linux_tdep (void)
 {
   gdbarch_register_osabi (bfd_arch_sh, 0, GDB_OSABI_LINUX, sh_linux_init_abi);
 }
+
+} /* namespace gdb */

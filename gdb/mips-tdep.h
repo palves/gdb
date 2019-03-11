@@ -22,6 +22,8 @@
 
 #include "objfiles.h"
 
+namespace gdb {
+
 struct gdbarch;
 
 /* All the possible MIPS ABIs.  */
@@ -190,5 +192,7 @@ in_mips_stubs_section (CORE_ADDR pc)
 {
   return pc_in_section (pc, ".MIPS.stubs");
 }
+
+} /* namespace gdb */
 
 #endif /* MIPS_TDEP_H */

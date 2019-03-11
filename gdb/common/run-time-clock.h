@@ -21,6 +21,8 @@
 
 #include <chrono>
 
+namespace gdb {
+
 /* Count the total amount of time spent executing in user mode.  */
 
 struct user_cpu_time_clock
@@ -71,5 +73,7 @@ struct run_time_clock
   static void now (user_cpu_time_clock::time_point &user,
 		   system_cpu_time_clock::time_point &system) noexcept;
 };
+
+} /* namespace gdb */
 
 #endif /* COMMON_RUN_TIME_CLOCK_H */

@@ -66,6 +66,8 @@
 
 #include "common/break-common.h" /* For enum target_hw_bp_type.  */
 
+namespace gdb {
+
 struct objfile;
 struct ui_file;
 struct mem_attrib;
@@ -2564,5 +2566,7 @@ extern void target_prepare_to_generate_core (void);
 
 /* See to_done_generating_core.  */
 extern void target_done_generating_core (void);
+
+} /* namespace gdb */
 
 #endif /* !defined (TARGET_H) */

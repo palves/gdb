@@ -33,6 +33,9 @@
 #include "frame-base.h"
 #include "frame-unwind.h"
 
+namespace gdb {
+
+
 enum gdb_regnum
 {
   E_R0_REGNUM, E_ER0_REGNUM = E_R0_REGNUM, E_ARG0_REGNUM = E_R0_REGNUM,
@@ -1407,3 +1410,5 @@ is_h8300_normal_mode (struct gdbarch *gdbarch)
     || gdbarch_bfd_arch_info (gdbarch)->mach == bfd_mach_h8300sn
     || gdbarch_bfd_arch_info (gdbarch)->mach == bfd_mach_h8300hn;
 }
+
+} /* namespace gdb */

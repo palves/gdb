@@ -25,6 +25,9 @@
 #include "ravenscar-thread.h"
 #include "ppc-ravenscar-thread.h"
 
+namespace gdb {
+
+
 #define NO_OFFSET -1
 
 /* See ppc-tdep.h for register numbers.  */
@@ -272,3 +275,5 @@ register_e500_ravenscar_ops (struct gdbarch *gdbarch)
 {
   set_gdbarch_ravenscar_ops (gdbarch, &ppc_ravenscar_e500_ops);
 }
+
+} /* namespace gdb */

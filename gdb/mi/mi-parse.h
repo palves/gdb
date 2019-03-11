@@ -24,6 +24,8 @@
 #include <chrono>
 #include "mi-cmds.h"  /* For enum print_values.  */
 
+namespace gdb {
+
 /* MI parser */
 
 /* Timestamps for current command and last asynchronous command.  */
@@ -78,5 +80,7 @@ extern std::unique_ptr<struct mi_parse> mi_parse (const char *cmd,
 /* Parse a string argument into a print_values value.  */
 
 enum print_values mi_parse_print_values (const char *name);
+
+} /* namespace gdb */
 
 #endif /* MI_MI_PARSE_H */

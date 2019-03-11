@@ -22,6 +22,8 @@
 
 #include <vector>
 
+namespace gdb {
+
 /* Forward declaration.  */
 struct arm_get_next_pcs;
 
@@ -63,5 +65,7 @@ void arm_get_next_pcs_ctor (struct arm_get_next_pcs *self,
 
 /* Find the next possible PCs after the current instruction executes.  */
 std::vector<CORE_ADDR> arm_get_next_pcs (struct arm_get_next_pcs *self);
+
+} /* namespace gdb */
 
 #endif /* ARCH_ARM_GET_NEXT_PCS_H */

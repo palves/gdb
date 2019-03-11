@@ -22,6 +22,8 @@
 
 #include "regset.h"
 
+namespace gdb {
+
 /* The general-purpose regset consists of 13 R registers, plus SP, LR,
    PC, and CPSR registers.  */
 #define ARM_FBSD_SIZEOF_GREGSET  (17 * 4)
@@ -41,5 +43,7 @@ extern const struct regset arm_fbsd_vfpregset;
 
 extern const struct target_desc *
 arm_fbsd_read_description_auxv (struct target_ops *target);
+
+} /* namespace gdb */
 
 #endif /* ARM_FBSD_TDEP_H */

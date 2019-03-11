@@ -54,6 +54,9 @@
 #include <algorithm>
 #include "safe-ctype.h"
 
+namespace gdb {
+
+
 /* See minsyms.h.  */
 
 bool
@@ -1564,3 +1567,5 @@ minimal_symbol_upper_bound (struct bound_minimal_symbol minsym)
 
   return result;
 }
+
+} /* namespace gdb */

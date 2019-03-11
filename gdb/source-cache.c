@@ -27,6 +27,9 @@
 #include <sstream>
 #include <srchilite/sourcehighlight.h>
 #include <srchilite/langmap.h>
+
+namespace gdb {
+
 #endif
 
 /* The number of source files we'll cache.  */
@@ -211,3 +214,5 @@ source_cache::get_source_lines (struct symtab *s, int first_line,
 
   return get_plain_source_lines (s, first_line, last_line, lines);
 }
+
+} /* namespace gdb */

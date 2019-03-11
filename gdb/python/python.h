@@ -22,10 +22,14 @@
 
 #include "extension.h"
 
+namespace gdb {
+
 /* This is all that python exports to gdb.  */
 extern const struct extension_language_defn extension_language_python;
 
 /* Command element for the 'python' command.  */
 extern cmd_list_element *python_cmd_element;
+
+} /* namespace gdb */
 
 #endif /* PYTHON_PYTHON_H */

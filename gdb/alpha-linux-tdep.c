@@ -26,6 +26,9 @@
 #include "linux-tdep.h"
 #include "alpha-tdep.h"
 
+namespace gdb {
+
+
 /* This enum represents the signals' numbers on the Alpha
    architecture.  It just contains the signal definitions which are
    different from the generic implementation.
@@ -394,3 +397,5 @@ _initialize_alpha_linux_tdep (void)
   gdbarch_register_osabi (bfd_arch_alpha, 0, GDB_OSABI_LINUX,
                           alpha_linux_init_abi);
 }
+
+} /* namespace gdb */

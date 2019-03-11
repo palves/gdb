@@ -21,6 +21,8 @@
 
 #include <windows.h>
 
+namespace gdb {
+
 struct target_desc;
 
 /* The inferior's target description.  This is a global because the
@@ -118,5 +120,7 @@ extern char * strwinerror (DWORD error);
 /* in wincecompat.c */
 
 extern void to_back_slashes (char *);
+
+} /* namespace gdb */
 
 #endif /* GDBSERVER_WIN32_LOW_H */

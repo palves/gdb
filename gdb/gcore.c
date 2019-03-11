@@ -39,6 +39,9 @@
 #include "common/byte-vector.h"
 #include "common/scope-exit.h"
 
+namespace gdb {
+
+
 /* The largest amount of memory to read from the target at once.  We
    must throttle it to limit the amount of memory used by GDB during
    generate-core-file for programs with large resident data.  */
@@ -602,3 +605,5 @@ Argument is optional filename.  Default filename is 'core.PROCESS_ID'."));
 
   add_com_alias ("gcore", "generate-core-file", class_files, 1);
 }
+
+} /* namespace gdb */

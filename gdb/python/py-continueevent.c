@@ -21,6 +21,9 @@
 #include "py-event.h"
 #include "gdbthread.h"
 
+namespace gdb {
+
+
 /* Create a gdb.ContinueEvent event.  gdb.ContinueEvent is-a
    gdb.ThreadEvent, and thread events can either be thread specific or
    process wide.  If gdb is running in non-stop mode then the event is
@@ -55,3 +58,5 @@ emit_continue_event (ptid_t ptid)
     return evpy_emit_event (event.get (), gdb_py_events.cont);
   return -1;
 }
+
+} /* namespace gdb */

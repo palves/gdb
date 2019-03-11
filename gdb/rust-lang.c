@@ -38,6 +38,9 @@
 #include <string>
 #include <vector>
 
+namespace gdb {
+
+
 /* See rust-lang.h.  */
 
 const char *
@@ -2145,3 +2148,5 @@ extern const struct language_defn rust_language_defn =
   NULL,
   LANG_MAGIC
 };
+
+} /* namespace gdb */

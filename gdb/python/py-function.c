@@ -28,6 +28,9 @@
 #include "expression.h"
 #include "language.h"
 
+namespace gdb {
+
+
 extern PyTypeObject fnpy_object_type
     CPYCHECKER_TYPE_OBJECT_FOR_TYPEDEF ("PyObject");
 
@@ -187,3 +190,5 @@ PyTypeObject fnpy_object_type =
   fnpy_init,			  /* tp_init */
   0,				  /* tp_alloc */
 };
+
+} /* namespace gdb */

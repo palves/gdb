@@ -22,6 +22,8 @@
 #include <dirent.h>
 #include <fcntl.h>
 
+namespace gdb {
+
 /* Note all the file descriptors which are open when this is called.
    These file descriptors will not be closed by close_most_fds.  */
 
@@ -138,5 +140,7 @@ extern bool is_regular_file (const char *name, int *errno_ptr);
    Returns false on failure and sets errno.  */
 
 extern bool mkdir_recursive (const char *dir);
+
+} /* namespace gdb */
 
 #endif /* COMMON_FILESTUFF_H */

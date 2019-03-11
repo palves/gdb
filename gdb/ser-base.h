@@ -22,6 +22,8 @@
 
 #include "serial.h"  /* For serial_ttystate.  */
 
+namespace gdb {
+
 struct serial;
 struct ui_file;
 
@@ -49,5 +51,7 @@ extern int ser_base_write (struct serial *scb, const void *buf, size_t count);
 
 extern void ser_base_async (struct serial *scb, int async_p);
 extern int ser_base_readchar (struct serial *scb, int timeout);
+
+} /* namespace gdb */
 
 #endif

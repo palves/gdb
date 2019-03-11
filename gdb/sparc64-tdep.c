@@ -69,6 +69,9 @@
 #include "gdbcmd.h"
 #include "auxv.h"
 
+namespace gdb {
+
+
 #define MAX_PROC_NAME_SIZE sizeof("/proc/99999/lwp/9999/adi/lstatus")
 
 /* ELF Auxiliary vectors */
@@ -2183,3 +2186,5 @@ const struct sparc_fpregmap sparc64_bsd_fpregmap =
   0 * 8,			/* %f0 */
   32 * 8,			/* %fsr */
 };
+
+} /* namespace gdb */

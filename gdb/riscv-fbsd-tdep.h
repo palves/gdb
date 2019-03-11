@@ -22,6 +22,8 @@
 
 #include "regset.h"
 
+namespace gdb {
+
 /* The general-purpose regset consists of 31 X registers, EPC, and
    SSTATUS.  */
 #define RISCV_FBSD_NUM_GREGS		33
@@ -34,5 +36,7 @@
 
 extern const struct regset riscv_fbsd_gregset;
 extern const struct regset riscv_fbsd_fpregset;
+
+} /* namespace gdb */
 
 #endif /* RISCV_FBSD_TDEP_H */

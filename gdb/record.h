@@ -23,6 +23,8 @@
 #include "target/waitstatus.h" /* For enum target_stop_reason.  */
 #include "common/enum-flags.h"
 
+namespace gdb {
+
 struct cmd_list_element;
 struct inferior;
 
@@ -112,5 +114,7 @@ extern void record_start (const char *method, const char *format,
 
 /* Stop recording.  Throw on failure.  */
 extern void record_stop (int from_tty);
+
+} /* namespace gdb */
 
 #endif /* RECORD_H */

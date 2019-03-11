@@ -34,6 +34,9 @@
 #include "nat/fork-inferior.h"
 #include "utils.h"
 
+namespace gdb {
+
+
 
 
 /* A unique_ptr helper to unpush a target.  */
@@ -668,3 +671,5 @@ inf_ptrace_target::auxv_parse (gdb_byte **readptr, gdb_byte *endptr,
 
 #endif
 
+
+} /* namespace gdb */

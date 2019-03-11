@@ -20,6 +20,9 @@
 #include "arm-tdep.h"
 #include "osabi.h"
 
+namespace gdb {
+
+
 /* The gdbarch_register_osabi handler for ARM PikeOS; it performs
    the gdbarch initialization for that platform.  */
 
@@ -90,3 +93,5 @@ _initialize_arm_pikeos_tdep (void)
   gdbarch_register_osabi (bfd_arch_arm, 0, GDB_OSABI_PIKEOS,
                           arm_pikeos_init_abi);
 }
+
+} /* namespace gdb */

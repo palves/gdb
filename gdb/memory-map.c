@@ -41,6 +41,9 @@ parse_memory_map (const char *memory_map)
 
 #include "xml-support.h"
 
+namespace gdb {
+
+
 /* Internal parsing data passed to all XML callbacks.  */
 struct memory_map_parsing_data
 {
@@ -187,3 +190,5 @@ parse_memory_map (const char *memory_map)
 }
 
 #endif /* HAVE_LIBEXPAT */
+
+} /* namespace gdb */

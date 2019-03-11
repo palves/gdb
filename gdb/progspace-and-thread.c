@@ -19,6 +19,9 @@
 #include "progspace-and-thread.h"
 #include "inferior.h"
 
+namespace gdb {
+
+
 /* See progspace-and-thread.h  */
 
 void
@@ -42,3 +45,5 @@ switch_to_program_space_and_thread (program_space *pspace)
   switch_to_no_thread ();
   set_current_program_space (pspace);
 }
+
+} /* namespace gdb */

@@ -36,6 +36,8 @@ struct frame_unwind;
    running on.  */
 #include "libunwind-ia64.h"
 
+namespace gdb {
+
 struct libunwind_descr
 {
   int (*gdb2uw) (int);
@@ -73,5 +75,7 @@ unw_word_t libunwind_find_dyn_list (unw_addr_space_t, unw_dyn_info_t *,
 int libunwind_get_reg_special (struct gdbarch *gdbarch,
 			       readable_regcache *regcache,
 			       int regnum, void *buf);
+
+} /* namespace gdb */
 
 #endif /* IA64_LIBUNWIND_TDEP_H */

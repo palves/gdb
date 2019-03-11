@@ -43,6 +43,9 @@
 
 #include <ctype.h>
 
+namespace gdb {
+
+
 /* The main function in the main package.  */
 static const char GO_MAIN_MAIN[] = "main.main";
 
@@ -676,3 +679,5 @@ _initialize_go_language (void)
 {
   go_type_data = gdbarch_data_register_post_init (build_go_types);
 }
+
+} /* namespace gdb */

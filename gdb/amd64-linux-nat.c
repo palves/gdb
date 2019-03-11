@@ -39,6 +39,9 @@
 #include "nat/linux-ptrace.h"
 #include "nat/amd64-linux-siginfo.h"
 
+namespace gdb {
+
+
 /* This definition comes from prctl.h.  Kernels older than 2.5.64
    do not have it.  */
 #ifndef PTRACE_ARCH_PRCTL
@@ -423,3 +426,5 @@ _initialize_amd64_linux_nat (void)
   /* Add the target.  */
   add_inf_child_target (linux_target);
 }
+
+} /* namespace gdb */

@@ -40,6 +40,9 @@
 #include "tui/tui-disasm.h"
 #include "gdb_curses.h"
 
+namespace gdb {
+
+
 /* Function to display the "main" routine.  */
 void
 tui_display_main (void)
@@ -681,3 +684,5 @@ tui_addr_is_displayed (CORE_ADDR addr,
 /*****************************************
 ** STATIC LOCAL FUNCTIONS               **
 ******************************************/
+
+} /* namespace gdb */

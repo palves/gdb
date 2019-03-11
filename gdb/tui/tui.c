@@ -56,6 +56,9 @@
    "gdb_curses.h".  */
 #include "readline/readline.h"
 
+namespace gdb {
+
+
 /* Tells whether the TUI is active or not.  */
 int tui_active = 0;
 static int tui_finish_init = 1;
@@ -696,3 +699,5 @@ _initialize_tui (void)
 	   _("Disable TUI display mode."),
 	   tuicmd);
 }
+
+} /* namespace gdb */

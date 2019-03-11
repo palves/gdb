@@ -22,6 +22,8 @@
 
 #include "python-internal.h"
 
+namespace gdb {
+
 /* Implementation of record.method [str].  */
 extern PyObject *recpy_bt_method (PyObject *self, void *closure);
 
@@ -87,5 +89,7 @@ extern PyObject *recpy_bt_func_prev (PyObject *self, void *closure);
 
 /* Implementation of RecordFunctionSegment.next [RecordFunctionSegment].  */
 extern PyObject *recpy_bt_func_next (PyObject *self, void *closure);
+
+} /* namespace gdb */
 
 #endif /* PYTHON_PY_RECORD_BTRACE_H */

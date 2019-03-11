@@ -31,6 +31,9 @@
 #include "trad-frame.h"
 #include "remote.h"
 
+namespace gdb {
+
+
 /* Two of the registers included in S12Z_N_REGISTERS are
    the CCH and CCL "registers" which are just views into
    the CCW register.  */
@@ -600,3 +603,5 @@ _initialize_s12z_tdep (void)
 {
   gdbarch_register (bfd_arch_s12z, s12z_gdbarch_init, NULL);
 }
+
+} /* namespace gdb */

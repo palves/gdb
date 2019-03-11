@@ -23,6 +23,8 @@
 #include <setjmp.h>
 #include <new>
 
+namespace gdb {
+
 /* Reasons for calling throw_exceptions().  NOTE: all reason values
    must be different from zero.  enum value 0 is reserved for internal
    use as the return value from an initial setjmp().  */
@@ -337,5 +339,7 @@ extern void throw_quit (const char *fmt, ...)
 
 /* A pre-defined non-exception.  */
 extern const struct gdb_exception exception_none;
+
+} /* namespace gdb */
 
 #endif /* COMMON_COMMON_EXCEPTIONS_H */

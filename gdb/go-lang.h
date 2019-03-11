@@ -26,6 +26,8 @@ struct type_print_options;
 #include "symtab.h"
 #include "value.h"
 
+namespace gdb {
+
 struct parser_state;
 
 struct builtin_go_type
@@ -87,5 +89,7 @@ extern void go_val_print (struct type *type,
 			  struct ui_file *stream, int recurse,
 			  struct value *val,
 			  const struct value_print_options *options);
+
+} /* namespace gdb */
 
 #endif /* !defined (GO_LANG_H) */

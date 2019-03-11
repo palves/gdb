@@ -21,6 +21,8 @@
 #if !defined (COMPLAINTS_H)
 #define COMPLAINTS_H
 
+namespace gdb {
+
 /* Helper for complaint.  */
 extern void complaint_internal (const char *fmt, ...)
   ATTRIBUTE_PRINTF (1, 2);
@@ -44,5 +46,7 @@ extern void complaint_internal (const char *fmt, ...)
 
 extern void clear_complaints ();
 
+
+} /* namespace gdb */
 
 #endif /* !defined (COMPLAINTS_H) */

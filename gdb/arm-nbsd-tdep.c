@@ -24,6 +24,9 @@
 #include "arm-tdep.h"
 #include "solib-svr4.h"
 
+namespace gdb {
+
+
 /* Description of the longjmp buffer.  */
 #define ARM_NBSD_JB_PC 24
 #define ARM_NBSD_JB_ELEMENT_SIZE INT_REGISTER_SIZE
@@ -91,3 +94,5 @@ _initialize_arm_netbsd_tdep (void)
   gdbarch_register_osabi (bfd_arch_arm, 0, GDB_OSABI_NETBSD,
                           arm_netbsd_elf_init_abi);
 }
+
+} /* namespace gdb */

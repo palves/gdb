@@ -70,6 +70,9 @@
 #include "common/gdb_tilde_expand.h"
 #include "common/pathstuff.h"
 
+namespace gdb {
+
+
 #define AdjustTokenPrivileges		dyn_AdjustTokenPrivileges
 #define DebugActiveProcessStop		dyn_DebugActiveProcessStop
 #define DebugBreakProcess		dyn_DebugBreakProcess
@@ -3386,3 +3389,5 @@ Use \"file\" or \"dll\" command to load executable/libraries directly."));
 
 #undef GPA
 }
+
+} /* namespace gdb */

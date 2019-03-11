@@ -66,6 +66,9 @@ gdbpy_initialize_py_events (void)
   if (add_new_registry (&gdb_py_events.name, #name) < 0)	\
     return -1;
 #include "py-all-events.def"
+
+namespace gdb {
+
 #undef GDB_PY_DEFINE_EVENT
 
   if (gdb_pymodule_addobject (gdb_module,
@@ -75,3 +78,5 @@ gdbpy_initialize_py_events (void)
 
   return 0;
 }
+
+} /* namespace gdb */

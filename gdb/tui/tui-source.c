@@ -37,6 +37,9 @@
 #include "tui/tui-source.h"
 #include "gdb_curses.h"
 
+namespace gdb {
+
+
 /* A helper function for tui_set_source_content that extracts some
    source text from PTR.  LINE_NO is the line number; FIRST_COL is the
    first column to extract, and LINE_WIDTH is the number of characters
@@ -336,3 +339,5 @@ tui_vertical_source_scroll (enum tui_scroll_direction scroll_direction,
       print_source_lines (s, l.u.line_no, l.u.line_no + 1, 0);
     }
 }
+
+} /* namespace gdb */

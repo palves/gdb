@@ -55,6 +55,9 @@
 #include <sys/ldr.h>
 #include <sys/systemcfg.h>
 
+namespace gdb {
+
+
 /* On AIX4.3+, sys/ldr.h provides different versions of struct ld_info for
    debugging 32-bit and 64-bit processes.  Define a typedef and macros for
    accessing fields in the appropriate structures.  */
@@ -673,3 +676,5 @@ _initialize_rs6000_nat (void)
 {
   add_inf_child_target (&the_rs6000_nat_target);
 }
+
+} /* namespace gdb */

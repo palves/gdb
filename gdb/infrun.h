@@ -21,6 +21,8 @@
 #include "symtab.h"
 #include "common/byte-vector.h"
 
+namespace gdb {
+
 struct target_waitstatus;
 struct frame_info;
 struct address_space;
@@ -301,5 +303,7 @@ struct displaced_step_inferior_state
   /* Saved contents of copy area.  */
   gdb::byte_vector step_saved_copy;
 };
+
+} /* namespace gdb */
 
 #endif /* INFRUN_H */

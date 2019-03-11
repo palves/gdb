@@ -22,6 +22,8 @@
 
 #include "target.h"
 
+namespace gdb {
+
 /* Abstract base class inherited by all process_stratum targets.  */
 
 class process_stratum_target : public target_ops
@@ -52,5 +54,7 @@ public:
   bool has_registers () override;
   bool has_execution (ptid_t the_ptid) override;
 };
+
+} /* namespace gdb */
 
 #endif /* !defined (PROCESS_STRATUM_TARGET_H) */

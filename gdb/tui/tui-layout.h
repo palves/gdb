@@ -25,11 +25,15 @@
 #include "tui/tui.h"
 #include "tui/tui-data.h"
 
+namespace gdb {
+
 extern void tui_add_win_to_layout (enum tui_win_type);
 extern int tui_default_win_height (enum tui_win_type, 
 				   enum tui_layout_type);
 extern int tui_default_win_viewport_height (enum tui_win_type,
 					    enum tui_layout_type);
 extern enum tui_status tui_set_layout (enum tui_layout_type);
+
+} /* namespace gdb */
 
 #endif /* TUI_TUI_LAYOUT_H */

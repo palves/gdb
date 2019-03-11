@@ -121,6 +121,8 @@
 /* Pull in gdb::unique_xmalloc_ptr.  */
 #include "common/gdb_unique_ptr.h"
 
+namespace gdb {
+
 /* String containing the current directory (what getwd would return).  */
 extern char *current_directory;
 
@@ -132,5 +134,7 @@ extern char *current_directory;
 #if defined (HAVE_SBRK) && !__APPLE__
 #define HAVE_USEFUL_SBRK 1
 #endif
+
+} /* namespace gdb */
 
 #endif /* COMMON_COMMON_DEFS_H */

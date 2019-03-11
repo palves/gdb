@@ -49,6 +49,9 @@
 #include "common/pathstuff.h"
 #include "valprint.h"
 
+namespace gdb {
+
+
 /* GNU/Linux libthread_db support.
 
    libthread_db is a library, provided along with libpthread.so, which
@@ -2014,3 +2017,5 @@ as they are loaded."),
      the new_objfile observer won't get called for libpthread.  */
   gdb::observers::inferior_created.attach (thread_db_inferior_created);
 }
+
+} /* namespace gdb */

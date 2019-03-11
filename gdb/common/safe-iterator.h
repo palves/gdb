@@ -19,6 +19,8 @@
 #ifndef COMMON_SAFE_ITERATOR_H
 #define COMMON_SAFE_ITERATOR_H
 
+namespace gdb {
+
 /* A forward iterator that wraps Iterator, such that when iterating
    with iterator IT, it is possible to delete *IT without invalidating
    IT.  Suitably wrapped in a range type and used with range-for, this
@@ -89,5 +91,7 @@ private:
   /* A one-past-end iterator.  */
   Iterator m_end {};
 };
+
+} /* namespace gdb */
 
 #endif /* COMMON_SAFE_ITERATOR_H */

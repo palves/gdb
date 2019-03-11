@@ -5,6 +5,9 @@
 #include "osabi.h"
 #include "target-descriptions.h"
 
+namespace gdb {
+
+
 struct target_desc *tdesc_nds32;
 static void
 initialize_tdesc_nds32 (void)
@@ -90,3 +93,5 @@ initialize_tdesc_nds32 (void)
 
   tdesc_nds32 = result;
 }
+
+} /* namespace gdb */

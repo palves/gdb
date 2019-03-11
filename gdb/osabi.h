@@ -19,6 +19,8 @@
 #ifndef OSABI_H
 #define OSABI_H
 
+namespace gdb {
+
 /* Register an OS ABI sniffer.  Each arch/flavour may have more than
    one sniffer.  This is used to e.g. differentiate one OS's a.out from
    another.  The first sniffer to return something other than
@@ -57,5 +59,7 @@ const char *osabi_triplet_regexp (enum gdb_osabi osabi);
    sections to determine the OS ABI from the note.  It should be called
    via bfd_map_over_sections.  */
 void generic_elf_osabi_sniff_abi_tag_sections (bfd *, asection *, void *);
+
+} /* namespace gdb */
 
 #endif /* OSABI_H */

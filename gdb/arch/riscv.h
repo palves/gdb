@@ -22,6 +22,8 @@
 
 #include "common/tdesc.h"
 
+namespace gdb {
+
 /* The set of RISC-V architectural features that we track that impact how
    we configure the actual gdbarch instance.  We hold one of these in the
    gdbarch_tdep structure, and use it to distinguish between different
@@ -71,5 +73,7 @@ struct riscv_gdbarch_features
 
 const target_desc *riscv_create_target_description
 	(struct riscv_gdbarch_features features);
+
+} /* namespace gdb */
 
 #endif /* ARCH_RISCV_H */

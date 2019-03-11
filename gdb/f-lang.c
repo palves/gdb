@@ -38,6 +38,9 @@
 
 #include <math.h>
 
+namespace gdb {
+
+
 /* Local functions */
 
 static void f_printchar (int c, struct type *type, struct ui_file * stream);
@@ -493,3 +496,5 @@ fortran_preserve_arg_pointer (struct value *arg, struct type *type)
     return value_type (arg);
   return type;
 }
+
+} /* namespace gdb */

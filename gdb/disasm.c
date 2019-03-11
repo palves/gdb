@@ -32,6 +32,9 @@
 #include "common/gdb_optional.h"
 #include "valprint.h"
 
+namespace gdb {
+
+
 /* Disassemble functions.
    FIXME: We should get rid of all the duplicate code in gdb that does
    the same thing: disassemble_command() and the gdbtk variation.  */
@@ -1143,3 +1146,5 @@ Show the disassembler options."), NULL,
 					 &setlist, &showlist);
   set_cmd_completer (cmd, disassembler_options_completer);
 }
+
+} /* namespace gdb */

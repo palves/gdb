@@ -31,6 +31,9 @@
 
 #include <string>
 
+namespace gdb {
+
+
 #define INTERNAL_SIGNAL(x) ((x) == GDB_SIGNAL_TRAP || (x) == GDB_SIGNAL_INT)
 
 /* An instance of this type is used to represent a signal catchpoint.
@@ -443,3 +446,5 @@ Arguments, if given, should be one or more signal names\n\
 		     CATCH_PERMANENT,
 		     CATCH_TEMPORARY);
 }
+
+} /* namespace gdb */

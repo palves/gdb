@@ -26,6 +26,8 @@
 #include "gdb_regex.h"
 #include "cli-script.h"
 
+namespace gdb {
+
 #if 0
 /* FIXME: cagney/2002-03-17: Once cmd_type() has been removed, ``enum
    cmd_types'' can be moved from "command.h" to "cli-decode.h".  */
@@ -269,5 +271,7 @@ extern const char * const auto_boolean_enums[];
 extern int cli_user_command_p (struct cmd_list_element *);
 
 extern int find_command_name_length (const char *);
+
+} /* namespace gdb */
 
 #endif /* CLI_CLI_DECODE_H */

@@ -20,6 +20,8 @@
 #ifndef CONTINUATIONS_H
 #define CONTINUATIONS_H
 
+namespace gdb {
+
 struct inferior;
 
 /* To continue the execution commands when running gdb asynchronously.
@@ -51,5 +53,7 @@ extern void add_inferior_continuation (continuation_ftype *,
 				       continuation_free_arg_ftype *);
 extern void do_all_inferior_continuations (int err);
 extern void discard_all_inferior_continuations (struct inferior *inf);
+
+} /* namespace gdb */
 
 #endif

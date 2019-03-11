@@ -23,6 +23,9 @@
 #include "mi-cmds.h"
 #include "mi-main.h"
 
+namespace gdb {
+
+
 struct mi_cmd;
 static struct mi_cmd **lookup_table (const char *command);
 static void build_table (struct mi_cmd *commands);
@@ -284,3 +287,5 @@ _initialize_mi_cmds (void)
   build_table (mi_cmds);
   memset (&stats, 0, sizeof (stats));
 }
+
+} /* namespace gdb */

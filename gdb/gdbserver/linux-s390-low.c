@@ -33,6 +33,9 @@
 
 #include "linux-s390-tdesc.h"
 
+namespace gdb {
+
+
 #ifndef HWCAP_S390_HIGH_GPRS
 #define HWCAP_S390_HIGH_GPRS 512
 #endif
@@ -2888,3 +2891,5 @@ initialize_low_arch (void)
   initialize_regsets_info (&s390_regsets_info);
   initialize_regsets_info (&s390_regsets_info_3264);
 }
+
+} /* namespace gdb */

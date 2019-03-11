@@ -25,6 +25,8 @@
 #include "x86-nat.h"
 #include "nat/x86-linux.h"
 
+namespace gdb {
+
 struct x86_linux_nat_target : public x86_nat_target<linux_nat_target>
 {
   virtual ~x86_linux_nat_target () override = 0;
@@ -83,5 +85,7 @@ struct x86_linux_nat_target : public x86_nat_target<linux_nat_target>
 
 extern ps_err_e x86_linux_get_thread_area (pid_t pid, void *addr,
 					   unsigned int *base_addr);
+
+} /* namespace gdb */
 
 #endif

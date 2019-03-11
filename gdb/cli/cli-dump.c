@@ -33,6 +33,9 @@
 #include "common/filestuff.h"
 #include "common/byte-vector.h"
 
+namespace gdb {
+
+
 static gdb::unique_xmalloc_ptr<char>
 scan_expression (const char **cmd, const char *def)
 {
@@ -766,3 +769,5 @@ If START and END are given, only the file contents within that range\n\
   c->completer = filename_completer;
   /* FIXME: completers for other commands.  */
 }
+
+} /* namespace gdb */

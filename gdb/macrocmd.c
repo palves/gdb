@@ -28,6 +28,9 @@
 #include "gdbcmd.h"
 #include "linespec.h"
 
+namespace gdb {
+
+
 
 /* The `macro' prefix command.  */
 
@@ -515,3 +518,5 @@ Remove the definition of the C/C++ preprocessor macro with the given name."),
 	   _("List all the macros defined using the `macro define' command."),
 	   &macrolist);
 }
+
+} /* namespace gdb */

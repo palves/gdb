@@ -32,6 +32,9 @@
 #include "value.h"
 #include "guile-internal.h"
 
+namespace gdb {
+
+
 /* The <gdb:value> smob.  */
 
 typedef struct _value_smob
@@ -1448,3 +1451,5 @@ gdbscm_initialize_values (void)
   escape_symbol = scm_from_latin1_symbol ("escape");
   substitute_symbol = scm_from_latin1_symbol ("substitute");
 }
+
+} /* namespace gdb */

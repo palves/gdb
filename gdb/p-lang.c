@@ -32,6 +32,9 @@
 #include <ctype.h>
 #include "c-lang.h"
 
+namespace gdb {
+
+
 /* All GPC versions until now (2007-09-27) also define a symbol called
    '_p_initialize'.  Check for the presence of this symbol first.  */
 static const char GPC_P_INITIALIZE[] = "_p_initialize";
@@ -462,3 +465,5 @@ extern const struct language_defn pascal_language_defn =
   NULL,
   LANG_MAGIC
 };
+
+} /* namespace gdb */

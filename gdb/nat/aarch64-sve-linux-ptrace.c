@@ -27,6 +27,9 @@
 #include "common/common-regcache.h"
 #include "common/byte-vector.h"
 
+namespace gdb {
+
+
 static bool vq_change_warned = false;
 
 /* See nat/aarch64-sve-linux-ptrace.h.  */
@@ -322,3 +325,5 @@ aarch64_sve_regs_copy_from_reg_buf (const struct reg_buffer_common *reg_buf,
 			  base + SVE_PT_SVE_FPCR_OFFSET (vq));
 
 }
+
+} /* namespace gdb */

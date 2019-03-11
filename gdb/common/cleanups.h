@@ -19,6 +19,8 @@
 #ifndef COMMON_CLEANUPS_H
 #define COMMON_CLEANUPS_H
 
+namespace gdb {
+
 /* Outside of cleanups.c, this is an opaque type.  */
 struct cleanup;
 
@@ -35,5 +37,7 @@ typedef void (make_cleanup_dtor_ftype) (void *);
 extern struct cleanup *make_final_cleanup (make_cleanup_ftype *, void *);
 
 extern void do_final_cleanups ();
+
+} /* namespace gdb */
 
 #endif /* COMMON_CLEANUPS_H */

@@ -34,6 +34,9 @@
 #include "namespace.h"
 #include <string>
 
+namespace gdb {
+
+
 static struct block_symbol
   cp_lookup_nested_symbol_1 (struct type *container_type,
 			     const char *nested_name,
@@ -1078,3 +1081,5 @@ _initialize_cp_namespace (void)
 		 &maint_cplus_cmd_list);
   deprecate_cmd (cmd, NULL);
 }
+
+} /* namespace gdb */

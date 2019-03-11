@@ -26,6 +26,9 @@
 #include "python.h"
 #include "python-internal.h"
 
+namespace gdb {
+
+
 /* Return type of print_string_repr.  */
 
 enum string_repr_result
@@ -676,3 +679,5 @@ gdbpy_default_visualizer (PyObject *self, PyObject *args)
 
   return find_pretty_printer (val_obj).release ();
 }
+
+} /* namespace gdb */

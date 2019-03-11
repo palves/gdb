@@ -33,6 +33,9 @@
 #include "sparc-nat.h"
 #include "inf-ptrace.h"
 
+namespace gdb {
+
+
 /* With some trickery we can use the code in this file for most (if
    not all) ptrace(2) based SPARC systems, which includes SunOS 4,
    GNU/Linux and the various SPARC BSD's.
@@ -326,3 +329,5 @@ _initialize_sparc_nat (void)
   if (sparc_fpregset_supplies_p == NULL)
     sparc_fpregset_supplies_p = sparc32_fpregset_supplies_p;
 }
+
+} /* namespace gdb */

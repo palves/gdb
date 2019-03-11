@@ -42,6 +42,9 @@
 #if GDB_SELF_TEST
 #include "common/selftest.h"
 #include "selftest-arch.h"
+
+namespace gdb {
+
 #endif
 
 struct comp_unit;
@@ -2438,3 +2441,5 @@ architecture that doesn't support them will have no effect."),
 					 selftests::execute_cfa_program_test);
 #endif
 }
+
+} /* namespace gdb */

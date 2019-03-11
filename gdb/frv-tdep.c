@@ -39,6 +39,9 @@
 #include "frv-tdep.h"
 #include "objfiles.h"
 
+namespace gdb {
+
+
 struct frv_unwind_cache		/* was struct frame_extra_info */
   {
     /* The previous frame's inner-most stack address.  Used as this
@@ -1578,3 +1581,5 @@ _initialize_frv_tdep (void)
 {
   register_gdbarch_init (bfd_arch_frv, frv_gdbarch_init);
 }
+
+} /* namespace gdb */

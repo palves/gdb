@@ -20,10 +20,14 @@
 #ifndef PPC_RAVENSCAR_THREAD_H
 #define PPC_RAVENSCAR_THREAD_H
 
+namespace gdb {
+
 struct gdbarch;
 
 extern void register_ppc_ravenscar_ops (struct gdbarch *gdbarch);
 
 extern void register_e500_ravenscar_ops (struct gdbarch *gdbarch);
+
+} /* namespace gdb */
 
 #endif

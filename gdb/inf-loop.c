@@ -31,6 +31,9 @@
 #include "top.h"
 #include "observable.h"
 
+namespace gdb {
+
+
 /* General function to handle events in the inferior.  */
 
 void
@@ -92,3 +95,5 @@ inferior_event_handler (enum inferior_event_type event_type,
       break;
     }
 }
+
+} /* namespace gdb */

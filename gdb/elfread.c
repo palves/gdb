@@ -49,6 +49,9 @@
 #include "auxv.h"
 #include "mdebugread.h"
 
+namespace gdb {
+
+
 /* Forward declarations.  */
 extern const struct sym_fns elf_sym_fns_gdb_index;
 extern const struct sym_fns elf_sym_fns_debug_names;
@@ -1481,3 +1484,5 @@ _initialize_elfread (void)
   elf_objfile_gnu_ifunc_cache_data = register_objfile_data ();
   gnu_ifunc_fns_p = &elf_gnu_ifunc_fns;
 }
+
+} /* namespace gdb */

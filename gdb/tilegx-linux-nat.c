@@ -34,6 +34,9 @@
 /* Prototypes for supply_gregset etc.  */
 #include "gregset.h"
 
+namespace gdb {
+
+
 class tilegx_linux_nat_target final : public linux_nat_target
 {
 public:
@@ -170,3 +173,5 @@ _initialize_tile_linux_nat (void)
   linux_target = &the_tilegx_linux_nat_target;
   add_inf_child_target (&the_tilegx_linux_nat_target);
 }
+
+} /* namespace gdb */

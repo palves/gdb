@@ -23,6 +23,8 @@
 #include "common/next-iterator.h"
 #include "common/safe-iterator.h"
 
+namespace gdb {
+
 /* A forward iterator that iterates over a given inferior's
    threads.  */
 
@@ -252,5 +254,7 @@ public:
 private:
   ptid_t m_filter_ptid;
 };
+
+} /* namespace gdb */
 
 #endif /* THREAD_ITER_H */

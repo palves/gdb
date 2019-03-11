@@ -35,6 +35,9 @@
 #include "solib-target.h"
 #include "gdbcore.h"
 
+namespace gdb {
+
+
 struct cmd_list_element *info_w32_cmdlist;
 
 typedef struct thread_information_block_32
@@ -517,3 +520,5 @@ even if their meaning is unknown."),
      isn't another convenience variable of the same name.  */
   create_internalvar_type_lazy ("_tlb", &tlb_funcs, NULL);
 }
+
+} /* namespace gdb */

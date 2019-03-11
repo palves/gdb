@@ -58,6 +58,9 @@
 #include "target-float.h"
 #include <algorithm>
 
+namespace gdb {
+
+
 static const struct objfile_data *mips_pdr_data;
 
 static struct type *mips_register_type (struct gdbarch *gdbarch, int regnum);
@@ -9119,3 +9122,5 @@ When non-zero, mips specific debugging is enabled."),
 				      currently %s.  */
 			     &setdebuglist, &showdebuglist);
 }
+
+} /* namespace gdb */

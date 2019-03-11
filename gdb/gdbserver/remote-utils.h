@@ -19,6 +19,8 @@
 #ifndef GDBSERVER_REMOTE_UTILS_H
 #define GDBSERVER_REMOTE_UTILS_H
 
+namespace gdb {
+
 extern int remote_debug;
 
 int gdb_connected (void);
@@ -68,5 +70,7 @@ int look_up_one_symbol (const char *name, CORE_ADDR *addrp, int may_ask_gdb);
 int relocate_instruction (CORE_ADDR *to, CORE_ADDR oldloc);
 
 void monitor_output (const char *msg);
+
+} /* namespace gdb */
 
 #endif /* GDBSERVER_REMOTE_UTILS_H */

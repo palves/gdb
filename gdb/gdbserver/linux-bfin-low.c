@@ -23,6 +23,9 @@
 #include "linux-low.h"
 #include <asm/ptrace.h>
 
+namespace gdb {
+
+
 /* Defined in auto-generated file reg-bfin.c.  */
 void init_registers_bfin (void);
 extern const struct target_desc *tdesc_bfin;
@@ -157,3 +160,5 @@ initialize_low_arch (void)
 {
   init_registers_bfin ();
 }
+
+} /* namespace gdb */

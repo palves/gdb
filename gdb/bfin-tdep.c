@@ -40,6 +40,9 @@
 #include "xml-syscall.h"
 #include "bfin-tdep.h"
 
+namespace gdb {
+
+
 /* Macros used by prologue functions.  */
 #define P_LINKAGE			0xE800
 #define P_MINUS_SP1			0x0140
@@ -838,3 +841,5 @@ _initialize_bfin_tdep (void)
 {
   register_gdbarch_init (bfd_arch_bfin, bfin_gdbarch_init);
 }
+
+} /* namespace gdb */

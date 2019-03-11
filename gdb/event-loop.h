@@ -20,6 +20,8 @@
 #ifndef EVENT_LOOP_H
 #define EVENT_LOOP_H
 
+namespace gdb {
+
 /* An event loop listens for events from multiple event sources.  When
    an event arrives, it is queued and processed by calling the
    appropriate event handler.  The event loop then continues to listen
@@ -130,5 +132,7 @@ extern void mark_async_event_handler (struct async_event_handler *handler);
 extern void clear_async_event_handler (struct async_event_handler *handler);
 
 extern void initialize_async_signal_handlers (void);
+
+} /* namespace gdb */
 
 #endif /* EVENT_LOOP_H */

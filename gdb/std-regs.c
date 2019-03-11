@@ -24,6 +24,9 @@
 #include "frame.h"
 #include "gdbtypes.h"
 #include "value.h"
+
+namespace gdb {
+
 static struct value *
 value_of_builtin_frame_fp_reg (struct frame_info *frame, const void *baton)
 {
@@ -100,3 +103,5 @@ _initialize_frame_reg (void)
   user_reg_add_builtin ("sp", value_of_builtin_frame_sp_reg, NULL);
   user_reg_add_builtin ("ps", value_of_builtin_frame_ps_reg, NULL);
 }
+
+} /* namespace gdb */

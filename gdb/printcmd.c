@@ -51,6 +51,9 @@
 #include "source.h"
 #include "common/byte-vector.h"
 
+namespace gdb {
+
+
 /* Last specified output format.  */
 
 static char last_format = 0;
@@ -2817,3 +2820,5 @@ Show printing of source filename and line number with <symbol>."), NULL,
 Convert \"printf format string\", arg1, arg2, arg3, ..., argn to\n\
 a command line, and call it."));
 }
+
+} /* namespace gdb */

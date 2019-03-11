@@ -20,6 +20,9 @@
 #include "common/common-defs.h"
 #include "nat/linux-personality.h"
 
+namespace gdb {
+
+
 #ifdef HAVE_PERSONALITY
 # include <sys/personality.h>
 # if !HAVE_DECL_ADDR_NO_RANDOMIZE
@@ -67,3 +70,5 @@ maybe_disable_address_space_randomization::
     }
 #endif /* HAVE_PERSONALITY */
 }
+
+} /* namespace gdb */

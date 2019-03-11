@@ -20,11 +20,15 @@
 #ifndef TARGET_WAIT_H
 #define TARGET_WAIT_H
 
+namespace gdb {
+
 /* Options that can be passed to target_wait.  */
 
 /* Return immediately if there's no event already queued.  If this
    options is not requested, target_wait blocks waiting for an
    event.  */
 #define TARGET_WNOHANG 1
+
+} /* namespace gdb */
 
 #endif /* TARGET_WAIT_H */

@@ -22,6 +22,9 @@
 #include "gdbcmd.h"
 #include "inferior.h"
 
+namespace gdb {
+
+
 /* Support for hardware watchpoints and breakpoints using the x86
    debug registers.
 
@@ -299,3 +302,5 @@ x86_set_debug_register_length (int len)
   x86_dr_low.debug_register_length = len;
   add_show_debug_regs_command ();
 }
+
+} /* namespace gdb */

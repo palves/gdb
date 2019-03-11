@@ -5,6 +5,9 @@
 #include "osabi.h"
 #include "target-descriptions.h"
 
+namespace gdb {
+
+
 struct target_desc *tdesc_mips64_linux;
 static void
 initialize_tdesc_mips64_linux (void)
@@ -97,3 +100,5 @@ initialize_tdesc_mips64_linux (void)
 
   tdesc_mips64_linux = result;
 }
+
+} /* namespace gdb */

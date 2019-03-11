@@ -20,6 +20,8 @@
 #ifndef NAT_LINUX_PERSONALITY_H
 #define NAT_LINUX_PERSONALITY_H
 
+namespace gdb {
+
 class maybe_disable_address_space_randomization
 {
 public:
@@ -42,5 +44,7 @@ private:
   /* If m_personality_set is true, the original personality value.  */
   int m_personality_orig;
 };
+
+} /* namespace gdb */
 
 #endif /* ! NAT_LINUX_PERSONALITY_H */

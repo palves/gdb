@@ -22,6 +22,9 @@
 #include "cli/cli-style.h"
 #include "source-cache.h"
 
+namespace gdb {
+
+
 /* True if styling is enabled.  */
 
 #if defined(_WIN32) || defined (__CYGWIN__)
@@ -287,3 +290,5 @@ Configure variable name colors and display intensity"));
 Address display styling\n\
 Configure address colors and display intensity"));
 }
+
+} /* namespace gdb */

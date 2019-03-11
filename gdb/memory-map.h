@@ -23,9 +23,13 @@
 
 #include "memattr.h"
 
+namespace gdb {
+
 /* Parses XML memory map passed as argument and returns the memory
    regions it describes.  On any error, emits error message and
    return an empty vector.  Does not throw.  */
 std::vector<mem_region> parse_memory_map (const char *memory_map);
+
+} /* namespace gdb */
 
 #endif

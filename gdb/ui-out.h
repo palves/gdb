@@ -27,6 +27,8 @@
 
 #include "common/enum-flags.h"
 
+namespace gdb {
+
 class ui_out_level;
 class ui_out_table;
 struct ui_file;
@@ -272,5 +274,7 @@ public:
 private:
   struct ui_out *m_uiout;
 };
+
+} /* namespace gdb */
 
 #endif /* UI_OUT_H */

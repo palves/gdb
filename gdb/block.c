@@ -27,6 +27,9 @@
 #include "gdbtypes.h"
 #include "objfiles.h"
 
+namespace gdb {
+
+
 /* This is used by struct block to store namespace-related info for
    C++ files, namely using declarations and the current namespace in
    scope.  */
@@ -831,3 +834,5 @@ make_blockranges (struct objfile *objfile,
   return blr;
 }
 
+
+} /* namespace gdb */

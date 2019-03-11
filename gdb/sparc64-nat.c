@@ -23,6 +23,9 @@
 #include "sparc64-tdep.h"
 #include "sparc-nat.h"
 
+namespace gdb {
+
+
 /* Determine whether `gregset_t' contains register REGNUM.  */
 
 static int
@@ -79,3 +82,5 @@ _initialize_sparc64_nat (void)
   sparc_gregset_supplies_p = sparc64_gregset_supplies_p;
   sparc_fpregset_supplies_p = sparc64_fpregset_supplies_p;
 }
+
+} /* namespace gdb */

@@ -31,6 +31,9 @@
 #include "common/gdb_vecs.h"
 #include "value.h"
 
+namespace gdb {
+
+
 
 
 /* Information about a given instruction.  */
@@ -1144,3 +1147,5 @@ compile_dwarf_bounds_to_c (string_file *stream,
 			      sym, pc, arch, registers_used,
 			      addr_size, op_ptr, op_end, NULL, per_cu);
 }
+
+} /* namespace gdb */

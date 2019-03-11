@@ -36,6 +36,9 @@
 #include <ctype.h>
 #include "gdbcore.h"
 
+namespace gdb {
+
+
 /* Given a C string type, STR_TYPE, return the corresponding target
    character set name.  */
 
@@ -1129,3 +1132,5 @@ extern const struct language_defn minimal_language_defn =
   NULL,
   LANG_MAGIC
 };
+
+} /* namespace gdb */

@@ -52,6 +52,9 @@
 
 #include <signal.h>
 
+namespace gdb {
+
+
 /*******************************
 ** Static Local Decls
 ********************************/
@@ -1761,3 +1764,5 @@ This variable controls how many spaces are used to display a tab character."),
 			     tui_set_tab_width, tui_show_tab_width,
 			     &tui_setlist, &tui_showlist);
 }
+
+} /* namespace gdb */

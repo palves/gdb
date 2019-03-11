@@ -77,6 +77,9 @@
 #include "common/byte-vector.h"
 #include <unordered_map>
 
+namespace gdb {
+
+
 /* The remote target.  */
 
 static const char remote_doc[] = N_("\
@@ -14761,3 +14764,5 @@ stepping is supported by the target.  The default is on."),
   not_sent_ptid = ptid_t (42000, -2, 1);
   any_thread_ptid = ptid_t (42000, 0, 1);
 }
+
+} /* namespace gdb */

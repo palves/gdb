@@ -20,6 +20,8 @@
 #ifndef ARCH_UTILS_H
 #define ARCH_UTILS_H
 
+namespace gdb {
+
 struct gdbarch;
 struct frame_info;
 struct minimal_symbol;
@@ -270,5 +272,7 @@ extern bool default_in_indirect_branch_thunk (gdbarch *gdbarch,
 /* Default implementation of gdbarch type_align method.  */
 extern ULONGEST default_type_align (struct gdbarch *gdbarch,
 				    struct type *type);
+
+} /* namespace gdb */
 
 #endif /* ARCH_UTILS_H */

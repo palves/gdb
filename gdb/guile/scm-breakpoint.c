@@ -33,6 +33,9 @@
 #include "guile-internal.h"
 #include "location.h"
 
+namespace gdb {
+
+
 /* The <gdb:breakpoint> smob.
    N.B.: The name of this struct is known to breakpoint.h.
 
@@ -1327,3 +1330,5 @@ gdbscm_initialize_breakpoints (void)
   wp_class_keyword = scm_from_latin1_keyword ("wp-class");
   internal_keyword = scm_from_latin1_keyword ("internal");
 }
+
+} /* namespace gdb */

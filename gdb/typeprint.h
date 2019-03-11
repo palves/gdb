@@ -21,6 +21,8 @@
 
 #include "gdb_obstack.h"
 
+namespace gdb {
+
 enum language;
 struct ui_file;
 struct typedef_hash_table;
@@ -168,5 +170,7 @@ extern void error_unknown_type (const char *sym_print_name);
 extern void val_print_not_allocated (struct ui_file *stream);
 
 extern void val_print_not_associated (struct ui_file *stream);
+
+} /* namespace gdb */
 
 #endif

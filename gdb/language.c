@@ -46,6 +46,9 @@
 #include "c-lang.h"
 #include <algorithm>
 
+namespace gdb {
+
+
 static int unk_lang_parser (struct parser_state *);
 
 static void set_range_case (void);
@@ -1179,3 +1182,5 @@ For Fortran the default is off; for other languages the default is on."),
   /* Have the above take effect.  */
   set_language (language_auto);
 }
+
+} /* namespace gdb */

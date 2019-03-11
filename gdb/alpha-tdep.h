@@ -19,6 +19,8 @@
 #ifndef ALPHA_TDEP_H
 #define ALPHA_TDEP_H
 
+namespace gdb {
+
 struct regcache;
 
 /* Say how long (ordinary) registers are.  This is a piece of bogosity
@@ -118,5 +120,7 @@ extern void alpha_supply_fp_regs (struct regcache *, int,
 				  const void *, const void *);
 extern void alpha_fill_fp_regs (const struct regcache *,
 				int, void *, void *);
+
+} /* namespace gdb */
 
 #endif /* ALPHA_TDEP_H */

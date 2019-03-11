@@ -25,6 +25,9 @@
 #include "nat/x86-dregs.h"
 #include "nat/x86-linux-dregs.h"
 
+namespace gdb {
+
+
 /* Return the offset of REGNUM in the u_debugreg field of struct
    user.  */
 
@@ -181,3 +184,5 @@ x86_linux_update_debug_registers (struct lwp_info *lwp)
       || lwp_stop_reason (lwp) == TARGET_STOPPED_BY_WATCHPOINT)
     x86_linux_dr_set (ptid, DR_STATUS, 0);
 }
+
+} /* namespace gdb */

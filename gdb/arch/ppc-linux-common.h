@@ -20,6 +20,8 @@
 #ifndef ARCH_PPC_LINUX_COMMON_H
 #define ARCH_PPC_LINUX_COMMON_H
 
+namespace gdb {
+
 struct target_desc;
 
 /* The core file VMX regset has 34 16-byte fields (32 16-byte vector
@@ -76,5 +78,7 @@ const struct ppc_linux_features ppc_linux_no_features = {
 /* Return a target description that matches FEATURES.  */
 const struct target_desc * ppc_linux_match_description
 (struct ppc_linux_features features);
+
+} /* namespace gdb */
 
 #endif /* ARCH_PPC_LINUX_COMMON_H */

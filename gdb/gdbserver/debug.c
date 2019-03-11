@@ -19,6 +19,9 @@
 #include "server.h"
 #include <chrono>
 
+namespace gdb {
+
+
 /* Enable miscellaneous debugging output.  The name is historical - it
    was originally used to debug LinuxThreads support.  */
 int debug_threads;
@@ -91,3 +94,5 @@ do_debug_exit (const char *function_name)
   if (function_name != NULL)
     debug_printf ("<<<< exiting %s\n", function_name);
 }
+
+} /* namespace gdb */

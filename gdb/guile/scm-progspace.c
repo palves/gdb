@@ -25,6 +25,9 @@
 #include "arch-utils.h"
 #include "guile-internal.h"
 
+namespace gdb {
+
+
 /* NOTE: Python exports the name "Progspace", so we export "progspace".
    Internally we shorten that to "pspace".  */
 
@@ -424,3 +427,5 @@ gdbscm_initialize_pspaces (void)
     = register_program_space_data_with_cleanup (NULL,
 						psscm_handle_pspace_deleted);
 }
+
+} /* namespace gdb */

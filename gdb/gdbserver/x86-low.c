@@ -20,6 +20,9 @@
 #include "server.h"
 #include "x86-low.h"
 
+namespace gdb {
+
+
 /* Clear the reference counts and forget everything we knew about the
    debug registers.  */
 
@@ -36,3 +39,5 @@ x86_low_init_dregs (struct x86_debug_reg_state *state)
   state->dr_control_mirror = 0;
   state->dr_status_mirror  = 0;
 }
+
+} /* namespace gdb */

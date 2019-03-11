@@ -20,6 +20,8 @@
 #ifndef CSKY_TDEP_H
 #define CSKY_TDEP_H
 
+namespace gdb {
+
 /* How to interpret the contents of the link register.  */
 enum lr_type_t
 {
@@ -351,5 +353,7 @@ enum csky_regnum
 
 #define CSKY_MOVI_R7_173 0x00adea07
 #define CSKY_TRAP_0 0x2020c000
+
+} /* namespace gdb */
 
 #endif

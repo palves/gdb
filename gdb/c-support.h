@@ -21,6 +21,8 @@
 
 #include "safe-ctype.h"
 
+namespace gdb {
+
 /* Like ISALPHA, but also returns true for the union of all UTF-8
    multi-byte sequence bytes and non-ASCII characters in
    extended-ASCII charsets (e.g., Latin1).  I.e., returns true if the
@@ -42,5 +44,7 @@ c_ident_is_alnum (unsigned char ch)
 {
   return ISALNUM (ch) || ch >= 0x80;
 }
+
+} /* namespace gdb */
 
 #endif /* C_SUPPORT_H */

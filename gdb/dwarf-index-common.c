@@ -20,6 +20,9 @@
 #include "defs.h"
 #include "dwarf-index-common.h"
 
+namespace gdb {
+
+
 /* See dwarf-index-common.h.  */
 
 hashval_t
@@ -54,3 +57,5 @@ dwarf5_djb_hash (const char *str_)
     hash = hash * 33 + tolower (c);
   return hash;
 }
+
+} /* namespace gdb */

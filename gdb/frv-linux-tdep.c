@@ -32,6 +32,9 @@
 #include "regset.h"
 #include "linux-tdep.h"
 
+namespace gdb {
+
+
 /* Define the size (in bytes) of an FR-V instruction.  */
 static const int frv_instr_size = 4;
 
@@ -489,3 +492,5 @@ _initialize_frv_linux_tdep (void)
 				  bfd_target_elf_flavour,
 				  frv_linux_elf_osabi_sniffer);
 }
+
+} /* namespace gdb */

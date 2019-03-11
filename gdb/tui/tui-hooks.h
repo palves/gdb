@@ -20,7 +20,11 @@
 #ifndef TUI_TUI_HOOKS_H
 #define TUI_TUI_HOOKS_H
 
+namespace gdb {
+
 extern void tui_install_hooks (void);
 extern void tui_remove_hooks (void);
+
+} /* namespace gdb */
 
 #endif /* TUI_TUI_HOOKS_H */

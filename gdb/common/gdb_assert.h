@@ -19,6 +19,8 @@
 #ifndef COMMON_GDB_ASSERT_H
 #define COMMON_GDB_ASSERT_H
 
+namespace gdb {
+
 /* A static assertion.  This will cause a compile-time error if EXPR,
    which must be a compile-time constant, is false.  */
 
@@ -55,5 +57,7 @@
 #define gdb_assert_not_reached(message) \
   internal_error (__FILE__, __LINE__, _(message))
 #endif
+
+} /* namespace gdb */
 
 #endif /* COMMON_GDB_ASSERT_H */

@@ -24,6 +24,8 @@
 
 #include "common/fileio.h"
 
+namespace gdb {
+
 struct cmd_list_element;
 struct remote_target;
 
@@ -43,5 +45,7 @@ extern void initialize_remote_fileio (
 /* Unpack a struct fio_stat.  */
 extern void remote_fileio_to_host_stat (struct fio_stat *fst,
 					struct stat *st);
+
+} /* namespace gdb */
 
 #endif

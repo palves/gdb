@@ -18,11 +18,15 @@
 #if !defined (SKIP_H)
 #define SKIP_H
 
+namespace gdb {
+
 struct symtab_and_line;
 
 /* Returns true if the given FUNCTION_NAME is marked for skip and
    shouldn't be stepped into.  Otherwise, returns false.  */
 bool function_name_is_marked_for_skip (const char *function_name,
 				       const symtab_and_line &function_sal);
+
+} /* namespace gdb */
 
 #endif /* !defined (SKIP_H) */

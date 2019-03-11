@@ -19,6 +19,8 @@
 #ifndef STABSREAD_H
 #define STABSREAD_H
 
+namespace gdb {
+
 struct objfile;
 enum language;
 
@@ -210,5 +212,7 @@ extern void init_header_files (void);
    to.  Get these symbols from the minimal symbol table.  */
 
 extern void scan_file_globals (struct objfile *objfile);
+
+} /* namespace gdb */
 
 #endif /* STABSREAD_H */

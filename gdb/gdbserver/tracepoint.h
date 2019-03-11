@@ -19,6 +19,8 @@
 #ifndef GDBSERVER_TRACEPOINT_H
 #define GDBSERVER_TRACEPOINT_H
 
+namespace gdb {
+
 /* Size for a small buffer to report problems from the in-process
    agent back to GDBserver.  */
 #define IPA_BUFSIZ 100
@@ -191,5 +193,7 @@ CORE_ADDR get_get_tsv_func_addr (void);
 /* Returns the address of the set_trace_state_variable_value
    function in the IPA.  */
 CORE_ADDR get_set_tsv_func_addr (void);
+
+} /* namespace gdb */
 
 #endif /* GDBSERVER_TRACEPOINT_H */

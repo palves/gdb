@@ -24,6 +24,8 @@
 #include "common/array-view.h"
 #include "symfile.h"
 
+namespace gdb {
+
 /* Base of the classes used to hold the resources of the indices loaded from
    the cache (e.g. mmapped files).  */
 
@@ -108,5 +110,7 @@ private:
 
 /* The global instance of the index cache.  */
 extern index_cache global_index_cache;
+
+} /* namespace gdb */
 
 #endif /* DWARF_INDEX_CACHE_H */

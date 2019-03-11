@@ -46,6 +46,9 @@
 /* Defines ps_err_e, struct ps_prochandle.  */
 #include "gdb_proc_service.h"
 
+namespace gdb {
+
+
 #ifndef TRAP_HWBKPT
 #define TRAP_HWBKPT 0x0004
 #endif
@@ -930,3 +933,5 @@ _initialize_aarch64_linux_nat (void)
   linux_target = &the_aarch64_linux_nat_target;
   add_inf_child_target (&the_aarch64_linux_nat_target);
 }
+
+} /* namespace gdb */

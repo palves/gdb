@@ -26,6 +26,9 @@
 #include "tdesc.h"
 #include "x86-tdesc.h"
 
+namespace gdb {
+
+
 #ifndef CONTEXT_EXTENDED_REGISTERS
 #define CONTEXT_EXTENDED_REGISTERS 0
 #endif
@@ -466,3 +469,5 @@ struct win32_target_ops the_low_target = {
   x86_stopped_by_watchpoint,
   x86_stopped_data_address
 };
+
+} /* namespace gdb */

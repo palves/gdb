@@ -25,6 +25,8 @@
 #include "filename-seen-cache.h"
 #include "gdb_obstack.h"
 
+namespace gdb {
+
 /* Hold 'maintenance (set|show) dwarf' commands.  */
 extern struct cmd_list_element *set_dwarf_cmdlist;
 extern struct cmd_list_element *show_dwarf_cmdlist;
@@ -402,5 +404,7 @@ struct signatured_type
 
 typedef struct signatured_type *sig_type_ptr;
 DEF_VEC_P (sig_type_ptr);
+
+} /* namespace gdb */
 
 #endif /* DWARF2READ_H */

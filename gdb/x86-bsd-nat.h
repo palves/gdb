@@ -22,6 +22,8 @@
 
 #include "x86-nat.h"
 
+namespace gdb {
+
 /* Low level x86 XSAVE info.  */
 extern size_t x86bsd_xsave_len;
 
@@ -40,5 +42,7 @@ public:
   }
 #endif /* HAVE_PT_GETDBREGS */
 };
+
+} /* namespace gdb */
 
 #endif /* x86-bsd-nat.h */

@@ -5,6 +5,9 @@
 #include "osabi.h"
 #include "target-descriptions.h"
 
+namespace gdb {
+
+
 struct target_desc *tdesc_powerpc_altivec32;
 static void
 initialize_tdesc_powerpc_altivec32 (void)
@@ -154,3 +157,5 @@ initialize_tdesc_powerpc_altivec32 (void)
 
   tdesc_powerpc_altivec32 = result;
 }
+
+} /* namespace gdb */

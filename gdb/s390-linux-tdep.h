@@ -20,6 +20,8 @@
 #ifndef S390_LINUX_TDEP_H
 #define S390_LINUX_TDEP_H
 
+namespace gdb {
+
 #define S390_IS_GREGSET_REGNUM(i)					\
   (((i) >= S390_PSWM_REGNUM && (i) <= S390_A15_REGNUM)			\
    || ((i) >= S390_R0_UPPER_REGNUM && (i) <= S390_R15_UPPER_REGNUM)	\
@@ -63,5 +65,7 @@ extern struct target_desc *tdesc_s390x_te_linux64;
 extern struct target_desc *tdesc_s390x_vx_linux64;
 extern struct target_desc *tdesc_s390x_tevx_linux64;
 extern struct target_desc *tdesc_s390x_gs_linux64;
+
+} /* namespace gdb */
 
 #endif /* S390_LINUX_TDEP_H */

@@ -20,6 +20,9 @@
 #include "defs.h"
 #include "py-event.h"
 
+namespace gdb {
+
+
 static gdbpy_ref<>
 create_new_objfile_event_object (struct objfile *objfile)
 {
@@ -89,3 +92,5 @@ emit_clear_objfiles_event (void)
     return evpy_emit_event (event.get (), gdb_py_events.clear_objfiles);
   return -1;
 }
+
+} /* namespace gdb */

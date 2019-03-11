@@ -27,6 +27,9 @@
 #endif
 #include "x86-tdesc.h"
 
+namespace gdb {
+
+
 /* Return the right x86_linux_tdesc index for a given XCR0.  Return
    X86_TDESC_LAST if can't find a match.  */
 
@@ -162,3 +165,5 @@ amd64_get_ipa_tdesc_idx (const struct target_desc *tdesc)
 
 #endif
 #endif
+
+} /* namespace gdb */

@@ -27,6 +27,9 @@
 #include "readline/readline.h"
 #include "cli/cli-style.h"
 
+namespace gdb {
+
+
 /* These are the CLI output functions */
 
 /* Mark beginning of a table */
@@ -385,3 +388,5 @@ cli_display_match_list (char **matches, int len, int max)
   gdb_display_match_list (matches, len, max, &displayer);
   rl_forced_update_display ();
 }
+
+} /* namespace gdb */

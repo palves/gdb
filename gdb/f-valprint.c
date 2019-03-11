@@ -34,6 +34,9 @@
 #include "block.h"
 #include "dictionary.h"
 
+namespace gdb {
+
+
 static void f77_get_dynamic_length_of_aggregate (struct type *);
 
 int f77_array_offset_tbl[MAX_FORTRAN_DIMS + 1][2];
@@ -477,3 +480,5 @@ _initialize_f_valprint (void)
   add_info ("common", info_common_command,
 	    _("Print out the values contained in a Fortran COMMON block."));
 }
+
+} /* namespace gdb */

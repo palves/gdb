@@ -30,6 +30,8 @@
   extern PyTypeObject name##_event_object_type		    \
         CPYCHECKER_TYPE_OBJECT_FOR_TYPEDEF ("event_object");
 #include "py-event-types.def"
+
+namespace gdb {
 #undef GDB_PY_DEFINE_EVENT_TYPE
 
 typedef struct
@@ -82,5 +84,7 @@ extern int evpy_add_attribute (PyObject *event,
   CPYCHECKER_NEGATIVE_RESULT_SETS_EXCEPTION;
 int gdbpy_initialize_event_generic (PyTypeObject *type, const char *name)
   CPYCHECKER_NEGATIVE_RESULT_SETS_EXCEPTION;
+
+} /* namespace gdb */
 
 #endif /* PYTHON_PY_EVENT_H */

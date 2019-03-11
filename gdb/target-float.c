@@ -1727,6 +1727,9 @@ mpfr_float_ops::compare (const gdb_byte *x, const struct type *type_x,
 #include "dpd/decimal64.h"
 #include "dpd/decimal32.h"
 
+namespace gdb {
+
+
 /* When using decimal128, this is the maximum string length + 1
    (value comes from libdecnumber's DECIMAL128_String constant).  */
 #define MAX_DECIMAL_STRING  43
@@ -2496,3 +2499,5 @@ target_float_compare (const gdb_byte *x, const struct type *type_x,
   return ops->compare (x, type_x, y, type_y);
 }
 
+
+} /* namespace gdb */

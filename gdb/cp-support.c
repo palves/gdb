@@ -38,6 +38,9 @@
 #include "safe-ctype.h"
 #include "common/selftest.h"
 
+namespace gdb {
+
+
 #define d_left(dc) (dc)->u.s_binary.left
 #define d_right(dc) (dc)->u.s_binary.right
 
@@ -2192,3 +2195,5 @@ display the offending symbol."),
 			    selftests::test_cp_remove_params);
 #endif
 }
+
+} /* namespace gdb */

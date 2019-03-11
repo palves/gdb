@@ -168,6 +168,9 @@ alpha_bsd_nat_target::store_registers (struct regcache *regcache, int regno)
 
 #include "bsd-kvm.h"
 
+namespace gdb {
+
+
 static int
 alphabsd_supply_pcb (struct regcache *regcache, struct pcb *pcb)
 {
@@ -200,3 +203,5 @@ _initialize_alphabsd_nat (void)
   /* Support debugging kernel virtual memory images.  */
   bsd_kvm_add_target (alphabsd_supply_pcb);
 }
+
+} /* namespace gdb */

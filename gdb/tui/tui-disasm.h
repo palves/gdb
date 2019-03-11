@@ -25,11 +25,15 @@
 #include "tui/tui.h"		/* For enum tui_status.  */
 #include "tui/tui-data.h"	/* For enum tui_scroll_direction.  */
 
+namespace gdb {
+
 extern enum tui_status tui_set_disassem_content (struct gdbarch *, CORE_ADDR);
 extern void tui_show_disassem (struct gdbarch *, CORE_ADDR);
 extern void tui_show_disassem_and_update_source (struct gdbarch *, CORE_ADDR);
 extern void tui_vertical_disassem_scroll (enum tui_scroll_direction, 
 					  int);
 extern void tui_get_begin_asm_address (struct gdbarch **, CORE_ADDR *);
+
+} /* namespace gdb */
 
 #endif /* TUI_TUI_DISASM_H */

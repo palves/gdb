@@ -20,6 +20,8 @@
 #ifndef MIPS_LINUX_TDEP_H
 #define MIPS_LINUX_TDEP_H
 
+namespace gdb {
+
 /* Copied from <asm/elf.h>.  */
 #define ELF_NGREG       45
 #define ELF_NFPREG      33
@@ -112,5 +114,7 @@ extern struct target_desc *tdesc_mips_linux;
 extern struct target_desc *tdesc_mips64_linux;
 extern struct target_desc *tdesc_mips_dsp_linux;
 extern struct target_desc *tdesc_mips64_dsp_linux;
+
+} /* namespace gdb */
 
 #endif /* MIPS_LINUX_TDEP_H */

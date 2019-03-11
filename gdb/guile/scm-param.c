@@ -27,6 +27,9 @@
 #include "arch-utils.h"
 #include "guile-internal.h"
 
+namespace gdb {
+
+
 /* A union that can hold anything described by enum var_types.  */
 
 union pascm_variable
@@ -1187,3 +1190,5 @@ gdbscm_initialize_parameters (void)
   auto_keyword = scm_from_latin1_keyword ("auto");
   unlimited_keyword = scm_from_latin1_keyword ("unlimited");
 }
+
+} /* namespace gdb */

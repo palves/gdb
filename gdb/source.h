@@ -21,6 +21,8 @@
 
 #include "common/scoped_fd.h"
 
+namespace gdb {
+
 struct symtab;
 
 /* See openp function definition for their description.  */
@@ -222,5 +224,7 @@ extern void forget_cached_source_info (void);
    default.  Also, since this can cause symbols to be read, doing it
    before we need to would make things slower than necessary.  */
 extern void select_source_symtab (struct symtab *s);
+
+} /* namespace gdb */
 
 #endif

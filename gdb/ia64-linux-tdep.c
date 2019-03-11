@@ -30,6 +30,9 @@
 
 #include <ctype.h>
 
+namespace gdb {
+
+
 /* The sigtramp code is in a non-readable (executable-only) region
    of memory called the ``gate page''.  The addresses in question
    were determined by examining the system headers.  They are
@@ -264,3 +267,5 @@ _initialize_ia64_linux_tdep (void)
   gdbarch_register_osabi (bfd_arch_ia64, 0, GDB_OSABI_LINUX,
 			  ia64_linux_init_abi);
 }
+
+} /* namespace gdb */

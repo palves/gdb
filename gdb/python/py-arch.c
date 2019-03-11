@@ -23,6 +23,9 @@
 #include "disasm.h"
 #include "python-internal.h"
 
+namespace gdb {
+
+
 typedef struct arch_object_type_object {
   PyObject_HEAD
   struct gdbarch *gdbarch;
@@ -292,3 +295,5 @@ PyTypeObject arch_object_type = {
   0,                                  /* tp_init */
   0,                                  /* tp_alloc */
 };
+
+} /* namespace gdb */

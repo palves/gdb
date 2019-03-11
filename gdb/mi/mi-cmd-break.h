@@ -23,8 +23,12 @@
 
 #include "common/scoped_restore.h"
 
+namespace gdb {
+
 /* Setup the reporting of the insertion of a new breakpoint or
    catchpoint.  */
 scoped_restore_tmpl<int> setup_breakpoint_reporting (void);
+
+} /* namespace gdb */
 
 #endif /* MI_MI_CMD_BREAK_H */

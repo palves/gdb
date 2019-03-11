@@ -23,6 +23,8 @@
 #include "gdb/fileio.h"
 #include <sys/stat.h>
 
+namespace gdb {
+
 /* Convert a host-format errno value to a File-I/O error number.  */
 
 extern int host_to_fileio_error (int error);
@@ -69,5 +71,7 @@ host_to_fileio_time (time_t num, fio_time_t fnum)
 /* Pack a host-format struct stat into a struct fio_stat.  */
 
 extern void host_to_fileio_stat (struct stat *st, struct fio_stat *fst);
+
+} /* namespace gdb */
 
 #endif /* COMMON_FILEIO_H */

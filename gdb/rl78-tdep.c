@@ -38,6 +38,9 @@
 #include "elf/rl78.h"
 #include "elf-bfd.h"
 
+namespace gdb {
+
+
 /* Register Banks.  */
 
 enum
@@ -1494,3 +1497,5 @@ _initialize_rl78_tdep (void)
 {
   register_gdbarch_init (bfd_arch_rl78, rl78_gdbarch_init);
 }
+
+} /* namespace gdb */

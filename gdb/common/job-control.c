@@ -25,6 +25,9 @@
 #endif
 #include <unistd.h>
 
+namespace gdb {
+
+
 /* Nonzero if we have job control.  */
 int job_control;
 
@@ -84,3 +87,5 @@ have_job_control ()
 #endif /* _POSIX_JOB_CONTROL */
 #endif /* HAVE_TERMIOS_H */
 }
+
+} /* namespace gdb */

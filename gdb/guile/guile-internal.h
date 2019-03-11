@@ -29,6 +29,8 @@
 #include "symtab.h"
 #include "libguile.h"
 
+namespace gdb {
+
 struct block;
 struct frame_info;
 struct objfile;
@@ -692,5 +694,7 @@ gdbscm_wrap (Function &&func, Args &&... args)
 
   return result;
 }
+
+} /* namespace gdb */
 
 #endif /* GUILE_GUILE_INTERNAL_H */

@@ -41,6 +41,9 @@
 
 #include "features/microblaze-with-stack-protect.c"
 #include "features/microblaze.c"
+
+namespace gdb {
+
 
 /* Instruction macros used for analyzing the prologue.  */
 /* This set of instruction macros need to be changed whenever the
@@ -771,3 +774,5 @@ When non-zero, microblaze specific debugging is enabled."),
 			     &setdebuglist, &showdebuglist);
 
 }
+
+} /* namespace gdb */

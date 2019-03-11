@@ -40,6 +40,9 @@
 
 #include <ctype.h>
 
+namespace gdb {
+
+
 /* The name of the SystemTap section where we will find information about
    the probes.  */
 
@@ -1721,3 +1724,5 @@ OBJECT matches the executable or shared library name."),
 	   info_probes_cmdlist_get ());
 
 }
+
+} /* namespace gdb */

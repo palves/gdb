@@ -21,6 +21,9 @@
 
 #ifdef HAVE_SYS_REG_H
 #include <sys/reg.h>
+
+namespace gdb {
+
 #endif
 
 /* Defined in auto-generated file reg-m32r.c.  */
@@ -155,3 +158,5 @@ initialize_low_arch (void)
 {
   init_registers_m32r ();
 }
+
+} /* namespace gdb */

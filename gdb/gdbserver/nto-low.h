@@ -19,6 +19,8 @@
 #ifndef GDBSERVER_NTO_LOW_H
 #define GDBSERVER_NTO_LOW_H
 
+namespace gdb {
+
 struct target_desc;
 
 enum regset_type
@@ -45,5 +47,7 @@ extern struct nto_target_ops the_low_target;
 /* The inferior's target description.  This is a global because the
    LynxOS ports support neither bi-arch nor multi-process.  */
 extern const struct target_desc *nto_tdesc;
+
+} /* namespace gdb */
 
 #endif /* GDBSERVER_NTO_LOW_H */

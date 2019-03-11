@@ -29,6 +29,9 @@
 #include "../features/i386/32bit-mpx.c"
 #include "../features/i386/32bit-pkeys.c"
 
+namespace gdb {
+
+
 /* Create i386 target descriptions according to XCR0.  */
 
 target_desc *
@@ -67,3 +70,5 @@ i386_create_target_description (uint64_t xcr0, bool is_linux)
 
   return tdesc;
 }
+
+} /* namespace gdb */

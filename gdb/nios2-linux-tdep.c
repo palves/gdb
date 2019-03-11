@@ -30,6 +30,9 @@
 #include "glibc-tdep.h"
 #include "nios2-tdep.h"
 
+namespace gdb {
+
+
 /* Core file and register set support.  */
 
 /* Map from the normal register enumeration order to the order that
@@ -247,3 +250,5 @@ _initialize_nios2_linux_tdep (void)
     gdbarch_register_osabi (bfd_arch_nios2, arch_info->mach,
 			    GDB_OSABI_LINUX, nios2_linux_init_abi);
 }
+
+} /* namespace gdb */

@@ -23,6 +23,9 @@
 #include <arch/abi.h>
 #include "nat/gdb_ptrace.h"
 
+namespace gdb {
+
+
 /* Defined in auto-generated file reg-tilegx.c.  */
 void init_registers_tilegx (void);
 extern const struct target_desc *tdesc_tilegx;
@@ -220,3 +223,5 @@ initialize_low_arch (void)
 
   initialize_regsets_info (&tile_regsets_info);
 }
+
+} /* namespace gdb */

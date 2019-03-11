@@ -20,6 +20,8 @@
 #ifndef COMMON_BUFFER_H
 #define COMMON_BUFFER_H
 
+namespace gdb {
+
 struct buffer
 {
   char *buffer;
@@ -64,5 +66,7 @@ void buffer_xml_printf (struct buffer *buffer, const char *format, ...)
   buffer_grow (BUFFER, STRING, strlen (STRING))
 #define buffer_grow_str0(BUFFER,STRING)			\
   buffer_grow (BUFFER, STRING, strlen (STRING) + 1)
+
+} /* namespace gdb */
 
 #endif /* COMMON_BUFFER_H */

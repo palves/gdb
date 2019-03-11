@@ -22,6 +22,8 @@
 
 #include "common/gdb_string_view.h"
 
+namespace gdb {
+
 #if defined(__MINGW32__) && !defined(PRINTF_HAS_LONG_LONG)
 # define USE_PRINTF_I64 1
 # define PRINTF_HAS_LONG_LONG
@@ -92,5 +94,7 @@ private:
   std::vector<format_piece> m_pieces;
   gdb::unique_xmalloc_ptr<char> m_storage;
 };
+
+} /* namespace gdb */
 
 #endif /* COMMON_FORMAT_H */

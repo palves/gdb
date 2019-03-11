@@ -21,6 +21,9 @@
 #include "gdbthread.h"
 #include "inferior.h"
 
+namespace gdb {
+
+
 /* See thread-iter.h.  */
 
 all_threads_iterator::all_threads_iterator (begin_t)
@@ -99,3 +102,5 @@ all_matching_threads_iterator::advance ()
 	  }
       }
 }
+
+} /* namespace gdb */

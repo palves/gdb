@@ -29,6 +29,9 @@
 #include <memory>
 #include <string>
 
+namespace gdb {
+
+
 namespace {
 
 /* A header of a ui_out_table.  */
@@ -648,3 +651,5 @@ ui_out::ui_out (ui_out_flags flags)
 ui_out::~ui_out ()
 {
 }
+
+} /* namespace gdb */

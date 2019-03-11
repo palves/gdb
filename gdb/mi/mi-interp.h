@@ -20,8 +20,12 @@
 #ifndef MI_MI_INTERP_H
 #define MI_MI_INTERP_H
 
+namespace gdb {
+
 /* Output the shared object attributes to UIOUT.  */
 
 void mi_output_solib_attribs (ui_out *uiout, struct so_list *solib);
+
+} /* namespace gdb */
 
 #endif /* MI_MI_INTERP_H */

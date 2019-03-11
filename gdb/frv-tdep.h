@@ -19,6 +19,8 @@
 #ifndef FRV_TDEP_H
 #define FRV_TDEP_H
 
+namespace gdb {
+
 /* Enumerate the possible ABIs for FR-V.  */
 enum frv_abi
   {
@@ -120,5 +122,7 @@ CORE_ADDR frv_fetch_objfile_link_map (struct objfile *objfile);
 
 struct target_so_ops;
 extern struct target_so_ops frv_so_ops;
+
+} /* namespace gdb */
 
 #endif /* FRV_TDEP_H */

@@ -27,6 +27,9 @@
 #include "command.h"
 #include "cli/cli-cmds.h"
 
+namespace gdb {
+
+
 /* A table of user registers.
 
    User registers have regnum's that live above of the range [0
@@ -243,3 +246,5 @@ _initialize_user_regs (void)
 	   _("List the names of the current user registers.\n"),
 	   &maintenanceprintlist);
 }
+
+} /* namespace gdb */

@@ -24,6 +24,9 @@
 #include "common/selftest.h"
 #include "selftest-arch.h"
 
+namespace gdb {
+
+
 namespace selftests {
 
 /* Test disassembly of one instruction.  */
@@ -220,3 +223,5 @@ _initialize_disasm_selftests (void)
 					 selftests::memory_error_test);
 #endif
 }
+
+} /* namespace gdb */

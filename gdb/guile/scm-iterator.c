@@ -53,6 +53,9 @@
 #include "defs.h"
 #include "guile-internal.h"
 
+namespace gdb {
+
+
 /* A smob for iterating over something.
    Typically this is used when computing a list of everything is
    too expensive.
@@ -359,3 +362,5 @@ gdbscm_initialize_iterators (void)
      but this is good enough for now.  */
   end_of_iteration = scm_from_latin1_keyword ("end-of-iteration");
 }
+
+} /* namespace gdb */

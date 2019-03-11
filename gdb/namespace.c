@@ -19,6 +19,9 @@
 #include "defs.h"
 #include "namespace.h"
 
+namespace gdb {
+
+
 /* Add a using directive to USING_DIRECTIVES.  If the using directive
    in question has already been added, don't add it twice.
 
@@ -119,3 +122,5 @@ add_using_directive (struct using_direct **using_directives,
   newobj->next = *using_directives;
   *using_directives = newobj;
 }
+
+} /* namespace gdb */

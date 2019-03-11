@@ -84,6 +84,9 @@
 #include "common/array-view.h"
 #include "common/gdb_optional.h"
 
+namespace gdb {
+
+
 /* Enums for exception-handling support.  */
 enum exception_event_kind
 {
@@ -16005,3 +16008,5 @@ agent-printf \"printf format string\", arg1, arg2, arg3, ..., argn\n\
   gdb::observers::about_to_proceed.attach (breakpoint_about_to_proceed);
   gdb::observers::thread_exit.attach (remove_threaded_breakpoints);
 }
+
+} /* namespace gdb */

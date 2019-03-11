@@ -31,6 +31,9 @@
 
 #ifdef HAVE_SYS_REG_H
 #include <sys/reg.h>
+
+namespace gdb {
+
 #endif
 
 #define INSN_SIZE 4
@@ -324,3 +327,5 @@ initialize_low_arch (void)
 
   initialize_regsets_info (&sparc_regsets_info);
 }
+
+} /* namespace gdb */

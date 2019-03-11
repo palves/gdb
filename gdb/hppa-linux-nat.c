@@ -47,6 +47,9 @@ static hppa_linux_nat_target the_hppa_linux_nat_target;
 /* Prototypes for supply_gregset etc.  */
 #include "gregset.h"
 
+namespace gdb {
+
+
 /* These must match the order of the register names.
 
    Some sort of lookup table is needed because the offsets associated
@@ -390,3 +393,5 @@ _initialize_hppa_linux_nat (void)
   linux_target = &the_hppa_linux_nat_target;
   add_inf_child_target (&the_hppa_linux_nat_target);
 }
+
+} /* namespace gdb */

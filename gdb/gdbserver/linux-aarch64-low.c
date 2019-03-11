@@ -45,6 +45,9 @@
 
 #ifdef HAVE_SYS_REG_H
 #include <sys/reg.h>
+
+namespace gdb {
+
 #endif
 
 /* Per-process arch-specific data we want to keep.  */
@@ -3073,3 +3076,5 @@ initialize_low_arch (void)
   initialize_low_tdesc ();
 #endif
 }
+
+} /* namespace gdb */

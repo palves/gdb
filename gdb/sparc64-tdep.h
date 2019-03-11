@@ -28,6 +28,8 @@ struct trad_frame_saved_reg;
 
 #include "sparc-tdep.h"
 
+namespace gdb {
+
 /* The stack pointer is offset from the stack frame by a BIAS of 2047
    (0x7ff) for 64-bit code.  BIAS is likely to be defined on SPARC
    hosts, so undefine it first.  */
@@ -139,5 +141,7 @@ extern struct trad_frame_saved_reg *
 extern const struct sparc_fpregmap sparc64_bsd_fpregmap;
 
 extern void sparc64_forget_process (pid_t pid);
+
+} /* namespace gdb */
 
 #endif /* sparc64-tdep.h */

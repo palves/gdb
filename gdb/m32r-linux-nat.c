@@ -32,6 +32,9 @@
 #include "gregset.h"
 
 #include "m32r-tdep.h"
+
+namespace gdb {
+
 
 
 class m32r_linux_nat_target final : public linux_nat_target
@@ -244,3 +247,5 @@ _initialize_m32r_linux_nat (void)
   linux_target = &the_m32r_linux_nat_target;
   add_inf_child_target (&the_m32r_linux_nat_target);
 }
+
+} /* namespace gdb */

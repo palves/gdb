@@ -38,6 +38,9 @@
 #include "elf-bfd.h"
 #include <algorithm>
 
+namespace gdb {
+
+
 /* Certain important register numbers.  */
 enum
 {
@@ -1167,3 +1170,5 @@ _initialize_rx_tdep (void)
 {
   register_gdbarch_init (bfd_arch_rx, rx_gdbarch_init);
 }
+
+} /* namespace gdb */

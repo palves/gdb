@@ -18,6 +18,8 @@
 #ifndef ARCH_TIC6X_H
 #define ARCH_TIC6X_H
 
+namespace gdb {
+
 enum c6x_feature
 {
   C6X_CORE,
@@ -27,5 +29,7 @@ enum c6x_feature
 };
 
 target_desc *tic6x_create_target_description (enum c6x_feature feature);
+
+} /* namespace gdb */
 
 #endif /* ARCH_TIC6X_H */

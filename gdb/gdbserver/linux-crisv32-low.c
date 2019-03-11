@@ -20,6 +20,9 @@
 #include "linux-low.h"
 #include "nat/gdb_ptrace.h"
 
+namespace gdb {
+
+
 /* Defined in auto-generated file reg-crisv32.c.  */
 void init_registers_crisv32 (void);
 extern const struct target_desc *tdesc_crisv32;
@@ -438,3 +441,5 @@ initialize_low_arch (void)
 
   initialize_regsets_info (&cris_regsets_info);
 }
+
+} /* namespace gdb */

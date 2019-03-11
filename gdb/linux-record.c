@@ -25,6 +25,9 @@
 #include "record-full.h"
 #include "linux-record.h"
 
+namespace gdb {
+
+
 /* These macros are the values of the first argument of system call
    "sys_ptrace".  The values of these macros were obtained from Linux
    Kernel source.  */
@@ -2039,3 +2042,5 @@ Do you want to stop the program?"),
 
   return 0;
 }
+
+} /* namespace gdb */

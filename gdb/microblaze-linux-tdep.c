@@ -37,6 +37,9 @@
 #include "tramp-frame.h"
 #include "linux-tdep.h"
 
+namespace gdb {
+
+
 static int
 microblaze_linux_memory_remove_breakpoint (struct gdbarch *gdbarch, 
 					   struct bp_target_info *bp_tgt)
@@ -137,3 +140,5 @@ _initialize_microblaze_linux_tdep (void)
   gdbarch_register_osabi (bfd_arch_microblaze, 0, GDB_OSABI_LINUX, 
 			  microblaze_linux_init_abi);
 }
+
+} /* namespace gdb */

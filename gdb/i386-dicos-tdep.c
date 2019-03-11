@@ -21,6 +21,9 @@
 #include "osabi.h"
 #include "dicos-tdep.h"
 
+namespace gdb {
+
+
 static void
 i386_dicos_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
 {
@@ -49,3 +52,5 @@ _initialize_i386_dicos_tdep (void)
   gdbarch_register_osabi (bfd_arch_i386, 0, GDB_OSABI_DICOS,
                           i386_dicos_init_abi);
 }
+
+} /* namespace gdb */

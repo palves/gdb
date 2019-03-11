@@ -28,6 +28,9 @@
 #include "valprint.h"
 #include "compile.h"
 
+namespace gdb {
+
+
 /* Helper for do_module_cleanup.  */
 
 struct do_module_cleanup
@@ -190,3 +193,5 @@ compile_object_run (struct compile_module *module)
   dtor_found = find_dummy_frame_dtor (do_module_cleanup, data);
   gdb_assert (!dtor_found && executed);
 }
+
+} /* namespace gdb */

@@ -22,6 +22,8 @@
 
 #include "frame.h"
 
+namespace gdb {
+
 struct infcall_suspend_state;
 struct frame_unwind;
 
@@ -78,5 +80,7 @@ extern int find_dummy_frame_dtor (dummy_frame_dtor_ftype *dtor,
 
 extern struct frame_id default_dummy_id (struct gdbarch *gdbarch,
 					 struct frame_info *this_frame);
+
+} /* namespace gdb */
 
 #endif /* !defined (DUMMY_FRAME_H)  */

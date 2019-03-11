@@ -19,6 +19,8 @@
 #ifndef ARCH_ARM_H
 #define ARCH_ARM_H
 
+namespace gdb {
+
 /* Register numbers of various important registers.  */
 
 enum gdb_regnum {
@@ -145,5 +147,7 @@ unsigned long shifted_reg_val (struct regcache *regcache,
 			       int carry,
 			       unsigned long pc_val,
 			       unsigned long status_reg);
+
+} /* namespace gdb */
 
 #endif /* ARCH_ARM_H */

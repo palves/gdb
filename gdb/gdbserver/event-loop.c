@@ -31,6 +31,9 @@
 #include <unistd.h>
 #include <queue>
 
+namespace gdb {
+
+
 typedef int (event_handler_func) (gdb_fildes_t);
 
 /* Tell create_file_handler what events we are interested in.  */
@@ -565,3 +568,5 @@ start_event_loop (void)
   /* We are done with the event loop.  There are no more event sources
      to listen to.  So we exit gdbserver.  */
 }
+
+} /* namespace gdb */

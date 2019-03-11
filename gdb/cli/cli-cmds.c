@@ -60,6 +60,9 @@
 #include <algorithm>
 #include <string>
 
+namespace gdb {
+
+
 /* Prototypes for local utility functions */
 
 static void print_sal_location (const symtab_and_line &sal);
@@ -1959,3 +1962,5 @@ when GDB is started."), gdbinit);
 	       source_help_text, &cmdlist);
   set_cmd_completer (c, filename_completer);
 }
+
+} /* namespace gdb */

@@ -20,6 +20,9 @@
 #include "defs.h"
 #include "py-event.h"
 
+namespace gdb {
+
+
 static gdbpy_ref<>
 create_exited_event_object (const LONGEST *exit_code, struct inferior *inf)
 {
@@ -64,3 +67,5 @@ emit_exited_event (const LONGEST *exit_code, struct inferior *inf)
 
   return -1;
 }
+
+} /* namespace gdb */

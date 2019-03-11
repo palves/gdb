@@ -22,6 +22,8 @@
 
 #include "solist.h"
 
+namespace gdb {
+
 struct objfile;
 struct target_so_ops;
 
@@ -106,5 +108,7 @@ extern struct link_map_offsets *svr4_lp64_fetch_link_map_offsets (void);
 /* Return 1 if PC lies in the dynamic symbol resolution code of the
    SVR4 run time loader.  */
 int svr4_in_dynsym_resolve_code (CORE_ADDR pc);
+
+} /* namespace gdb */
 
 #endif /* solib-svr4.h */

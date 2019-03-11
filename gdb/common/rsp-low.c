@@ -20,6 +20,9 @@
 #include "common-defs.h"
 #include "rsp-low.h"
 
+namespace gdb {
+
+
 /* See rsp-low.h.  */
 
 int
@@ -305,3 +308,5 @@ remote_unescape_input (const gdb_byte *buffer, int len,
   return output_index;
 }
 
+
+} /* namespace gdb */

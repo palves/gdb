@@ -20,6 +20,9 @@
 #include "defs.h"
 #include "python-internal.h"
 
+namespace gdb {
+
+
 typedef struct {
   PyObject_HEAD
   /* The line table source line.  */
@@ -590,3 +593,5 @@ PyTypeObject linetable_entry_object_type = {
   0,	                          /* tp_init */
   0,				  /* tp_alloc */
 };
+
+} /* namespace gdb */

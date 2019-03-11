@@ -21,6 +21,8 @@
 
 #include <limits.h>
 
+namespace gdb {
+
 /* Static host-system-dependent parameters for GDB.  */
 
 /* * Number of bits in a char or unsigned char for the target machine.
@@ -57,5 +59,7 @@
 #ifndef SLASH_STRING
 #define SLASH_STRING "/"
 #endif
+
+} /* namespace gdb */
 
 #endif /* COMMON_HOST_DEFS_H */

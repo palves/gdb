@@ -24,6 +24,8 @@
 
 #include <list>
 
+namespace gdb {
+
 struct btrace_target_info;
 struct regcache;
 
@@ -223,5 +225,7 @@ lwpid_of (const thread_info *thread)
 {
   return thread->id.lwp ();
 }
+
+} /* namespace gdb */
 
 #endif /* GDBSERVER_GDBTHREAD_H */

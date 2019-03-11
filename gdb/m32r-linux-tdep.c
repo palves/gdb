@@ -37,6 +37,9 @@
 #include "m32r-tdep.h"
 #include "linux-tdep.h"
 
+namespace gdb {
+
+
 
 
 /* Recognizing signal handler frames.  */
@@ -476,3 +479,5 @@ _initialize_m32r_linux_tdep (void)
   gdbarch_register_osabi (bfd_arch_m32r, 0, GDB_OSABI_LINUX,
 			  m32r_linux_init_abi);
 }
+
+} /* namespace gdb */

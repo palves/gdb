@@ -31,6 +31,9 @@ extern const struct target_desc *tdesc_ia64;
 
 #include <asm/ptrace_offsets.h>
 
+namespace gdb {
+
+
 static int ia64_regmap[] =
   {
     /* general registers */
@@ -358,3 +361,5 @@ initialize_low_arch (void)
 {
   init_registers_ia64 ();
 }
+
+} /* namespace gdb */

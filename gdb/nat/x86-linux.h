@@ -22,6 +22,8 @@
 
 #include "nat/linux-nat.h"
 
+namespace gdb {
+
 /* Set whether our local mirror of LWP's debug registers has been
    changed since the values were last written to the thread.  Nonzero
    indicates that a change has been made, zero indicates no change.  */
@@ -46,5 +48,7 @@ extern void x86_linux_delete_thread (struct arch_lwp_info *arch_lwp);
 /* Function to call prior to resuming a thread.  */
 
 extern void x86_linux_prepare_to_resume (struct lwp_info *lwp);
+
+} /* namespace gdb */
 
 #endif /* NAT_X86_LINUX_H */

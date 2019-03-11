@@ -22,11 +22,15 @@
 
 #include "gdb_bfd.h"
 
+namespace gdb {
+
 extern gdb_bfd_ref_ptr create_gcore_bfd (const char *filename);
 extern void write_gcore_file (bfd *obfd);
 extern bfd *load_corefile (char *filename, int from_tty);
 extern int objfile_find_memory_regions (struct target_ops *self,
 					find_memory_region_ftype func,
 					void *obfd);
+
+} /* namespace gdb */
 
 #endif /* GCORE_H */

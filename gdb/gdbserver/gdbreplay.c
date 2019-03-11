@@ -54,6 +54,9 @@
 
 #include "common/netstuff.h"
 
+namespace gdb {
+
+
 #ifndef HAVE_SOCKLEN_T
 typedef int socklen_t;
 #endif
@@ -546,3 +549,5 @@ main (int argc, char *argv[])
 
   gdb_assert_not_reached ("captured_main should never return");
 }
+
+} /* namespace gdb */

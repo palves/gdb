@@ -28,6 +28,8 @@
 
 #include "vec.h"
 
+namespace gdb {
+
 /* A branch trace block.
 
    This represents a block of sequential control-flow.  Adjacent blocks will be
@@ -253,5 +255,7 @@ extern const char *btrace_format_short_string (enum btrace_format format);
    Returns zero on success; a negative number otherwise.  */
 extern int btrace_data_append (struct btrace_data *dst,
 			       const struct btrace_data *src);
+
+} /* namespace gdb */
 
 #endif /* COMMON_BTRACE_COMMON_H */

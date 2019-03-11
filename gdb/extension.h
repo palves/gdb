@@ -24,6 +24,8 @@
 #include "common/vec.h"
 #include "common/array-view.h"
 
+namespace gdb {
+
 struct breakpoint;
 struct command_line;
 struct frame_info;
@@ -306,5 +308,7 @@ extern int breakpoint_ext_lang_cond_says_stop (struct breakpoint *);
 extern void get_matching_xmethod_workers
   (struct type *type, const char *method_name,
    std::vector<xmethod_worker_up> *workers);
+
+} /* namespace gdb */
 
 #endif /* EXTENSION_H */

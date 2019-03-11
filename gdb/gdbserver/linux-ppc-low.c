@@ -33,6 +33,9 @@
 #include "ax.h"
 #include "tracepoint.h"
 
+namespace gdb {
+
+
 #define PPC_FIELD(value, from, len) \
 	(((value) >> (32 - (from) - (len))) & ((1 << (len)) - 1))
 #define PPC_SEXT(v, bs) \
@@ -3565,3 +3568,5 @@ initialize_low_arch (void)
 
   initialize_regsets_info (&ppc_regsets_info);
 }
+
+} /* namespace gdb */

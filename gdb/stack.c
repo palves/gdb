@@ -53,6 +53,9 @@
 #include "observable.h"
 #include "common/def-vector.h"
 
+namespace gdb {
+
+
 /* The possible choices of "set print frame-arguments", and the value
    of this setting.  */
 
@@ -3158,3 +3161,5 @@ to print the current value, the value at entry (marked as val@entry),\n\
 or both.  Note that one or both of these values may be <optimized out>."),
 			NULL, NULL, &setprintlist, &showprintlist);
 }
+
+} /* namespace gdb */

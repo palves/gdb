@@ -24,6 +24,9 @@
 
 #include "aarch32-linux-nat.h"
 
+namespace gdb {
+
+
 /* Supply GP registers contents, stored in REGS, to REGCACHE.  ARM_APCS_32
    is true if the 32-bit mode is in use, otherwise, it is false.  */
 
@@ -106,3 +109,5 @@ aarch32_vfp_regcache_collect (const struct regcache *regcache, gdb_byte *regs,
 
   regcache->raw_collect (ARM_FPSCR_REGNUM, regs + 32 * 8);
 }
+
+} /* namespace gdb */

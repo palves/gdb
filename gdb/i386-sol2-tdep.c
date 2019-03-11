@@ -25,6 +25,9 @@
 #include "i386-tdep.h"
 #include "solib-svr4.h"
 
+namespace gdb {
+
+
 /* From <ia32/sys/reg.h>.  */
 static int i386_sol2_gregset_reg_offset[] =
 {
@@ -161,3 +164,5 @@ _initialize_i386_sol2_tdep (void)
   gdbarch_register_osabi (bfd_arch_i386, 0, GDB_OSABI_SOLARIS,
 			  i386_sol2_init_abi);
 }
+
+} /* namespace gdb */

@@ -29,6 +29,9 @@
 #include "mips-tdep.h"
 #include "solib-svr4.h"
 
+namespace gdb {
+
+
 /* The MIPS64 Floating-Point Quad-Precision format is similar to
    big-endian IA-64 Quad-Precision format.  */
 #define floatformats_mips64_quad floatformats_ia64_quad
@@ -165,3 +168,5 @@ _initialize_mips64obsd_tdep (void)
   gdbarch_register_osabi (bfd_arch_mips, 0, GDB_OSABI_OPENBSD,
 			  mips64obsd_init_abi);
 }
+
+} /* namespace gdb */

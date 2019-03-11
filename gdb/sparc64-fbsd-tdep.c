@@ -31,6 +31,9 @@
 #include "fbsd-tdep.h"
 #include "solib-svr4.h"
 
+namespace gdb {
+
+
 /* From <machine/reg.h>.  */
 const struct sparc_gregmap sparc64fbsd_gregmap =
 {
@@ -247,3 +250,5 @@ _initialize_sparc64fbsd_tdep (void)
   gdbarch_register_osabi (bfd_arch_sparc, bfd_mach_sparc_v9,
 			  GDB_OSABI_FREEBSD, sparc64fbsd_init_abi);
 }
+
+} /* namespace gdb */

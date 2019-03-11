@@ -29,6 +29,9 @@
 
 #include "solib-svr4.h"
 
+namespace gdb {
+
+
 /* Core file support. */
 
 /* Number of registers in `struct reg' from <machine/reg.h>.  The
@@ -559,3 +562,5 @@ _initialize_mips_fbsd_tdep (void)
   gdbarch_register_osabi (bfd_arch_mips, 0, GDB_OSABI_FREEBSD,
 			  mips_fbsd_init_abi);
 }
+
+} /* namespace gdb */

@@ -148,6 +148,9 @@ m68k_breakpoint_at (CORE_ADDR pc)
 
 #include <asm/ptrace.h>
 
+namespace gdb {
+
+
 #ifdef PTRACE_GET_THREAD_AREA
 /* Fetch the thread-local storage pointer for libthread_db.  */
 
@@ -253,3 +256,5 @@ initialize_low_arch (void)
 
   initialize_regsets_info (&m68k_regsets_info);
 }
+
+} /* namespace gdb */

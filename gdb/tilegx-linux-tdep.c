@@ -29,6 +29,9 @@
 #include "trad-frame.h"
 #include "tilegx-tdep.h"
 
+namespace gdb {
+
+
 /* Signal trampoline support.  */
 
 static void
@@ -140,3 +143,5 @@ _initialize_tilegx_linux_tdep (void)
   gdbarch_register_osabi (bfd_arch_tilegx, bfd_mach_tilegx, GDB_OSABI_LINUX,
 			  tilegx_linux_init_abi);
 }
+
+} /* namespace gdb */

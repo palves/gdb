@@ -20,6 +20,8 @@
 #ifndef MICROBLAZE_TDEP_H
 #define MICROBLAZE_TDEP_H 1
 
+namespace gdb {
+
 
 /* Microblaze architecture-specific information.  */
 struct gdbarch_tdep
@@ -118,5 +120,7 @@ struct microblaze_frame_cache
 /* MICROBLAZE_BREAKPOINT defines the breakpoint that should be used.
    Only used for native debugging.  */
 #define MICROBLAZE_BREAKPOINT {0xb9, 0xcc, 0x00, 0x60}
+
+} /* namespace gdb */
 
 #endif /* microblaze-tdep.h */

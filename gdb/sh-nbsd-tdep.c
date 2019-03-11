@@ -28,6 +28,9 @@
 #include "sh-tdep.h"
 #include "solib-svr4.h"
 
+namespace gdb {
+
+
 /* Convert a register number into an offset into a ptrace
    register structure.  */
 static const struct sh_corefile_regmap regmap[] =
@@ -78,3 +81,5 @@ _initialize_shnbsd_tdep (void)
   gdbarch_register_osabi (bfd_arch_sh, 0, GDB_OSABI_OPENBSD,
 			  shnbsd_init_abi);
 }
+
+} /* namespace gdb */

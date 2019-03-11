@@ -41,6 +41,9 @@
 
 #include "psymtab.h"
 
+namespace gdb {
+
+
 static void
 read_alphacoff_dynamic_symtab (minimal_symbol_reader &,
 			       struct section_offsets *,
@@ -386,3 +389,5 @@ _initialize_mipsread (void)
 {
   add_symtab_fns (bfd_target_ecoff_flavour, &ecoff_sym_fns);
 }
+
+} /* namespace gdb */

@@ -23,6 +23,8 @@
 #include "inf-ptrace.h"
 #include <sys/proc.h>
 
+namespace gdb {
+
 #ifdef TRAP_BRKPT
 /* MIPS does not set si_code for SIGTRAP.  sparc64 reports
    non-standard values in si_code for SIGTRAP.  */
@@ -95,5 +97,7 @@ public:
 #endif
 #endif /* PT_LWPINFO */
 };
+
+} /* namespace gdb */
 
 #endif /* fbsd-nat.h */

@@ -28,6 +28,9 @@
 #include "gdbcore.h" /* Why is memory_error here? */
 #include "guile-internal.h"
 
+namespace gdb {
+
+
 static SCM port_keyword;
 static SCM offset_keyword;
 static SCM size_keyword;
@@ -315,3 +318,5 @@ gdbscm_initialize_disasm (void)
   asm_symbol = scm_from_latin1_symbol ("asm");
   length_symbol = scm_from_latin1_symbol ("length");
 }
+
+} /* namespace gdb */

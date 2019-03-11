@@ -35,6 +35,9 @@
 #include "obsd-nat.h"
 #include "bsd-kvm.h"
 
+namespace gdb {
+
+
 struct ppc_obsd_nat_target final : public obsd_nat_target
 {
   void fetch_registers (struct regcache *, int) override;
@@ -216,3 +219,5 @@ _initialize_ppcobsd_nat (void)
   /* Support debugging kernel virtual memory images.  */
   bsd_kvm_add_target (ppcobsd_supply_pcb);
 }
+
+} /* namespace gdb */

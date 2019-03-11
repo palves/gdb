@@ -37,6 +37,9 @@
 #include "common/gdb_optional.h"
 #include <list>
 
+namespace gdb {
+
+
 /* True if we want to print debug printouts related to file/function
    skipping. */
 static int debug_skip = 0;
@@ -736,3 +739,5 @@ When non-zero, debug output about skipping files and functions is displayed."),
 			   NULL, NULL,
 			   &setdebuglist, &showdebuglist);
 }
+
+} /* namespace gdb */

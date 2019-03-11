@@ -22,6 +22,8 @@
 
 #include "bfd.h"
 
+namespace gdb {
+
 struct regcache;
 
 /* Enum used to define the extra fields of the siginfo type used by an
@@ -60,5 +62,7 @@ extern CORE_ADDR linux_displaced_step_location (struct gdbarch *gdbarch);
 extern void linux_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch);
 
 extern int linux_is_uclinux (void);
+
+} /* namespace gdb */
 
 #endif /* linux-tdep.h */

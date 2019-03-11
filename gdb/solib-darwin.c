@@ -41,6 +41,9 @@
 #include "mach-o.h"
 #include "mach-o/external.h"
 
+namespace gdb {
+
+
 struct gdb_dyld_image_info
 {
   /* Base address (which corresponds to the Mach-O header).  */
@@ -705,3 +708,5 @@ _initialize_darwin_solib (void)
   darwin_so_ops.lookup_lib_global_symbol = darwin_lookup_lib_symbol;
   darwin_so_ops.bfd_open = darwin_bfd_open;
 }
+
+} /* namespace gdb */

@@ -27,6 +27,9 @@
 #include "defs.h"
 #include "mi-console.h"
 
+namespace gdb {
+
+
 /* Create a console that wraps the given output stream RAW with the
    string PREFIX and quoting it with QUOTE.  */
 
@@ -116,3 +119,5 @@ mi_console_file::set_raw (ui_file *raw)
 {
   m_raw = raw;
 }
+
+} /* namespace gdb */

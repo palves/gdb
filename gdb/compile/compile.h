@@ -18,6 +18,8 @@
 #ifndef COMPILE_COMPILE_H
 #define COMPILE_COMPILE_H
 
+namespace gdb {
+
 struct ui_file;
 struct gdbarch;
 struct dwarf2_per_cu_data;
@@ -105,5 +107,7 @@ extern void compile_print_value (struct value *val, void *data_voidp);
 
 /* Command element for the 'compile' command.  */
 extern cmd_list_element *compile_cmd_element;
+
+} /* namespace gdb */
 
 #endif /* COMPILE_COMPILE_H */

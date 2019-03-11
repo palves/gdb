@@ -33,6 +33,9 @@
 #include "nbsd-tdep.h"
 #include "solib-svr4.h"
 
+namespace gdb {
+
+
 /* From <machine/reg.h>.  */
 static int i386nbsd_r_reg_offset[] =
 {
@@ -427,3 +430,5 @@ _initialize_i386nbsd_tdep (void)
   gdbarch_register_osabi (bfd_arch_i386, 0, GDB_OSABI_NETBSD,
 			  i386nbsdelf_init_abi);
 }
+
+} /* namespace gdb */

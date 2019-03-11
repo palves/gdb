@@ -70,6 +70,9 @@
 #include "common/scope-exit.h"
 #include "common/forward-scope-exit.h"
 
+namespace gdb {
+
+
 /* Prototypes for local functions */
 
 static void sig_print_info (enum gdb_signal);
@@ -9241,3 +9244,5 @@ or signalled."),
 			   &setlist,
 			   &showlist);
 }
+
+} /* namespace gdb */

@@ -37,6 +37,9 @@
 #include "typeprint.h"
 #include "common/byte-vector.h"
 
+namespace gdb {
+
+
 /* Controls printing of vtbl's.  */
 static void
 show_vtblprint (struct ui_file *file, int from_tty,
@@ -834,3 +837,5 @@ Show printing of object's derived type based on vtable info."), NULL,
   obstack_begin (&dont_print_vb_obstack,
 		 32 * sizeof (struct type *));
 }
+
+} /* namespace gdb */

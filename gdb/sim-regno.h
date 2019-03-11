@@ -22,6 +22,8 @@
 #ifndef SIM_REGNO_H
 #define SIM_REGNO_H
 
+namespace gdb {
+
 /* The gdbarch_register_sim_regno (REGNUM) method, when there is a
    corresponding simulator register, returns that register number as a
    cardinal.  When there is no corresponding register, it returns a
@@ -39,5 +41,7 @@ enum sim_regno {
 /* Treat all raw registers as valid.  */
 
 extern int one2one_register_sim_regno (struct gdbarch *gdbarch, int regnum);
+
+} /* namespace gdb */
 
 #endif

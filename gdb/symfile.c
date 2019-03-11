@@ -71,6 +71,9 @@
 
 #include "psymtab.h"
 
+namespace gdb {
+
+
 int (*deprecated_ui_load_progress_hook) (const char *section,
 					 unsigned long num);
 void (*deprecated_show_load_progress) (const char *section,
@@ -4026,3 +4029,5 @@ info files."), NULL, NULL, &setdebuglist, &showdebuglist);
      selftests::filename_language::test_set_ext_lang_command);
 #endif
 }
+
+} /* namespace gdb */

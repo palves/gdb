@@ -23,6 +23,8 @@
 #include "target.h"
 #include "process-stratum-target.h"
 
+namespace gdb {
+
 /* A prototype child target.  The client can override it with local
    methods.  */
 
@@ -114,5 +116,7 @@ extern void add_inf_child_target (inf_child_target *target);
    that want to register an alternative target_info object.  Most
    targets use add_inf_child_target instead.  */
 extern void inf_child_open_target (const char *arg, int from_tty);
+
+} /* namespace gdb */
 
 #endif

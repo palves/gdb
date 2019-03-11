@@ -29,6 +29,9 @@
 #include "dwarf2-frame.h"
 #include "solib-svr4.h"
 
+namespace gdb {
+
+
 static CORE_ADDR
 hppabsd_find_global_pointer (struct gdbarch *gdbarch, struct value *function)
 {
@@ -139,3 +142,5 @@ hppabsd_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
   dwarf2_frame_set_init_reg (gdbarch, hppabsd_dwarf2_frame_init_reg);
   dwarf2_append_unwinders (gdbarch);
 }
+
+} /* namespace gdb */

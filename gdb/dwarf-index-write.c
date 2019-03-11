@@ -41,6 +41,9 @@
 #include <unordered_map>
 #include <unordered_set>
 
+namespace gdb {
+
+
 /* Ensure only legit values are used.  */
 #define DW2_GDB_INDEX_SYMBOL_STATIC_SET_VALUE(cu_index, value) \
   do { \
@@ -1707,3 +1710,5 @@ extension .debug_names and .debug_str for DWARF-5 .debug_names section."),
 	       &save_cmdlist);
   set_cmd_completer (c, filename_completer);
 }
+
+} /* namespace gdb */

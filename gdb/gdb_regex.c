@@ -19,6 +19,9 @@
 #include "gdb_regex.h"
 #include "common/def-vector.h"
 
+namespace gdb {
+
+
 compiled_regex::compiled_regex (const char *regex, int cflags,
 				const char *message)
 {
@@ -55,3 +58,5 @@ compiled_regex::search (const char *string,
 {
   return re_search (&m_pattern, string, length, start, range, regs);
 }
+
+} /* namespace gdb */

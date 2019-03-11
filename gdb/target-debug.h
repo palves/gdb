@@ -20,6 +20,8 @@
 #ifndef TARGET_DEBUG_H
 #define TARGET_DEBUG_H
 
+namespace gdb {
+
 /* Printers for the debug target.  Each prints an object of a given
    type to a string that needn't be freed.  Most printers are macros,
    for brevity, but a few are static functions where more complicated
@@ -221,5 +223,7 @@ target_debug_print_signals (gdb::array_view<const unsigned char> sigs)
       }
   fputs_unfiltered (" }", gdb_stdlog);
 }
+
+} /* namespace gdb */
 
 #endif /* TARGET_DEBUG_H */

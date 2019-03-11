@@ -22,6 +22,9 @@
 #include <dirent.h>
 #include <sys/stat.h>
 
+namespace gdb {
+
+
 /* Return the TGID of LWPID from /proc/pid/status.  Returns -1 if not
    found.  */
 
@@ -374,3 +377,5 @@ linux_proc_init_warnings ()
   if (stat ("/proc/self", &st) != 0)
     warning (_("/proc is not accessible."));
 }
+
+} /* namespace gdb */

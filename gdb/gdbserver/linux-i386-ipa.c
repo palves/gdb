@@ -115,6 +115,9 @@ get_raw_reg (const unsigned char *raw_regs, int regnum)
 
 #include <ust/processor.h>
 
+namespace gdb {
+
+
 /* "struct registers" is the UST object type holding the registers at
    the time of the static tracepoint marker call.  This doesn't
    contain EIP, but we know what it must have been (the marker
@@ -292,3 +295,5 @@ initialize_low_tracepoint (void)
   for (auto i = 0; i < X86_TDESC_LAST; i++)
     i386_linux_read_description (idx2mask[i]);
 }
+
+} /* namespace gdb */

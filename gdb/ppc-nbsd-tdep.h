@@ -20,6 +20,8 @@
 #ifndef PPC_NBSD_TDEP_H
 #define PPC_NBSD_TDEP_H
 
+namespace gdb {
+
 struct regset;
 
 /* Register offsets for NetBSD/powerpc.  */
@@ -28,5 +30,7 @@ extern struct ppc_reg_offsets ppcnbsd_reg_offsets;
 /* Register sets for NetBSD/powerpc.  */
 extern const struct regset ppcnbsd_gregset;
 extern const struct regset ppcnbsd_fpregset;
+
+} /* namespace gdb */
 
 #endif /* ppc-nbsd-tdep.h */

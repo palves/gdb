@@ -21,7 +21,11 @@
 #include "common/tdesc.h"
 #include <stdint.h>
 
+namespace gdb {
+
 target_desc *amd64_create_target_description (uint64_t xcr0, bool is_x32,
 					      bool is_linux, bool segments);
+
+} /* namespace gdb */
 
 #endif /* ARCH_AMD64_H */

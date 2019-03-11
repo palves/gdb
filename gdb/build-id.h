@@ -23,6 +23,8 @@
 #include "gdb_bfd.h"
 #include "common/rsp-low.h"
 
+namespace gdb {
+
 /* Locate NT_GNU_BUILD_ID from ABFD and return its content.  */
 
 extern const struct bfd_build_id *build_id_bfd_get (bfd *abfd);
@@ -57,5 +59,7 @@ build_id_to_string (const bfd_build_id *build_id)
 
   return bin2hex (build_id->data, build_id->size);
 }
+
+} /* namespace gdb */
 
 #endif /* BUILD_ID_H */

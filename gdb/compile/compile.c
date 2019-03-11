@@ -43,6 +43,9 @@
 #include "common/gdb_unlinker.h"
 #include "common/pathstuff.h"
 
+namespace gdb {
+
+
 
 
 /* Initial filename for temporary files.  */
@@ -1013,3 +1016,5 @@ If empty the default target triplet will be searched in $PATH."),
 				     &showlist);
   compile_gcc = xstrdup ("");
 }
+
+} /* namespace gdb */

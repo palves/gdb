@@ -21,6 +21,8 @@
 
 #include "mi/mi-common.h" /* For enum async_reply_reason.  */
 
+namespace gdb {
+
 struct return_value_info;
 struct thread_fsm_ops;
 
@@ -109,5 +111,7 @@ protected:
     gdb_assert_not_reached (_("should not call async_reply_reason here"));
   }
 };
+
+} /* namespace gdb */
 
 #endif /* THREAD_FSM_H */

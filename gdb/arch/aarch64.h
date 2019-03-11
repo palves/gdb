@@ -22,6 +22,8 @@
 
 #include "common/tdesc.h"
 
+namespace gdb {
+
 /* Create the aarch64 target description.  A non zero VQ value indicates both
    the presence of SVE and the Vector Quotient - the number of 128bit chunks in
    an SVE Z register.  */
@@ -96,5 +98,7 @@ enum aarch64_regnum
 
 /* Maximum supported VQ value.  Increase if required.  */
 #define AARCH64_MAX_SVE_VQ  16
+
+} /* namespace gdb */
 
 #endif /* ARCH_AARCH64_H */

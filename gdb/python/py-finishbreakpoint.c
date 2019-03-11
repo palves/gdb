@@ -31,6 +31,9 @@
 #include "block.h"
 #include "location.h"
 
+namespace gdb {
+
+
 /* Function that is called when a Python finish bp is found out of scope.  */
 static const char outofscope_func[] = "out_of_scope";
 
@@ -470,3 +473,5 @@ PyTypeObject finish_breakpoint_object_type =
   0,                              /* tp_alloc */
   0                               /* tp_new */
 };
+
+} /* namespace gdb */

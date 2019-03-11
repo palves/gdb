@@ -5,6 +5,9 @@
 #include "osabi.h"
 #include "target-descriptions.h"
 
+namespace gdb {
+
+
 struct target_desc *tdesc_arm_with_neon;
 static void
 initialize_tdesc_arm_with_neon (void)
@@ -72,3 +75,5 @@ initialize_tdesc_arm_with_neon (void)
 
   tdesc_arm_with_neon = result;
 }
+
+} /* namespace gdb */

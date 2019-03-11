@@ -30,6 +30,9 @@
 #include "thread-fsm.h"
 #include "inferior.h"
 
+namespace gdb {
+
+
 cli_interp_base::cli_interp_base (const char *name)
   : interp (name)
 {}
@@ -470,3 +473,5 @@ _initialize_cli_interp (void)
   gdb::observers::user_selected_context_changed.attach
     (cli_on_user_selected_context_changed);
 }
+
+} /* namespace gdb */

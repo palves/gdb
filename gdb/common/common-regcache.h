@@ -20,6 +20,8 @@
 #ifndef COMMON_COMMON_REGCACHE_H
 #define COMMON_COMMON_REGCACHE_H
 
+namespace gdb {
+
 /* This header is a stopgap until we have an independent regcache.  */
 
 enum register_status : signed char
@@ -81,5 +83,7 @@ struct reg_buffer_common
      true if the same.  */
   virtual bool raw_compare (int regnum, const void *buf, int offset) const = 0;
 };
+
+} /* namespace gdb */
 
 #endif /* COMMON_COMMON_REGCACHE_H */

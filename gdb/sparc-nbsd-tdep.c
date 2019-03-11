@@ -33,6 +33,9 @@
 #include "sparc-tdep.h"
 #include "nbsd-tdep.h"
 
+namespace gdb {
+
+
 /* Macros to extract fields from SPARC instructions.  */
 #define X_RS1(i) (((i) >> 14) & 0x1f)
 #define X_RS2(i) ((i) & 0x1f)
@@ -320,3 +323,5 @@ _initialize_sparcnbsd_tdep (void)
   gdbarch_register_osabi (bfd_arch_sparc, 0, GDB_OSABI_NETBSD,
 			  sparc32nbsd_init_abi);
 }
+
+} /* namespace gdb */

@@ -19,6 +19,9 @@
 #include "common/common-defs.h"
 #include "aarch64-insn.h"
 
+namespace gdb {
+
+
 /* Toggle this file's internal debugging dump.  */
 int aarch64_debug = 0;
 
@@ -387,3 +390,5 @@ aarch64_emit_load_store (uint32_t *buf, uint32_t size,
       return 0;
     }
 }
+
+} /* namespace gdb */

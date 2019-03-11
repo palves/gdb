@@ -45,6 +45,9 @@
 
 #include "features/nds32.c"
 
+namespace gdb {
+
+
 /* Simple macros for instruction analysis.  */
 #define CHOP_BITS(insn, n)	(insn & ~__MASK (n))
 #define N32_LSMW_ENABLE4(insn)	(((insn) >> 6) & 0xf)
@@ -2178,3 +2181,5 @@ _initialize_nds32_tdep (void)
   initialize_tdesc_nds32 ();
   nds32_init_reggroups ();
 }
+
+} /* namespace gdb */

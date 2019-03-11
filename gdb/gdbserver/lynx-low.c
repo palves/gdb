@@ -31,6 +31,9 @@
 #include "common/common-inferior.h"
 #include "nat/fork-inferior.h"
 
+namespace gdb {
+
+
 int using_threads = 1;
 
 const struct target_desc *lynx_tdesc;
@@ -775,3 +778,5 @@ initialize_low (void)
   the_low_target.arch_setup ();
 }
 
+
+} /* namespace gdb */

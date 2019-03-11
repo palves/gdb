@@ -22,6 +22,8 @@
 #include "target.h"
 #include "common/queue.h"
 
+namespace gdb {
+
 /* Structure holding information related to a single event.  We
    keep a queue of these to push to GDB.  It can be extended if
    the event of given notification contains more information.  */
@@ -65,5 +67,7 @@ void notif_event_enque (struct notif_server *notif,
 			struct notif_event *event);
 
 void initialize_notif (void);
+
+} /* namespace gdb */
 
 #endif /* GDBSERVER_NOTIF_H */

@@ -22,6 +22,8 @@
 
 #include "target.h"
 
+namespace gdb {
+
 struct sparc_gregmap;
 struct sparc_fpregmap;
 
@@ -79,5 +81,7 @@ struct sparc_target : public BaseTarget
 		       offset, len, xfered_len);
   }
 };
+
+} /* namespace gdb */
 
 #endif /* sparc-nat.h */

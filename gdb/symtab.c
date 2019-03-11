@@ -70,6 +70,9 @@
 #include <algorithm>
 #include "common/pathstuff.h"
 
+namespace gdb {
+
+
 /* Forward declarations for local functions.  */
 
 static void rbreak_command (const char *, int);
@@ -6170,3 +6173,5 @@ If zero then the symbol cache is disabled."),
   gdb::observers::new_objfile.attach (symtab_new_objfile_observer);
   gdb::observers::free_objfile.attach (symtab_free_objfile_observer);
 }
+
+} /* namespace gdb */

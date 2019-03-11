@@ -27,6 +27,9 @@
 #include <sys/ptrace.h>
 #include <elf.h>
 
+namespace gdb {
+
+
 /* Number of hardware breakpoints/watchpoints the target supports.
    They are initialized with values obtained via the ptrace calls
    with NT_ARM_HW_BREAK and NT_ARM_HW_WATCH respectively.  */
@@ -867,3 +870,5 @@ aarch64_linux_region_ok_for_watchpoint (CORE_ADDR addr, int len)
      the checking is costly.  */
   return 1;
 }
+
+} /* namespace gdb */

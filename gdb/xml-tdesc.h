@@ -25,6 +25,8 @@
 #include "common/gdb_optional.h"
 #include <string>
 
+namespace gdb {
+
 struct target_ops;
 struct target_desc;
 
@@ -48,6 +50,8 @@ gdb::optional<std::string> target_fetch_description_xml (target_ops *ops);
    handle a string containing includes.  */
 
 const struct target_desc *string_read_description_xml (const char *xml);
+
+} /* namespace gdb */
 
 #endif /* XML_TDESC_H */
 

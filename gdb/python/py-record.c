@@ -25,6 +25,9 @@
 #include "target.h"
 #include "gdbthread.h"
 
+namespace gdb {
+
+
 /* Python Record type.  */
 
 static PyTypeObject recpy_record_type = {
@@ -650,3 +653,5 @@ gdbpy_stop_recording (PyObject *self, PyObject *args)
 
   Py_RETURN_NONE;
 }
+
+} /* namespace gdb */

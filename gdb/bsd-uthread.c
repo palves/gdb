@@ -33,6 +33,9 @@
 
 #include "bsd-uthread.h"
 
+namespace gdb {
+
+
 static const target_info bsd_uthread_target_info = {
   "bsd-uthreads",
   N_("BSD user-level threads"),
@@ -554,3 +557,5 @@ _initialize_bsd_uthread (void)
   gdb::observers::solib_loaded.attach (bsd_uthread_solib_loaded);
   gdb::observers::solib_unloaded.attach (bsd_uthread_solib_unloaded);
 }
+
+} /* namespace gdb */

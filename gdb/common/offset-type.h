@@ -48,6 +48,8 @@
 #ifndef COMMON_OFFSET_TYPE_H
 #define COMMON_OFFSET_TYPE_H
 
+namespace gdb {
+
 /* Declare TYPE as being an offset type.  This declares the type and
    enables the operators defined below.  */
 #define DEFINE_OFFSET_TYPE(TYPE, UNDERLYING)	\
@@ -129,5 +131,7 @@ operator- (E lhs, E rhs)
   using underlying = typename std::underlying_type<E>::type;
   return static_cast<underlying> (lhs) - static_cast<underlying> (rhs);
 }
+
+} /* namespace gdb */
 
 #endif /* COMMON_OFFSET_TYPE_H */

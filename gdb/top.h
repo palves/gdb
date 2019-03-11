@@ -24,6 +24,8 @@
 #include "event-loop.h"
 #include "value.h"
 
+namespace gdb {
+
 struct tl_interp_info;
 
 /* Prompt state.  */
@@ -299,5 +301,7 @@ extern void set_verbose (const char *, int, struct cmd_list_element *);
 extern char *handle_line_of_input (struct buffer *cmd_line_buffer,
 				   const char *rl, int repeat,
 				   const char *annotation_suffix);
+
+} /* namespace gdb */
 
 #endif

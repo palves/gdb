@@ -28,6 +28,9 @@
 #include "gdbcmd.h"		/* For maintenanceprintlist.  */
 #include "gdb_obstack.h"
 
+namespace gdb {
+
+
 /* Individual register groups.  */
 
 struct reggroup
@@ -342,3 +345,5 @@ Takes an optional file parameter."),
 	   &maintenanceprintlist);
 
 }
+
+} /* namespace gdb */

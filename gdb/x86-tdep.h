@@ -20,11 +20,15 @@
 #ifndef X86_TDEP_H
 #define X86_TDEP_H
 
+namespace gdb {
+
 /* Checks whether PC lies in an indirect branch thunk using registers
    REGISTER_NAMES[LO] (inclusive) to REGISTER_NAMES[HI] (exclusive).  */
 
 extern bool x86_in_indirect_branch_thunk (CORE_ADDR pc,
 					  const char **register_names,
 					  int lo, int hi);
+
+} /* namespace gdb */
 
 #endif /* x86-tdep.h */

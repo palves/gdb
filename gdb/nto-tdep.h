@@ -27,6 +27,8 @@
 #include "regset.h"
 #include "gdbthread.h"
 
+namespace gdb {
+
 /* Target operations defined for Neutrino targets (<target>-nto-tdep.c).  */
 
 struct nto_target_ops
@@ -190,5 +192,7 @@ LONGEST nto_read_auxv_from_initial_stack (CORE_ADDR inital_stack,
 					  LONGEST len, size_t sizeof_auxv_t);
 
 struct nto_inferior_data *nto_inferior_data (struct inferior *inf);
+
+} /* namespace gdb */
 
 #endif /* NTO_TDEP_H */

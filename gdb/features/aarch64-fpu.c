@@ -3,6 +3,9 @@
 
 #include "common/tdesc.h"
 
+namespace gdb {
+
+
 static int
 create_feature_aarch64_fpu (struct target_desc *result, long regnum)
 {
@@ -131,3 +134,5 @@ create_feature_aarch64_fpu (struct target_desc *result, long regnum)
   tdesc_create_reg (feature, "fpcr", regnum++, 1, NULL, 32, "int");
   return regnum;
 }
+
+} /* namespace gdb */

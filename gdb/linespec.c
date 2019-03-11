@@ -48,6 +48,9 @@
 #include "common/def-vector.h"
 #include <algorithm>
 
+namespace gdb {
+
+
 /* An enumeration of the various things a user might attempt to
    complete for a linespec location.  */
 
@@ -4512,3 +4515,5 @@ get_gdb_linespec_parser_quote_characters (void)
 {
   return linespec_quote_characters;
 }
+
+} /* namespace gdb */

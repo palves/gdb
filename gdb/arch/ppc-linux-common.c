@@ -21,6 +21,9 @@
 #include "arch/ppc-linux-common.h"
 #include "arch/ppc-linux-tdesc.h"
 
+namespace gdb {
+
+
 /* Decimal Floating Point bit in AT_HWCAP.
 
    This file can be used by a host with another architecture, e.g.
@@ -89,3 +92,5 @@ ppc_linux_match_description (struct ppc_linux_features features)
 
   return tdesc;
 }
+
+} /* namespace gdb */

@@ -130,6 +130,9 @@ fill_fpregset (const struct regcache *regcache,
 #include "i386-tdep.h"
 #include "i387-tdep.h"
 
+namespace gdb {
+
+
 /* The `/proc' interface divides the target machine's register set up
    into two different sets, the general purpose register set (gregset)
    and the floating-point register set (fpregset).
@@ -253,3 +256,5 @@ _initialize_amd64_sol2_nat (void)
     ARRAY_SIZE (amd64_sol2_gregset64_reg_offset);
 #endif
 }
+
+} /* namespace gdb */

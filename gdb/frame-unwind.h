@@ -22,6 +22,8 @@
 
 #include "frame.h"		/* For enum frame_type.  */
 
+namespace gdb {
+
 struct frame_data;
 struct frame_info;
 struct frame_id;
@@ -231,5 +233,7 @@ struct value *frame_unwind_got_bytes (struct frame_info *frame, int regnum,
 
 struct value *frame_unwind_got_address (struct frame_info *frame, int regnum,
 					CORE_ADDR addr);
+
+} /* namespace gdb */
 
 #endif

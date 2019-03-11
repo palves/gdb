@@ -23,6 +23,8 @@
 
 #include "common/break-common.h"
 
+namespace gdb {
+
 /* Breakpoints are opaque.  */
 struct breakpoint;
 struct gdb_breakpoint;
@@ -275,5 +277,7 @@ int remove_memory_breakpoint (struct raw_breakpoint *bp);
 
 void clone_all_breakpoints (struct thread_info *child_thread,
 			    const struct thread_info *parent_thread);
+
+} /* namespace gdb */
 
 #endif /* GDBSERVER_MEM_BREAK_H */

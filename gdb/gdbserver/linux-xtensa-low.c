@@ -31,6 +31,9 @@ extern const struct target_desc *tdesc_xtensa;
 
 #include "xtensa-xtregs.c"
 
+namespace gdb {
+
+
 enum regnum {
 	R_PC=0,	R_PS,
 	R_LBEG,	R_LEND,	R_LCOUNT,
@@ -313,3 +316,5 @@ initialize_low_arch (void)
 
   initialize_regsets_info (&xtensa_regsets_info);
 }
+
+} /* namespace gdb */

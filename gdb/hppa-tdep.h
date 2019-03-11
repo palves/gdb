@@ -20,6 +20,8 @@
 #ifndef HPPA_TDEP_H
 #define HPPA_TDEP_H
 
+namespace gdb {
+
 struct trad_frame_saved_reg;
 struct objfile;
 struct so_list;
@@ -214,5 +216,7 @@ extern struct bound_minimal_symbol
 extern int hppa_in_solib_call_trampoline (struct gdbarch *gdbarch,
 					  CORE_ADDR pc);
 extern CORE_ADDR hppa_skip_trampoline_code (struct frame_info *, CORE_ADDR pc);
+
+} /* namespace gdb */
 
 #endif  /* hppa-tdep.h */

@@ -33,6 +33,9 @@
 #include "elf-bfd.h"
 #include "elf/v850.h"
 
+namespace gdb {
+
+
 enum
   {
     /* General purpose registers.  */
@@ -1484,3 +1487,5 @@ _initialize_v850_tdep (void)
   register_gdbarch_init (bfd_arch_v850, v850_gdbarch_init);
   register_gdbarch_init (bfd_arch_v850_rh850, v850_gdbarch_init);
 }
+
+} /* namespace gdb */

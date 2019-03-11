@@ -23,6 +23,8 @@
 #ifndef F_LANG_H
 #define F_LANG_H
 
+namespace gdb {
+
 struct type_print_options;
 struct parser_state;
 
@@ -115,5 +117,7 @@ extern struct value *fortran_argument_convert (struct value *value,
 
 extern struct type *fortran_preserve_arg_pointer (struct value *arg,
 						  struct type *type);
+
+} /* namespace gdb */
 
 #endif /* F_LANG_H */

@@ -21,6 +21,8 @@
 #define TARGET_TARGET_H
 
 #include "target/waitstatus.h"
+
+namespace gdb {
 /* This header is a stopgap until more code is shared.  */
 
 /* Read LEN bytes of target memory at address MEMADDR, placing the
@@ -208,5 +210,7 @@ private:
 
   static target_terminal_state m_terminal_state;
 };
+
+} /* namespace gdb */
 
 #endif /* TARGET_TARGET_H */

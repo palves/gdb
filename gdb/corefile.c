@@ -33,6 +33,9 @@
 #include "observable.h"
 #include "cli/cli-utils.h"
 
+namespace gdb {
+
+
 /* You can have any number of hooks for `exec_file_command' command to
    call.  If there's only one hook, it is set in exec_file_display
    hook.  If there are two or more hooks, they are set in
@@ -508,3 +511,5 @@ Use `set gnutarget auto' to specify automatic detection."),
   else
     set_gnutarget ("auto");
 }
+
+} /* namespace gdb */

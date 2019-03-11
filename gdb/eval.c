@@ -42,6 +42,9 @@
 #include "typeprint.h"
 #include <ctype.h>
 
+namespace gdb {
+
+
 /* This is defined in valops.c */
 extern int overload_resolution;
 
@@ -3359,3 +3362,5 @@ calc_f77_array_dims (struct type *array_type)
     }
   return ndimen;
 }
+
+} /* namespace gdb */

@@ -30,6 +30,9 @@
 #include "observable.h"
 #include "xml-syscall.h"
 
+namespace gdb {
+
+
 /* An instance of this type is used to represent a syscall catchpoint.
    A breakpoint is really of this type iff its ops pointer points to
    CATCH_SYSCALL_BREAKPOINT_OPS.  */
@@ -632,3 +635,5 @@ groups or system call numbers."),
 		     CATCH_PERMANENT,
 		     CATCH_TEMPORARY);
 }
+
+} /* namespace gdb */

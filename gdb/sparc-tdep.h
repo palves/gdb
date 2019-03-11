@@ -20,6 +20,8 @@
 #ifndef SPARC_TDEP_H
 #define SPARC_TDEP_H 1
 
+namespace gdb {
+
 #define SPARC_CORE_REGISTERS                      \
   "g0", "g1", "g2", "g3", "g4", "g5", "g6", "g7", \
   "o0", "o1", "o2", "o3", "o4", "o5", "sp", "o7", \
@@ -267,5 +269,7 @@ extern void sparc32nbsd_init_abi (struct gdbarch_info info,
 
 extern struct trad_frame_saved_reg *
   sparc32nbsd_sigcontext_saved_regs (struct frame_info *next_frame);
+
+} /* namespace gdb */
 
 #endif /* sparc-tdep.h */

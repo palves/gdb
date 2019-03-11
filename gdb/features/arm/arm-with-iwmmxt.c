@@ -5,6 +5,9 @@
 #include "osabi.h"
 #include "target-descriptions.h"
 
+namespace gdb {
+
+
 struct target_desc *tdesc_arm_with_iwmmxt;
 static void
 initialize_tdesc_arm_with_iwmmxt (void)
@@ -81,3 +84,5 @@ initialize_tdesc_arm_with_iwmmxt (void)
 
   tdesc_arm_with_iwmmxt = result;
 }
+
+} /* namespace gdb */

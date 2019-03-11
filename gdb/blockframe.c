@@ -35,6 +35,9 @@
 #include "block.h"
 #include "inline-frame.h"
 
+namespace gdb {
+
+
 /* Return the innermost lexical block in execution in a specified
    stack frame.  The frame address is assumed valid.
 
@@ -477,3 +480,5 @@ block_innermost_frame (const struct block *block)
 
   return NULL;
 }
+
+} /* namespace gdb */

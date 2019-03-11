@@ -22,6 +22,9 @@
 #include "inferior.h"
 #include "python-internal.h"
 
+namespace gdb {
+
+
 extern PyTypeObject thread_object_type
     CPYCHECKER_TYPE_OBJECT_FOR_TYPEDEF ("thread_object");
 
@@ -380,3 +383,5 @@ PyTypeObject thread_object_type =
   0,				  /* tp_init */
   0				  /* tp_alloc */
 };
+
+} /* namespace gdb */

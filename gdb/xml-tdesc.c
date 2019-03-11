@@ -29,6 +29,9 @@
 #include <unordered_map>
 #include <string>
 
+namespace gdb {
+
+
 /* Maximum sizes.
    This is just to catch obviously wrong values.  */
 #define MAX_FIELD_SIZE 65536
@@ -761,3 +764,5 @@ string_read_description_xml (const char *xml)
       return gdb::optional<gdb::char_vector> ();
     }, nullptr);
 }
+
+} /* namespace gdb */

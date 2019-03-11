@@ -22,6 +22,8 @@
 
 #include <vector>
 
+namespace gdb {
+
 struct osdata_column
 {
   osdata_column (std::string &&name_, std::string &&value_)
@@ -56,5 +58,7 @@ const std::string *get_osdata_column (const osdata_item &item,
    NULL or empty, then dump the top level table that lists the
    available types of OS data.  */
 void info_osdata (const char *type);
+
+} /* namespace gdb */
 
 #endif /* OSDATA_H */

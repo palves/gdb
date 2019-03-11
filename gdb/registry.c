@@ -19,6 +19,9 @@
 
 #include "defs.h"
 #include "registry.h"
+
+namespace gdb {
+
 const struct registry_data *
 register_data_with_cleanup (struct registry_data_registry *registry,
 			    registry_data_callback save,
@@ -110,3 +113,5 @@ registry_data (struct registry_fields *fields,
   gdb_assert (data->index < fields->num_data);
   return fields->data[data->index];
 }
+
+} /* namespace gdb */

@@ -20,6 +20,9 @@
 #include "defs.h"
 #include "py-stopevent.h"
 
+namespace gdb {
+
+
 gdbpy_ref<>
 create_stop_event_object (PyTypeObject *py_type)
 {
@@ -97,3 +100,5 @@ emit_stop_event (struct bpstats *bs, enum gdb_signal stop_signal)
 
   return evpy_emit_event (stop_event_obj.get (), gdb_py_events.stop);
 }
+
+} /* namespace gdb */

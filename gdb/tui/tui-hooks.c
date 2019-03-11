@@ -55,6 +55,9 @@
    "gdb_curses.h".  */
 #include "readline/readline.h"
 
+namespace gdb {
+
+
 static void
 tui_new_objfile_hook (struct objfile* objfile)
 {
@@ -273,3 +276,5 @@ _initialize_tui_hooks (void)
   /* Install the permanent hooks.  */
   gdb::observers::new_objfile.attach (tui_new_objfile_hook);
 }
+
+} /* namespace gdb */

@@ -390,6 +390,9 @@ compile_c_instance::convert_type (struct type *type)
 
 #include "gcc-c-fe.def"
 
+namespace gdb {
+
+
 #undef GCC_METHOD0
 #undef GCC_METHOD1
 #undef GCC_METHOD2
@@ -398,3 +401,5 @@ compile_c_instance::convert_type (struct type *type)
 #undef GCC_METHOD5
 #undef GCC_METHOD7
 #undef FORWARD
+
+} /* namespace gdb */

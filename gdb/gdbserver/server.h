@@ -205,4 +205,8 @@ client_state &get_client_state ();
 #include "gdbthread.h"
 #include "inferiors.h"
 
+namespace gdb {
+
+} /* namespace gdb */
+
 #endif /* GDBSERVER_SERVER_H */

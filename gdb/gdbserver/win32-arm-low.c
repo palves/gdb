@@ -18,6 +18,9 @@
 #include "server.h"
 #include "win32-low.h"
 
+namespace gdb {
+
+
 #ifndef CONTEXT_FLOATING_POINT
 #define CONTEXT_FLOATING_POINT 0
 #endif
@@ -132,3 +135,5 @@ struct win32_target_ops the_low_target = {
   NULL, /* stopped_by_watchpoint */
   NULL  /* stopped_data_address */
 };
+
+} /* namespace gdb */

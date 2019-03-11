@@ -26,6 +26,8 @@
 
 #include <sys/mman.h>
 
+namespace gdb {
+
 /* A smart-pointer-like class to mmap() and automatically munmap() a memory
    mapping.  */
 
@@ -92,5 +94,7 @@ private:
 scoped_mmap mmap_file (const char *filename);
 
 #endif /* HAVE_SYS_MMAN_H */
+
+} /* namespace gdb */
 
 #endif /* COMMON_SCOPED_MMAP_H */

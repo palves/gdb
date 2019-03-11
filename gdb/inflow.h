@@ -22,4 +22,8 @@
 
 #include <unistd.h>
 
+namespace gdb {
+
+} /* namespace gdb */
+
 #endif /* inflow.h */

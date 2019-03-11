@@ -25,6 +25,8 @@
 #include <signal.h>
 #include "cli/cli-script.h"
 
+namespace gdb {
+
 /* High level description of an extension/scripting language.
    An entry for each is compiled into GDB regardless of whether the support
    is present.  This is done so that we can issue meaningful errors if the
@@ -285,5 +287,7 @@ extern struct active_ext_lang_state *set_active_ext_lang
   (const struct extension_language_defn *);
 
 extern void restore_active_ext_lang (struct active_ext_lang_state *previous);
+
+} /* namespace gdb */
 
 #endif /* EXTENSION_PRIV_H */

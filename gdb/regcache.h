@@ -23,6 +23,8 @@
 #include "common/common-regcache.h"
 #include <forward_list>
 
+namespace gdb {
+
 struct regcache;
 struct regset;
 struct gdbarch;
@@ -474,5 +476,7 @@ protected:
 
   gdbarch *m_gdbarch;
 };
+
+} /* namespace gdb */
 
 #endif /* REGCACHE_H */

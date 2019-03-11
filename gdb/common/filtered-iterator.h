@@ -19,6 +19,8 @@
 #ifndef COMMON_FILTERED_ITERATOR_H
 #define COMMON_FILTERED_ITERATOR_H
 
+namespace gdb {
+
 /* A filtered iterator.  This wraps BaseIterator and automatically
    skips elements that FilterFunc filters out.  Requires that
    default-constructing a BaseIterator creates a valid one-past-end
@@ -83,5 +85,7 @@ private:
   BaseIterator m_it {};
   BaseIterator m_end {};
 };
+
+} /* namespace gdb */
 
 #endif /* COMMON_FILTERED_ITERATOR_H */

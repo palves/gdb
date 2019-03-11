@@ -27,6 +27,9 @@
 #include "infrun.h"
 #include "regcache.h"
 
+namespace gdb {
+
+
 /* User interface:
    reverse-step, reverse-next etc.  */
 
@@ -382,3 +385,5 @@ the 'bookmark' command, or the special arguments:\n\
   start (beginning of recording)\n\
   end   (end of recording)\n"));
 }
+
+} /* namespace gdb */

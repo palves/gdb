@@ -22,6 +22,8 @@
 #include "common/run-time-clock.h"
 #include <chrono>
 
+namespace gdb {
+
 extern void set_per_command_time (int);
 
 extern void set_per_command_space (int);
@@ -61,5 +63,7 @@ class scoped_command_stats
   /* Total number of blocks.  */
   int m_start_nr_blocks;
 };
+
+} /* namespace gdb */
 
 #endif /* MAINT_H */

@@ -31,6 +31,9 @@
 #include "gdb-demangle.h"
 #include "language.h"
 
+namespace gdb {
+
+
 /* Select the default C++ demangling style to use.  The default is "auto",
    which allows gdb to attempt to pick an appropriate demangling style for
    the executable it has loaded.  It can be set to a specific style ("gnu",
@@ -266,3 +269,5 @@ Usage: demangle [-l LANGUAGE] [--] NAME\n\
 If LANGUAGE is not specified, NAME is demangled in the current language."),
 	   &cmdlist);
 }
+
+} /* namespace gdb */

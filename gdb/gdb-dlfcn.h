@@ -20,6 +20,8 @@
 #ifndef GDB_DLFCN_H
 #define GDB_DLFCN_H
 
+namespace gdb {
+
 /* A deleter that closes an open dynamic library.  */
 
 struct dlclose_deleter
@@ -47,5 +49,7 @@ void *gdb_dlsym (const gdb_dlhandle_up &handle, const char *symbol);
    this platform.  */
 
 int is_dl_available(void);
+
+} /* namespace gdb */
 
 #endif /* GDB_DLFCN_H */

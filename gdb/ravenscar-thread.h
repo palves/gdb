@@ -20,6 +20,8 @@
 #ifndef RAVENSCAR_THREAD_H
 #define RAVENSCAR_THREAD_H
 
+namespace gdb {
+
 /* Architecture-specific hooks.  */
 
 struct ravenscar_arch_ops
@@ -31,5 +33,7 @@ struct ravenscar_arch_ops
   virtual void fetch_registers (struct regcache *, int) = 0;
   virtual void store_registers (struct regcache *, int) = 0;
 };
+
+} /* namespace gdb */
 
 #endif /* !defined (RAVENSCAR_THREAD_H) */

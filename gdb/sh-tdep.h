@@ -19,6 +19,8 @@
 #ifndef SH_TDEP_H
 #define SH_TDEP_H
 
+namespace gdb {
+
 /* Contributed by Steve Chamberlain sac@cygnus.com.  */
 
 /* Registers for all SH variants.  Used also by sh3-rom.c.  */
@@ -113,4 +115,6 @@ void sh_corefile_supply_regset (const struct regset *regset,
 void sh_corefile_collect_regset (const struct regset *regset,
 				 const struct regcache *regcache,
 				 int regnum, void *regs, size_t len);
+} /* namespace gdb */
+
 #endif /* SH_TDEP_H */

@@ -19,6 +19,8 @@
 #ifndef COMMON_NEXT_ITERATOR_H
 #define COMMON_NEXT_ITERATOR_H
 
+namespace gdb {
+
 /* An iterator that uses the 'next' field of a type to iterate.  This
    can be used with various GDB types that are stored as linked
    lists.  */
@@ -98,5 +100,7 @@ private:
 
   T *m_item;
 };
+
+} /* namespace gdb */
 
 #endif /* COMMON_NEXT_ITERATOR_H */

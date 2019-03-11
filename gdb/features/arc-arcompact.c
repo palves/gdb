@@ -5,6 +5,9 @@
 #include "osabi.h"
 #include "target-descriptions.h"
 
+namespace gdb {
+
+
 struct target_desc *tdesc_arc_arcompact;
 static void
 initialize_tdesc_arc_arcompact (void)
@@ -72,3 +75,5 @@ initialize_tdesc_arc_arcompact (void)
 
   tdesc_arc_arcompact = result;
 }
+
+} /* namespace gdb */

@@ -20,6 +20,8 @@
 #ifndef RECORD_FULL_H
 #define RECORD_FULL_H
 
+namespace gdb {
+
 extern int record_full_memory_query;
 
 extern int record_full_arch_list_add_reg (struct regcache *regcache, int num);
@@ -30,5 +32,7 @@ extern int record_full_arch_list_add_end (void);
 extern int record_full_is_used (void);
 
 extern scoped_restore_tmpl<int> record_full_gdb_operation_disable_set ();
+
+} /* namespace gdb */
 
 #endif /* RECORD_FULL_H */

@@ -20,6 +20,8 @@
 #ifndef COMMON_PTID_H
 #define COMMON_PTID_H
 
+namespace gdb {
+
 /* The ptid struct is a collection of the various "ids" necessary for
    identifying the inferior process/thread being debugged.  This
    consists of the process id (pid), lightweight process id (lwp) and
@@ -151,5 +153,7 @@ extern ptid_t null_ptid;
    or a "don't care" condition, i.e, "run all threads."  */
 
 extern ptid_t minus_one_ptid;
+
+} /* namespace gdb */
 
 #endif /* COMMON_PTID_H */

@@ -21,6 +21,8 @@
 
 #include "ui-file.h"
 
+namespace gdb {
+
 /* A STDIO-like output stream for the TUI.  */
 
 class tui_file : public stdio_file
@@ -32,5 +34,7 @@ public:
   void puts (const char *) override;
   void flush () override;
 };
+
+} /* namespace gdb */
 
 #endif /* TUI_TUI_FILE_H */

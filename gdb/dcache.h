@@ -23,6 +23,8 @@
 
 #include "target.h"	/* for enum target_xfer_status */
 
+namespace gdb {
+
 typedef struct dcache_struct DCACHE;
 
 /* Invalidate DCACHE.  */
@@ -42,5 +44,7 @@ enum target_xfer_status
 void dcache_update (DCACHE *dcache, enum target_xfer_status status,
 		    CORE_ADDR memaddr, const gdb_byte *myaddr,
 		    ULONGEST len);
+
+} /* namespace gdb */
 
 #endif /* DCACHE_H */

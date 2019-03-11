@@ -23,6 +23,8 @@
 #define TARGET_DESCRIPTIONS_H 1
 #include "common/tdesc.h"
 
+namespace gdb {
+
 struct tdesc_arch_data;
 struct target_ops;
 /* An inferior's target description info is stored in this opaque
@@ -232,5 +234,7 @@ void record_xml_tdesc (const char *xml_file,
 		       const struct target_desc *tdesc);
 }
 #endif
+
+} /* namespace gdb */
 
 #endif /* TARGET_DESCRIPTIONS_H */

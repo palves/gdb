@@ -37,6 +37,9 @@
 #endif
 #include <signal.h>
 
+namespace gdb {
+
+
 /* The Guile version we're using.
    We *could* use the macros in libguile/version.h but that would preclude
    handling the user switching in a different version with, e.g.,
@@ -846,3 +849,5 @@ _initialize_guile (void)
   }
 #endif
 }
+
+} /* namespace gdb */

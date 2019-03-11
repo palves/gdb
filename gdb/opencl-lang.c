@@ -27,6 +27,9 @@
 #include "varobj.h"
 #include "c-lang.h"
 
+namespace gdb {
+
+
 /* This macro generates enum values from a given type.  */
 
 #define OCL_P_TYPE(TYPE)\
@@ -1182,3 +1185,5 @@ _initialize_opencl_language (void)
 {
   opencl_type_data = gdbarch_data_register_post_init (build_opencl_types);
 }
+
+} /* namespace gdb */

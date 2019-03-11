@@ -19,6 +19,8 @@
 #ifndef PROLOGUE_VALUE_H
 #define PROLOGUE_VALUE_H
 
+namespace gdb {
+
 /* What sort of value is this?  This determines the interpretation
    of subsequent fields.  */
 enum prologue_value_kind
@@ -326,5 +328,7 @@ private:
      have none.  */
   struct area_entry *m_entry;
 };
+
+} /* namespace gdb */
 
 #endif /* PROLOGUE_VALUE_H */

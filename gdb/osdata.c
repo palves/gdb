@@ -25,6 +25,9 @@
 #include "ui-out.h"
 #include "gdbcmd.h"
 
+namespace gdb {
+
+
 #if !defined(HAVE_LIBEXPAT)
 
 std::unique_ptr<osdata>
@@ -296,3 +299,5 @@ _initialize_osdata (void)
   add_info ("os", info_osdata_command,
            _("Show OS data ARG."));
 }
+
+} /* namespace gdb */

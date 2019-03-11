@@ -22,6 +22,8 @@
 
 #include "common/gdb_ref_ptr.h"
 
+namespace gdb {
+
 /* A policy class for gdb::ref_ptr for Python reference counting.  */
 template<typename T>
 struct gdbpy_ref_policy
@@ -41,5 +43,7 @@ struct gdbpy_ref_policy
    their "subclasses".  */
 template<typename T = PyObject> using gdbpy_ref
   = gdb::ref_ptr<T, gdbpy_ref_policy<T>>;
+
+} /* namespace gdb */
 
 #endif /* PYTHON_PY_REF_H */

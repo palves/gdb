@@ -27,6 +27,9 @@
 #include "arch/i386.h"
 #include "x86-tdesc.h"
 
+namespace gdb {
+
+
 const unsigned char x86_breakpoint[] = { 0xCC };
 #define x86_breakpoint_len 1
 
@@ -107,3 +110,5 @@ struct nto_target_ops the_low_target =
 
 
 
+
+} /* namespace gdb */

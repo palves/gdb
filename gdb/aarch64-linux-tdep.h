@@ -23,6 +23,8 @@
 
 #include "regset.h"
 
+namespace gdb {
+
 /* The general-purpose regset consists of 31 X registers, plus SP, PC,
    and PSTATE registers, as defined in the AArch64 port of the Linux
    kernel.  */
@@ -35,5 +37,7 @@
 
 extern const struct regset aarch64_linux_gregset;
 extern const struct regset aarch64_linux_fpregset;
+
+} /* namespace gdb */
 
 #endif /* AARCH64_LINUX_TDEP_H */

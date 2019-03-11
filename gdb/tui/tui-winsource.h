@@ -24,6 +24,8 @@
 
 #include "tui/tui-data.h"
 
+namespace gdb {
+
 struct tui_win_info;
 
 /* Update the execution windows to show the active breakpoints.  This
@@ -75,5 +77,7 @@ extern int tui_addr_is_displayed (CORE_ADDR,
 
 /* Constant definitions. */
 #define SCROLL_THRESHOLD 2	/* Threshold for lazy scroll.  */
+
+} /* namespace gdb */
 
 #endif /* TUI_TUI_WINSOURCE_H */

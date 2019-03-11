@@ -74,6 +74,9 @@ static const char *xmltarget_amd64_linux_no_xml = "@<target>\
 #include <sys/procfs.h>
 #include <sys/uio.h>
 
+namespace gdb {
+
+
 #ifndef PTRACE_GET_THREAD_AREA
 #define PTRACE_GET_THREAD_AREA 25
 #endif
@@ -2907,3 +2910,5 @@ initialize_low_arch (void)
 
   initialize_regsets_info (&x86_regsets_info);
 }
+
+} /* namespace gdb */

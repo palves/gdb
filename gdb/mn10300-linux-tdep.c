@@ -31,6 +31,9 @@
 #include "tramp-frame.h"
 #include "linux-tdep.h"
 
+namespace gdb {
+
+
 /* Transliterated from <asm-mn10300/elf.h>...  */
 #define MN10300_ELF_NGREG 28
 #define MN10300_ELF_NFPREG 32
@@ -721,3 +724,5 @@ _initialize_mn10300_linux_tdep (void)
 			  GDB_OSABI_LINUX, am33_linux_init_osabi);
 }
 
+
+} /* namespace gdb */

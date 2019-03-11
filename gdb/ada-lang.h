@@ -25,6 +25,8 @@
 #include "breakpoint.h"
 #include "common/vec.h"
 
+namespace gdb {
+
 struct frame_info;
 struct inferior;
 struct type_print_options;
@@ -414,5 +416,7 @@ extern const char *ada_get_tcb_types_info (void);
 extern void print_ada_task_info (struct ui_out *uiout,
 				 char *taskno_str,
 				 struct inferior *inf);
+
+} /* namespace gdb */
 
 #endif

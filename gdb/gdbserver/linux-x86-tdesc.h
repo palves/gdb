@@ -21,6 +21,8 @@
 #ifndef GDBSERVER_LINUX_X86_TDESC_H
 #define GDBSERVER_LINUX_X86_TDESC_H
 
+namespace gdb {
+
 /* Note: since IPA obviously knows what ABI it's running on (i386 vs x86_64
    vs x32), it's sufficient to pass only the register set here.  This,
    together with the ABI known at IPA compile time, maps to a tdesc.  */
@@ -54,5 +56,7 @@ const struct target_desc *amd64_linux_read_description (uint64_t xcr0,
 const struct target_desc *i386_linux_read_description (uint64_t xcr0);
 
 void initialize_low_tdesc ();
+
+} /* namespace gdb */
 
 #endif /* GDBSERVER_LINUX_X86_TDESC_H */

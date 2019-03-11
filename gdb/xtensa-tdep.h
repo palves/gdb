@@ -22,6 +22,8 @@
 
 #include "arch/xtensa.h"
 
+namespace gdb {
+
 /* XTENSA_TDEP_VERSION can/should be changed along with XTENSA_CONFIG_VERSION
    whenever the "tdep" structure changes in an incompatible way.  */
 
@@ -292,5 +294,7 @@ struct gdbarch_tdep
    (i.e., relative to WB).  The registers get remapped via the reg_map 
    data structure to their corresponding register in the AR register 
    file (see xtensa-tdep.c).  */
+
+} /* namespace gdb */
 
 #endif /* XTENSA_TDEP_H */

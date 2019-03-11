@@ -31,6 +31,9 @@
 
 #include "../features/i386/x32-core.c"
 
+namespace gdb {
+
+
 /* Create amd64 target descriptions according to XCR0.  If IS_X32 is
    true, create the x32 ones.  If IS_LINUX is true, create target
    descriptions for Linux.  If SEGMENTS is true, then include
@@ -76,3 +79,5 @@ amd64_create_target_description (uint64_t xcr0, bool is_x32, bool is_linux,
 
   return tdesc;
 }
+
+} /* namespace gdb */

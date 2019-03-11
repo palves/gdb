@@ -91,6 +91,9 @@
 #include "rust-lang.h"
 #include "common/pathstuff.h"
 
+namespace gdb {
+
+
 /* When == 1, print basic high level tracing messages.
    When > 1, be more verbose.
    This is in contrast to the low level DIE reading of dwarf_die_debug.  */
@@ -25711,3 +25714,5 @@ Warning: This option must be enabled before gdb reads the file."),
 			    selftests::dw2_expand_symtabs_matching::run_test);
 #endif
 }
+
+} /* namespace gdb */

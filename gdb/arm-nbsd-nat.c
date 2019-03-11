@@ -30,6 +30,9 @@
 #include "arm-tdep.h"
 #include "inf-ptrace.h"
 
+namespace gdb {
+
+
 class arm_netbsd_nat_target final : public inf_ptrace_target
 {
 public:
@@ -453,3 +456,5 @@ _initialize_arm_netbsd_nat (void)
 
   deprecated_add_core_fns (&arm_netbsd_elfcore_fns);
 }
+
+} /* namespace gdb */

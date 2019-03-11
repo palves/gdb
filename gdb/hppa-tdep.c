@@ -41,6 +41,9 @@
 #include "hppa-tdep.h"
 #include <algorithm>
 
+namespace gdb {
+
+
 static int hppa_debug = 0;
 
 /* Some local constants.  */
@@ -3192,3 +3195,5 @@ unwinding problems."),
 			   NULL, /* FIXME: i18n: hppa debug flag is %s.  */
 			   &setdebuglist, &showdebuglist);
 }
+
+} /* namespace gdb */

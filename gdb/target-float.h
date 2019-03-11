@@ -22,6 +22,8 @@
 
 #include "expression.h"
 
+namespace gdb {
+
 extern bool target_float_is_valid (const gdb_byte *addr,
 				   const struct type *type);
 extern bool target_float_is_zero (const gdb_byte *addr,
@@ -57,5 +59,7 @@ extern void target_float_binop (enum exp_opcode opcode,
 				gdb_byte *res, const struct type *type_res);
 extern int target_float_compare (const gdb_byte *x, const struct type *type_x,
 				 const gdb_byte *y, const struct type *type_y);
+
+} /* namespace gdb */
 
 #endif /* TARGET_FLOAT_H */

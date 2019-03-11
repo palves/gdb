@@ -36,6 +36,9 @@ extern int debug_threads;
 #include <limits.h>
 #include <ctype.h>
 
+namespace gdb {
+
+
 struct thread_db
 {
   /* Structure that identifies the child process for the
@@ -909,3 +912,5 @@ thread_db_notice_clone (struct thread_info *parent_thr, ptid_t child_ptid)
   if (!find_one_thread (child_ptid))
     warning ("Cannot find thread after clone.\n");
 }
+
+} /* namespace gdb */

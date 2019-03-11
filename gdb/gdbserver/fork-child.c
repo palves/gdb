@@ -21,6 +21,9 @@
 #include "nat/fork-inferior.h"
 #ifdef HAVE_SIGNAL_H
 #include <signal.h>
+
+namespace gdb {
+
 #endif
 
 #ifdef SIGTTOU
@@ -116,3 +119,5 @@ post_fork_inferior (int pid, const char *program)
   fprintf (stderr, "Process %s created; pid = %d\n", program, pid);
   fflush (stderr);
 }
+
+} /* namespace gdb */

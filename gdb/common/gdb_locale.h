@@ -38,6 +38,10 @@
 
 #ifdef HAVE_LANGINFO_CODESET
 #include <langinfo.h>
+
+namespace gdb {
 #endif
+
+} /* namespace gdb */
 
 #endif /* COMMON_GDB_LOCALE_H */

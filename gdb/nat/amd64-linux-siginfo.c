@@ -21,6 +21,9 @@
 #include "common/common-defs.h"
 #include "amd64-linux-siginfo.h"
 
+namespace gdb {
+
+
 #define GDB_SI_SIZE 128
 
 /* The types below define the most complete kernel siginfo types known
@@ -594,3 +597,5 @@ gdb_static_assert (sizeof (nat_siginfo_t) == GDB_SI_SIZE);
 gdb_static_assert (sizeof (compat_x32_siginfo_t) == GDB_SI_SIZE);
 gdb_static_assert (sizeof (compat_siginfo_t) == GDB_SI_SIZE);
 gdb_static_assert (sizeof (ptrace_siginfo_t) == GDB_SI_SIZE);
+
+} /* namespace gdb */

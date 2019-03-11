@@ -26,6 +26,9 @@
 #include "tramp-frame.h"
 #include "trad-frame.h"
 
+namespace gdb {
+
+
 /* Define the general register mapping.  The kernel puts the PC at offset 0,
    gdb puts it at offset 32.  Register x0 is always 0 and can be ignored.
    Registers x1 to x31 are in the same place.  */
@@ -168,3 +171,5 @@ _initialize_or1k_linux_tdep (void)
   gdbarch_register_osabi (bfd_arch_or1k, 0, GDB_OSABI_LINUX,
 			  or1k_linux_init_abi);
 }
+
+} /* namespace gdb */

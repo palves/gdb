@@ -30,6 +30,9 @@
 #include "i387-tdep.h"
 #include "common/x86-xstate.h"
 
+namespace gdb {
+
+
 /* Print the floating point number specified by RAW.  */
 
 static void
@@ -1963,3 +1966,5 @@ i387_reset_bnd_regs (struct gdbarch *gdbarch, struct regcache *regcache)
 	regcache->raw_write (I387_BND0R_REGNUM (tdep) + i, bnd_buf);
     }
 }
+
+} /* namespace gdb */

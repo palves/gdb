@@ -21,6 +21,9 @@
 #include "x86-linux.h"
 #include "x86-linux-dregs.h"
 
+namespace gdb {
+
+
 /* Per-thread arch-specific data we want to keep.  */
 
 struct arch_lwp_info
@@ -80,3 +83,5 @@ x86_linux_prepare_to_resume (struct lwp_info *lwp)
 {
   x86_linux_update_debug_registers (lwp);
 }
+
+} /* namespace gdb */

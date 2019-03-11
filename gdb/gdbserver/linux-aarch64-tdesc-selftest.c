@@ -20,6 +20,9 @@
 #include "common/selftest.h"
 #include "linux-aarch64-tdesc.h"
 
+namespace gdb {
+
+
 /* Defined in auto-generated file features/aarch64.c.  */
 void init_registers_aarch64 (void);
 extern const struct target_desc *tdesc_aarch64;
@@ -43,3 +46,5 @@ initialize_low_tdesc ()
   selftests::register_test ("aarch64-tdesc",
 			    selftests::tdesc::aarch64_tdesc_test);
 }
+
+} /* namespace gdb */

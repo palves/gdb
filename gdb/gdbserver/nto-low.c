@@ -31,6 +31,9 @@
 #include <sys/iomgr.h>
 #include <sys/neutrino.h>
 
+namespace gdb {
+
+
 
 extern int using_threads;
 int using_threads = 1;
@@ -1025,3 +1028,5 @@ initialize_low (void)
   sigprocmask (SIG_BLOCK, &set, NULL);
 }
 
+
+} /* namespace gdb */

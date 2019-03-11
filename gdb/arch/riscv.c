@@ -25,6 +25,9 @@
 #include "../features/riscv/32bit-fpu.c"
 #include "../features/riscv/64bit-fpu.c"
 
+namespace gdb {
+
+
 /* Wrapper used by std::unordered_map to generate hash for feature set.  */
 struct riscv_gdbarch_features_hasher
 {
@@ -98,3 +101,5 @@ riscv_create_target_description (struct riscv_gdbarch_features features)
 
   return tdesc;
 }
+
+} /* namespace gdb */

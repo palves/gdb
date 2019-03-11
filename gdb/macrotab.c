@@ -29,6 +29,9 @@
 #include "complaints.h"
 #include "macroexp.h"
 
+namespace gdb {
+
+
 
 /* The macro table structure.  */
 
@@ -1079,3 +1082,5 @@ macro_source_fullname (struct macro_source_file *file)
 
   return std::string (comp_dir) + SLASH_STRING + file->filename;
 }
+
+} /* namespace gdb */

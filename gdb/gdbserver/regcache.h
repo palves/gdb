@@ -21,6 +21,8 @@
 
 #include "common/common-regcache.h"
 
+namespace gdb {
+
 struct thread_info;
 struct target_desc;
 
@@ -137,5 +139,7 @@ void collect_register_by_name (struct regcache *regcache,
 
 ULONGEST regcache_raw_get_unsigned_by_name (struct regcache *regcache,
 					    const char *name);
+
+} /* namespace gdb */
 
 #endif /* GDBSERVER_REGCACHE_H */

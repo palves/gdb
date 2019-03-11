@@ -20,6 +20,9 @@
 #include "common-defs.h"
 #include "common/tdesc.h"
 
+namespace gdb {
+
+
 tdesc_reg::tdesc_reg (struct tdesc_feature *feature, const std::string &name_,
 		      int regnum, int save_restore_, const char *group_,
 		      int bitsize_, const char *type_)
@@ -398,3 +401,5 @@ void print_xml_feature::visit_post (const target_desc *e)
 {
   string_appendf (*m_buffer, "</target>\n");
 }
+
+} /* namespace gdb */

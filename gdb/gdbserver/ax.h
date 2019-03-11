@@ -21,6 +21,8 @@
 
 #include "regcache.h"
 
+namespace gdb {
+
 #ifdef IN_PROCESS_AGENT
 extern int debug_agent;
 #define debug_threads debug_agent
@@ -141,5 +143,7 @@ struct emit_ops
 
 extern CORE_ADDR current_insn_ptr;
 extern int emit_error;
+
+} /* namespace gdb */
 
 #endif /* GDBSERVER_AX_H */

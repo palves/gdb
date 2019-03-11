@@ -29,6 +29,9 @@
 #include "cp-support.h"
 #include <ctype.h>
 
+namespace gdb {
+
+
 struct cp_abi_ops gnu_v2_abi_ops;
 
 static int vb_match (struct type *, int, struct type *);
@@ -419,3 +422,5 @@ _initialize_gnu_v2_abi (void)
   init_gnuv2_ops ();
   register_cp_abi (&gnu_v2_abi_ops);
 }
+
+} /* namespace gdb */

@@ -22,6 +22,8 @@
 
 #include "process-stratum-target.h"
 
+namespace gdb {
+
 #if GDB_SELF_TEST
 namespace selftests {
 
@@ -61,5 +63,7 @@ public:
 
 } // namespace selftests
 #endif /* GDB_SELF_TEST */
+
+} /* namespace gdb */
 
 #endif /* !defined (TEST_TARGET_H) */

@@ -28,6 +28,9 @@
 #include "value.h"
 #include "guile-internal.h"
 
+namespace gdb {
+
+
 /* The <gdb:symbol> smob.  */
 
 typedef struct
@@ -826,3 +829,5 @@ gdbscm_initialize_symbols (void)
   syscm_gdbarch_data_key
     = gdbarch_data_register_post_init (syscm_init_arch_symbols);
 }
+
+} /* namespace gdb */

@@ -23,6 +23,9 @@
 #include "target-descriptions.h"
 #include "osabi.h"
 
+namespace gdb {
+
+
 static void
 i386_go32_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
 {
@@ -71,3 +74,5 @@ _initialize_i386_go32_tdep ()
   gdbarch_register_osabi (bfd_arch_i386, 0, GDB_OSABI_GO32,
 			  i386_go32_init_abi);
 }
+
+} /* namespace gdb */

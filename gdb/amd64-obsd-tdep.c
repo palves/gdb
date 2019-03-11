@@ -36,6 +36,9 @@
 #include "solib-svr4.h"
 #include "bsd-uthread.h"
 
+namespace gdb {
+
+
 /* Support for signal handlers.  */
 
 /* Default page size.  */
@@ -457,3 +460,5 @@ _initialize_amd64obsd_tdep (void)
   gdbarch_register_osabi (bfd_arch_i386, bfd_mach_x86_64,
 			  GDB_OSABI_OPENBSD, amd64obsd_init_abi);
 }
+
+} /* namespace gdb */

@@ -31,6 +31,9 @@
 
 #include "obsd-nat.h"
 
+namespace gdb {
+
+
 struct hppa_obsd_nat_target final : public obsd_nat_target
 {
   void fetch_registers (struct regcache *, int) override;
@@ -257,3 +260,5 @@ _initialize_hppaobsd_nat (void)
 {
   add_inf_child_target (&the_hppa_obsd_nat_target);
 }
+
+} /* namespace gdb */

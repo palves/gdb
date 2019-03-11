@@ -22,6 +22,9 @@
 
 #include "i386-tdep.h"
 
+namespace gdb {
+
+
 /* From <sys/ucontext.h>.  */
 static int i386gnu_gregset_reg_offset[] =
 {
@@ -66,3 +69,5 @@ _initialize_i386gnu_tdep (void)
 {
   gdbarch_register_osabi (bfd_arch_i386, 0, GDB_OSABI_HURD, i386gnu_init_abi);
 }
+
+} /* namespace gdb */

@@ -20,6 +20,8 @@
 
 #include <type_traits>
 
+namespace gdb {
+
 /* Convert an enum to its underlying value.  */
 
 template<typename E>
@@ -28,5 +30,7 @@ to_underlying (E val) noexcept
 {
   return static_cast<typename std::underlying_type<E>::type> (val);
 }
+
+} /* namespace gdb */
 
 #endif

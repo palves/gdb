@@ -21,6 +21,8 @@
 #ifndef NDS32_TDEP_H
 #define NDS32_TDEP_H
 
+namespace gdb {
+
 enum nds32_regnum
 {
   /* General purpose registers.  */
@@ -51,4 +53,6 @@ struct gdbarch_tdep
   /* ELF ABI info.  */
   int elf_abi;
 };
+} /* namespace gdb */
+
 #endif /* NDS32_TDEP_H */

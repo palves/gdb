@@ -22,6 +22,9 @@
 #include "value.h"
 #include "python-internal.h"
 
+namespace gdb {
+
+
 /* Converts a Python 8-bit string to a unicode string object.  Assumes the
    8-bit string is in the host charset.  If an error occurs during conversion,
    returns NULL with a python exception set.
@@ -425,3 +428,5 @@ gdbpy_handle_exception ()
   else
     error ("%s", msg.get ());
 }
+
+} /* namespace gdb */

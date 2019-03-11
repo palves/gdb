@@ -34,6 +34,9 @@
 #include "ppc-linux-tdep.h"
 #include "spu-tdep.h"
 
+namespace gdb {
+
+
 /* The SPU multi-architecture support target.  */
 
 static const target_info spu_multiarch_target_info = {
@@ -415,3 +418,5 @@ _initialize_spu_multiarch (void)
   gdb::observers::solib_unloaded.attach (spu_multiarch_solib_unloaded);
 }
 
+
+} /* namespace gdb */

@@ -19,8 +19,12 @@
 #ifndef XCOFFREAD_H
 #define XCOFFREAD_H
 
+namespace gdb {
+
 extern CORE_ADDR xcoff_get_toc_offset (struct objfile *);
 
 extern int xcoff_get_n_import_files (bfd *abfd);
+
+} /* namespace gdb */
 
 #endif /* XCOFFREAD_H */

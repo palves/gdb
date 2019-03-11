@@ -23,6 +23,8 @@
 #include "psymtab.h"
 #include "objfiles.h"
 
+namespace gdb {
+
 /* A partial_symbol records the name, domain, and address class of
    symbols whose types we have not parsed yet.  For functions, it also
    contains their memory address, so we can find them from a PC value.
@@ -350,5 +352,7 @@ class psymtab_discarder
   /* How far back to free.  */
   struct partial_symtab *m_psymtab;
 };
+
+} /* namespace gdb */
 
 #endif /* PSYMPRIV_H */

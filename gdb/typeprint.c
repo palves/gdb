@@ -37,6 +37,9 @@
 #include "extension.h"
 #include "completer.h"
 
+namespace gdb {
+
+
 const struct type_print_options type_print_raw_options =
 {
   1,				/* raw */
@@ -889,3 +892,5 @@ val_print_not_associated (struct ui_file *stream)
 {
   fprintf_filtered (stream, _("<not associated>"));
 }
+
+} /* namespace gdb */

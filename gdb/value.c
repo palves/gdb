@@ -44,6 +44,9 @@
 #include "common/selftest.h"
 #include "common/array-view.h"
 
+namespace gdb {
+
+
 /* Definition of a user function.  */
 struct internal_function
 {
@@ -4132,3 +4135,5 @@ prevents future values, larger than this size, from being allocated."),
 			    selftests::test_insert_into_bit_range_vector);
 #endif
 }
+
+} /* namespace gdb */

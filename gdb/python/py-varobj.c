@@ -18,6 +18,9 @@
 #include "varobj.h"
 #include "varobj-iter.h"
 
+namespace gdb {
+
+
 /* A dynamic varobj iterator "class" for python pretty-printed
    varobjs.  This inherits struct varobj_iter.  */
 
@@ -180,3 +183,5 @@ py_varobj_get_iterator (struct varobj *var, PyObject *printer)
 
   return &py_iter->base;
 }
+
+} /* namespace gdb */

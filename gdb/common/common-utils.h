@@ -25,6 +25,8 @@
 
 #include "poison.h"
 
+namespace gdb {
+
 /* If possible, define FUNCTION_NAME, a macro containing the name of
    the function being defined.  Since this macro may not always be
    defined, all uses must be protected by appropriate macro definition
@@ -177,5 +179,7 @@ in_inclusive_range (T value, T low, T high)
 
 extern ULONGEST align_up (ULONGEST v, int n);
 extern ULONGEST align_down (ULONGEST v, int n);
+
+} /* namespace gdb */
 
 #endif /* COMMON_COMMON_UTILS_H */

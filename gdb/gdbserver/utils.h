@@ -19,7 +19,11 @@
 #ifndef GDBSERVER_UTILS_H
 #define GDBSERVER_UTILS_H
 
+namespace gdb {
+
 char *paddress (CORE_ADDR addr);
 char *pfildes (gdb_fildes_t fd);
+
+} /* namespace gdb */
 
 #endif /* GDBSERVER_UTILS_H */

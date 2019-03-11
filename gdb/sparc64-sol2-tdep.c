@@ -31,6 +31,9 @@
 #include "sparc64-tdep.h"
 #include "solib-svr4.h"
 
+namespace gdb {
+
+
 /* From <sys/regset.h>.  */
 const struct sparc_gregmap sparc64_sol2_gregmap =
 {
@@ -249,3 +252,5 @@ _initialize_sparc64_sol2_tdep (void)
   gdbarch_register_osabi (bfd_arch_sparc, bfd_mach_sparc_v9,
 			  GDB_OSABI_SOLARIS, sparc64_sol2_init_abi);
 }
+
+} /* namespace gdb */

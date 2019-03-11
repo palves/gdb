@@ -19,6 +19,8 @@
 #ifndef UI_STYLE_H
 #define UI_STYLE_H
 
+namespace gdb {
+
 /* Styles that can be applied to a ui_file.  */
 struct ui_file_style
 {
@@ -219,5 +221,7 @@ private:
    reflect the number of chars read from BUF.  */
 
 extern bool skip_ansi_escape (const char *buf, int *n_read);
+
+} /* namespace gdb */
 
 #endif /* UI_STYLE_H */

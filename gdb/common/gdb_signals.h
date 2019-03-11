@@ -22,6 +22,8 @@
 
 #include "gdb/signals.h"
 
+namespace gdb {
+
 /* Predicate to gdb_signal_to_host(). Return non-zero if the enum
    targ_signal SIGNO has an equivalent ``host'' representation.  */
 /* FIXME: cagney/1999-11-22: The name below was chosen in preference
@@ -54,5 +56,7 @@ extern const char *gdb_signal_to_name (enum gdb_signal);
 
 /* Given a name (SIGHUP, etc.), return its signal.  */
 enum gdb_signal gdb_signal_from_name (const char *);
+
+} /* namespace gdb */
 
 #endif /* COMMON_GDB_SIGNALS_H */

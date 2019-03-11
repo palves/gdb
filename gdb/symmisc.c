@@ -40,6 +40,9 @@
 
 #include "psymtab.h"
 
+namespace gdb {
+
+
 /* Unfortunately for debugging, stderr is usually a macro.  This is painful
    when calling functions that take FILE *'s from the debugger.
    So we make a variable which has the same value and which is accessible when
@@ -1101,3 +1104,5 @@ Check consistency of currently expanded symtabs."),
 With an argument REGEXP, only expand the symbol tables with matching names."),
 	   &maintenancelist);
 }
+
+} /* namespace gdb */

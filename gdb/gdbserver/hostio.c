@@ -29,6 +29,9 @@
 #include <sys/stat.h>
 #include "common/fileio.h"
 
+namespace gdb {
+
+
 extern int remote_debug;
 
 struct fd_list
@@ -620,3 +623,5 @@ handle_vFile (char *own_buf, int packet_len, int *new_packet_len)
 
   return 1;
 }
+
+} /* namespace gdb */

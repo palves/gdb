@@ -34,6 +34,9 @@
 
 #include "proc-utils.h"
 
+namespace gdb {
+
+
 /*  Much of the information used in the /proc interface, particularly for
     printing status information, is kept as tables of structures of the
     following form.  These tables can be used to map numeric values to
@@ -111,3 +114,5 @@ proc_prettyprint_flags (unsigned long flags, int verbose)
 {
   proc_prettyfprint_flags (stdout, flags, verbose);
 }
+
+} /* namespace gdb */

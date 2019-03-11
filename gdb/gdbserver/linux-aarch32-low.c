@@ -26,6 +26,9 @@
    On Bionic elf.h and linux/elf.h have conflicting definitions.  */
 #ifndef ELFMAG0
 #include <elf.h>
+
+namespace gdb {
+
 #endif
 
 /* Correct in either endianness.  */
@@ -303,3 +306,5 @@ initialize_low_arch_aarch32 (void)
 
   initialize_regsets_info (&aarch32_regsets_info);
 }
+
+} /* namespace gdb */

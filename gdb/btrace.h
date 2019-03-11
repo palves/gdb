@@ -36,6 +36,8 @@
 
 #include <vector>
 
+namespace gdb {
+
 struct thread_info;
 struct btrace_function;
 
@@ -506,5 +508,7 @@ extern int btrace_is_replaying (struct thread_info *tp);
 
 /* Return non-zero if the branch trace for TP is empty; zero otherwise.  */
 extern int btrace_is_empty (struct thread_info *tp);
+
+} /* namespace gdb */
 
 #endif /* BTRACE_H */

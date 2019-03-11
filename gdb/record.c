@@ -29,6 +29,9 @@
 
 #include <ctype.h>
 
+namespace gdb {
+
+
 /* This is the debug switch for process record.  */
 unsigned int record_debug = 0;
 
@@ -896,3 +899,5 @@ function-call-history-size\"."),
   record_insn_history_size_setshow_var = record_insn_history_size;
   record_call_history_size_setshow_var = record_call_history_size;
 }
+
+} /* namespace gdb */

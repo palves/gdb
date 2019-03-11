@@ -29,6 +29,9 @@
 #include <sys/procfs.h>
 #include "gregset.h"
 
+namespace gdb {
+
+
 /* The address of UNIQUE for ptrace.  */
 #define ALPHA_UNIQUE_PTRACE_ADDR 65
 
@@ -106,3 +109,5 @@ _initialize_alpha_linux_nat (void)
   linux_target = &the_alpha_linux_nat_target;
   add_inf_child_target (&the_alpha_linux_nat_target);
 }
+
+} /* namespace gdb */

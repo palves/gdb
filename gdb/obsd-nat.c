@@ -29,6 +29,9 @@
 #include "inf-child.h"
 #include "obsd-nat.h"
 
+namespace gdb {
+
+
 /* OpenBSD 5.2 and later include rthreads which uses a thread model
    that maps userland threads directly onto kernel threads in a 1:1
    fashion.  */
@@ -166,3 +169,5 @@ obsd_nat_target::wait (ptid_t ptid, struct target_waitstatus *ourstatus,
 }
 
 #endif /* PT_GET_THREAD_FIRST */
+
+} /* namespace gdb */

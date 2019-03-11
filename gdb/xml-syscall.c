@@ -29,6 +29,9 @@
 
 #include "filenames.h"
 
+namespace gdb {
+
+
 #ifndef HAVE_LIBEXPAT
 
 /* Dummy functions to indicate that there's no support for fetching
@@ -559,3 +562,5 @@ get_syscall_group_names (struct gdbarch *gdbarch)
 }
 
 #endif /* ! HAVE_LIBEXPAT */
+
+} /* namespace gdb */

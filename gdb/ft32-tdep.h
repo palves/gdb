@@ -20,10 +20,14 @@
 #ifndef FT32_TDEP_H
 #define FT32_TDEP_H
 
+namespace gdb {
+
 struct gdbarch_tdep
 {
   /* Type for a pointer to a function.  Used for the type of PC.  */
   struct type *pc_type;
 };
+
+} /* namespace gdb */
 
 #endif /* FT32_TDEP_H */

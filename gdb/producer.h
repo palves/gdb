@@ -20,6 +20,8 @@
 #ifndef PRODUCER_H
 #define PRODUCER_H
 
+namespace gdb {
+
 /* Check for GCC >= 4.x according to the symtab->producer string.  Return minor
    version (x) of 4.x in such case.  If it is not GCC or it is GCC older than
    4.x return -1.  If it is GCC 5.x or higher return INT_MAX.  */
@@ -51,5 +53,7 @@ extern int producer_is_gcc (const char *producer, int *major, int *minor);
       "Intel(R) C++ Intel(R) 64 Compiler for applications
        running on Intel(R) 64, Version 18.0 Beta ....".  */
 extern bool producer_is_icc (const char *producer, int *major, int *minor);
+
+} /* namespace gdb */
 
 #endif

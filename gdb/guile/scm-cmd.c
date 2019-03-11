@@ -28,6 +28,9 @@
 #include "completer.h"
 #include "guile-internal.h"
 
+namespace gdb {
+
+
 /* The <gdb:command> smob.
 
    Note: Commands are added to gdb using a two step process:
@@ -880,3 +883,5 @@ gdbscm_initialize_commands (void)
   prefix_p_keyword = scm_from_latin1_keyword ("prefix?");
   doc_keyword = scm_from_latin1_keyword ("doc");
 }
+
+} /* namespace gdb */

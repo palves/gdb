@@ -20,6 +20,9 @@
 #include "defs.h"
 #include "py-stopevent.h"
 
+namespace gdb {
+
+
 gdbpy_ref<>
 create_signal_event_object (enum gdb_signal stop_signal)
 {
@@ -41,3 +44,5 @@ create_signal_event_object (enum gdb_signal stop_signal)
 
   return signal_event_obj;
 }
+
+} /* namespace gdb */

@@ -20,6 +20,8 @@
 #ifndef BSD_KVM_H
 #define BSD_KVM_H
 
+namespace gdb {
+
 struct pcb;
 struct regcache;
 
@@ -29,5 +31,7 @@ struct regcache;
 
 extern void
   bsd_kvm_add_target (int (*supply_pcb)(struct regcache *, struct pcb *));
+
+} /* namespace gdb */
 
 #endif /* bsd-kvm.h */

@@ -29,6 +29,9 @@
 #include "m2-lang.h"
 #include "target.h"
 
+namespace gdb {
+
+
 static int print_unpacked_pointer (struct type *type,
 				   CORE_ADDR address, CORE_ADDR addr,
 				   const struct value_print_options *options,
@@ -499,3 +502,5 @@ m2_val_print (struct type *type, int embedded_offset,
       break;
     }
 }
+
+} /* namespace gdb */

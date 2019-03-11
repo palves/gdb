@@ -25,6 +25,9 @@
 #include "amd64-bsd-nat.h"
 #include "amd64-nat.h"
 
+namespace gdb {
+
+
 /* Mapping between the general-purpose registers in NetBSD/amd64
    `struct reg' format and GDB's register cache layout for
    NetBSD/i386.
@@ -65,3 +68,5 @@ _initialize_amd64nbsd_nat (void)
 
   add_inf_child_target (&the_amd64_nbsd_nat_target);
 }
+
+} /* namespace gdb */

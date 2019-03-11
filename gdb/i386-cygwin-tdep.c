@@ -27,6 +27,9 @@
 #include "gdbcore.h"
 #include "inferior.h"
 
+namespace gdb {
+
+
 /* Core file support.  */
 
 /* This vector maps GDB's idea of a register's number into an address
@@ -265,3 +268,5 @@ _initialize_i386_cygwin_tdep (void)
   gdbarch_register_osabi (bfd_arch_i386, 0, GDB_OSABI_CYGWIN,
                           i386_cygwin_init_abi);
 }
+
+} /* namespace gdb */

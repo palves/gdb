@@ -25,6 +25,8 @@
 #include "tui/tui.h"	/* For enum tui_win_type.  */
 #include "gdb_curses.h"	/* For WINDOW.  */
 
+namespace gdb {
+
 /* This is a point definition.  */
 struct tui_point
 {
@@ -343,5 +345,7 @@ extern struct tui_win_info *tui_prev_win (struct tui_win_info *);
 extern void tui_add_to_source_windows (struct tui_win_info *);
 
 extern unsigned int tui_tab_width;
+
+} /* namespace gdb */
 
 #endif /* TUI_TUI_DATA_H */

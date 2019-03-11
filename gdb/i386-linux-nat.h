@@ -20,7 +20,11 @@
 #ifndef I386_LINUX_NAT_H
 #define I386_LINUX_NAT_H 1
 
+namespace gdb {
+
 /* Does the current host support the GETFPXREGS request? */
 extern int have_ptrace_getfpxregs;
+
+} /* namespace gdb */
 
 #endif

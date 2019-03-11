@@ -21,6 +21,9 @@
 #include "command.h"
 #include "py-events.h"
 
+namespace gdb {
+
+
 events_object gdb_py_events;
 
 extern PyTypeObject eventregistry_object_type
@@ -168,3 +171,5 @@ PyTypeObject eventregistry_object_type =
   0,                                          /* tp_init */
   0                                           /* tp_alloc */
 };
+
+} /* namespace gdb */

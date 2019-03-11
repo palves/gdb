@@ -43,6 +43,9 @@
 #include "features/arc-v2.c"
 #include "features/arc-arcompact.c"
 
+namespace gdb {
+
+
 /* The frame unwind cache for ARC.  */
 
 struct arc_frame_cache
@@ -2175,3 +2178,5 @@ _initialize_arc_tdep (void)
 			    _("Non-zero enables ARC specific debugging."),
 			    NULL, NULL, &setdebuglist, &showdebuglist);
 }
+
+} /* namespace gdb */

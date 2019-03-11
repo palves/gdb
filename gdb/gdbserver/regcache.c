@@ -21,6 +21,9 @@
 #include "gdbthread.h"
 #include "tdesc.h"
 #include "common/rsp-low.h"
+
+namespace gdb {
+
 #ifndef IN_PROCESS_AGENT
 
 struct regcache *
@@ -526,3 +529,5 @@ regcache::raw_compare (int regnum, const void *buf, int offset) const
 
   return (memcmp (buf, regbuf + offset, size - offset) == 0);
 }
+
+} /* namespace gdb */

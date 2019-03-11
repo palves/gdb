@@ -39,6 +39,9 @@
 
 #include "sparc-tdep.h"
 
+namespace gdb {
+
+
 /* Signal trampoline support.  */
 
 static void sparc32_linux_sigframe_init (const struct tramp_frame *self,
@@ -471,3 +474,5 @@ _initialize_sparc_linux_tdep (void)
   gdbarch_register_osabi (bfd_arch_sparc, 0, GDB_OSABI_LINUX,
 			  sparc32_linux_init_abi);
 }
+
+} /* namespace gdb */

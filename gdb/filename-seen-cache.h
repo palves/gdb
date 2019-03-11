@@ -23,6 +23,8 @@
 #include "defs.h"
 #include "common/function-view.h"
 
+namespace gdb {
+
 /* Cache to watch for file names already seen.  */
 
 class filename_seen_cache
@@ -62,5 +64,7 @@ private:
   /* Table of files seen so far.  */
   htab_t m_tab;
 };
+
+} /* namespace gdb */
 
 #endif /* FILENAME_SEEN_CACHE_H */

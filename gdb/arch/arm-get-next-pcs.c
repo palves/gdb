@@ -23,6 +23,9 @@
 #include "arm.h"
 #include "arm-get-next-pcs.h"
 
+namespace gdb {
+
+
 /* See arm-get-next-pcs.h.  */
 
 void
@@ -933,3 +936,5 @@ arm_get_next_pcs (struct arm_get_next_pcs *self)
 
   return next_pcs;
 }
+
+} /* namespace gdb */

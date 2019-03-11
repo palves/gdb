@@ -22,6 +22,8 @@
 #include "common/gdb_vecs.h"
 #include <list>
 
+namespace gdb {
+
 struct thread_info;
 struct regcache;
 struct target_desc;
@@ -143,5 +145,7 @@ void clear_inferiors (void);
 void *thread_target_data (struct thread_info *);
 struct regcache *thread_regcache_data (struct thread_info *);
 void set_thread_regcache_data (struct thread_info *, struct regcache *);
+
+} /* namespace gdb */
 
 #endif /* GDBSERVER_INFERIORS_H */

@@ -18,9 +18,13 @@
 #ifndef SOLIB_AIX_H
 #define SOLIB_AIX_H
 
+namespace gdb {
+
 struct target_so_ops;
 extern struct target_so_ops solib_aix_so_ops;
 
 extern CORE_ADDR solib_aix_get_toc_value (CORE_ADDR pc);
+
+} /* namespace gdb */
 
 #endif

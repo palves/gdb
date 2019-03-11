@@ -23,6 +23,9 @@
 #include "nat/gdb_ptrace.h"
 #include "inf-ptrace.h"
 
+namespace gdb {
+
+
 /* Fetch register REGNUM from the inferior.  */
 
 void
@@ -142,3 +145,5 @@ linux_nat_trad_target::store_registers (struct regcache *regcache, int regnum)
   else
     store_register (regcache, regnum);
 }
+
+} /* namespace gdb */

@@ -22,6 +22,8 @@
 
 #include <string>
 
+namespace gdb {
+
 /* Number of traps that happen between exec'ing the shell to run an
    inferior and when we finally get to the inferior code, not counting
    the exec for the shell.  This is 1 on all supported
@@ -102,5 +104,7 @@ extern void trace_start_error (const char *fmt, ...)
    function does not return.  */
 extern void trace_start_error_with_name (const char *string)
   ATTRIBUTE_NORETURN;
+
+} /* namespace gdb */
 
 #endif /* NAT_FORK_INFERIOR_H */

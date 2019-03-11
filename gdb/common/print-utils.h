@@ -20,6 +20,8 @@
 #ifndef COMMON_PRINT_UTILS_H
 #define COMMON_PRINT_UTILS_H
 
+namespace gdb {
+
 /* How many characters (including the terminating null byte) fit in a
    cell.  */
 #define PRINT_CELL_SIZE 50
@@ -78,5 +80,7 @@ extern const char *host_address_to_string_1 (const void *addr);
 /* Return the next entry in the circular print buffer.  */
 
 extern char *get_print_cell (void);
+
+} /* namespace gdb */
 
 #endif /* COMMON_PRINT_UTILS_H */

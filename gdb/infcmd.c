@@ -61,6 +61,9 @@
 #include "common/gdb_optional.h"
 #include "source.h"
 
+namespace gdb {
+
+
 /* Local functions: */
 
 static void until_next_command (int);
@@ -3420,3 +3423,5 @@ List files opened by the specified process."),
 List all available info about the specified process."),
 	   &info_proc_cmdlist);
 }
+
+} /* namespace gdb */

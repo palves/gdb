@@ -26,6 +26,9 @@
 #include "guile.h"
 #include "guile-internal.h"
 
+namespace gdb {
+
+
 /* User-settable option to enable/disable auto-loading of Guile scripts:
    set auto-load guile-scripts on|off
    This is true if we should auto-load associated Guile scripts when an
@@ -77,3 +80,5 @@ This options has security implications for untrusted inferiors."),
 Usage: info auto-load guile-scripts [REGEXP]"),
 	   auto_load_info_cmdlist_get ());
 }
+
+} /* namespace gdb */

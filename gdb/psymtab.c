@@ -37,6 +37,9 @@
 #include <algorithm>
 #include <set>
 
+namespace gdb {
+
+
 static struct partial_symbol *match_partial_symbol (struct objfile *,
 						    struct partial_symtab *,
 						    int,
@@ -2210,3 +2213,5 @@ just the symbol table structures themselves."),
 Check consistency of currently expanded psymtabs versus symtabs."),
 	   &maintenancelist);
 }
+
+} /* namespace gdb */

@@ -24,6 +24,8 @@
 #include "symtab.h"
 #include "gdb_bfd.h"
 
+namespace gdb {
+
 #define ALL_SO_LIBS(so) \
     for (so = so_list_head; \
 	 so != NULL; \
@@ -213,5 +215,7 @@ extern struct target_so_ops *current_target_so_ops;
 struct block_symbol solib_global_lookup (struct objfile *objfile,
 					    const char *name,
 					    const domain_enum domain);
+
+} /* namespace gdb */
 
 #endif

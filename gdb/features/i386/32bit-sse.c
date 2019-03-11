@@ -3,6 +3,9 @@
 
 #include "common/tdesc.h"
 
+namespace gdb {
+
+
 static int
 create_feature_i386_32bit_sse (struct target_desc *result, long regnum)
 {
@@ -74,3 +77,5 @@ create_feature_i386_32bit_sse (struct target_desc *result, long regnum)
   tdesc_create_reg (feature, "mxcsr", regnum++, 1, "vector", 32, "i386_mxcsr");
   return regnum;
 }
+
+} /* namespace gdb */

@@ -22,6 +22,8 @@
 
 #include <expat.h>
 
+namespace gdb {
+
 /* Expat 1.95.x does not define these; this is the definition
    recommended by the expat 2.0 headers.  */
 #ifndef XML_STATUS_OK
@@ -34,5 +36,7 @@
 #ifndef XMLCALL
 #define XMLCALL
 #endif
+
+} /* namespace gdb */
 
 #endif /* !defined(GDB_EXPAT_H) */

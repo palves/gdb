@@ -3,6 +3,9 @@
 
 #include "common/tdesc.h"
 
+namespace gdb {
+
+
 static int
 create_feature_aarch64_core (struct target_desc *result, long regnum)
 {
@@ -63,3 +66,5 @@ create_feature_aarch64_core (struct target_desc *result, long regnum)
   tdesc_create_reg (feature, "cpsr", regnum++, 1, NULL, 32, "cpsr_flags");
   return regnum;
 }
+
+} /* namespace gdb */

@@ -19,6 +19,8 @@
 #ifndef COMMON_SELFTEST_H
 #define COMMON_SELFTEST_H
 
+namespace gdb {
+
 /* A test is just a function that does some checks and throws an
    exception if something has gone wrong.  */
 
@@ -69,5 +71,7 @@ extern void for_each_selftest (for_each_selftest_ftype func);
     if (!(VALUE))							\
       error (_("self-test failed at %s:%d"), __FILE__, __LINE__);	\
   } while (0)
+
+} /* namespace gdb */
 
 #endif /* COMMON_SELFTEST_H */

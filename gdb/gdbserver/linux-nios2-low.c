@@ -27,6 +27,9 @@
 #include "gdb_proc_service.h"
 #include <asm/ptrace.h>
 
+namespace gdb {
+
+
 #ifndef PTRACE_GET_THREAD_AREA
 #define PTRACE_GET_THREAD_AREA 25
 #endif
@@ -257,3 +260,5 @@ initialize_low_arch (void)
 
   initialize_regsets_info (&nios2_regsets_info);
 }
+
+} /* namespace gdb */

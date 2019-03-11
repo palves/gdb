@@ -5,6 +5,9 @@
 #include "osabi.h"
 #include "target-descriptions.h"
 
+namespace gdb {
+
+
 struct target_desc *tdesc_powerpc_isa207_htm_vsx32l;
 static void
 initialize_tdesc_powerpc_isa207_htm_vsx32l (void)
@@ -394,3 +397,5 @@ initialize_tdesc_powerpc_isa207_htm_vsx32l (void)
 
   tdesc_powerpc_isa207_htm_vsx32l = result;
 }
+
+} /* namespace gdb */

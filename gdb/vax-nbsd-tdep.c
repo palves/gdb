@@ -24,6 +24,9 @@
 #include "vax-tdep.h"
 #include "solib-svr4.h"
 
+namespace gdb {
+
+
 /* NetBSD ELF.  */
 
 static void
@@ -40,3 +43,5 @@ _initialize_vaxnbsd_tdep (void)
   gdbarch_register_osabi (bfd_arch_vax, 0, GDB_OSABI_NETBSD,
 			  vaxnbsd_elf_init_abi);
 }
+
+} /* namespace gdb */

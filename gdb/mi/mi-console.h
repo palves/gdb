@@ -20,6 +20,8 @@
 #ifndef MI_MI_CONSOLE_H
 #define MI_MI_CONSOLE_H
 
+namespace gdb {
+
 /* An output stream for MI.  Wraps a given output stream with a prefix
    and handles quoting.  This stream is locally buffered.  */
 
@@ -54,5 +56,7 @@ private:
   /* The quote char.  */
   char m_quote;
 };
+
+} /* namespace gdb */
 
 #endif /* MI_MI_CONSOLE_H */

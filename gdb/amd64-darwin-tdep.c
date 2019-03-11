@@ -38,6 +38,9 @@
 #include "solib-darwin.h"
 #include "dwarf2-frame.h"
 
+namespace gdb {
+
+
 /* Offsets into the struct x86_thread_state64 where we'll find the saved regs.
    From <mach/i386/thread_status.h> and amd64-tdep.h.  */
 int amd64_darwin_thread_state_reg_offset[] =
@@ -122,3 +125,5 @@ _initialize_amd64_darwin_tdep (void)
   gdbarch_register_osabi (bfd_arch_i386, bfd_mach_x86_64,
                           GDB_OSABI_DARWIN, x86_darwin_init_abi_64);
 }
+
+} /* namespace gdb */

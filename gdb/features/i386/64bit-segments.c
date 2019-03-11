@@ -3,6 +3,9 @@
 
 #include "common/tdesc.h"
 
+namespace gdb {
+
+
 static int
 create_feature_i386_64bit_segments (struct target_desc *result, long regnum)
 {
@@ -13,3 +16,5 @@ create_feature_i386_64bit_segments (struct target_desc *result, long regnum)
   tdesc_create_reg (feature, "gs_base", regnum++, 1, NULL, 64, "int");
   return regnum;
 }
+
+} /* namespace gdb */

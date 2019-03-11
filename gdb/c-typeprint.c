@@ -33,6 +33,9 @@
 #include "cp-abi.h"
 #include "cp-support.h"
 
+namespace gdb {
+
+
 /* A list of access specifiers used for printing.  */
 
 enum access_specifier
@@ -1709,3 +1712,5 @@ c_type_print_base (struct type *type, struct ui_file *stream,
   c_type_print_base_1 (type, stream, show, level,
 		       current_language->la_language, flags, &podata);
 }
+
+} /* namespace gdb */

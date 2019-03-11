@@ -20,6 +20,8 @@
 #ifndef COMMON_XML_UTILS_H
 #define COMMON_XML_UTILS_H
 
+namespace gdb {
+
 /* Return a string with special characters from TEXT replaced by entity
    references.  */
 
@@ -29,5 +31,7 @@ extern std::string xml_escape_text (const char *text);
    references.  */
 
 extern void xml_escape_text_append (std::string *result, const char *text);
+
+} /* namespace gdb */
 
 #endif /* COMMON_XML_UTILS_H */

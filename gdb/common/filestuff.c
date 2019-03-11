@@ -63,6 +63,9 @@
 
 #include <dirent.h>
 
+namespace gdb {
+
+
 /* Replacement for fdwalk, if the system doesn't define it.  Walks all
    open file descriptors (though this implementation may walk closed
    ones as well, depending on the host platform's capabilities) and
@@ -501,3 +504,5 @@ mkdir_recursive (const char *dir)
       component_start = component_end;
     }
 }
+
+} /* namespace gdb */

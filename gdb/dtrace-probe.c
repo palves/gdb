@@ -34,6 +34,9 @@
 #include "parser-defs.h"
 #include "inferior.h"
 
+namespace gdb {
+
+
 /* The type of the ELF sections where we will find the DOF programs
    with information about probes.  */
 
@@ -912,3 +915,5 @@ NAME matches the probe names.\n\
 OBJECT matches the executable or shared library name."),
 	   info_probes_cmdlist_get ());
 }
+
+} /* namespace gdb */

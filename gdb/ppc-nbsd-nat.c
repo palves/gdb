@@ -36,6 +36,9 @@
 #include "bsd-kvm.h"
 #include "inf-ptrace.h"
 
+namespace gdb {
+
+
 struct ppc_nbsd_nat_target final : public inf_ptrace_target
 {
   void fetch_registers (struct regcache *, int) override;
@@ -187,3 +190,5 @@ _initialize_ppcnbsd_nat (void)
 
   add_inf_child_target (&the_ppc_nbsd_nat_target);
 }
+
+} /* namespace gdb */

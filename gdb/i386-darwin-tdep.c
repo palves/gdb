@@ -37,6 +37,9 @@
 #include "dwarf2-frame.h"
 #include <algorithm>
 
+namespace gdb {
+
+
 /* Offsets into the struct i386_thread_state where we'll find the saved regs.
    From <mach/i386/thread_status.h> and i386-tdep.h.  */
 int i386_darwin_thread_state_reg_offset[] =
@@ -295,3 +298,5 @@ _initialize_i386_darwin_tdep (void)
   gdbarch_register_osabi (bfd_arch_i386, bfd_mach_i386_i386,
 			  GDB_OSABI_DARWIN, i386_darwin_init_abi);
 }
+
+} /* namespace gdb */

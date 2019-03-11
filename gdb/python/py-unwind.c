@@ -29,6 +29,9 @@
 #include "valprint.h"
 #include "user-regs.h"
 
+namespace gdb {
+
+
 #define TRACE_PY_UNWIND(level, args...) if (pyuw_debug >= level)  \
   { fprintf_unfiltered (gdb_stdlog, args); }
 
@@ -768,3 +771,5 @@ PyTypeObject unwind_info_object_type =
   0,                              /* tp_init */
   0,                              /* tp_alloc */
 };
+
+} /* namespace gdb */

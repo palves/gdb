@@ -22,6 +22,8 @@
 
 #include "diagnostics.h"
 
+namespace gdb {
+
 /* clang has a bug that makes it warn (-Wunused-function) about unused functions
    that are the result of the DEF_VEC_* macro expansion.  See:
 
@@ -1146,5 +1148,7 @@ static inline T *VEC_OP (T,safe_insert)					  \
 									  \
   return VEC_OP (T,quick_insert) (*vec_, ix_, obj_ VEC_ASSERT_PASS);	  \
 }
+
+} /* namespace gdb */
 
 #endif /* COMMON_VEC_H */

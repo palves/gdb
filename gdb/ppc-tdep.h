@@ -20,6 +20,8 @@
 #ifndef PPC_TDEP_H
 #define PPC_TDEP_H
 
+namespace gdb {
+
 struct gdbarch;
 struct frame_info;
 struct value;
@@ -433,5 +435,7 @@ extern int ppc_process_record (struct gdbarch *gdbarch,
 
 /* Estimate for the maximum number of instrctions in a function epilogue.  */
 #define PPC_MAX_EPILOGUE_INSTRUCTIONS  52
+
+} /* namespace gdb */
 
 #endif /* ppc-tdep.h */

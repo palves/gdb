@@ -37,6 +37,9 @@
 #endif
 #include <signal.h>
 
+namespace gdb {
+
+
 static struct {
   int *fd_map;
   int fd_map_size;
@@ -1306,3 +1309,5 @@ initialize_remote_fileio (struct cmd_list_element *remote_set_cmdlist,
 	   _("Show if the host system(3) call is allowed for the target."),
 	   &remote_show_cmdlist);
 }
+
+} /* namespace gdb */

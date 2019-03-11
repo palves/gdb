@@ -23,6 +23,9 @@
 #include "gdbcmd.h"
 #include "cli/cli-utils.h"
 
+namespace gdb {
+
+
 /* Is serial being debugged?  */
 
 static unsigned int global_serial_debug_p;
@@ -738,3 +741,5 @@ When non-zero, serial port debugging is enabled."),
 			     NULL, /* FIXME: i18n: */
 			     &setdebuglist, &showdebuglist);
 }
+
+} /* namespace gdb */

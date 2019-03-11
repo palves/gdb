@@ -20,6 +20,8 @@
 #ifndef PPC_OBSD_TDEP_H
 #define PPC_OBSD_TDEP_H
 
+namespace gdb {
+
 struct regset;
 struct regcache;
 
@@ -48,5 +50,7 @@ extern void ppcobsd_supply_gregset (const struct regset *regset,
 extern void ppcobsd_collect_gregset (const struct regset *regset,
 				     const struct regcache *regcache,
 				     int regnum, void *gregs, size_t len);
+
+} /* namespace gdb */
 
 #endif /* ppc-obsd-tdep.h */

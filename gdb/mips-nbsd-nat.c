@@ -30,6 +30,9 @@
 #include "mips-nbsd-tdep.h"
 #include "inf-ptrace.h"
 
+namespace gdb {
+
+
 class mips_nbsd_nat_target final : public inf_ptrace_target
 {
   void fetch_registers (struct regcache *, int) override;
@@ -118,3 +121,5 @@ _initialize_mipsnbsd_nat (void)
 {
   add_inf_child_target (&the_mips_nbsd_nat_target);
 }
+
+} /* namespace gdb */

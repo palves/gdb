@@ -23,6 +23,8 @@
 #include "coff/sym.h"		/* Needed for PDR below.  */
 #include "coff/symconst.h"
 
+namespace gdb {
+
 /* Specific information about a procedure.  Architectures (ab)uses
    this to save memory.  */
 
@@ -45,5 +47,7 @@ extern void mdebug_build_psymtabs (minimal_symbol_reader &,
 extern void elfmdebug_build_psymtabs (struct objfile *,
 				      const struct ecoff_debug_swap *,
 				      asection *);
+
+} /* namespace gdb */
 
 #endif /* MDEBUGREAD_H */

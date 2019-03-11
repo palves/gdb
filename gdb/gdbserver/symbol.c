@@ -20,6 +20,9 @@
 #include "server.h"
 #include "common/symbol.h"
 
+namespace gdb {
+
+
 /* See common/symbol.h.  */
 
 int
@@ -30,3 +33,5 @@ find_minimal_symbol_address (const char *name, CORE_ADDR *addr,
 
   return look_up_one_symbol (name, addr, 1) != 1;
 }
+
+} /* namespace gdb */

@@ -24,6 +24,8 @@
 
 #include "tui/tui-data.h"
 
+namespace gdb {
+
 struct symtab;
 struct tui_win_info;
 
@@ -38,5 +40,7 @@ extern void tui_show_symtab_source (struct gdbarch *, struct symtab *,
 extern int tui_source_is_displayed (const char *);
 extern void tui_vertical_source_scroll (enum tui_scroll_direction,
 					int);
+
+} /* namespace gdb */
 
 #endif /* TUI_TUI_SOURCE_H */

@@ -33,6 +33,9 @@
 #include "osabi.h"
 #include "gdbcore.h"
 
+namespace gdb {
+
+
 enum gdb_regnum
 {
   E_R0_REGNUM,  E_R1_REGNUM,  E_R2_REGNUM,  E_R3_REGNUM, 
@@ -866,3 +869,5 @@ _initialize_iq2000_tdep (void)
 {
   register_gdbarch_init (bfd_arch_iq2000, iq2000_gdbarch_init);
 }
+
+} /* namespace gdb */

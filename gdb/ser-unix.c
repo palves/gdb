@@ -33,6 +33,9 @@
 #include "common/filestuff.h"
 #include <termios.h>
 
+namespace gdb {
+
+
 struct hardwire_ttystate
   {
     struct termios termios;
@@ -523,3 +526,5 @@ ser_unix_write_prim (struct serial *scb, const void *buf, size_t len)
 {
   return write (scb->fd, buf, len);
 }
+
+} /* namespace gdb */

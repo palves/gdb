@@ -32,6 +32,9 @@
 #include "typeprint.h"
 #include "cp-abi.h"
 
+namespace gdb {
+
+
 static void m2_print_bounds (struct type *type,
 			     struct ui_file *stream, int show, int level,
 			     int print_high);
@@ -619,3 +622,5 @@ m2_enum (struct type *type, struct ui_file *stream, int show, int level)
       fprintf_filtered (stream, ")");
     }
 }
+
+} /* namespace gdb */

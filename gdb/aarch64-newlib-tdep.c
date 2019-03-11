@@ -24,6 +24,9 @@
 #include "aarch64-tdep.h"
 #include "osabi.h"
 
+namespace gdb {
+
+
 /* Implement the 'init_osabi' method of struct gdb_osabi_handler.  */
 
 static void
@@ -42,3 +45,5 @@ _initialize_aarch64_newlib_tdep (void)
   gdbarch_register_osabi (bfd_arch_aarch64, 0, GDB_OSABI_NEWLIB,
 			  aarch64_newlib_init_abi);
 }
+
+} /* namespace gdb */

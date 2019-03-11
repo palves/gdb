@@ -27,6 +27,9 @@
 #include "python.h"
 #include "python-internal.h"
 
+namespace gdb {
+
+
 static const char enabled_field_name[] = "enabled";
 static const char match_method_name[] = "match";
 static const char get_arg_types_method_name[] = "get_arg_types";
@@ -612,3 +615,5 @@ gdbpy_initialize_xmethods (void)
 
   return 1;
 }
+
+} /* namespace gdb */

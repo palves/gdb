@@ -31,6 +31,9 @@
 #include "gdbtypes.h"
 #include "dwarf2loc.h"
 
+namespace gdb {
+
+
 
 
 /* Compute the name of the pointer representing a local symbol's
@@ -656,3 +659,5 @@ generate_c_for_variable_locations (compile_instance *compiler,
 
   return registers_used;
 }
+
+} /* namespace gdb */

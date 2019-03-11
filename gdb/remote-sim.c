@@ -43,6 +43,9 @@
 #include "gdbthread.h"
 #include "common/byte-vector.h"
 
+namespace gdb {
+
+
 /* Prototypes */
 
 static void init_callbacks (void);
@@ -1329,3 +1332,5 @@ _initialize_remote_sim (void)
   sim_inferior_data_key
     = register_inferior_data_with_cleanup (NULL, sim_inferior_data_cleanup);
 }
+
+} /* namespace gdb */

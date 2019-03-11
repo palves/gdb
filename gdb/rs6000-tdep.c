@@ -86,6 +86,9 @@
 #include "features/rs6000/powerpc-e500.c"
 #include "features/rs6000/rs6000.c"
 
+namespace gdb {
+
+
 /* Determine if regnum is an SPE pseudo-register.  */
 #define IS_SPE_PSEUDOREG(tdep, regnum) ((tdep)->ppc_ev0_regnum >= 0 \
     && (regnum) >= (tdep)->ppc_ev0_regnum \
@@ -7403,3 +7406,5 @@ of its first byte."),
 			   NULL, show_powerpc_exact_watchpoints,
 			   &setpowerpccmdlist, &showpowerpccmdlist);
 }
+
+} /* namespace gdb */

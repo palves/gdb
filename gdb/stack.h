@@ -20,6 +20,8 @@
 #ifndef STACK_H
 #define STACK_H
 
+namespace gdb {
+
 /* Access method used by the MI -stack-select-frame command to switch to
    frame FI.  This differs from SELECT_FRAME in that the observers for a
    user selected context change will be triggered.  */
@@ -51,5 +53,7 @@ CORE_ADDR get_last_displayed_addr (void);
 struct symtab* get_last_displayed_symtab (void);
 int get_last_displayed_line (void);
 symtab_and_line get_last_displayed_sal ();
+
+} /* namespace gdb */
 
 #endif /* #ifndef STACK_H */

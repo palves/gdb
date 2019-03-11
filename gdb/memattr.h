@@ -20,6 +20,8 @@
 #ifndef MEMATTR_H
 #define MEMATTR_H
 
+namespace gdb {
+
 enum mem_access_mode
 {
   MEM_NONE,                     /* Memory that is not physically present.  */
@@ -128,5 +130,7 @@ struct mem_region
 extern struct mem_region *lookup_mem_region (CORE_ADDR);
 
 void invalidate_target_mem_regions (void);
+
+} /* namespace gdb */
 
 #endif	/* MEMATTR_H */

@@ -17,6 +17,8 @@
 #ifndef CLI_CLI_SCRIPT_H
 #define CLI_CLI_SCRIPT_H
 
+namespace gdb {
+
 struct ui_file;
 struct cmd_list_element;
 
@@ -167,5 +169,7 @@ extern void print_command_trace (const char *cmd, ...)
 /* Exported to event-top.c */
 
 extern void reset_command_nest_depth (void);
+
+} /* namespace gdb */
 
 #endif /* CLI_CLI_SCRIPT_H */

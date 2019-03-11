@@ -20,6 +20,8 @@
 #ifndef GDB_STABS_H
 #define GDB_STABS_H
 
+namespace gdb {
+
 /* This file exists to hold the common definitions required of most of
    the symbol-readers that end up using stabs.  The common use of
    these `symbol-type-specific' customizations of the generic data
@@ -73,5 +75,7 @@ struct dbx_symfile_info
 #define DBX_DATA_SECTION(o)	(DBX_SYMFILE_INFO(o)->data_section)
 #define DBX_BSS_SECTION(o)	(DBX_SYMFILE_INFO(o)->bss_section)
 #define DBX_STAB_SECTION(o)	(DBX_SYMFILE_INFO(o)->stab_section)
+
+} /* namespace gdb */
 
 #endif /* GDB_STABS_H */

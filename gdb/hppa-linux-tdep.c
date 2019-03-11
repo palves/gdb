@@ -34,6 +34,9 @@
 #include "linux-tdep.h"
 #include "elf/common.h"
 
+namespace gdb {
+
+
 /* Map DWARF DBX register numbers to GDB register numbers.  */
 static int
 hppa_dwarf_reg_to_regnum (struct gdbarch *gdbarch, int reg)
@@ -534,3 +537,5 @@ _initialize_hppa_linux_tdep (void)
   gdbarch_register_osabi (bfd_arch_hppa, bfd_mach_hppa20w,
 			  GDB_OSABI_LINUX, hppa_linux_init_abi);
 }
+
+} /* namespace gdb */

@@ -21,6 +21,8 @@
 #ifndef COMMON_JOB_CONTROL_H
 #define COMMON_JOB_CONTROL_H
 
+namespace gdb {
+
 /* Do we have job control?  Can be assumed to always be the same
    within a given run of GDB.  Use in gdb/inflow.c and
    common/common-inflow.c.  */
@@ -34,5 +36,7 @@ extern int gdb_setpgid ();
    accordingly.  This function must be called before any use of
    JOB_CONTROL.  */
 extern void have_job_control ();
+
+} /* namespace gdb */
 
 #endif /* COMMON_JOB_CONTROL_H */

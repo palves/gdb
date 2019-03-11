@@ -59,6 +59,9 @@ extern const struct target_desc *tdesc_mips64_dsp_linux;
 
 #include <asm/ptrace.h>
 
+namespace gdb {
+
+
 #ifndef DSP_BASE
 #define DSP_BASE 71
 #define DSP_CONTROL 77
@@ -976,3 +979,5 @@ initialize_low_arch (void)
 
   initialize_regsets_info (&mips_regsets_info);
 }
+
+} /* namespace gdb */

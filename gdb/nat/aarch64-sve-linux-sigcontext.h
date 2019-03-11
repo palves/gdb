@@ -19,6 +19,8 @@
 #ifndef NAT_AARCH64_SVE_LINUX_SIGCONTEXT_H
 #define NAT_AARCH64_SVE_LINUX_SIGCONTEXT_H
 
+namespace gdb {
+
 #define SVE_MAGIC	0x53564501
 
 struct sve_context {
@@ -263,5 +265,7 @@ struct user_sve_header {
 	 (((flags) & SVE_PT_REGS_MASK) == SVE_PT_REGS_SVE ?		\
 		  SVE_PT_SVE_OFFSET + SVE_PT_SVE_SIZE(vq, flags)	\
 		: SVE_PT_FPSIMD_OFFSET + SVE_PT_FPSIMD_SIZE(vq, flags))
+
+} /* namespace gdb */
 
 #endif /* NAT_AARCH64_SVE_LINUX_SIGCONTEXT_H */

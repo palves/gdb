@@ -41,6 +41,9 @@
 #include "moxie-tdep.h"
 #include <algorithm>
 
+namespace gdb {
+
+
 /* Use an invalid address value as 'not available' marker.  */
 enum { REG_UNAVAIL = (CORE_ADDR) -1 };
 
@@ -1141,3 +1144,5 @@ _initialize_moxie_tdep (void)
 {
   register_gdbarch_init (bfd_arch_moxie, moxie_gdbarch_init);
 }
+
+} /* namespace gdb */

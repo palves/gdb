@@ -3,6 +3,9 @@
 
 #include "common/tdesc.h"
 
+namespace gdb {
+
+
 static int
 create_feature_tic6x_c6xp (struct target_desc *result, long regnum)
 {
@@ -14,3 +17,5 @@ create_feature_tic6x_c6xp (struct target_desc *result, long regnum)
   tdesc_create_reg (feature, "RILC", regnum++, 1, NULL, 32, "uint32");
   return regnum;
 }
+
+} /* namespace gdb */

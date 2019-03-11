@@ -20,6 +20,8 @@
 #ifndef I386_LINUX_TDEP_H
 #define I386_LINUX_TDEP_H
 
+namespace gdb {
+
 /* The Linux kernel pretends there is an additional "orig_eax"
    register.  Since GDB needs access to that register to be able to
    properly restart system calls when necessary (see
@@ -76,5 +78,7 @@ extern int i386_linux_gregset_reg_offset[];
 
 /* Return x86 siginfo type.  */
 extern struct type *x86_linux_get_siginfo_type (struct gdbarch *gdbarch);
+
+} /* namespace gdb */
 
 #endif /* i386-linux-tdep.h */

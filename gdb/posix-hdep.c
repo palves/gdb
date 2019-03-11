@@ -22,6 +22,9 @@
 
 #include "gdb_select.h"
 
+namespace gdb {
+
+
 /* Wrapper for select.  Nothing special needed on POSIX platforms.  */
 
 int
@@ -30,3 +33,5 @@ gdb_select (int n, fd_set *readfds, fd_set *writefds, fd_set *exceptfds,
 {
   return select (n, readfds, writefds, exceptfds, timeout);
 }
+
+} /* namespace gdb */

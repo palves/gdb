@@ -29,6 +29,8 @@
 #include "common/preprocessor.h"
 #include "common/traits.h"
 
+namespace gdb {
+
 /* Macro that uses SFINAE magic to detect whether the EXPR expression
    is either valid or ill-formed, at compile time, without actually
    producing compile-time errors.  I.e., check that bad uses of the
@@ -104,5 +106,7 @@
 				    typename T3, typename T4),		\
 			ESC_PARENS (T1, T2, T3, T4),			\
 			VALID, EXPR_TYPE, EXPR)
+
+} /* namespace gdb */
 
 #endif /* COMMON_VALID_EXPR_H */

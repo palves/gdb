@@ -20,6 +20,9 @@
 #include <limits.h>
 #include <sys/ptrace.h>
 
+namespace gdb {
+
+
 /* The following two typedefs are defined in a .h file which is not
    in the standard include path (/sys/include/family/ppc/ucontext.h),
    so we just duplicate them here.  */
@@ -183,3 +186,5 @@ struct lynx_regset_info lynx_target_regsets[] = {
 struct lynx_target_ops the_low_target = {
   lynx_ppc_arch_setup,
 };
+
+} /* namespace gdb */

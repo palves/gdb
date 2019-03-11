@@ -20,6 +20,8 @@
 #ifndef I386_BSD_NAT_H
 #define I386_BSD_NAT_H
 
+namespace gdb {
+
 /* Helper functions.  See definitions.  */
 extern void i386bsd_fetch_inferior_registers (struct regcache *regcache,
 					      int regnum);
@@ -38,5 +40,7 @@ public:
   void store_registers (struct regcache *regcache, int regnum) override
   { i386bsd_store_inferior_registers (regcache, regnum); }
 };
+
+} /* namespace gdb */
 
 #endif /* i386-bsd-nat.h */

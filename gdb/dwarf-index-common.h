@@ -20,6 +20,8 @@
 #ifndef DWARF_INDEX_COMMON_H
 #define DWARF_INDEX_COMMON_H
 
+namespace gdb {
+
 /* The suffix for an index file.  */
 #define INDEX4_SUFFIX ".gdb-index"
 #define INDEX5_SUFFIX ".debug_names"
@@ -64,5 +66,7 @@ hashval_t mapped_index_string_hash (int index_version, const void *p);
 /* Symbol name hashing function as specified by DWARF-5.  */
 
 uint32_t dwarf5_djb_hash (const char *str_);
+
+} /* namespace gdb */
 
 #endif /* DWARF_INDEX_COMMON_H */

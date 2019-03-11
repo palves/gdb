@@ -37,6 +37,9 @@
 
 #ifndef USE_WIN32API
 #include <sys/cygwin.h>
+
+namespace gdb {
+
 #endif
 
 #define OUTMSG(X) do { printf X; fflush (stderr); } while (0)
@@ -1863,3 +1866,5 @@ initialize_low (void)
   set_target_ops (&win32_target_ops);
   the_low_target.arch_setup ();
 }
+
+} /* namespace gdb */

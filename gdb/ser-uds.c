@@ -24,6 +24,9 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 
+namespace gdb {
+
+
 #ifndef UNIX_PATH_MAX
 #define UNIX_PATH_MAX sizeof(((struct sockaddr_un *) NULL)->sun_path)
 #endif
@@ -116,3 +119,5 @@ _initialize_ser_socket (void)
 {
   serial_add_interface (&uds_ops);
 }
+
+} /* namespace gdb */

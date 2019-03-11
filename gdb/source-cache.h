@@ -19,6 +19,8 @@
 #ifndef SOURCE_CACHE_H
 #define SOURCE_CACHE_H
 
+namespace gdb {
+
 /* This caches highlighted source text, keyed by the source file's
    full name.  A size-limited LRU cache is used.
 
@@ -75,5 +77,7 @@ private:
 
 /* The global source cache.  */
 extern source_cache g_source_cache;
+
+} /* namespace gdb */
 
 #endif /* SOURCE_CACHE_H */

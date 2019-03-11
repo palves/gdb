@@ -64,6 +64,9 @@
 #include <set>
 #include <map>
 
+namespace gdb {
+
+
 enum
   {
     FROM_TTY = 0
@@ -2730,3 +2733,5 @@ Tells GDB whether MI should be in asynchronous mode."),
   c = add_alias_cmd ("target-async", "mi-async", class_run, 0, &showlist);
   deprecate_cmd (c, "show mi-async");
 }
+
+} /* namespace gdb */

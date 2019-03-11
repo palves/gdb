@@ -22,6 +22,8 @@
 
 #include "common/preprocessor.h"
 
+namespace gdb {
+
 int agent_run_command (int pid, const char *cmd, int len);
 
 int agent_look_up_symbols (void *);
@@ -64,5 +66,7 @@ enum agent_capa
 int agent_capability_check (enum agent_capa);
 
 void agent_capability_invalidate (void);
+
+} /* namespace gdb */
 
 #endif /* COMMON_AGENT_H */

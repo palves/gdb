@@ -47,6 +47,9 @@
 #include "common/pathstuff.h"
 #include "source-cache.h"
 
+namespace gdb {
+
+
 #define OPEN_MODE (O_RDONLY | O_BINARY)
 #define FDOPEN_MODE FOPEN_RB
 
@@ -1995,3 +1998,5 @@ By default, relative filenames are displayed."),
 			&setlist, &showlist);
 
 }
+
+} /* namespace gdb */

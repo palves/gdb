@@ -20,6 +20,8 @@
 #ifndef NAT_X86_LINUX_DREGS_H
 #define NAT_X86_LINUX_DREGS_H
 
+namespace gdb {
+
 /* Return the address stored in the current inferior's debug register
    REGNUM.  */
 
@@ -49,5 +51,7 @@ extern unsigned long x86_linux_dr_get_status (void);
    mirror have been changed.  */
 
 extern void x86_linux_update_debug_registers (struct lwp_info *lwp);
+
+} /* namespace gdb */
 
 #endif /* NAT_X86_LINUX_DREGS_H */

@@ -39,6 +39,9 @@
 #include <fcntl.h>
 #include <unistd.h>
 
+namespace gdb {
+
+
 static const target_info inf_child_target_info = {
   "native",
   N_("Native process"),
@@ -417,3 +420,5 @@ add_inf_child_target (inf_child_target *target)
   set_native_target (target);
   add_target (inf_child_target_info, inf_child_open_target);
 }
+
+} /* namespace gdb */

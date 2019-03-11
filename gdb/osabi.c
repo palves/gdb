@@ -26,6 +26,9 @@
 
 #include "elf-bfd.h"
 
+namespace gdb {
+
+
 #ifndef GDB_OSABI_DEFAULT
 #define GDB_OSABI_DEFAULT GDB_OSABI_UNKNOWN
 #endif
@@ -675,3 +678,5 @@ _initialize_gdb_osabi (void)
 			&setlist, &showlist);
   user_osabi_state = osabi_auto;
 }
+
+} /* namespace gdb */

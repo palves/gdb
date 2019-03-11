@@ -30,6 +30,9 @@
 
 #include "mips-tdep.h"
 
+namespace gdb {
+
+
 /* Fill in the register cache *THIS_CACHE for THIS_FRAME for use
    in the SDE frame unwinder.  */
 
@@ -265,3 +268,5 @@ _initialize_mips_sde_tdep (void)
 
   gdbarch_register_osabi (bfd_arch_mips, 0, GDB_OSABI_SDE, mips_sde_init_abi);
 }
+
+} /* namespace gdb */

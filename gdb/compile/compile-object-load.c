@@ -34,6 +34,9 @@
 #include "arch-utils.h"
 #include <algorithm>
 
+namespace gdb {
+
+
 /* Add inferior mmap memory range ADDR..ADDR+SIZE (exclusive) to the
    list.  */
 
@@ -803,3 +806,5 @@ compile_object_load (const compile_file_names &file_names,
 
   return retval;
 }
+
+} /* namespace gdb */

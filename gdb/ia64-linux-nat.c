@@ -43,6 +43,9 @@
 
 #include "inf-ptrace.h"
 
+namespace gdb {
+
+
 class ia64_linux_nat_target final : public linux_nat_target
 {
 public:
@@ -928,3 +931,5 @@ _initialize_ia64_linux_nat (void)
   linux_target = &the_ia64_linux_nat_target;
   add_inf_child_target (&the_ia64_linux_nat_target);
 }
+
+} /* namespace gdb */

@@ -27,6 +27,9 @@
 #include "trad-frame.h"
 #include "frame-base.h"
 
+namespace gdb {
+
+
 struct frame_data
 {
   const struct tramp_frame *tramp_frame;
@@ -171,3 +174,5 @@ tramp_frame_prepend_unwinder (struct gdbarch *gdbarch,
   unwinder->prev_register = tramp_frame_prev_register;
   frame_unwind_prepend_unwinder (gdbarch, unwinder);
 }
+
+} /* namespace gdb */

@@ -30,6 +30,9 @@
 #include "gdbthread.h"
 #include "infcall.h"
 
+namespace gdb {
+
+
 struct dummy_frame_id
 {
   /* This frame's ID.  Must match the value returned by
@@ -438,3 +441,5 @@ _initialize_dummy_frame (void)
 
   gdb::observers::inferior_created.attach (cleanup_dummy_frames);
 }
+
+} /* namespace gdb */

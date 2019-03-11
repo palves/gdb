@@ -19,6 +19,9 @@
 #include "defs.h"
 #include "ui-style.h"
 
+namespace gdb {
+
+
 /* A regular expression that is used for matching ANSI terminal escape
    sequences.  */
 
@@ -411,3 +414,5 @@ _initialize_ui_style ()
      error.  */
   gdb_assert (code == 0);
 }
+
+} /* namespace gdb */

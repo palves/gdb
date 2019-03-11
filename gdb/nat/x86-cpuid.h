@@ -22,6 +22,8 @@
 /* Always include the header for the cpu bit defines.  */
 #include "x86-gcc-cpuid.h"
 
+namespace gdb {
+
 #if defined(__i386__) || defined(__x86_64__)
 
 /* Return cpuid data for requested cpuid level, as found in returned
@@ -59,5 +61,7 @@ x86_cpuid (unsigned int __level,
 }
 
 #endif /* i386 && x86_64 */
+
+} /* namespace gdb */
 
 #endif /* NAT_X86_CPUID_H */

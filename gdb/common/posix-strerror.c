@@ -19,6 +19,9 @@
 
 #include "common-defs.h"
 
+namespace gdb {
+
+
 /* Implementation of safe_strerror as defined in common-utils.h.  */
 
 char *
@@ -36,3 +39,5 @@ safe_strerror (int errnum)
     }
   return (msg);
 }
+
+} /* namespace gdb */

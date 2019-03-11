@@ -18,6 +18,8 @@
 #ifndef YY_REMAP_H
 #define YY_REMAP_H
 
+namespace gdb {
+
 /* Remap normal yacc parser interface names (yyparse, yylex, yyerror,
    etc), as well as gratuitiously global symbol names, so we can have
    multiple yacc generated parsers in gdb.  Note that these are only
@@ -93,5 +95,7 @@
 #endif
 
 #define YYFPRINTF parser_fprintf
+
+} /* namespace gdb */
 
 #endif /* YY_REMAP_H */

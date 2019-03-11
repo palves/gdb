@@ -20,6 +20,8 @@
 #ifndef M2_LANG_H
 #define M2_LANG_H
 
+namespace gdb {
+
 struct type_print_options;
 struct parser_state;
 
@@ -56,5 +58,7 @@ struct builtin_m2_type
 
 /* Return the Modula-2 type table for the specified architecture.  */
 extern const struct builtin_m2_type *builtin_m2_type (struct gdbarch *gdbarch);
+
+} /* namespace gdb */
 
 #endif /* M2_LANG_H */

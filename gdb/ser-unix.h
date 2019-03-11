@@ -20,8 +20,12 @@
 #ifndef SER_UNIX_H
 #define SER_UNIX_H
 
+namespace gdb {
+
 extern int ser_unix_read_prim (struct serial *scb, size_t count);
 extern int ser_unix_write_prim (struct serial *scb, const void *buf, 
 				size_t count);
+
+} /* namespace gdb */
 
 #endif

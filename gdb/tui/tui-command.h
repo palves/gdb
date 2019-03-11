@@ -22,9 +22,13 @@
 #ifndef TUI_TUI_COMMAND_H
 #define TUI_TUI_COMMAND_H
 
+namespace gdb {
+
 extern unsigned int tui_dispatch_ctrl_char (unsigned int);
 
 /* Refresh the command window.  */
 extern void tui_refresh_cmd_win (void);
+
+} /* namespace gdb */
 
 #endif /* TUI_TUI_COMMAND_H */

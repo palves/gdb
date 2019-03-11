@@ -20,9 +20,13 @@
 #ifndef SOLIB_DARWIN_H
 #define SOLIB_DARWIN_H
 
+namespace gdb {
+
 struct objfile;
 struct target_so_ops;
 
 extern struct target_so_ops darwin_so_ops;
+
+} /* namespace gdb */
 
 #endif /* solib-darwin.h */

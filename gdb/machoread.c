@@ -35,6 +35,9 @@
 #include <string>
 #include <algorithm>
 
+namespace gdb {
+
+
 /* If non-zero displays debugging message.  */
 static unsigned int mach_o_debug_level = 0;
 
@@ -980,3 +983,5 @@ _initialize_machoread (void)
 			     NULL, NULL, NULL,
 			     &setdebuglist, &showdebuglist);
 }
+
+} /* namespace gdb */

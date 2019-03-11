@@ -22,6 +22,8 @@
 
 #include "symtab.h"
 
+namespace gdb {
+
 /* Language specific builtin types for D.  Any additional types added
    should be kept in sync with enum d_primitive_types, where these
    types are documented.  */
@@ -83,5 +85,7 @@ extern void d_val_print (struct type *type,
 			 struct ui_file *stream, int recurse,
 			 struct value *val,
 			 const struct value_print_options *options);
+
+} /* namespace gdb */
 
 #endif /* !defined (D_LANG_H) */

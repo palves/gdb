@@ -27,6 +27,9 @@
 #include "solib.h"
 #include "block.h"
 
+namespace gdb {
+
+
 typedef struct
 {
   PyObject_HEAD
@@ -603,3 +606,5 @@ PyTypeObject pspace_object_type =
   0,				  /* tp_alloc */
   pspy_new,			  /* tp_new */
 };
+
+} /* namespace gdb */

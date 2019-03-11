@@ -23,6 +23,9 @@
 #include "linux-aarch32-low.h"
 #include <inttypes.h>
 
+namespace gdb {
+
+
 /* All possible aarch64 target descriptors.  */
 struct target_desc *tdesc_aarch64_list[AARCH64_MAX_SVE_VQ + 1];
 
@@ -55,3 +58,5 @@ aarch64_linux_read_description (uint64_t vq)
 
   return tdesc;
 }
+
+} /* namespace gdb */

@@ -22,6 +22,9 @@
 #include "frame.h"
 #include "gdb_obstack.h"
 
+namespace gdb {
+
+
 /* A default frame base implementations.  If it wasn't for the old
    DEPRECATED_FRAME_LOCALS_ADDRESS and DEPRECATED_FRAME_ARGS_ADDRESS,
    these could be combined into a single function.  All architectures
@@ -125,3 +128,5 @@ _initialize_frame_base (void)
 {
   frame_base_data = gdbarch_data_register_pre_init (frame_base_init);
 }
+
+} /* namespace gdb */

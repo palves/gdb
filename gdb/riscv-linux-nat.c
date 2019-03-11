@@ -28,6 +28,9 @@
 
 #include <sys/ptrace.h>
 
+namespace gdb {
+
+
 /* RISC-V Linux native additions to the default linux support.  */
 
 class riscv_linux_nat_target final : public linux_nat_target
@@ -317,3 +320,5 @@ _initialize_riscv_linux_nat (void)
   linux_target = &the_riscv_linux_nat_target;
   add_inf_child_target (&the_riscv_linux_nat_target);
 }
+
+} /* namespace gdb */

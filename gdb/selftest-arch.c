@@ -23,6 +23,9 @@
 #include "selftest-arch.h"
 #include "arch-utils.h"
 
+namespace gdb {
+
+
 namespace selftests {
 
 /* A kind of selftest that calls the test function once for each gdbarch known
@@ -105,3 +108,5 @@ reset ()
 }
 } // namespace selftests
 #endif /* GDB_SELF_TEST */
+
+} /* namespace gdb */

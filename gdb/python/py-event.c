@@ -20,6 +20,9 @@
 #include "defs.h"
 #include "py-event.h"
 
+namespace gdb {
+
+
 void
 evpy_dealloc (PyObject *self)
 {
@@ -161,3 +164,5 @@ PyTypeObject event_object_type =
   0,                                          /* tp_init */
   0                                           /* tp_alloc */
 };
+
+} /* namespace gdb */

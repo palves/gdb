@@ -45,6 +45,9 @@
 #include "readline/readline.h"
 #include "readline/history.h"
 
+namespace gdb {
+
+
 /* readline defines this.  */
 #undef savestring
 
@@ -1240,3 +1243,5 @@ gdb_disable_readline (void)
     gdb_rl_callback_handler_remove ();
   delete_file_handler (ui->input_fd);
 }
+
+} /* namespace gdb */

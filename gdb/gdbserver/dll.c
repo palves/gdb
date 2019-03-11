@@ -20,6 +20,9 @@
 
 #include <algorithm>
 
+namespace gdb {
+
+
 /* An "unspecified" CORE_ADDR, for match_dll.  */
 #define UNSPECIFIED_CORE_ADDR (~(CORE_ADDR) 0)
 
@@ -78,3 +81,5 @@ clear_dlls (void)
 {
   all_dlls.clear ();
 }
+
+} /* namespace gdb */

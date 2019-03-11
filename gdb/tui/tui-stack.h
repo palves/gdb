@@ -22,10 +22,14 @@
 #ifndef TUI_TUI_STACK_H
 #define TUI_TUI_STACK_H
 
+namespace gdb {
+
 struct frame_info;
 
 extern void tui_update_locator_fullname (const char *);
 extern void tui_show_locator_content (void);
 extern int tui_show_frame_info (struct frame_info *);
+
+} /* namespace gdb */
 
 #endif /* TUI_TUI_STACK_H */

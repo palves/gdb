@@ -22,6 +22,9 @@
 
 #ifdef HAVE_GETAUXVAL
 #include <sys/auxv.h>
+
+namespace gdb {
+
 #endif
 
 #ifdef __powerpc64__
@@ -93,3 +96,5 @@ ppc_linux_target_wordsize (int tid)
 
   return wordsize;
 }
+
+} /* namespace gdb */

@@ -33,6 +33,9 @@
 #include "solib-svr4.h"
 #include "bsd-uthread.h"
 
+namespace gdb {
+
+
 /* Older OpenBSD versions used the traditional NetBSD core file
    format, even for ports that use ELF.  These core files don't use
    multiple register sets.  Instead, the general-purpose and
@@ -446,3 +449,5 @@ _initialize_sparc64obsd_tdep (void)
   gdbarch_register_osabi (bfd_arch_sparc, bfd_mach_sparc_v9,
 			  GDB_OSABI_OPENBSD, sparc64obsd_init_abi);
 }
+
+} /* namespace gdb */

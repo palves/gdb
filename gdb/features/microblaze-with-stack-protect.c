@@ -5,6 +5,9 @@
 #include "osabi.h"
 #include "target-descriptions.h"
 
+namespace gdb {
+
+
 struct target_desc *tdesc_microblaze_with_stack_protect;
 static void
 initialize_tdesc_microblaze_with_stack_protect (void)
@@ -77,3 +80,5 @@ initialize_tdesc_microblaze_with_stack_protect (void)
 
   tdesc_microblaze_with_stack_protect = result;
 }
+
+} /* namespace gdb */

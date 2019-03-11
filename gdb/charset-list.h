@@ -20,6 +20,8 @@
 #ifndef CHARSET_LIST_H
 #define CHARSET_LIST_H
 
+namespace gdb {
+
 /* Note that the first entry must always be "auto".
    The remaining entries were created by running this script:
    
@@ -1191,5 +1193,7 @@
 "WINSAMI2", \
 "WS2", \
 "YU",
+
+} /* namespace gdb */
 
 #endif /* CHARSET_LIST_H */

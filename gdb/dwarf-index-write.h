@@ -23,6 +23,8 @@
 #include "symfile.h"
 #include "dwarf2read.h"
 
+namespace gdb {
+
 /* Create an index file for OBJFILE in the directory DIR.  BASENAME is the
    desired filename, minus the extension, which gets added by this function
    based on INDEX_KIND.  */
@@ -30,5 +32,7 @@
 extern void write_psymtabs_to_index
   (struct dwarf2_per_objfile *dwarf2_per_objfile, const char *dir,
    const char *basename, dw_index_kind index_kind);
+
+} /* namespace gdb */
 
 #endif /* DWARF_INDEX_WRITE_H */

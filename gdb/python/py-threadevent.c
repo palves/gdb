@@ -20,6 +20,9 @@
 #include "infrun.h"
 #include "gdbthread.h"
 
+namespace gdb {
+
+
 /* See py-event.h.  */
 
 gdbpy_ref<>
@@ -52,3 +55,5 @@ create_thread_event_object (PyTypeObject *py_type, PyObject *thread)
 
   return thread_event_obj;
 }
+
+} /* namespace gdb */

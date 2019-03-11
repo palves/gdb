@@ -25,6 +25,9 @@
 #include "auto-load.h"
 #include "python-internal.h"
 
+namespace gdb {
+
+
 /* User-settable option to enable/disable auto-loading of Python scripts:
    set auto-load python-scripts on|off
    This is true if we should auto-load associated Python scripts when an
@@ -103,3 +106,5 @@ Print the list of automatically loaded Python scripts, deprecated."));
 
   return 0;
 }
+
+} /* namespace gdb */

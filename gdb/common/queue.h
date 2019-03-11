@@ -20,6 +20,8 @@
 #ifndef COMMON_QUEUE_H
 #define COMMON_QUEUE_H
 
+namespace gdb {
+
 /* These macros implement functions and structs for a general queue.
    Macro 'DEFINE_QUEUE_P(TYPEDEF)' is to define the new queue type for
    TYPEDEF', and macro 'DECLARE_QUEUE_P' is to declare external queue
@@ -294,5 +296,7 @@ extern int							\
 extern void							\
   queue_ ## TYPE ## _remove_elem (QUEUE (TYPE) *q,		\
 				  QUEUE_ITER (TYPE) *iter);	\
+
+} /* namespace gdb */
 
 #endif /* COMMON_QUEUE_H */

@@ -22,6 +22,8 @@
 
 #include "common/byte-vector.h"
 
+namespace gdb {
+
 /* Path utilities.  */
 
 /* Return the real path of FILENAME, expanding all the symbolic links.
@@ -91,5 +93,7 @@ extern const char *get_shell ();
    /tmp/foo -> /tmp/foo-XXXXXX).  */
 
 extern gdb::char_vector make_temp_filename (const std::string &f);
+
+} /* namespace gdb */
 
 #endif /* COMMON_PATHSTUFF_H */

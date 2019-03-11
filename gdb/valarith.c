@@ -28,6 +28,9 @@
 #include "infcall.h"
 #include "common/byte-vector.h"
 
+namespace gdb {
+
+
 /* Define whether or not the C operator '/' truncates towards zero for
    differently signed operands (truncation direction is undefined in C).  */
 
@@ -1745,3 +1748,5 @@ void
 _initialize_valarith (void)
 {
 }
+
+} /* namespace gdb */

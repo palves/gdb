@@ -29,6 +29,9 @@ extern const struct target_desc *tdesc_sh;
 
 #include <asm/ptrace.h>
 
+namespace gdb {
+
+
 #define sh_num_regs 41
 
 /* Currently, don't check/send MQ.  */
@@ -187,3 +190,5 @@ initialize_low_arch (void)
 
   initialize_regsets_info (&sh_regsets_info);
 }
+
+} /* namespace gdb */

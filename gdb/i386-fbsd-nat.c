@@ -106,6 +106,9 @@ i386_fbsd_nat_target::resume (ptid_t ptid, int step, enum gdb_signal signal)
 
 #include "bsd-kvm.h"
 
+namespace gdb {
+
+
 static int
 i386fbsd_supply_pcb (struct regcache *regcache, struct pcb *pcb)
 {
@@ -208,3 +211,5 @@ _initialize_i386fbsd_nat (void)
   }
 #endif
 }
+
+} /* namespace gdb */

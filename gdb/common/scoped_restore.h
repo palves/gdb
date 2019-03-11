@@ -20,6 +20,8 @@
 #ifndef COMMON_SCOPED_RESTORE_H
 #define COMMON_SCOPED_RESTORE_H
 
+namespace gdb {
+
 /* Base class for scoped_restore_tmpl.  */
 class scoped_restore_base
 {
@@ -114,5 +116,7 @@ scoped_restore_tmpl<T> make_scoped_restore (T *var, T2 value)
 {
   return scoped_restore_tmpl<T> (var, value);
 }
+
+} /* namespace gdb */
 
 #endif /* COMMON_SCOPED_RESTORE_H */

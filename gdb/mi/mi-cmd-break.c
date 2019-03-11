@@ -34,6 +34,9 @@
 #include <ctype.h>
 #include "tracepoint.h"
 
+namespace gdb {
+
+
 enum
   {
     FROM_TTY = 0
@@ -514,3 +517,5 @@ mi_cmd_break_commands (const char *command, char **argv, int argc)
   breakpoint_set_commands (b, std::move (break_command));
 }
 
+
+} /* namespace gdb */

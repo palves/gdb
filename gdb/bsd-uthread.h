@@ -20,6 +20,8 @@
 #ifndef BSD_UTHREAD_H
 #define BSD_UTHREAD_H 1
 
+namespace gdb {
+
 /* Set the function that supplies registers for an inactive thread for
    architecture GDBARCH to SUPPLY_UTHREAD.  */
 
@@ -34,5 +36,7 @@ extern void bsd_uthread_set_supply_uthread (struct gdbarch *gdbarch,
 extern void bsd_uthread_set_collect_uthread (struct gdbarch *gdbarch,
 			     void (*collect_uthread) (const struct regcache *,
 						      int, CORE_ADDR));
+
+} /* namespace gdb */
 
 #endif /* bsd-uthread.h */

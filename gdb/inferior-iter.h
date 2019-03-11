@@ -23,6 +23,8 @@
 #include "common/filtered-iterator.h"
 #include "common/safe-iterator.h"
 
+namespace gdb {
+
 /* A forward iterator that iterates over all inferiors.  */
 
 class all_inferiors_iterator
@@ -113,5 +115,7 @@ struct all_non_exited_inferiors_range
   all_non_exited_inferiors_iterator end () const
   { return all_non_exited_inferiors_iterator (); }
 };
+
+} /* namespace gdb */
 
 #endif /* !defined (INFERIOR_ITER_H) */

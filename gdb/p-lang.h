@@ -20,6 +20,8 @@
 #ifndef P_LANG_H
 #define P_LANG_H
 
+namespace gdb {
+
 /* This file is derived from c-lang.h */
 
 struct value;
@@ -83,5 +85,7 @@ extern void pascal_object_print_value_fields (struct type *, const gdb_byte *,
 extern int pascal_object_is_vtbl_ptr_type (struct type *);
 
 extern int pascal_object_is_vtbl_member (struct type *);
+
+} /* namespace gdb */
 
 #endif /* P_LANG_H */

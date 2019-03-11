@@ -25,6 +25,9 @@
 #include "amd64-tdep.h"
 #include "amd64-nat.h"
 
+namespace gdb {
+
+
 /* The following bits of code help with implementing debugging 32-bit
    code natively on AMD64.  The idea is to define two mappings between
    the register number as used by GDB and the register set used by the
@@ -164,3 +167,5 @@ amd64_collect_native_gregset (const struct regcache *regcache,
 	}
     }
 }
+
+} /* namespace gdb */

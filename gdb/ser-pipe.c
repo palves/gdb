@@ -33,6 +33,9 @@
 
 #include <signal.h>
 
+namespace gdb {
+
+
 static int pipe_open (struct serial *scb, const char *name);
 static void pipe_close (struct serial *scb);
 
@@ -233,3 +236,5 @@ _initialize_ser_pipe (void)
 {
   serial_add_interface (&pipe_ops);
 }
+
+} /* namespace gdb */

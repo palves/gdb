@@ -74,6 +74,9 @@
 #include "cli/cli-style.h"
 #include "common/scope-exit.h"
 
+namespace gdb {
+
+
 void (*deprecated_error_begin_hook) (void);
 
 /* Prototypes for local functions */
@@ -3421,3 +3424,5 @@ _initialize_utils (void)
   selftests::register_test ("gdb_realpath", gdb_realpath_tests);
 #endif
 }
+
+} /* namespace gdb */

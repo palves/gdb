@@ -36,6 +36,9 @@
 #include "ada-lang.h"
 #include <ctype.h>
 
+namespace gdb {
+
+
 static int print_selected_record_field_types (struct type *, struct type *,
 					      int, int,
 					      struct ui_file *, int, int,
@@ -953,3 +956,5 @@ ada_print_typedef (struct type *type, struct symbol *new_symbol,
   ada_print_type (type, "", stream, 0, 0, &type_print_raw_options);
   fprintf_filtered (stream, "\n");
 }
+
+} /* namespace gdb */

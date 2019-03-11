@@ -31,6 +31,8 @@
 #include "common/array-view.h"
 #include "cli/cli-script.h"
 
+namespace gdb {
+
 struct block;
 struct gdbpy_breakpoint_object;
 struct gdbscm_breakpoint_object;
@@ -1669,5 +1671,7 @@ extern void print_breakpoint (breakpoint *bp);
 
 /* Command element for the 'commands' command.  */
 extern cmd_list_element *commands_cmd_element;
+
+} /* namespace gdb */
 
 #endif /* !defined (BREAKPOINT_H) */

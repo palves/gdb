@@ -21,6 +21,8 @@
 #include "common/scope-exit.h"
 #include <functional>
 
+namespace gdb {
+
 /* A forward_scope_exit is like scope_exit, but instead of giving it a
    callable, you instead specialize it for a given cleanup function,
    and the generated class automatically has a constructor with the
@@ -119,5 +121,7 @@ private:
 
 #define FORWARD_SCOPE_EXIT(FUNC) \
   detail::forward_scope_exit<decltype (FUNC), FUNC, decltype (FUNC)>
+
+} /* namespace gdb */
 
 #endif /* COMMON_FORWARD_SCOPE_EXIT_H */

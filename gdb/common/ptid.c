@@ -20,7 +20,12 @@
 #include "common-defs.h"
 #include "ptid.h"
 
+namespace gdb {
+
+
 /* See ptid.h for these.  */
 
 ptid_t null_ptid = ptid_t::make_null ();
 ptid_t minus_one_ptid = ptid_t::make_minus_one ();
+
+} /* namespace gdb */

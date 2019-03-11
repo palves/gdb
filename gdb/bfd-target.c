@@ -23,6 +23,9 @@
 #include "exec.h"
 #include "gdb_bfd.h"
 
+namespace gdb {
+
+
 /* A target that wraps a BFD.  */
 
 static const target_info target_bfd_target_info = {
@@ -115,3 +118,5 @@ target_bfd::close ()
 {
   delete this;
 }
+
+} /* namespace gdb */

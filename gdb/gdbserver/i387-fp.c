@@ -20,6 +20,9 @@
 #include "i387-fp.h"
 #include "common/x86-xstate.h"
 
+namespace gdb {
+
+
 static const int num_mpx_bnd_registers = 4;
 static const int num_mpx_cfg_registers = 2;
 static const int num_avx512_k_registers = 8;
@@ -952,3 +955,5 @@ i387_xsave_to_cache (struct regcache *regcache, const void *buf)
 
 /* Default to SSE.  */
 unsigned long long x86_xcr0 = X86_XSTATE_SSE_MASK;
+
+} /* namespace gdb */

@@ -39,6 +39,9 @@
 
 #include "gdb_curses.h"
 
+namespace gdb {
+
+
 /* Get a printable name for the function at the address.
    The symbol name is demangled if demangling is turned on.
    Returns a pointer to a static area holding the result.  */
@@ -500,3 +503,5 @@ tui_update_command (const char *arg, int from_tty)
 {
   execute_command ("frame 0", from_tty);
 }
+
+} /* namespace gdb */

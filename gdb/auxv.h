@@ -22,6 +22,8 @@
 
 #include "target.h"
 
+namespace gdb {
+
 /* See "include/elf/common.h" for the definition of valid AT_* values.  */
 
 /* The default implementation of to_auxv_parse, used by the target
@@ -64,5 +66,7 @@ extern int fprint_target_auxv (struct ui_file *file, struct target_ops *ops);
 
 extern target_xfer_partial_ftype memory_xfer_auxv;
 
+
+} /* namespace gdb */
 
 #endif

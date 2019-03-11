@@ -21,6 +21,9 @@
 #include "process-stratum-target.h"
 #include "inferior.h"
 
+namespace gdb {
+
+
 process_stratum_target::~process_stratum_target ()
 {
 }
@@ -83,3 +86,5 @@ process_stratum_target::has_execution (ptid_t the_ptid)
      hoops.  */
   return the_ptid != null_ptid;
 }
+
+} /* namespace gdb */

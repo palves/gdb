@@ -20,6 +20,8 @@
 #ifndef COMMON_COMMON_DEBUG_H
 #define COMMON_COMMON_DEBUG_H
 
+namespace gdb {
+
 /* Set to nonzero to enable debugging of hardware breakpoint/
    watchpoint support code.  */
 
@@ -37,5 +39,7 @@ extern void debug_printf (const char *format, ...)
 
 extern void debug_vprintf (const char *format, va_list ap)
      ATTRIBUTE_PRINTF (1, 0);
+
+} /* namespace gdb */
 
 #endif /* COMMON_COMMON_DEBUG_H */

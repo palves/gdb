@@ -43,6 +43,9 @@
 #include "features/s390-linux32.c"
 #include "features/s390x-linux64.c"
 
+namespace gdb {
+
+
 /* Holds the current set of options to be passed to the disassembler.  */
 static char *s390_disassembler_options;
 
@@ -7136,3 +7139,5 @@ _initialize_s390_tdep (void)
   initialize_tdesc_s390_linux32 ();
   initialize_tdesc_s390x_linux64 ();
 }
+
+} /* namespace gdb */

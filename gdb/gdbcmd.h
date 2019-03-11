@@ -28,6 +28,8 @@
 #include "ui-out.h"
 #include "cli/cli-script.h"
 
+namespace gdb {
+
 /* Chain containing all defined commands.  */
 
 extern struct cmd_list_element *cmdlist;
@@ -139,5 +141,7 @@ extern void print_command_line (struct command_line *, unsigned int,
 				struct ui_file *);
 extern void print_command_lines (struct ui_out *,
 				 struct command_line *, unsigned int);
+
+} /* namespace gdb */
 
 #endif /* !defined (GDBCMD_H) */

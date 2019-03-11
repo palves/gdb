@@ -23,6 +23,8 @@
 #ifndef CRIS_TDEP_H
 #define CRIS_TDEP_H
 
+namespace gdb {
+
 /* CRIS architecture specific information.  */
 struct gdbarch_tdep
 {
@@ -30,5 +32,7 @@ struct gdbarch_tdep
   const char *cris_mode;
   int cris_dwarf2_cfi;
 };
+
+} /* namespace gdb */
 
 #endif /* CRIS_TDEP_H */

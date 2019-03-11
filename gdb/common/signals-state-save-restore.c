@@ -20,6 +20,9 @@
 
 #include <signal.h>
 
+namespace gdb {
+
+
 /* The original signal actions and mask.  */
 
 #ifdef HAVE_SIGACTION
@@ -115,3 +118,5 @@ restore_original_signals_state (void)
     perror_with_name (("sigprocmask"));
 #endif
 }
+
+} /* namespace gdb */

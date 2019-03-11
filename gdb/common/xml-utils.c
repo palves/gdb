@@ -20,6 +20,9 @@
 #include "common-defs.h"
 #include "xml-utils.h"
 
+namespace gdb {
+
+
 /* See xml-utils.h.  */
 
 std::string
@@ -61,3 +64,5 @@ xml_escape_text_append (std::string *result, const char *text)
 	break;
       }
 }
+
+} /* namespace gdb */

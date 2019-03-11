@@ -20,6 +20,8 @@
 #ifndef MI_MI_MAIN_H
 #define MI_MI_MAIN_H
 
+namespace gdb {
+
 struct ui_file;
 
 extern void mi_load_progress (const char *section_name,
@@ -53,5 +55,7 @@ struct mi_suppress_notification
   int user_selected_context;
 };
 extern struct mi_suppress_notification mi_suppress_notification;
+
+} /* namespace gdb */
 
 #endif /* MI_MI_MAIN_H */

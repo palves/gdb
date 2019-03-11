@@ -18,6 +18,8 @@
 #ifndef GDBSERVER_LINUX_AARCH32_LOW_H
 #define GDBSERVER_LINUX_AARCH32_LOW_H
 
+namespace gdb {
+
 extern struct regs_info regs_info_aarch32;
 
 void arm_fill_gregset (struct regcache *regcache, void *buf);
@@ -37,5 +39,7 @@ void init_registers_arm_with_neon (void);
 int arm_is_thumb_mode (void);
 
 extern const struct target_desc *tdesc_arm_with_neon;
+
+} /* namespace gdb */
 
 #endif /* GDBSERVER_LINUX_AARCH32_LOW_H */

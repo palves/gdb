@@ -28,6 +28,9 @@
 
 #include "gdb_proc_service.h"
 
+namespace gdb {
+
+
 typedef struct ps_prochandle *gdb_ps_prochandle_t;
 typedef void *gdb_ps_read_buf_t;
 typedef const void *gdb_ps_write_buf_t;
@@ -163,3 +166,5 @@ ps_getpid (gdb_ps_prochandle_t ph)
 {
   return pid_of (current_thread);
 }
+
+} /* namespace gdb */

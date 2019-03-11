@@ -22,6 +22,8 @@
 
 #include "x86-bsd-nat.h"
 
+namespace gdb {
+
 /* Helper functions.  See definitions.  */
 extern void amd64bsd_fetch_inferior_registers (struct regcache *regcache,
 					       int regnum);
@@ -40,5 +42,7 @@ public:
   void store_registers (struct regcache *regcache, int regnum) override
   { amd64bsd_store_inferior_registers (regcache, regnum); }
 };
+
+} /* namespace gdb */
 
 #endif /* i386-bsd-nat.h */

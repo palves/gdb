@@ -20,6 +20,8 @@
 #ifndef GDBSERVER_LINUX_PPC_TDESC_INIT_H
 #define GDBSERVER_LINUX_PPC_TDESC_INIT_H
 
+namespace gdb {
+
 /* Note: since IPA obviously knows what ABI it's running on (32 vs 64),
    it's sufficient to pass only the register set here.  This, together with
    the ABI known at IPA compile time, maps to a tdesc.  */
@@ -108,5 +110,7 @@ void init_registers_powerpc_isa207_vsx64l (void);
 void init_registers_powerpc_isa207_htm_vsx64l (void);
 
 #endif
+
+} /* namespace gdb */
 
 #endif /* GDBSERVER_LINUX_PPC_TDESC_INIT_H */

@@ -39,6 +39,9 @@
 #include "top.h"		/* For command_loop.  */
 #include "continuations.h"
 
+namespace gdb {
+
+
 /* Each UI has its own independent set of interpreters.  */
 
 struct ui_interp_info
@@ -451,3 +454,5 @@ The first argument is the name of the interpreter to use.\n\
 The second argument is the command to execute.\n"), &cmdlist);
   set_cmd_completer (c, interpreter_completer);
 }
+
+} /* namespace gdb */

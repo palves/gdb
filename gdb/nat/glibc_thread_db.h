@@ -27,6 +27,8 @@
 #include <sys/types.h>
 #include <sys/procfs.h>
 
+namespace gdb {
+
 
 /* Error codes of the library.  */
 typedef enum
@@ -454,5 +456,7 @@ extern td_err_e td_thr_dbsuspend (const td_thrhandle_t *__th);
 
 /* Resume execution of thread TH.  */
 extern td_err_e td_thr_dbresume (const td_thrhandle_t *__th);
+
+} /* namespace gdb */
 
 #endif /* NAT_GLIBC_THREAD_DB_H */

@@ -52,6 +52,9 @@
 #include "arch/ppc-linux-tdesc.h"
 #include "nat/ppc-linux.h"
 
+namespace gdb {
+
+
 /* Similarly for the hardware watchpoint support.  These requests are used
    when the PowerPC HWDEBUG ptrace interface is not available.  */
 #ifndef PTRACE_GET_DEBUGREG
@@ -2706,3 +2709,5 @@ _initialize_ppc_linux_nat (void)
   /* Register the target.  */
   add_inf_child_target (linux_target);
 }
+
+} /* namespace gdb */

@@ -31,6 +31,9 @@
 
 #include "command.h"
 
+namespace gdb {
+
+
 struct ser_windows_state
 {
   int in_progress;
@@ -1367,3 +1370,5 @@ _initialize_ser_windows (void)
 
   serial_add_interface (&tcp_ops);
 }
+
+} /* namespace gdb */

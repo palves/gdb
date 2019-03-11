@@ -27,6 +27,9 @@
 #include <algorithm>
 #include "common/byte-vector.h"
 
+namespace gdb {
+
+
 /* Copied from bfd_put_bits.  */
 
 static void
@@ -301,3 +304,5 @@ The address of the last match is stored as the value of \"$_\".\n\
 Convenience variable \"$numfound\" is set to the number of matches."),
 	   &cmdlist);
 }
+
+} /* namespace gdb */

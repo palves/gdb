@@ -23,6 +23,8 @@
 #include "dummy-frame.h"
 #include "common/array-view.h"
 
+namespace gdb {
+
 struct value;
 struct type;
 
@@ -70,5 +72,7 @@ extern struct value *
    case the error message doesn't include a function name.  */
 
 extern void error_call_unknown_return_type (const char *func_name);
+
+} /* namespace gdb */
 
 #endif

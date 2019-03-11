@@ -38,6 +38,9 @@
 #include "objfiles.h"
 #include <algorithm>
 
+namespace gdb {
+
+
 /* AVR Background:
 
    (AVR micros are pure Harvard Architecture processors.)
@@ -1631,3 +1634,5 @@ _initialize_avr_tdep (void)
   add_info ("io_registers", avr_io_reg_read_command,
 	    _("query remote avr target for io space register values"));
 }
+
+} /* namespace gdb */

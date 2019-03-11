@@ -26,6 +26,9 @@
 #include "inferior.h"
 #include "infrun.h"
 #include "top.h"
+
+namespace gdb {
+
 
 
 /* Prototypes for local functions.  */
@@ -596,3 +599,5 @@ _initialize_annotate (void)
   gdb::observers::breakpoint_deleted.attach (breakpoint_changed);
   gdb::observers::breakpoint_modified.attach (breakpoint_changed);
 }
+
+} /* namespace gdb */

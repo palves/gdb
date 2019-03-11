@@ -45,6 +45,9 @@
 #include "common/selftest.h"
 #include "common/scope-exit.h"
 
+namespace gdb {
+
+
 #define require_running_or_return(BUF)		\
   if (!target_running ())			\
     {						\
@@ -4514,3 +4517,5 @@ reset ()
 
 } // namespace selftests
 #endif /* GDB_SELF_TEST */
+
+} /* namespace gdb */

@@ -20,6 +20,9 @@
 #include "gdb_select.h"
 #include "common/gdb_sys_time.h"
 
+namespace gdb {
+
+
 int
 gdb_usleep (int usec)
 {
@@ -37,3 +40,5 @@ gdb_usleep (int usec)
 
   return retval;
 }
+
+} /* namespace gdb */

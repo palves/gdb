@@ -23,6 +23,8 @@
 #include "ui-out.h"
 #include <vector>
 
+namespace gdb {
+
 class cli_ui_out : public ui_out
 {
 public:
@@ -79,5 +81,7 @@ private:
 extern cli_ui_out *cli_out_new (struct ui_file *stream);
 
 extern void cli_display_match_list (char **matches, int len, int max);
+
+} /* namespace gdb */
 
 #endif

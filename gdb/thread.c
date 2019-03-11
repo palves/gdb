@@ -47,6 +47,9 @@
 #include "common/gdb_optional.h"
 #include "inline-frame.h"
 
+namespace gdb {
+
+
 /* Definition of struct thread_info exported to gdbthread.h.  */
 
 /* Prototypes for local functions.  */
@@ -2013,3 +2016,5 @@ Show printing of thread events (such as thread start and exit)."), NULL,
   create_internalvar_type_lazy ("_thread", &thread_funcs, NULL);
   create_internalvar_type_lazy ("_gthread", &gthread_funcs, NULL);
 }
+
+} /* namespace gdb */

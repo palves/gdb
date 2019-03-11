@@ -65,6 +65,9 @@ static int amd64obsd32_r_reg_offset[] =
 
 #include "bsd-kvm.h"
 
+namespace gdb {
+
+
 static int
 amd64obsd_supply_pcb (struct regcache *regcache, struct pcb *pcb)
 {
@@ -140,3 +143,5 @@ _initialize_amd64obsd_nat (void)
   /* Support debugging kernel virtual memory images.  */
   bsd_kvm_add_target (amd64obsd_supply_pcb);
 }
+
+} /* namespace gdb */

@@ -42,6 +42,9 @@
 #include "inferior.h"
 #include <algorithm>
 
+namespace gdb {
+
+
 static const target_info record_btrace_target_info = {
   "record-btrace",
   N_("Branch tracing target"),
@@ -3278,3 +3281,5 @@ to see the actual buffer size."), NULL, show_record_pt_buffer_size_value,
   record_btrace_conf.bts.size = 64 * 1024;
   record_btrace_conf.pt.size = 16 * 1024;
 }
+
+} /* namespace gdb */

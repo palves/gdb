@@ -21,6 +21,8 @@
 #ifndef XML_SYSCALL_H
 #define XML_SYSCALL_H 1
 
+namespace gdb {
+
 /* Function used to set the name of the file which contains
    information about the system calls present in the current
    architecture.
@@ -65,5 +67,7 @@ bool get_syscalls_by_group (struct gdbarch *gdbarch, const char *group,
    information available.  */
 
 const char **get_syscall_group_names (struct gdbarch *gdbarch);
+
+} /* namespace gdb */
 
 #endif /* XML_SYSCALL_H */

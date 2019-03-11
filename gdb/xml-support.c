@@ -34,6 +34,9 @@ static int debug_xml;
 
 #include "gdb_expat.h"
 
+namespace gdb {
+
+
 /* The maximum depth of <xi:include> nesting.  No need to be miserly,
    we just want to avoid running out of stack on loops.  */
 #define MAX_XINCLUDE_DEPTH 30
@@ -1023,3 +1026,5 @@ _initialize_xml_support (void)
 			   NULL, show_debug_xml,
 			   &setdebuglist, &showdebuglist);
 }
+
+} /* namespace gdb */

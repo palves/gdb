@@ -22,6 +22,9 @@
 #include "objfiles.h"
 #include "ui-out.h"
 
+namespace gdb {
+
+
 /* Print the list of all pc addresses and lines of code for the
    provided (full or base) source file name.  The entries are sorted
    in ascending PC order.  */
@@ -59,3 +62,5 @@ mi_cmd_symbol_list_lines (const char *command, char **argv, int argc)
       uiout->field_int ("line", SYMTAB_LINETABLE (s)->item[i].line);
     }
 }
+
+} /* namespace gdb */

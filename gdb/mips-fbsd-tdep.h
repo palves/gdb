@@ -20,9 +20,13 @@
 #ifndef MIPS_FBSD_TDEP_H
 #define MIPS_FBSD_TDEP_H
 
+namespace gdb {
+
 void mips_fbsd_supply_fpregs (struct regcache *, int, const void *, size_t);
 void mips_fbsd_supply_gregs (struct regcache *, int, const void *, size_t);
 void mips_fbsd_collect_fpregs (const struct regcache *, int, void *, size_t);
 void mips_fbsd_collect_gregs (const struct regcache *, int, void *, size_t);
+
+} /* namespace gdb */
 
 #endif /* MIPS_FBSD_TDEP_H */

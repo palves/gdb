@@ -40,6 +40,9 @@
 
 #include "stabsread.h"
 
+namespace gdb {
+
+
 /* List of blocks already made (lexical contexts already closed).
    This is used at the end to make the blockvector.  */
 
@@ -1259,3 +1262,5 @@ buildsym_compunit::pop_context ()
   m_context_stack.pop_back ();
   return result;
 }
+
+} /* namespace gdb */

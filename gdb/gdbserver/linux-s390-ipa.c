@@ -25,6 +25,9 @@
 #include <elf.h>
 #ifdef HAVE_GETAUXVAL
 #include <sys/auxv.h>
+
+namespace gdb {
+
 #endif
 
 #define FT_FPR(x) (0x000 + (x) * 0x10)
@@ -461,3 +464,5 @@ initialize_low_tracepoint (void)
   init_registers_s390_gs_linux64 ();
 #endif
 }
+
+} /* namespace gdb */

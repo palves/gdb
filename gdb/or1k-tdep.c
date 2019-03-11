@@ -46,6 +46,9 @@
 /* OpenRISC specific includes.  */
 #include "or1k-tdep.h"
 #include "features/or1k.c"
+
+namespace gdb {
+
 
 
 /* Global debug flag.  */
@@ -1295,3 +1298,5 @@ _initialize_or1k_tdep (void)
 			   show_or1k_debug,
 			   &setdebuglist, &showdebuglist);
 }
+
+} /* namespace gdb */

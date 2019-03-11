@@ -38,6 +38,9 @@
 #include "../opcodes/lm32-desc.h"
 #include <algorithm>
 
+namespace gdb {
+
+
 /* Macros to extract fields from an instruction.  */
 #define LM32_OPCODE(insn)       ((insn >> 26) & 0x3f)
 #define LM32_REG0(insn)         ((insn >> 21) & 0x1f)
@@ -577,3 +580,5 @@ _initialize_lm32_tdep (void)
 {
   register_gdbarch_init (bfd_arch_lm32, lm32_gdbarch_init);
 }
+
+} /* namespace gdb */

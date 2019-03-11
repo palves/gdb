@@ -53,6 +53,9 @@
 
 #include "inf-ptrace.h"
 
+namespace gdb {
+
+
 #ifndef PTRACE_GET_THREAD_AREA
 #define PTRACE_GET_THREAD_AREA 25
 #endif
@@ -517,3 +520,5 @@ _initialize_m68k_linux_nat (void)
   linux_target = &the_m68k_linux_nat_target;
   add_inf_child_target (&the_m68k_linux_nat_target);
 }
+
+} /* namespace gdb */

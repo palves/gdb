@@ -23,6 +23,9 @@
 #include "gdbcmd.h"
 #include <unordered_map>
 
+namespace gdb {
+
+
 /* Map format strings to counters.  */
 
 static std::unordered_map<const char *, int> counters;
@@ -84,3 +87,5 @@ Show max number of complaints about incorrect symbols."), NULL,
 			    NULL, complaints_show_value,
 			    &setlist, &showlist);
 }
+
+} /* namespace gdb */

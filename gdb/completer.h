@@ -20,6 +20,8 @@
 #include "common/gdb_vecs.h"
 #include "command.h"
 
+namespace gdb {
+
 /* Types of functions in struct match_list_displayer.  */
 
 struct match_list_displayer;
@@ -609,5 +611,7 @@ extern const char *skip_quoted (const char *);
    disable limiting.  */
 
 extern int max_completions;
+
+} /* namespace gdb */
 
 #endif /* defined (COMPLETER_H) */

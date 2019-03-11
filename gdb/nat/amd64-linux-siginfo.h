@@ -22,6 +22,8 @@
 
 #include <signal.h>  /* For siginfo_t.  */
 
+namespace gdb {
+
 /* When GDB is built as a 64-bit application on Linux, the
    PTRACE_GETSIGINFO data is always presented in 64-bit layout.  Since
    debugging a 32-bit inferior with a 64-bit GDB should look the same
@@ -54,5 +56,7 @@ enum amd64_siginfo_fixup_mode
 int amd64_linux_siginfo_fixup_common (siginfo_t *native, gdb_byte *inf,
 				      int direction,
 				      enum amd64_siginfo_fixup_mode mode);
+
+} /* namespace gdb */
 
 #endif /* NAT_AMD64_LINUX_SIGINFO_H */

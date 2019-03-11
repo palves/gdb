@@ -31,6 +31,9 @@
 #include "obsd-nat.h"
 #include "bsd-kvm.h"
 
+namespace gdb {
+
+
 static int
 i386obsd_supply_pcb (struct regcache *regcache, struct pcb *pcb)
 {
@@ -124,3 +127,5 @@ _initialize_i386obsd_nat (void)
   }
 #endif
 }
+
+} /* namespace gdb */

@@ -19,6 +19,9 @@
 
 #include "common-defs.h"
 #include "print-utils.h"
+
+namespace gdb {
+
 /* Temporary storage using circular buffer.  */
 
 /* Number of cells in the circular buffer.  */
@@ -324,3 +327,5 @@ host_address_to_string_1 (const void *addr)
 	     phex_nz ((uintptr_t) addr, sizeof (addr)));
   return str;
 }
+
+} /* namespace gdb */

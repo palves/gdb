@@ -31,6 +31,9 @@
 #include "mips-fbsd-tdep.h"
 #include "inf-ptrace.h"
 
+namespace gdb {
+
+
 struct mips_fbsd_nat_target final : public fbsd_nat_target
 {
   void fetch_registers (struct regcache *, int) override;
@@ -131,3 +134,5 @@ _initialize_mips_fbsd_nat (void)
 {
   add_inf_child_target (&the_mips_fbsd_nat_target);
 }
+
+} /* namespace gdb */

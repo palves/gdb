@@ -19,7 +19,11 @@
 #ifndef COMMON_COMMON_GDBTHREAD_H
 #define COMMON_COMMON_GDBTHREAD_H
 
+namespace gdb {
+
 /* Switch from one thread to another.  */
 extern void switch_to_thread (ptid_t ptid);
+
+} /* namespace gdb */
 
 #endif /* COMMON_COMMON_GDBTHREAD_H */

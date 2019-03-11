@@ -20,6 +20,9 @@
 #include "common-defs.h"
 #include "common-exceptions.h"
 
+namespace gdb {
+
+
 const struct gdb_exception exception_none = { (enum return_reason) 0, GDB_NO_ERROR, NULL };
 
 /* Possible catcher states.  */
@@ -386,3 +389,5 @@ throw_quit (const char *fmt, ...)
   throw_vquit (fmt, args);
   va_end (args);
 }
+
+} /* namespace gdb */

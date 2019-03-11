@@ -23,6 +23,9 @@
 #include "arch/i386.h"
 #include "x86-tdesc.h"
 
+namespace gdb {
+
+
 /* The following two typedefs are defined in a .h file which is not
    in the standard include path (/sys/include/family/x86/ucontext.h),
    so we just duplicate them here.
@@ -356,3 +359,5 @@ struct lynx_regset_info lynx_target_regsets[] = {
 struct lynx_target_ops the_low_target = {
   lynx_i386_arch_setup,
 };
+
+} /* namespace gdb */

@@ -1391,6 +1391,9 @@ register_dump::dump (ui_file *file)
 #include "selftest-arch.h"
 #include "target-float.h"
 
+namespace gdb {
+
+
 namespace selftests {
 
 class regcache_access : public regcache
@@ -1831,3 +1834,5 @@ _initialize_regcache (void)
 					 selftests::cooked_write_test);
 #endif
 }
+
+} /* namespace gdb */

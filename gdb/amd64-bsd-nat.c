@@ -33,6 +33,9 @@
 #include "amd64-nat.h"
 #include "x86-bsd-nat.h"
 #include "inf-ptrace.h"
+
+namespace gdb {
+
 
 
 /* Fetch register REGNUM from the inferior.  If REGNUM is -1, do this
@@ -191,3 +194,5 @@ amd64bsd_store_inferior_registers (struct regcache *regcache, int regnum)
 	perror_with_name (_("Couldn't write floating point status"));
     }
 }
+
+} /* namespace gdb */

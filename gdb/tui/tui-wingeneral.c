@@ -27,6 +27,9 @@
 
 #include "gdb_curses.h"
 
+namespace gdb {
+
+
 /***********************
 ** PUBLIC FUNCTIONS
 ***********************/
@@ -278,3 +281,5 @@ tui_refresh_all (struct tui_win_info **list)
 /*********************************
 ** Local Static Functions
 *********************************/
+
+} /* namespace gdb */

@@ -37,6 +37,9 @@
 #include "target.h"
 #include "objfiles.h"
 
+namespace gdb {
+
+
 
 /* The m32c tdep structure.  */
 
@@ -2685,3 +2688,5 @@ _initialize_m32c_tdep (void)
 
   m32c_dma_reggroup = reggroup_new ("dma", USER_REGGROUP);
 }
+
+} /* namespace gdb */

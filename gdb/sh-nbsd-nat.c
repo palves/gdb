@@ -30,6 +30,9 @@
 #include "inf-ptrace.h"
 #include "regcache.h"
 
+namespace gdb {
+
+
 struct sh_nbsd_nat_target final : public inf_ptrace_target
 {
   void fetch_registers (struct regcache *, int) override;
@@ -101,3 +104,5 @@ _initialize_shnbsd_nat (void)
 {
   add_inf_child_target (&the_sh_nbsd_nat_target);
 }
+
+} /* namespace gdb */

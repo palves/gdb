@@ -25,6 +25,9 @@
 #include "hppa-tdep.h"
 #include "hppa-bsd-tdep.h"
 
+namespace gdb {
+
+
 /* Core file support.  */
 
 /* Sizeof `struct reg' in <machine/reg.h>.  */
@@ -173,3 +176,5 @@ _initialize_hppabsd_tdep (void)
   gdbarch_register_osabi (bfd_arch_hppa, 0, GDB_OSABI_OPENBSD,
 			  hppaobsd_init_abi);
 }
+
+} /* namespace gdb */

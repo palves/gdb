@@ -24,6 +24,8 @@
 #include "python-internal.h"
 #include "record.h"
 
+namespace gdb {
+
 /* Python Record object.  */
 typedef struct
 {
@@ -70,5 +72,7 @@ extern PyObject *recpy_func_new (thread_info *thread, enum record_method method,
 /* Create a new gdb.RecordGap object.  */
 extern PyObject *recpy_gap_new (int reason_code, const char *reason_string,
 				Py_ssize_t number);
+
+} /* namespace gdb */
 
 #endif /* PYTHON_PY_RECORD_H */

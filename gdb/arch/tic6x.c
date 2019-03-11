@@ -23,6 +23,9 @@
 #include "../features/tic6x-gp.c"
 #include "../features/tic6x-c6xp.c"
 
+namespace gdb {
+
+
 /* Create tic6x target descriptions according to FEATURE.  */
 
 target_desc *
@@ -45,3 +48,5 @@ tic6x_create_target_description (enum c6x_feature feature)
 
   return tdesc;
 }
+
+} /* namespace gdb */

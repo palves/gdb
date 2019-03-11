@@ -30,6 +30,8 @@
 #include "common/btrace-common.h"
 #include <vector>
 
+namespace gdb {
+
 struct emit_ops;
 struct buffer;
 struct process_info;
@@ -736,5 +738,7 @@ const char *target_pid_to_str (ptid_t);
 int target_can_do_hardware_single_step (void);
 
 int default_breakpoint_kind_from_pc (CORE_ADDR *pcptr);
+
+} /* namespace gdb */
 
 #endif /* GDBSERVER_TARGET_H */

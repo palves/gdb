@@ -21,6 +21,8 @@
 #ifndef COMMON_COMMON_INFERIOR_H
 #define COMMON_COMMON_INFERIOR_H
 
+namespace gdb {
+
 /* Return the exec wrapper to be used when starting the inferior, or NULL
    otherwise.  */
 extern const char *get_exec_wrapper ();
@@ -37,5 +39,7 @@ extern const char *get_inferior_cwd ();
 /* Set the inferior current working directory.  If CWD is NULL, unset
    the directory.  */
 extern void set_inferior_cwd (const char *cwd);
+
+} /* namespace gdb */
 
 #endif /* COMMON_COMMON_INFERIOR_H */

@@ -33,6 +33,9 @@
 #include "value.h"
 #include <algorithm>
 
+namespace gdb {
+
+
 /* The registers used to pass integer arguments during a function call.  */
 static int amd64_windows_dummy_call_integer_regs[] =
 {
@@ -1251,3 +1254,5 @@ _initialize_amd64_windows_tdep (void)
   gdbarch_register_osabi (bfd_arch_i386, bfd_mach_x86_64, GDB_OSABI_CYGWIN,
                           amd64_windows_init_abi);
 }
+
+} /* namespace gdb */

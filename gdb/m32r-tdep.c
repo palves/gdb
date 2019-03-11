@@ -38,6 +38,9 @@
 #include "m32r-tdep.h"
 #include <algorithm>
 
+namespace gdb {
+
+
 /* The size of the argument registers (r0 - r3) in bytes.  */
 #define M32R_ARG_REGISTER_SIZE 4
 
@@ -953,3 +956,5 @@ _initialize_m32r_tdep (void)
 {
   register_gdbarch_init (bfd_arch_m32r, m32r_gdbarch_init);
 }
+
+} /* namespace gdb */

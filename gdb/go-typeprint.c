@@ -28,6 +28,9 @@
 #include "c-lang.h"
 #include "go-lang.h"
 
+namespace gdb {
+
+
 /* Print a description of a type TYPE.
    Output goes to STREAM (via stdio).
    If VARSTRING is a non-empty string, print as an Ada variable/field
@@ -61,3 +64,5 @@ go_print_type (struct type *type, const char *varstring,
   /* Punt the rest to C for now.  */
   c_print_type (type, varstring, stream, show, level, flags);
 }
+
+} /* namespace gdb */

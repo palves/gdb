@@ -20,6 +20,9 @@
 #include "defs.h"
 #include "test-target.h"
 
+namespace gdb {
+
+
 #if GDB_SELF_TEST
 namespace selftests {
 
@@ -37,3 +40,5 @@ test_target_ops::info () const
 
 } /* namespace selftests */
 #endif /* GDB_SELF_TEST */
+
+} /* namespace gdb */

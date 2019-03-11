@@ -37,6 +37,9 @@
 #include "readline/tilde.h"
 #include "progspace-and-thread.h"
 
+namespace gdb {
+
+
 /* Keep a registry of per-inferior data-pointers required by other GDB
    modules.  */
 
@@ -938,3 +941,5 @@ Show printing of inferior events (e.g., inferior start and exit)."), NULL,
 
   create_internalvar_type_lazy ("_inferior", &inferior_funcs, NULL);
 }
+
+} /* namespace gdb */

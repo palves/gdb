@@ -22,6 +22,8 @@
 
 #include "obstack.h"
 
+namespace gdb {
+
 /* Utility macros - wrap obstack alloc into something more robust.  */
 
 template <typename T>
@@ -125,5 +127,7 @@ struct allocate_on_obstack
   void operator delete (void *memory) {}
   void operator delete[] (void *memory) {}
 };
+
+} /* namespace gdb */
 
 #endif

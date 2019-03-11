@@ -28,6 +28,9 @@
 #include "hppa-tdep.h"
 #include "hppa-bsd-tdep.h"
 
+namespace gdb {
+
+
 /* From <machine/mcontext.h>.  */
 static int hppanbsd_mc_reg_offset[] =
 {
@@ -213,3 +216,5 @@ _initialize_hppanbsd_tdep (void)
   gdbarch_register_osabi (bfd_arch_hppa, 0, GDB_OSABI_NETBSD,
 			  hppanbsd_init_abi);
 }
+
+} /* namespace gdb */

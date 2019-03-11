@@ -65,6 +65,9 @@
 #include <ctype.h>
 #include <algorithm>
 
+namespace gdb {
+
+
 /* Register names.  */
 
 static const char *i386_register_names[] =
@@ -9078,3 +9081,5 @@ Show Intel Memory Protection Extensions specific variables."),
     }
 #endif /* GDB_SELF_TEST */
 }
+
+} /* namespace gdb */

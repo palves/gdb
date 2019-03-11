@@ -22,6 +22,8 @@
 
 #include "ui-out.h"
 
+namespace gdb {
+
 /* If E is an exception, print it's error message on the specified
    stream.  For _fprintf, prefix the message with PREFIX...  */
 extern void exception_print (struct ui_file *file, struct gdb_exception e);
@@ -32,4 +34,6 @@ extern void exception_fprintf (struct ui_file *file, struct gdb_exception e,
 /* Compare two exception objects for print equality.  */
 extern int exception_print_same (struct gdb_exception e1,
 				 struct gdb_exception e2);
+} /* namespace gdb */
+
 #endif

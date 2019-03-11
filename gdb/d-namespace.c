@@ -25,6 +25,9 @@
 #include "d-lang.h"
 #include "gdb_obstack.h"
 
+namespace gdb {
+
+
 /* This returns the length of first component of NAME, which should be
    the demangled name of a D variable/function/method/etc.
    Specifically, it returns the index of the first dot forming the
@@ -522,3 +525,5 @@ d_lookup_symbol_nonlocal (const struct language_defn *langdef,
   return d_lookup_symbol_module (scope, name, block, domain);
 }
 
+
+} /* namespace gdb */

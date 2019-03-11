@@ -22,6 +22,9 @@
 #include "regcache.h"
 #include "ax.h"
 
+namespace gdb {
+
+
 #define MAX_BREAKPOINT_LEN 8
 
 /* Helper macro used in loops that append multiple items to a singly-linked
@@ -2235,3 +2238,5 @@ clone_all_breakpoints (struct thread_info *child_thread,
       APPEND_TO_LIST (new_raw_list, new_bkpt->raw, raw_bkpt_tail);
     }
 }
+
+} /* namespace gdb */

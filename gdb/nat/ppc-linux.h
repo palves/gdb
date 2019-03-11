@@ -21,6 +21,8 @@
 #include <asm/ptrace.h>
 #include <asm/cputable.h>
 
+namespace gdb {
+
 /* This sometimes isn't defined.  */
 #ifndef PT_ORIG_R3
 #define PT_ORIG_R3 34
@@ -164,5 +166,7 @@
 
 /* Return the wordsize of the target, either 4 or 8 bytes.  */
 int ppc_linux_target_wordsize (int tid);
+
+} /* namespace gdb */
 
 #endif /* NAT_PPC_LINUX_H */

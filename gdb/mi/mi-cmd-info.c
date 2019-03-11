@@ -22,6 +22,9 @@
 #include "ada-lang.h"
 #include "arch-utils.h"
 
+namespace gdb {
+
+
 /* Implement the "-info-ada-exceptions" GDB/MI command.  */
 
 void
@@ -104,3 +107,5 @@ mi_cmd_info_os (const char *command, char **argv, int argc)
       break;
     }
 }
+
+} /* namespace gdb */

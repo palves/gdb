@@ -20,6 +20,8 @@
 #ifndef REGISTRY_H
 #define REGISTRY_H
 
+namespace gdb {
+
 /* The macros here implement a template type and functions for
    associating some user data with a container object.
 
@@ -249,5 +251,7 @@ extern void set_ ## TAG ## _data (struct TAG *,			\
 				  void *value);			\
 extern void *TAG ## _data (struct TAG *,			\
 			   const struct TAG ## _data *data);
+
+} /* namespace gdb */
 
 #endif /* REGISTRY_H */

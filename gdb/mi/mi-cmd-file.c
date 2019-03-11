@@ -30,6 +30,9 @@
 #include "solist.h"
 #include "gdb_regex.h"
 
+namespace gdb {
+
+
 /* Return to the client the absolute path and line number of the 
    current file being executed.  */
 
@@ -159,3 +162,5 @@ mi_cmd_file_list_shared_libraries (const char *command, char **argv, int argc)
       mi_output_solib_attribs (uiout, so);
     }
 }
+
+} /* namespace gdb */

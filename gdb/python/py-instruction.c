@@ -20,6 +20,9 @@
 #include "defs.h"
 #include "py-instruction.h"
 
+namespace gdb {
+
+
 /* See py-instruction.h.  */
 
 PyTypeObject py_insn_type = {
@@ -65,3 +68,5 @@ gdbpy_initialize_instruction (void)
 
   return PyType_Ready (&py_insn_type);
 }
+
+} /* namespace gdb */

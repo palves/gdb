@@ -24,6 +24,9 @@
 #include "gdbtypes.h"
 #include "gdbcore.h"
 
+namespace gdb {
+
+
 #ifdef HAVE_LIBUNWIND_IA64_H
 
 /* Libunwind callback accessor function to acquire procedure unwind-info.  */
@@ -158,3 +161,5 @@ _initialize_ia64_vms_tdep (void)
   gdbarch_register_osabi (bfd_arch_ia64, 0, GDB_OSABI_OPENVMS,
 			  ia64_openvms_init_abi);
 }
+
+} /* namespace gdb */

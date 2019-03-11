@@ -28,6 +28,9 @@
 #include "symtab.h"
 #include "guile-internal.h"
 
+namespace gdb {
+
+
 /* A smob describing a gdb block.  */
 
 typedef struct _block_smob
@@ -804,3 +807,5 @@ Internal function to assist the block symbols iterator."));
   bkscm_objfile_data_key
     = register_objfile_data_with_cleanup (NULL, bkscm_del_objfile_blocks);
 }
+
+} /* namespace gdb */

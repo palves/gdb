@@ -19,6 +19,8 @@
 #if !defined (BUILDSYM_H)
 #define BUILDSYM_H 1
 
+namespace gdb {
+
 struct objfile;
 struct symbol;
 struct addrmap;
@@ -403,5 +405,7 @@ extern void add_symbol_to_list (struct symbol *symbol,
 
 extern struct symbol *find_symbol_in_list (struct pending *list,
 					   char *name, int length);
+
+} /* namespace gdb */
 
 #endif /* defined (BUILDSYM_H) */

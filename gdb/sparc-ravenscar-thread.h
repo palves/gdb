@@ -20,7 +20,11 @@
 #ifndef SPARC_RAVENSCAR_THREAD_H
 #define SPARC_RAVENSCAR_THREAD_H
 
+namespace gdb {
+
 struct gdbarch;
 
 extern void register_sparc_ravenscar_ops (struct gdbarch *gdbarch);
+} /* namespace gdb */
+
 #endif

@@ -25,6 +25,8 @@
 #define SCORE_TDEP_H
 #include "math.h"
 
+namespace gdb {
+
 enum gdb_regnum
 {
   SCORE_SP_REGNUM = 0,
@@ -46,5 +48,7 @@ enum gdb_regnum
 
 #define SCORE_INSTLEN          4
 #define SCORE16_INSTLEN        2
+
+} /* namespace gdb */
 
 #endif /* SCORE_TDEP_H */

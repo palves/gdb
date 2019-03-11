@@ -29,6 +29,8 @@ struct regcache;
 #include "exec.h"
 #include "target.h"
 
+namespace gdb {
+
 /* Nonzero if there is a core file.  */
 
 extern int have_core_file_p (void);
@@ -274,5 +276,7 @@ private:
 extern void deprecated_add_core_fns (struct core_fns *cf);
 extern int default_core_sniffer (struct core_fns *cf, bfd * abfd);
 extern int default_check_format (bfd * abfd);
+
+} /* namespace gdb */
 
 #endif /* !defined (GDBCORE_H) */

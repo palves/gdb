@@ -25,6 +25,9 @@
 #include "inferior.h"
 #include "splay-tree.h"
 
+namespace gdb {
+
+
 /* Commands with a prefix of `{set,show} dcache'.  */
 static struct cmd_list_element *dcache_set_list = NULL;
 static struct cmd_list_element *dcache_show_list = NULL;
@@ -730,3 +733,5 @@ Show number of dcache lines."),
 			     NULL,
 			     &dcache_set_list, &dcache_show_list);
 }
+
+} /* namespace gdb */

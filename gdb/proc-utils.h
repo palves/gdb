@@ -19,6 +19,8 @@
 #ifndef PROC_UTILS_H
 #define PROC_UTILS_H
 
+namespace gdb {
+
 /* From proc-why.c */
 
 /*
@@ -116,5 +118,7 @@ extern  void  procfs_note      (const char *, const char *, int);
 /* Define the type (and more importantly the width) of the control
    word used to write to the /proc/PID/ctl file.  */
 typedef long procfs_ctl_t;
+
+} /* namespace gdb */
 
 #endif /* PROC_UTILS_H */

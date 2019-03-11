@@ -26,6 +26,9 @@
 #include "progspace.h"
 #include "objfiles.h"
 
+namespace gdb {
+
+
 static int ada_build_task_list ();
 
 /* The name of the array in the GNAT runtime where the Ada Task Control
@@ -1450,3 +1453,5 @@ _initialize_tasks (void)
 Without argument, this command simply prints the current task ID"),
            &cmdlist);
 }
+
+} /* namespace gdb */

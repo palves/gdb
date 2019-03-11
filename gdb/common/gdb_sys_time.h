@@ -20,6 +20,8 @@
 
 #include <sys/time.h>
 
+namespace gdb {
+
 /* On MinGW-w64, gnulib's sys/time.h replaces 'struct timeval' and
    gettimeofday with versions that support 64-bit time_t, for POSIX
    compliance.  However, the gettimeofday replacement does not ever
@@ -34,5 +36,7 @@
 # undef timeval
 # undef gettimeofday
 #endif
+
+} /* namespace gdb */
 
 #endif /* COMMON_GDB_SYS_TIME_H */

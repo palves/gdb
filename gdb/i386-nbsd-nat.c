@@ -34,6 +34,9 @@
 #include "nbsd-nat.h"
 #include "bsd-kvm.h"
 
+namespace gdb {
+
+
 static int
 i386nbsd_supply_pcb (struct regcache *regcache, struct pcb *pcb)
 {
@@ -81,3 +84,5 @@ _initialize_i386nbsd_nat (void)
   /* Support debugging kernel virtual memory images.  */
   bsd_kvm_add_target (i386nbsd_supply_pcb);
 }
+
+} /* namespace gdb */

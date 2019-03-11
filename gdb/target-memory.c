@@ -26,6 +26,9 @@
 #include "common/gdb_sys_time.h"
 #include <algorithm>
 
+namespace gdb {
+
+
 static bool
 compare_block_starting_address (const memory_write_request &a_req,
 				const memory_write_request &b_req)
@@ -373,3 +376,5 @@ target_write_memory_blocks (const std::vector<memory_write_request> &requests,
 
   return 0;
 }
+
+} /* namespace gdb */

@@ -24,6 +24,8 @@
 
 #include "common/btrace-common.h"
 #include "common/vec.h"
+
+namespace gdb {
 #if HAVE_LINUX_PERF_EVENT_H
 #  include <linux/perf_event.h>
 #endif
@@ -118,5 +120,7 @@ extern enum btrace_error linux_read_btrace (struct btrace_data *btrace,
 /* See to_btrace_conf in target.h.  */
 extern const struct btrace_config *
   linux_btrace_conf (const struct btrace_target_info *);
+
+} /* namespace gdb */
 
 #endif /* NAT_LINUX_BTRACE_H */

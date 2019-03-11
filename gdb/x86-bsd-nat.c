@@ -31,6 +31,9 @@
 #include "x86-nat.h"
 #include "x86-bsd-nat.h"
 #include "inf-ptrace.h"
+
+namespace gdb {
+
 
 
 #ifdef PT_GETXSTATE_INFO
@@ -134,3 +137,5 @@ _initialize_x86_bsd_nat ()
   x86_set_debug_register_length (sizeof (void *));
 #endif /* HAVE_PT_GETDBREGS */
 }
+
+} /* namespace gdb */

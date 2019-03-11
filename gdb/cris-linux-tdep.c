@@ -29,6 +29,9 @@
 
 #include "cris-tdep.h"
 
+namespace gdb {
+
+
 static void
 cris_linux_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
 {
@@ -52,3 +55,5 @@ _initialize_cris_linux_tdep (void)
   gdbarch_register_osabi (bfd_arch_cris, 0, GDB_OSABI_LINUX,
 			  cris_linux_init_abi);
 }
+
+} /* namespace gdb */

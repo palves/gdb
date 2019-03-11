@@ -22,6 +22,8 @@
 #include <type_traits>
 #include "common/preprocessor.h"
 
+namespace gdb {
+
 /* scope_exit is a general-purpose scope guard that calls its exit
    function at the end of the current scope.  A scope_exit may be
    canceled by calling the "release" method.  The API is modeled on
@@ -182,5 +184,7 @@ operator+ (scope_exit_lhs, EF &&rhs)
 
 #define SCOPE_EXIT \
   auto CONCAT(scope_exit_, __LINE__) = ::detail::scope_exit_lhs () + [&] ()
+
+} /* namespace gdb */
 
 #endif /* COMMON_SCOPE_EXIT_H */

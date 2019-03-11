@@ -47,6 +47,9 @@
 #include <ctype.h>
 #include <algorithm>
 
+namespace gdb {
+
+
 struct objc_object {
   CORE_ADDR isa;
 };
@@ -1582,3 +1585,5 @@ _initialize_objc_lang (void)
 {
   objc_objfile_data = register_objfile_data ();
 }
+
+} /* namespace gdb */

@@ -20,6 +20,8 @@
 #ifndef ARCH_XTENSA_H
 #define ARCH_XTENSA_H
 
+namespace gdb {
+
 /* Xtensa ELF core file register set representation ('.reg' section).
    Copied from target-side ELF header <xtensa/elf.h>.  */
 
@@ -44,5 +46,7 @@ typedef struct
 			  / sizeof (xtensa_elf_greg_t))
 
 #define C0_NREGS   16	/* Number of A-registers to track in call0 ABI.  */
+
+} /* namespace gdb */
 
 #endif /* ARCH_XTENSA_H */

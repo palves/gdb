@@ -20,6 +20,9 @@
 #include "defs.h"
 #include "py-record-full.h"
 
+namespace gdb {
+
+
 /* Implementation of
    BtraceRecord.method [str].  */
 
@@ -37,3 +40,5 @@ recpy_full_format (PyObject *self, void *closure)
 {
   return PyString_FromString ("full");
 }
+
+} /* namespace gdb */

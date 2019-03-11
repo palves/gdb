@@ -35,6 +35,9 @@
 #include "gdbcmd.h"
 #include "compile-c.h"
 
+namespace gdb {
+
+
 /* Convert a given symbol, SYM, to the compiler's representation.
    INSTANCE is the compiler instance.  IS_GLOBAL is true if the
    symbol came from the global scope.  IS_LOCAL is true if the symbol
@@ -489,3 +492,5 @@ gcc_cplus_symbol_address (void *datum, struct gcc_cp_context *gcc_context,
 
   return result;
 }
+
+} /* namespace gdb */

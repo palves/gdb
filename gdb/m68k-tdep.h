@@ -20,6 +20,8 @@
 #ifndef M68K_TDEP_H
 #define M68K_TDEP_H
 
+namespace gdb {
+
 struct frame_info;
 
 /* Register numbers of various important registers.  */
@@ -104,5 +106,7 @@ extern void m68k_svr4_init_abi (struct gdbarch_info, struct gdbarch *);
 /* Functions exported from m68k-bsd-tdep.c.  */
 
 extern int m68kbsd_fpreg_offset (struct gdbarch *gdbarch, int regnum);
+
+} /* namespace gdb */
 
 #endif /* m68k-tdep.h */

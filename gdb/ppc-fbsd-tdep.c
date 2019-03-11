@@ -36,6 +36,9 @@
 #include "fbsd-tdep.h"
 #include "solib-svr4.h"
 
+namespace gdb {
+
+
 
 /* 32-bit regset descriptions.  */
 
@@ -334,3 +337,5 @@ _initialize_ppcfbsd_tdep (void)
   gdbarch_register_osabi (bfd_arch_rs6000, 0, GDB_OSABI_FREEBSD,
 			  ppcfbsd_init_abi);
 }
+
+} /* namespace gdb */

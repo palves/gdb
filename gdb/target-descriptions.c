@@ -38,6 +38,9 @@
 #include "completer.h"
 #include "readline/tilde.h" /* tilde_expand */
 
+namespace gdb {
+
+
 /* Types.  */
 
 struct property
@@ -1867,3 +1870,5 @@ The parameter is the directory name."),
 		 &maintenancechecklist);
   set_cmd_completer (cmd, filename_completer);
 }
+
+} /* namespace gdb */

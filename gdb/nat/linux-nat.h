@@ -22,6 +22,8 @@
 
 #include "target/waitstatus.h"
 
+namespace gdb {
+
 struct lwp_info;
 struct arch_lwp_info;
 
@@ -89,5 +91,7 @@ extern void linux_stop_lwp (struct lwp_info *lwp);
    level.  */
 
 extern int lwp_is_stepping (struct lwp_info *lwp);
+
+} /* namespace gdb */
 
 #endif /* NAT_LINUX_NAT_H */

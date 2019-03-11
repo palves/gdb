@@ -17,6 +17,8 @@
 #ifndef VAROBJ_ITER_H
 #define VAROBJ_ITER_H
 
+namespace gdb {
+
 /* A node or item of varobj, composed of the name and the value.  */
 
 typedef struct varobj_item
@@ -73,5 +75,7 @@ struct varobj_iter_ops
 	  xfree (ITER);		       \
 	}				       \
     } while (0)
+
+} /* namespace gdb */
 
 #endif /* VAROBJ_ITER_H */

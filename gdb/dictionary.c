@@ -29,6 +29,9 @@
 #include "safe-ctype.h"
 #include <unordered_map>
 
+namespace gdb {
+
+
 /* This file implements dictionaries, which are tables that associate
    symbols to names.  They are represented by an opaque type 'struct
    dictionary'.  That type has various internal implementations, which
@@ -1296,3 +1299,5 @@ mdict_empty (const struct multidictionary *mdict)
 
   return true;
 }
+
+} /* namespace gdb */

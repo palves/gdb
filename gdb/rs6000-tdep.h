@@ -18,7 +18,11 @@
 #ifndef RS6000_TDEP_H
 #define RS6000_TDEP_H
 
+namespace gdb {
+
 /* Minimum possible text address in AIX.  */
 #define AIX_TEXT_SEGMENT_BASE 0x10000000
+
+} /* namespace gdb */
 
 #endif /* RS6000_TDEP_H */

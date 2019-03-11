@@ -32,6 +32,9 @@
 #include <signal.h>
 #include "guile-internal.h"
 
+namespace gdb {
+
+
 /* The <gdb:exception> smob.
    This is used to record and handle Scheme exceptions.
    One important invariant is that <gdb:exception> smobs are never a valid
@@ -698,3 +701,5 @@ gdbscm_initialize_exceptions (void)
   message_symbol = scm_from_latin1_symbol ("message");
   full_symbol = scm_from_latin1_symbol ("full");
 }
+
+} /* namespace gdb */

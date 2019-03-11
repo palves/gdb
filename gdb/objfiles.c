@@ -56,6 +56,9 @@
 
 #include <vector>
 
+namespace gdb {
+
+
 /* Keep a registry of per-objfile data-pointers required by other GDB
    modules.  */
 
@@ -1557,3 +1560,5 @@ _initialize_objfiles (void)
   objfiles_bfd_data = register_bfd_data_with_cleanup (NULL,
 						      objfile_bfd_data_free);
 }
+
+} /* namespace gdb */

@@ -24,6 +24,9 @@
 
 #include "obsd-tdep.h"
 
+namespace gdb {
+
+
 CORE_ADDR
 obsd_skip_solib_resolver (struct gdbarch *gdbarch, CORE_ADDR pc)
 {
@@ -326,3 +329,5 @@ obsd_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
   /* Unlike Linux, OpenBSD actually follows the ELF standard.  */
   set_gdbarch_auxv_parse (gdbarch, obsd_auxv_parse);
 }
+
+} /* namespace gdb */

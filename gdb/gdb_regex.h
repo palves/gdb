@@ -19,6 +19,8 @@
 #ifndef GDB_REGEX_H
 #define GDB_REGEX_H 1
 
+namespace gdb {
+
 #ifdef USE_INCLUDED_REGEX
 # include "xregex.h"
 #else
@@ -59,5 +61,7 @@ private:
   /* The compiled pattern.  */
   regex_t m_pattern;
 };
+
+} /* namespace gdb */
 
 #endif /* not GDB_REGEX_H */

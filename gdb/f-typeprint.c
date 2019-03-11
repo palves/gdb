@@ -32,6 +32,9 @@
 #include "f-lang.h"
 #include "typeprint.h"
 
+namespace gdb {
+
+
 #if 0				/* Currently unused.  */
 static void f_type_print_args (struct type *, struct ui_file *);
 #endif
@@ -413,3 +416,5 @@ f_type_print_base (struct type *type, struct ui_file *stream, int show,
       break;
     }
 }
+
+} /* namespace gdb */

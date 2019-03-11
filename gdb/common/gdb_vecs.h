@@ -22,6 +22,8 @@
 
 #include "vec.h"
 
+namespace gdb {
+
 /* Split STR, a list of DELIMITER-separated fields, into a char pointer vector.
 
    You may modify the returned strings.  */
@@ -85,5 +87,7 @@ ordered_remove (std::vector<T> &vec, typename std::vector<T>::size_type ix)
 
   return removed;
 }
+
+} /* namespace gdb */
 
 #endif /* COMMON_GDB_VECS_H */

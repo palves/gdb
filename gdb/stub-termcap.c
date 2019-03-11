@@ -22,6 +22,9 @@
 
 #include "defs.h"
 
+namespace gdb {
+
+
 extern "C" {
 
 /* -Wmissing-prototypes */
@@ -95,3 +98,5 @@ tgoto (const char *cap, int col, int row)
 {
   return NULL;
 }
+
+} /* namespace gdb */

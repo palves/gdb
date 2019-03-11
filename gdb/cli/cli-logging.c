@@ -22,6 +22,9 @@
 #include "ui-out.h"
 #include "interps.h"
 
+namespace gdb {
+
+
 static char *saved_filename;
 
 static char *logging_filename;
@@ -245,3 +248,5 @@ The logfile is used when directing GDB's output."),
 
   logging_filename = xstrdup ("gdb.txt");
 }
+
+} /* namespace gdb */

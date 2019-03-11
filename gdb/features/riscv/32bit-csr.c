@@ -3,6 +3,9 @@
 
 #include "common/tdesc.h"
 
+namespace gdb {
+
+
 static int
 create_feature_riscv_32bit_csr (struct target_desc *result, long regnum)
 {
@@ -251,3 +254,5 @@ create_feature_riscv_32bit_csr (struct target_desc *result, long regnum)
   tdesc_create_reg (feature, "mhcounteren", regnum++, 1, NULL, 32, "int");
   return regnum;
 }
+
+} /* namespace gdb */

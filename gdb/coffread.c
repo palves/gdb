@@ -43,6 +43,9 @@
 #include "psymtab.h"
 #include "build-id.h"
 
+namespace gdb {
+
+
 /* Key for COFF-associated data.  */
 
 static const struct objfile_data *coff_objfile_data_key;
@@ -2229,3 +2232,5 @@ _initialize_coffread (void)
   coff_register_index
     = register_symbol_register_impl (LOC_REGISTER, &coff_register_funcs);
 }
+
+} /* namespace gdb */

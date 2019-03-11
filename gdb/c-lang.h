@@ -26,6 +26,8 @@
 #include "parser-defs.h"
 #include "common/enum-flags.h"
 
+namespace gdb {
+
 struct ui_file;
 struct language_arch_info;
 struct type_print_options;
@@ -189,5 +191,7 @@ extern std::string cplus_compute_program (compile_instance *inst,
 					  struct gdbarch *gdbarch,
 					  const struct block *expr_block,
 					  CORE_ADDR expr_pc);
+
+} /* namespace gdb */
 
 #endif /* !defined (C_LANG_H) */

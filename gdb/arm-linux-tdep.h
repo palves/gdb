@@ -20,6 +20,8 @@
 #ifndef ARM_LINUX_TDEP_H
 #define ARM_LINUX_TDEP_H
 
+namespace gdb {
+
 struct regset;
 struct regcache;
 
@@ -66,5 +68,7 @@ void arm_linux_collect_nwfpe (const struct regset *regset,
 #define HWCAP_NEON      4096
 #define HWCAP_VFPv3     8192
 #define HWCAP_VFPv3D16  16384
+
+} /* namespace gdb */
 
 #endif /* ARM_LINUX_TDEP_H */

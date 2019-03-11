@@ -22,6 +22,9 @@
 #include "gdbarch.h"
 #include "gdbcmd.h"
 
+namespace gdb {
+
+
 const char file_system_kind_auto[] = "auto";
 const char file_system_kind_unix[] = "unix";
 const char file_system_kind_dos_based[] = "dos-based";
@@ -98,3 +101,5 @@ knowledge of the target operating system."),
 			show_target_file_system_kind_command,
 			&setlist, &showlist);
 }
+
+} /* namespace gdb */

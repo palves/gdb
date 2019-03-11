@@ -33,6 +33,9 @@
 
 #include "solib-svr4.h"
 
+namespace gdb {
+
+
 /* Shorthand for some register numbers used below.  */
 #define MIPS_PC_REGNUM  MIPS_EMBED_PC_REGNUM
 #define MIPS_FP0_REGNUM MIPS_EMBED_FP0_REGNUM
@@ -377,3 +380,5 @@ _initialize_mipsnbsd_tdep (void)
   gdbarch_register_osabi (bfd_arch_mips, 0, GDB_OSABI_NETBSD,
 			  mipsnbsd_init_abi);
 }
+
+} /* namespace gdb */

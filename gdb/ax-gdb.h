@@ -21,6 +21,8 @@
 
 #include "ax.h"  /* For agent_expr_up.  */
 
+namespace gdb {
+
 struct expression;
 union exp_element;
 
@@ -123,5 +125,7 @@ extern void require_rvalue (struct agent_expr *ax, struct axs_value *value);
 extern agent_expr_up gen_printf (CORE_ADDR, struct gdbarch *,
 				 CORE_ADDR, LONGEST, const char *, int,
 				 int, struct expression **);
+
+} /* namespace gdb */
 
 #endif /* AX_GDB_H */

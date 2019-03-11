@@ -60,6 +60,9 @@
 #include "opcode/aarch64.h"
 #include <algorithm>
 
+namespace gdb {
+
+
 #define submask(x) ((1L << ((x) + 1)) - 1)
 #define bit(obj,st) (((obj) >> (st)) & 1)
 #define bits(obj,st,fn) (((obj) >> (st)) & submask ((fn) - (st)))
@@ -4192,3 +4195,5 @@ aarch64_process_record (struct gdbarch *gdbarch, struct regcache *regcache,
   deallocate_reg_mem (&aarch64_record);
   return ret;
 }
+
+} /* namespace gdb */

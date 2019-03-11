@@ -47,6 +47,9 @@
 
 #include "sparc64-tdep.h"
 
+namespace gdb {
+
+
 #define sparc_supply_gregset sparc64_supply_gregset
 #define sparc_supply_fpregset sparc64_supply_fpregset
 #define sparc_collect_gregset sparc64_collect_gregset
@@ -91,3 +94,5 @@ fill_fpregset (const struct regcache *regcache,
 {
   sparc_collect_fpregset (&sparc_sol2_fpregmap, regcache, regnum, fpregs);
 }
+
+} /* namespace gdb */

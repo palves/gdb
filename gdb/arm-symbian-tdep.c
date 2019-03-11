@@ -26,6 +26,9 @@
 #include "target.h"
 #include "elf-bfd.h"
 
+namespace gdb {
+
+
 /* If PC is in a DLL import stub, return the address of the `real'
    function belonging to the stub.  */
 
@@ -129,3 +132,5 @@ _initialize_arm_symbian_tdep (void)
   gdbarch_register_osabi (bfd_arch_arm, 0, GDB_OSABI_SYMBIAN,
 			  arm_symbian_init_abi);
 }
+
+} /* namespace gdb */

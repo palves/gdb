@@ -24,6 +24,8 @@
 
 #include "tui/tui-data.h"  /* For struct tui_register_display_type.  */
 
+namespace gdb {
+
 extern void tui_check_register_values (struct frame_info *);
 extern void tui_show_registers (struct reggroup *group);
 extern void tui_display_registers_from (int);
@@ -32,5 +34,7 @@ extern int tui_last_regs_line_no (void);
 extern int tui_first_reg_element_inline (int);
 extern int tui_line_from_reg_element_no (int);
 extern int tui_first_reg_element_no_inline (int lineno);
+
+} /* namespace gdb */
 
 #endif /* TUI_TUI_REGS_H */

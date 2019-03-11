@@ -21,6 +21,9 @@
 #include "gdb_tilde_expand.h"
 #include <glob.h>
 
+namespace gdb {
+
+
 /* RAII-style class wrapping "glob".  */
 
 class gdb_glob
@@ -93,3 +96,5 @@ gdb_tilde_expand_up (const char *dir)
      user, but we are only interested in the first match.  */
   return gdb::unique_xmalloc_ptr<char> (xstrdup (glob.pathv ()[0]));
 }
+
+} /* namespace gdb */

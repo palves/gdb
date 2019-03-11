@@ -27,6 +27,9 @@
 #include "tui/tui-command.h"
 
 #include "gdb_curses.h"
+
+namespace gdb {
+
 /*****************************************
 ** STATIC LOCAL FUNCTIONS FORWARD DECLS    **
 ******************************************/
@@ -103,3 +106,5 @@ tui_refresh_cmd_win (void)
      not introduce some subtle breakage.  */
   fflush (stdout);
 }
+
+} /* namespace gdb */

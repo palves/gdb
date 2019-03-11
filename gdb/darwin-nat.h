@@ -21,6 +21,8 @@
 #include <mach/mach.h>
 #include "gdbthread.h"
 
+namespace gdb {
+
 /* This needs to be overridden by the platform specific nat code.  */
 
 class darwin_nat_target : public inf_child_target
@@ -200,5 +202,7 @@ extern void mach_check_error (kern_return_t ret, const char *file,
 void darwin_set_sstep (thread_t thread, int enable);
 
 void darwin_check_osabi (darwin_inferior *inf, thread_t thread);
+
+} /* namespace gdb */
 
 #endif /* DARWIN_NAT_H */

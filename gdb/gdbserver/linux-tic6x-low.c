@@ -426,6 +426,9 @@ struct linux_target_ops the_low_target = {
 #if GDB_SELF_TEST
 #include "common/selftest.h"
 
+namespace gdb {
+
+
 namespace selftests {
 namespace tdesc {
 static void
@@ -453,3 +456,5 @@ initialize_low_arch (void)
 
   initialize_regsets_info (&tic6x_regsets_info);
 }
+
+} /* namespace gdb */

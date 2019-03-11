@@ -37,6 +37,9 @@
 #include "nat/linux-ptrace.h"
 #include "inf-ptrace.h"
 
+namespace gdb {
+
+
 struct i386_linux_nat_target final : public x86_linux_nat_target
 {
   /* Add our register access methods.  */
@@ -719,3 +722,5 @@ _initialize_i386_linux_nat (void)
   /* Add the target.  */
   add_inf_child_target (linux_target);
 }
+
+} /* namespace gdb */

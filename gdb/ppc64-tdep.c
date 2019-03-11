@@ -25,6 +25,9 @@
 #include "ppc64-tdep.h"
 #include "elf-bfd.h"
 
+namespace gdb {
+
+
 /* Macros for matching instructions.  Note that, since all the
    operands are masked off before they're or-ed into the instruction,
    you can use -1 to make masks.  */
@@ -613,3 +616,5 @@ ppc64_elf_make_msymbol_special (asymbol *sym, struct minimal_symbol *msym)
       SET_MSYMBOL_SIZE (msym, elf_sym->internal_elf_sym.st_size);
     }
 }
+
+} /* namespace gdb */

@@ -27,6 +27,9 @@
 #include "record-btrace.h"
 #include "disasm.h"
 
+namespace gdb {
+
+
 #if defined (IS_PY3K)
 
 #define BTPY_PYSLICE(x) (x)
@@ -853,3 +856,5 @@ gdbpy_initialize_btrace (void)
 
   return PyType_Ready (&btpy_list_type);
 }
+
+} /* namespace gdb */

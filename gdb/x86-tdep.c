@@ -20,6 +20,9 @@
 #include "defs.h"
 #include "x86-tdep.h"
 
+namespace gdb {
+
+
 
 /* Check whether NAME is included in NAMES[LO] (inclusive) to NAMES[HI]
    (exclusive).  */
@@ -74,3 +77,5 @@ x86_in_indirect_branch_thunk (CORE_ADDR pc, const char **register_names,
 
   return false;
 }
+
+} /* namespace gdb */

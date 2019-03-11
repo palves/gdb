@@ -41,6 +41,9 @@
 #include "amd64-nat.h"
 #include "amd64-tdep.h"
 #include "amd64-darwin-tdep.h"
+
+namespace gdb {
+
 #endif
 
 struct i386_darwin_nat_target final : public x86_nat_target<darwin_nat_target>
@@ -658,3 +661,5 @@ _initialize_i386_darwin_nat (void)
 
   add_inf_child_target (&darwin_target);
 }
+
+} /* namespace gdb */

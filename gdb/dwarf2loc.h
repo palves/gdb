@@ -22,6 +22,8 @@
 
 #include "dwarf2expr.h"
 
+namespace gdb {
+
 struct symbol_computed_ops;
 struct objfile;
 struct dwarf2_per_cu_data;
@@ -310,5 +312,7 @@ extern int dwarf_reg_to_regnum (struct gdbarch *arch, int dwarf_reg);
 
 extern int dwarf_reg_to_regnum_or_error (struct gdbarch *arch,
 					 ULONGEST dwarf_reg);
+
+} /* namespace gdb */
 
 #endif /* dwarf2loc.h */

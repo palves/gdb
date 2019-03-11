@@ -21,6 +21,9 @@
 #include "producer.h"
 #include "common/selftest.h"
 
+namespace gdb {
+
+
 /* See producer.h.  */
 
 int
@@ -216,3 +219,5 @@ _initialize_producer ()
     ("producer-parser", selftests::producer::producer_parsing_tests);
 #endif
 }
+
+} /* namespace gdb */

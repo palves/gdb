@@ -84,6 +84,9 @@ get_raw_reg (const unsigned char *raw_regs, int regnum)
 
 #include <ust/processor.h>
 
+namespace gdb {
+
+
 /* "struct registers" is the UST object type holding the registers at
    the time of the static tracepoint marker call.  This doesn't
    contain RIP, but we know what it must have been (the marker
@@ -287,3 +290,5 @@ initialize_low_tracepoint (void)
     amd64_linux_read_description (idx2mask[i], false);
 #endif
 }
+
+} /* namespace gdb */

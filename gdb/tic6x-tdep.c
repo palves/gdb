@@ -49,6 +49,9 @@
 #include "target-descriptions.h"
 #include <algorithm>
 
+namespace gdb {
+
+
 #define TIC6X_OPCODE_SIZE 4
 #define TIC6X_FETCH_PACKET_SIZE 32
 
@@ -1328,3 +1331,5 @@ _initialize_tic6x_tdep (void)
 {
   register_gdbarch_init (bfd_arch_tic6x, tic6x_gdbarch_init);
 }
+
+} /* namespace gdb */

@@ -25,6 +25,9 @@
 #include "ravenscar-thread.h"
 #include "aarch64-ravenscar-thread.h"
 
+namespace gdb {
+
+
 #define NO_OFFSET -1
 
 /* See aarch64-tdep.h for register numbers.  */
@@ -192,3 +195,5 @@ register_aarch64_ravenscar_ops (struct gdbarch *gdbarch)
 {
   set_gdbarch_ravenscar_ops (gdbarch, &aarch64_ravenscar_ops);
 }
+
+} /* namespace gdb */

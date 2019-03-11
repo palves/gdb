@@ -33,6 +33,9 @@
 #include "gdb-demangle.h"
 #include <ctype.h>
 
+namespace gdb {
+
+
 static void pascal_type_print_varspec_suffix (struct type *, struct ui_file *,
 					      int, int, int,
 					      const struct type_print_options *);
@@ -833,3 +836,5 @@ pascal_type_print_base (struct type *type, struct ui_file *stream, int show,
       break;
     }
 }
+
+} /* namespace gdb */

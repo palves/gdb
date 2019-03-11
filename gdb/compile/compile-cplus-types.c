@@ -1351,6 +1351,9 @@ compile_cplus_debug_output (T arg, Targs... Args)
 
 #include "gcc-cp-fe.def"
 
+namespace gdb {
+
+
 #undef GCC_METHOD0
 #undef GCC_METHOD1
 #undef GCC_METHOD2
@@ -1429,3 +1432,5 @@ C++ type conversion for the compile commands."),
 			     &setdebuglist,
 			     &showdebuglist);
 }
+
+} /* namespace gdb */

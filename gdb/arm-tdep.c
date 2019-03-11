@@ -74,6 +74,9 @@
 
 #if GDB_SELF_TEST
 #include "common/selftest.h"
+
+namespace gdb {
+
 #endif
 
 static int arm_debug;
@@ -13386,3 +13389,5 @@ arm_process_record (struct gdbarch *gdbarch, struct regcache *regcache,
 
   return ret;
 }
+
+} /* namespace gdb */

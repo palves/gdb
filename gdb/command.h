@@ -21,6 +21,8 @@
 #include "common/gdb_vecs.h"
 #include "common/scoped_restore.h"
 
+namespace gdb {
+
 struct completion_tracker;
 
 /* This file defines the public interface for any code wanting to
@@ -469,5 +471,7 @@ extern int cmd_func_p (struct cmd_list_element *cmd);
 /* Call the command function.  */
 extern void cmd_func (struct cmd_list_element *cmd,
 		      const char *args, int from_tty);
+
+} /* namespace gdb */
 
 #endif /* !defined (COMMAND_H) */

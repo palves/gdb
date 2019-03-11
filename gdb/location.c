@@ -29,6 +29,9 @@
 #include <ctype.h>
 #include <string.h>
 
+namespace gdb {
+
+
 /* An event location used to set a stop event in the inferior.
    This structure is an amalgam of the various ways
    to specify where a stop event should be set.  */
@@ -984,3 +987,5 @@ set_event_location_string (struct event_location *location,
   xfree (EL_STRING (location));
   EL_STRING (location) = string == NULL ?  NULL : xstrdup (string);
 }
+
+} /* namespace gdb */

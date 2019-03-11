@@ -20,6 +20,8 @@
 #if !defined(OBJC_LANG_H)
 #define OBJC_LANG_H
 
+namespace gdb {
+
 struct stoken;
 
 struct value;
@@ -49,5 +51,7 @@ extern int end_msglist (struct parser_state *);
 struct symbol *lookup_struct_typedef (const char *name,
 				      const struct block *block,
 				      int noerr);
+
+} /* namespace gdb */
 
 #endif

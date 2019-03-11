@@ -22,6 +22,8 @@
 #ifndef BCACHE_H
 #define BCACHE_H 1
 
+namespace gdb {
+
 /* A bcache is a data structure for factoring out duplication in
    read-only structures.  You give the bcache some string of bytes S.
    If the bcache already contains a copy of S, it hands you back a
@@ -220,5 +222,7 @@ private:
   /* Expand the hash table.  */
   void expand_hash_table ();
 };
+
+} /* namespace gdb */
 
 #endif /* BCACHE_H */

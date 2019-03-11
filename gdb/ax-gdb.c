@@ -48,6 +48,9 @@
 
 #include "common/format.h"
 
+namespace gdb {
+
+
 /* To make sense of this file, you should read doc/agentexpr.texi.
    Then look at the types and enums in ax-gdb.h.  For the code itself,
    look at gen_expr, towards the bottom; that's the main function that
@@ -2769,3 +2772,5 @@ If not, generate remote agent bytecode for current frame pc address."),
 	     "agent bytecode for evaluation and display the bytecodes."),
 	   &maintenancelist);
 }
+
+} /* namespace gdb */

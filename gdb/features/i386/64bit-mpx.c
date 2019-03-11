@@ -3,6 +3,9 @@
 
 #include "common/tdesc.h"
 
+namespace gdb {
+
+
 static int
 create_feature_i386_64bit_mpx (struct target_desc *result, long regnum)
 {
@@ -49,3 +52,5 @@ create_feature_i386_64bit_mpx (struct target_desc *result, long regnum)
   tdesc_create_reg (feature, "bndstatus", regnum++, 1, NULL, 64, "status");
   return regnum;
 }
+
+} /* namespace gdb */

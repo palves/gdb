@@ -21,6 +21,8 @@
 
 #include <string>
 
+namespace gdb {
+
 /* Like NI_MAXHOST/NI_MAXSERV, but enough for numeric forms.  */
 #define GDB_NI_MAX_ADDR 64
 #define GDB_NI_MAX_PORT 16
@@ -72,5 +74,7 @@ extern parsed_connection_spec
    accordingly.  */
 extern parsed_connection_spec parse_connection_spec (const char *spec,
 						     struct addrinfo *hint);
+
+} /* namespace gdb */
 
 #endif /* COMMON_NETSTUFF_H */

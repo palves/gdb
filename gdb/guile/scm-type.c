@@ -32,6 +32,9 @@
 #include "typeprint.h"
 #include "guile-internal.h"
 
+namespace gdb {
+
+
 /* The <gdb:type> smob.
    The type is chained with all types associated with its objfile, if any.
    This lets us copy the underlying struct type when the objfile is
@@ -1508,3 +1511,5 @@ Internal function to assist the type fields iterator."));
   global_types_map = gdbscm_create_eqable_gsmob_ptr_map (tyscm_hash_type_smob,
 							 tyscm_eq_type_smob);
 }
+
+} /* namespace gdb */

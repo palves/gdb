@@ -20,6 +20,8 @@
 #ifndef FBSD_TDEP_H
 #define FBSD_TDEP_H
 
+namespace gdb {
+
 extern void fbsd_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch);
 
 /* Output the header for "info proc files".  */
@@ -59,5 +61,7 @@ extern void fbsd_info_proc_mappings_entry (int addr_bit, ULONGEST kve_start,
 					   ULONGEST kve_offset,
 					   int kve_flags, int kve_protection,
 					   const void *kve_path);
+
+} /* namespace gdb */
 
 #endif /* fbsd-tdep.h */

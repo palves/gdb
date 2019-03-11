@@ -68,6 +68,9 @@
 
 #include "expression.h"
 
+namespace gdb {
+
+
 /* Provide a way to test if we have both ECOFF and ELF symbol tables.
    We use this define in order to know whether we should override a 
    symbol's ECOFF section with its ELF section.  This is necessary in 
@@ -4818,3 +4821,5 @@ _initialize_mdebugread (void)
   mdebug_regparm_index
     = register_symbol_register_impl (LOC_REGPARM_ADDR, &mdebug_register_funcs);
 }
+
+} /* namespace gdb */

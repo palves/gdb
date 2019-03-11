@@ -20,6 +20,8 @@
 #ifndef REGSET_H
 #define REGSET_H 1
 
+namespace gdb {
+
 struct gdbarch;
 struct regcache;
 
@@ -51,5 +53,7 @@ struct regset
 
 #define REGSET_VARIABLE_SIZE 1	/* Accept a larger regset section size
 				   in a core file without warning.  */
+
+} /* namespace gdb */
 
 #endif /* regset.h */

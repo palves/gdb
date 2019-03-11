@@ -30,6 +30,9 @@
 #include "common/function-view.h"
 #include "common/preprocessor.h"
 
+namespace gdb {
+
+
 /* See compile-internal.h.  */
 
 const char *
@@ -689,3 +692,5 @@ cplus_compute_program (compile_instance *inst,
 
   return program.compute (input, expr_block, expr_pc);
 }
+
+} /* namespace gdb */

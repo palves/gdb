@@ -19,6 +19,8 @@
 #ifndef GDBSERVER_DEBUG_H
 #define GDBSERVER_DEBUG_H
 
+namespace gdb {
+
 /* We declare debug format variables here, and debug_threads but no other
    debug content variables (e.g., not remote_debug) because while this file
    is not currently used by IPA it may be some day, and IPA may have its own
@@ -50,5 +52,7 @@ void do_debug_exit (const char *function_name);
 #define debug_exit() \
   do { } while (0)
 #endif
+
+} /* namespace gdb */
 
 #endif /* GDBSERVER_DEBUG_H */

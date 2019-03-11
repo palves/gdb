@@ -19,6 +19,9 @@
 #include "defs.h"
 #include "mi-common.h"
 
+namespace gdb {
+
+
 static const char * const async_reason_string_lookup[] =
 {
   "breakpoint-hit",
@@ -50,3 +53,5 @@ async_reason_lookup (enum async_reply_reason reason)
 {
   return async_reason_string_lookup[reason];
 }
+
+} /* namespace gdb */

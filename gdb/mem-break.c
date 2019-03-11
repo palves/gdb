@@ -24,6 +24,9 @@
 #include "breakpoint.h"
 #include "inferior.h"
 #include "target.h"
+
+namespace gdb {
+
 /* Insert a breakpoint on targets that don't have any better
    breakpoint support.  We read the contents of the target location
    and stash it, then overwrite it with a breakpoint instruction.
@@ -125,3 +128,5 @@ memory_validate_breakpoint (struct gdbarch *gdbarch,
      the old value.  */
   return (val == 0 && memcmp (bp, cur_contents, bplen) == 0);
 }
+
+} /* namespace gdb */

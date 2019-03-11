@@ -19,6 +19,8 @@
 #ifndef COMMON_REFCOUNTED_OBJECT_H
 #define COMMON_REFCOUNTED_OBJECT_H
 
+namespace gdb {
+
 /* Base class of intrusively reference-countable objects.
    Incrementing and decrementing the reference count is an external
    responsibility.  */
@@ -66,5 +68,7 @@ struct refcounted_object_ref_policy
     ptr->decref ();
   }
 };
+
+} /* namespace gdb */
 
 #endif /* COMMON_REFCOUNTED_OBJECT_H */

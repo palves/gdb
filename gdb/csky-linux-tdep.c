@@ -30,6 +30,9 @@
 #include "tramp-frame.h"
 #include "csky-tdep.h"
 
+namespace gdb {
+
+
 /* Functions, definitions, and data structures for C-Sky core file debug.  */
 
 /* General regset pc, r1, r0, psr, r2-r31 for CK810.  */
@@ -261,3 +264,5 @@ _initialize_csky_linux_tdep (void)
   gdbarch_register_osabi (bfd_arch_csky, 0, GDB_OSABI_LINUX,
 			  csky_linux_init_abi);
 }
+
+} /* namespace gdb */

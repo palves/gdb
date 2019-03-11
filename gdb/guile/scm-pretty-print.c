@@ -29,6 +29,9 @@
 #include "valprint.h"
 #include "guile-internal.h"
 
+namespace gdb {
+
+
 /* Return type of print_string_repr.  */
 
 enum string_repr_result
@@ -1098,3 +1101,5 @@ gdbscm_initialize_pretty_printers (void)
   ppscm_array_string = scm_from_latin1_string ("array");
   ppscm_string_string = scm_from_latin1_string ("string");
 }
+
+} /* namespace gdb */

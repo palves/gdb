@@ -25,6 +25,9 @@
 #include "target.h"
 #include "value.h"
 
+namespace gdb {
+
+
 struct trad_frame_cache
 {
   struct frame_info *this_frame;
@@ -269,3 +272,5 @@ trad_frame_get_this_base (struct trad_frame_cache *this_trad_cache)
 {
   return this_trad_cache->this_base;
 }
+
+} /* namespace gdb */

@@ -24,6 +24,9 @@
 #include "reggroups.h"
 #include "target.h"
 
+namespace gdb {
+
+
 /* Dump registers from regcache, used for dumping raw registers and
    cooked registers.  */
 
@@ -333,3 +336,5 @@ remote register number and buffer offset in the g/G packets.\n\
 Takes an optional file parameter."),
 	   &maintenanceprintlist);
 }
+
+} /* namespace gdb */

@@ -182,6 +182,9 @@ m68k_bsd_nat_target::store_registers (struct regcache *regcache, int regnum)
 
 #include "bsd-kvm.h"
 
+namespace gdb {
+
+
 /* OpenBSD doesn't have these.  */
 #ifndef PCB_REGS_FP
 #define PCB_REGS_FP 10
@@ -229,3 +232,5 @@ _initialize_m68kbsd_nat (void)
   /* Support debugging kernel virtual memory images.  */
   bsd_kvm_add_target (m68kbsd_supply_pcb);
 }
+
+} /* namespace gdb */

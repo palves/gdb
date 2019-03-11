@@ -23,6 +23,8 @@
 #include "traits.h"
 #include "obstack.h"
 
+namespace gdb {
+
 /* Poison memset of non-POD types.  The idea is catching invalid
    initialization of non-POD structs that is easy to be introduced as
    side effect of refactoring.  For example, say this:
@@ -244,5 +246,7 @@ non-POD data type.");
 
 #undef XOBNEWVEC
 #define XOBNEWVEC(O, T, N) xobnewvec<T> (O, N)
+
+} /* namespace gdb */
 
 #endif /* COMMON_POISON_H */

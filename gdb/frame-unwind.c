@@ -27,6 +27,9 @@
 #include "gdb_obstack.h"
 #include "target.h"
 
+namespace gdb {
+
+
 static struct gdbarch_data *frame_unwind_data;
 
 struct frame_unwind_table_entry
@@ -310,3 +313,5 @@ _initialize_frame_unwind (void)
 {
   frame_unwind_data = gdbarch_data_register_pre_init (frame_unwind_init);
 }
+
+} /* namespace gdb */

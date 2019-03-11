@@ -24,6 +24,9 @@
 #include "xtensa-config.h"
 #include "xtensa-tdep.h"
 
+namespace gdb {
+
+
 
 
 /* Masked registers.  */
@@ -219,3 +222,5 @@ xtensa_register_t rmap[] =
 XTENSA_CONFIG_INSTANTIATE(rmap,0)
 #endif
 
+
+} /* namespace gdb */

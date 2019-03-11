@@ -28,6 +28,9 @@
 #include "completer.h"
 #include "language.h"
 
+namespace gdb {
+
+
 /* Struct representing built-in completion types.  */
 struct cmdpy_completer
 {
@@ -731,3 +734,5 @@ gdbpy_string_to_argv (PyObject *self, PyObject *args)
 
   return py_argv.release ();
 }
+
+} /* namespace gdb */

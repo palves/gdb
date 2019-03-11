@@ -44,6 +44,9 @@
 #include "elf/m68hc11.h"
 #include "elf-bfd.h"
 
+namespace gdb {
+
+
 /* Macros for setting and testing a bit in a minimal symbol.
    For 68HC11/68HC12 we have two flags that tell which return
    type the function is using.  This is used for prologue and frame
@@ -1544,3 +1547,5 @@ _initialize_m68hc11_tdep (void)
   m68hc11_init_reggroups ();
 } 
 
+
+} /* namespace gdb */

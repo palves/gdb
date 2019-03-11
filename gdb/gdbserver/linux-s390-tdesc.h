@@ -20,6 +20,8 @@
 #ifndef GDBSERVER_LINUX_S390_TDESC_H
 #define GDBSERVER_LINUX_S390_TDESC_H
 
+namespace gdb {
+
 /* Note: since IPA obviously knows what ABI it's running on (s390 vs s390x),
    it's sufficient to pass only the register set here.  This, together with
    the ABI known at IPA compile time, maps to a tdesc.  */
@@ -112,5 +114,7 @@ void init_registers_s390_gs_linux64 (void);
 extern const struct target_desc *tdesc_s390_gs_linux64;
 
 #endif
+
+} /* namespace gdb */
 
 #endif /* GDBSERVER_LINUX_S390_TDESC_H */

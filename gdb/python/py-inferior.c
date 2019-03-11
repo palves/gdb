@@ -30,6 +30,9 @@
 #include "py-event.h"
 #include "py-stopevent.h"
 
+namespace gdb {
+
+
 struct threadlist_entry {
   thread_object *thread_obj;
   struct threadlist_entry *next;
@@ -1049,3 +1052,5 @@ PyTypeObject membuf_object_type = {
   0,				  /* tp_init */
   0,				  /* tp_alloc */
 };
+
+} /* namespace gdb */

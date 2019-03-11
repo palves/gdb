@@ -19,6 +19,8 @@
 #ifndef GDBSERVER_EVENT_LOOP_H
 #define GDBSERVER_EVENT_LOOP_H
 
+namespace gdb {
+
 typedef void *gdb_client_data;
 typedef int (handler_func) (int, gdb_client_data);
 typedef int (callback_handler_func) (gdb_client_data);
@@ -32,5 +34,7 @@ extern void delete_callback_event (int id);
 
 extern void start_event_loop (void);
 extern void initialize_event_loop (void);
+
+} /* namespace gdb */
 
 #endif /* GDBSERVER_EVENT_LOOP_H */

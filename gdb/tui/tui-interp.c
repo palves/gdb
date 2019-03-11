@@ -35,6 +35,9 @@
 #include "gdbthread.h"
 #include "inferior.h"
 
+namespace gdb {
+
+
 /* Set to 1 when the TUI mode must be activated when we first start
    gdb.  */
 static int tui_start_enabled = 0;
@@ -334,3 +337,5 @@ _initialize_tui_interp (void)
   gdb::observers::user_selected_context_changed.attach
     (tui_on_user_selected_context_changed);
 }
+
+} /* namespace gdb */

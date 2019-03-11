@@ -20,8 +20,12 @@
 #ifndef AARCH64_RAVENSCAR_THREAD_H
 #define AARCH64_RAVENSCAR_THREAD_H
 
+namespace gdb {
+
 struct gdbarch;
 
 extern void register_aarch64_ravenscar_ops (struct gdbarch *gdbarch);
+
+} /* namespace gdb */
 
 #endif

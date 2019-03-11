@@ -34,6 +34,9 @@
 #include "py-event.h"
 #include "linespec.h"
 
+namespace gdb {
+
+
 /* Number of live breakpoints.  */
 static int bppy_live;
 
@@ -1288,3 +1291,5 @@ PyTypeObject breakpoint_object_type =
   bppy_init,			  /* tp_init */
   0,				  /* tp_alloc */
 };
+
+} /* namespace gdb */

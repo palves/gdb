@@ -20,6 +20,8 @@
 #ifndef MAIN_H
 #define MAIN_H
 
+namespace gdb {
+
 struct captured_main_args
 {
   int argc;
@@ -48,5 +50,7 @@ extern char *windows_get_absolute_argv0 (const char *argv0);
 extern const char *get_gdb_program_name (void);
 
 extern void set_gdb_data_directory (const char *new_data_dir);
+
+} /* namespace gdb */
 
 #endif

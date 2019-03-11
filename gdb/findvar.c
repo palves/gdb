@@ -34,6 +34,9 @@
 #include "dwarf2loc.h"
 #include "common/selftest.h"
 
+namespace gdb {
+
+
 /* Basic byte-swapping routines.  All 'extract' functions return a
    host-format integer from a target-format integer at ADDR which is
    LEN bytes long.  */
@@ -1097,3 +1100,5 @@ _initialize_findvar (void)
      selftests::findvar_tests::copy_integer_to_size_test);
 #endif
 }
+
+} /* namespace gdb */

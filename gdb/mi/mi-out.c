@@ -24,6 +24,9 @@
 #include "mi-out.h"
 #include <vector>
 
+namespace gdb {
+
+
 /* Mark beginning of a table.  */
 
 void
@@ -326,3 +329,5 @@ mi_out_rewind (ui_out *uiout)
 {
   return as_mi_ui_out (uiout)->rewind ();
 }
+
+} /* namespace gdb */

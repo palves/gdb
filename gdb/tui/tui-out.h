@@ -20,6 +20,8 @@
 
 #include "cli-out.h"
 
+namespace gdb {
+
 class tui_ui_out : public cli_ui_out
 {
 public:
@@ -44,5 +46,7 @@ private:
 };
 
 extern tui_ui_out *tui_out_new (struct ui_file *stream);
+
+} /* namespace gdb */
 
 #endif /* TUI_TUI_OUT_H */

@@ -20,10 +20,14 @@
 #ifndef GDBSERVER_LINUX_AARCH64_TDESC_H
 #define GDBSERVER_LINUX_AARCH64_TDESC_H
 
+namespace gdb {
+
 const target_desc * aarch64_linux_read_description (uint64_t vq);
 
 #if GDB_SELF_TEST
 void initialize_low_tdesc ();
 #endif
+
+} /* namespace gdb */
 
 #endif /* GDBSERVER_LINUX_AARCH64_TDESC_H */

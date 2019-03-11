@@ -25,6 +25,9 @@
 #include "tui-out.h"
 #include "tui.h"
 
+namespace gdb {
+
+
 /* Output an int field.  */
 
 void
@@ -119,3 +122,5 @@ tui_out_new (struct ui_file *stream)
 {
   return new tui_ui_out (stream);
 }
+
+} /* namespace gdb */

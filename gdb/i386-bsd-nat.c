@@ -32,6 +32,9 @@
 #include "x86-bsd-nat.h"
 #include "i386-bsd-nat.h"
 #include "inf-ptrace.h"
+
+namespace gdb {
+
 
 
 /* In older BSD versions we cannot get at some of the segment
@@ -340,3 +343,5 @@ Please report this to <bug-gdb@gnu.org>."),
 
 #endif /* SC_REG_OFFSET */
 }
+
+} /* namespace gdb */

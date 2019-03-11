@@ -25,6 +25,9 @@
 #include "language.h"
 #include "guile-internal.h"
 
+namespace gdb {
+
+
 /* The <gdb:objfile> smob.
    The typedef for this struct is in guile-internal.h.  */
 
@@ -433,3 +436,5 @@ gdbscm_initialize_objfiles (void)
   ofscm_objfile_data_key
     = register_objfile_data_with_cleanup (NULL, ofscm_handle_objfile_deleted);
 }
+
+} /* namespace gdb */

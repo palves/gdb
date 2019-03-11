@@ -22,10 +22,14 @@
 
 #include "python-internal.h"
 
+namespace gdb {
+
 /* Implementation of record.method [str].  */
 extern PyObject *recpy_full_method (PyObject *self, void *value);
 
 /* Implementation of record.format [str].  */
 extern PyObject *recpy_full_format (PyObject *self, void *value);
+
+} /* namespace gdb */
 
 #endif /* PYTHON_PY_RECORD_FULL_H */

@@ -22,6 +22,8 @@
 #include "common/vec.h"
 #include "value.h"
 
+namespace gdb {
+
 /* Enumeration for the format types */
 enum varobj_display_formats
   {
@@ -350,5 +352,7 @@ extern void varobj_restrict_range (const std::vector<varobj *> &children,
 				   int *from, int *to);
 
 extern bool varobj_default_is_path_expr_parent (const struct varobj *var);
+
+} /* namespace gdb */
 
 #endif /* VAROBJ_H */

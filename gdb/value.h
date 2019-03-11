@@ -27,6 +27,8 @@
 #include "gdbtypes.h"
 #include "expression.h"
 
+namespace gdb {
+
 struct block;
 struct expression;
 struct regcache;
@@ -1186,5 +1188,7 @@ extern struct value *call_xmethod (struct value *method,
 
 extern int value_union_variant (struct type *union_type,
 				const gdb_byte *contents);
+
+} /* namespace gdb */
 
 #endif /* !defined (VALUE_H) */

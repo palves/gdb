@@ -24,6 +24,9 @@
 #include "inferior.h"
 #include "dicos-tdep.h"
 
+namespace gdb {
+
+
 void
 dicos_init_abi (struct gdbarch *gdbarch)
 {
@@ -114,3 +117,5 @@ dicos_load_module_p (bfd *abfd, int header_size)
   xfree (symbol_table);
   return ret;
 }
+
+} /* namespace gdb */

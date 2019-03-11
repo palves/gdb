@@ -37,6 +37,9 @@
 
 #include "spu-tdep.h"
 
+namespace gdb {
+
+
 /* Highest SPE id (file handle) the inferior may have.  */
 #define MAX_SPE_FD 1024
 
@@ -548,3 +551,5 @@ _initialize_spu_solib (void)
   ocl_program_data_key = register_objfile_data ();
 }
 
+
+} /* namespace gdb */

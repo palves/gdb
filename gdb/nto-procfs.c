@@ -45,6 +45,9 @@
 #include "common/filestuff.h"
 #include "common/scoped_fd.h"
 
+namespace gdb {
+
+
 #define NULL_PID		0
 #define _DEBUG_FLAG_TRACE	(_DEBUG_FLAG_TRACE_EXEC|_DEBUG_FLAG_TRACE_RD|\
 		_DEBUG_FLAG_TRACE_WR|_DEBUG_FLAG_TRACE_MODIFY)
@@ -1610,3 +1613,5 @@ nto_procfs_target::stopped_by_watchpoint ()
 	    | _DEBUG_FLAG_TRACE_WR
 	    | _DEBUG_FLAG_TRACE_MODIFY);
 }
+
+} /* namespace gdb */

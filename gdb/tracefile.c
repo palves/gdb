@@ -24,6 +24,9 @@
 #include "regcache.h"
 #include "common/byte-vector.h"
 
+namespace gdb {
+
+
 /* Helper macros.  */
 
 #define TRACE_WRITE_R_BLOCK(writer, buf, size)	\
@@ -479,3 +482,5 @@ Use the '-ctf' option to save the data to CTF format.\n\
 Use the '-r' option to direct the target to save directly to the file,\n\
 using its own filesystem."));
 }
+
+} /* namespace gdb */

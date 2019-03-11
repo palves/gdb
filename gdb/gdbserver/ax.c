@@ -75,6 +75,9 @@ static const unsigned char gdb_agent_op_sizes [gdb_agent_op_last] =
     0
 #define DEFOP(NAME, SIZE, DATA_SIZE, CONSUMED, PRODUCED, VALUE)  , SIZE
 #include "common/ax.def"
+
+namespace gdb {
+
 #undef DEFOP
   };
 #endif
@@ -1362,3 +1365,5 @@ gdb_eval_agent_expr (struct eval_agent_expr_context *ctx,
 		gdb_agent_op_name (op), sp, phex_nz (top, 0));
     }
 }
+
+} /* namespace gdb */

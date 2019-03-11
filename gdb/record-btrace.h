@@ -22,11 +22,15 @@
 #ifndef RECORD_BTRACE_H
 #define RECORD_BTRACE_H
 
+namespace gdb {
+
 /* Push the record_btrace target.  */
 extern void record_btrace_push_target (void);
 
 /* Return the cpu configured by the user via "set btrace cpu".  Returns
    NULL if the cpu was configured as auto.  */
 extern const struct btrace_cpu *record_btrace_get_cpu (void);
+
+} /* namespace gdb */
 
 #endif /* RECORD_BTRACE_H */

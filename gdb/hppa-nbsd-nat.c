@@ -30,6 +30,9 @@
 
 #include "nbsd-nat.h"
 
+namespace gdb {
+
+
 class hppa_nbsd_nat_target final : public nbsd_nat_target
 {
   void fetch_registers (struct regcache *, int) override;
@@ -233,3 +236,5 @@ _initialize_hppanbsd_nat (void)
 {
   add_inf_child_target (&the_hppa_nbsd_nat_target);
 }
+
+} /* namespace gdb */

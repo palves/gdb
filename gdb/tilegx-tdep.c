@@ -42,6 +42,9 @@
 #include <algorithm>
 #include "common/byte-vector.h"
 
+namespace gdb {
+
+
 struct tilegx_frame_cache
 {
   /* Base address.  */
@@ -1063,3 +1066,5 @@ _initialize_tilegx_tdep (void)
 {
   register_gdbarch_init (bfd_arch_tilegx, tilegx_gdbarch_init);
 }
+
+} /* namespace gdb */
