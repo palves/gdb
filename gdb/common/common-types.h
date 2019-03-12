@@ -22,6 +22,8 @@
 
 #ifdef GDBSERVER
 
+namespace gdb {
+
 /* * A byte from the program being debugged.  */
 typedef unsigned char gdb_byte;
 
@@ -30,9 +32,13 @@ typedef unsigned long long CORE_ADDR;
 typedef long long LONGEST;
 typedef unsigned long long ULONGEST;
 
+} /* namespace gdb */
+
 #else /* GDBSERVER */
 
 #include "bfd.h"
+
+namespace gdb {
 
 /* * A byte from the program being debugged.  */
 typedef bfd_byte gdb_byte;
@@ -53,7 +59,12 @@ typedef long long LONGEST;
 typedef unsigned long long ULONGEST;
 
 #endif /* No BFD64 */
+
+} /* namespace gdb */
+
 #endif /* GDBSERVER */
+
+namespace gdb {
 
 /* * The largest CORE_ADDR value.  */
 #define CORE_ADDR_MAX (~(CORE_ADDR) 0)
@@ -62,5 +73,7 @@ typedef unsigned long long ULONGEST;
 #define ULONGEST_MAX (~(ULONGEST) 0)
 
 enum tribool { TRIBOOL_UNKNOWN = -1, TRIBOOL_FALSE = 0, TRIBOOL_TRUE = 1 };
+
+} /* namespace gdb */
 
 #endif /* COMMON_COMMON_TYPES_H */
