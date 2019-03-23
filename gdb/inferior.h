@@ -55,6 +55,8 @@ struct thread_info;
 #include "common-inferior.h"
 #include "gdbthread.h"
 
+#include "process-stratum-target.h"
+
 struct infcall_suspend_state;
 struct infcall_control_state;
 
@@ -364,8 +366,8 @@ public:
   target_ops *top_target ()
   { return m_stack.top (); }
 
-  target_ops *process_target ()
-  { return m_stack.at (process_stratum); }
+  struct process_stratum_target *process_target ()
+  { return (process_stratum_target *) m_stack.at (process_stratum); }
 
   target_ops *target_at (enum strata stratum)
   { return m_stack.at (stratum); }
