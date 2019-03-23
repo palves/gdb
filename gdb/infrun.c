@@ -582,7 +582,7 @@ holding the child stopped.  Try \"set detach-on-fork\" or \
 
       /* Get a strong reference to the target before (maybe) detaching
 	 the parent.  Otherwise detaching could close the target.  */
-      target_ops *target = parent_inf->process_target ();
+      process_stratum_target *target = parent_inf->process_target ();
       target->incref ();
 
       /* If we're vforking, we want to hold on to the parent until the
@@ -759,7 +759,7 @@ follow_fork (void)
 	parent = inferior_ptid;
 	child = tp->pending_follow.value.related_pid;
 
-	target_ops *parent_targ = tp->inf->process_target ();
+	process_stratum_target *parent_targ = tp->inf->process_target ();
 	/* Set up inferior(s) as specified by the caller, and tell the
 	   target to do whatever is necessary to follow either parent
 	   or child.  */
@@ -2026,7 +2026,7 @@ displaced_step_fixup (thread_info *event_thread, enum gdb_signal signal)
    discarded between events.  */
 struct execution_control_state
 {
-  target_ops *target;
+  process_stratum_target *target;
   ptid_t ptid;
   /* The thread that got the event, if this was a thread event; NULL
      otherwise.  */
@@ -2283,7 +2283,7 @@ user_visible_resume_ptid (int step)
   return resume_ptid;
 }
 
-target_ops *
+process_stratum_target *
 user_visible_resume_target (ptid_t resume_ptid, inferior *cur_inf)
 {
   return (resume_ptid == minus_one_ptid
@@ -2885,8 +2885,8 @@ clear_proceed_status (int step)
   if (!non_stop && inferior_ptid != null_ptid)
     {
       ptid_t resume_ptid = user_visible_resume_ptid (step);
-      target_ops *resume_target = user_visible_resume_target (resume_ptid,
-							      current_inferior ());
+      process_stratum_target *resume_target
+	= user_visible_resume_target (resume_ptid, current_inferior ());
 
       /* In all-stop mode, delete the per-thread status of all threads
 	 we're about to resume, implicitly and explicitly.  */
@@ -2999,7 +2999,6 @@ proceed (CORE_ADDR addr, enum gdb_signal siggnal)
   struct regcache *regcache;
   struct gdbarch *gdbarch;
   CORE_ADDR pc;
-  ptid_t resume_ptid;
   struct execution_control_state ecss;
   struct execution_control_state *ecs = &ecss;
   int started;
@@ -3060,9 +3059,10 @@ proceed (CORE_ADDR addr, enum gdb_signal siggnal)
   if (siggnal != GDB_SIGNAL_DEFAULT)
     cur_thr->suspend.stop_signal = siggnal;
 
-  resume_ptid = user_visible_resume_ptid (cur_thr->control.stepping_command);
-  target_ops *resume_target = user_visible_resume_target (resume_ptid,
-							  current_inferior ());
+  ptid_t resume_ptid
+    = user_visible_resume_ptid (cur_thr->control.stepping_command);
+  process_stratum_target *resume_target
+    = user_visible_resume_target (resume_ptid, current_inferior ());
 
   /* If an exception is thrown from this point on, make sure to
      propagate GDB's knowledge of the executing state to the
@@ -3315,7 +3315,7 @@ static int switch_back_to_stepped_thread (struct execution_control_state *ecs);
 static void
 infrun_thread_stop_requested (ptid_t ptid)
 {
-  target_ops *curr_target = current_inferior ()->process_target ();
+  process_stratum_target *curr_target = current_inferior ()->process_target ();
 
   /* PTID was requested to stop.  If the thread was already stopped,
      but the user/frontend doesn't know about that yet (e.g., the
@@ -4494,7 +4494,7 @@ poll_one_curr_target (struct target_waitstatus *ws)
 struct wait_one_event
 {
   /* The target the event came out of.  */
-  target_ops *target;
+  process_stratum_target *target;
 
   /* The PTID the event was for.  */
   ptid_t ptid;
@@ -4512,7 +4512,7 @@ wait_one ()
     {
       for (inferior *inf : all_inferiors ())
 	{
-	  target_ops *target = inf->process_target ();
+	  process_stratum_target *target = inf->process_target ();
 	  if (target == NULL
 	      || !target->is_async_p ()
 	      || !target->threads_executing)
@@ -4543,7 +4543,7 @@ wait_one ()
 
       for (inferior *inf : all_inferiors ())
 	{
-	  target_ops *target = inf->process_target ();
+	  process_stratum_target *target = inf->process_target ();
 	  if (target == NULL
 	      || !target->is_async_p ()
 	      || !target->threads_executing)
@@ -5431,14 +5431,16 @@ Cannot fill $_exitsignal with the correct signal number.\n"));
 
 	  ecs->event_thread->suspend.stop_signal = GDB_SIGNAL_0;
 
-	  target_ops *targ = ecs->event_thread->inf->process_target ();
+	  process_stratum_target *targ
+	    = ecs->event_thread->inf->process_target ();
 
 	  should_resume = follow_fork ();
 
 	  /* Note that one of these may be an invalid pointer,
 	     depending on detach_fork.  */
 	  thread_info *parent = ecs->event_thread;
-	  thread_info *child = find_thread_ptid (targ, ecs->ws.value.related_pid);
+	  thread_info *child
+	    = find_thread_ptid (targ, ecs->ws.value.related_pid);
 
 	  /* At this point, the parent is marked running, and the
 	     child is marked stopped.  */

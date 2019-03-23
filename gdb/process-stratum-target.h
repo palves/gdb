@@ -51,6 +51,13 @@ public:
   bool has_stack () override;
   bool has_registers () override;
   bool has_execution (inferior *inf) override;
+
+  /* True if any thread is, or may be executing.  We need to track
+     this separately because until we fully sync the thread list, we
+     won't know whether the target is fully stopped, even if we see
+     stop events for all known threads, because any of those threads
+     may have spawned new threads we haven't heard of yet.  */
+  bool threads_executing = false;
 };
 
 #endif /* !defined (PROCESS_STRATUM_TARGET_H) */

@@ -2409,7 +2409,8 @@ remote_target::remote_add_inferior (int fake_pid_p, int pid, int attached,
 }
 
 static remote_thread_info *get_remote_thread_info (thread_info *thread);
-static remote_thread_info *get_remote_thread_info (target_ops *target, ptid_t ptid);
+static remote_thread_info *get_remote_thread_info
+  (process_stratum_target *target, ptid_t ptid);
 
 /* Add thread PTID to GDB's thread list.  Tag it as executing/running
    according to RUNNING.  */
@@ -2546,7 +2547,7 @@ get_remote_thread_info (thread_info *thread)
 /* Return PTID's private thread data, creating it if necessary.  */
 
 static remote_thread_info *
-get_remote_thread_info (target_ops *target, ptid_t ptid)
+get_remote_thread_info (process_stratum_target *target, ptid_t ptid)
 {
   thread_info *thr = find_thread_ptid (target, ptid);
   return get_remote_thread_info (thr);

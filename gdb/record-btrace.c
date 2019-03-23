@@ -1377,7 +1377,7 @@ record_btrace_target::call_history_from (ULONGEST from, int size,
 enum record_method
 record_btrace_target::record_method (ptid_t ptid)
 {
-  target_ops *proc_target = current_inferior ()->process_target ();
+  process_stratum_target *proc_target = current_inferior ()->process_target ();
   struct thread_info * const tp = find_thread_ptid (proc_target, ptid);
 
   if (tp == NULL)
@@ -1394,7 +1394,7 @@ record_btrace_target::record_method (ptid_t ptid)
 bool
 record_btrace_target::record_is_replaying (ptid_t ptid)
 {
-  target_ops *proc_target = current_inferior ()->process_target ();
+  process_stratum_target *proc_target = current_inferior ()->process_target ();
   for (thread_info *tp : all_non_exited_threads (proc_target, ptid))
     if (btrace_is_replaying (tp))
       return true;
@@ -1974,7 +1974,7 @@ get_thread_current_frame_id (struct thread_info *tp)
 
   switch_to_thread (tp);
 
-  target_ops *proc_target = tp->inf->process_target ();
+  process_stratum_target *proc_target = tp->inf->process_target ();
 
   /* Clear the executing flag to allow changes to the current frame.
      We are not actually running, yet.  We just started a reverse execution
@@ -2167,7 +2167,7 @@ record_btrace_target::resume (ptid_t ptid, int step, enum gdb_signal signal)
 
       For all-stop targets, we only step INFERIOR_PTID and continue others.  */
 
-  target_ops *proc_target = current_inferior ()->process_target ();
+  process_stratum_target *proc_target = current_inferior ()->process_target ();
 
   if (!target_is_non_stop_p ())
     {
@@ -2541,7 +2541,7 @@ record_btrace_target::wait (ptid_t ptid, struct target_waitstatus *status,
     }
 
   /* Keep a work list of moving threads.  */
-  target_ops *proc_target = current_inferior ()->process_target ();
+  process_stratum_target *proc_target = current_inferior ()->process_target ();
   for (thread_info *tp : all_non_exited_threads (proc_target, ptid))
     if ((tp->btrace.flags & (BTHR_MOVE | BTHR_STOP)) != 0)
       moving.push_back (tp);
@@ -2662,7 +2662,8 @@ record_btrace_target::stop (ptid_t ptid)
     }
   else
     {
-      target_ops *proc_target = current_inferior ()->process_target ();
+      process_stratum_target *proc_target
+	= current_inferior ()->process_target ();
 
       for (thread_info *tp : all_non_exited_threads (proc_target, ptid))
 	{

@@ -450,7 +450,7 @@ fork_inferior (const char *exec_file_arg, const std::string &allargs,
 /* See nat/fork-inferior.h.  */
 
 ptid_t
-startup_inferior (target_ops *proc_target, pid_t pid, int ntraps,
+startup_inferior (process_stratum_target *proc_target, pid_t pid, int ntraps,
 		  struct target_waitstatus *last_waitstatus,
 		  ptid_t *last_ptid)
 {

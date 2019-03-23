@@ -147,7 +147,7 @@ public:
 
   /* Creates an iterator that iterates over all threads that match
      FILTER_PTID.  */
-  explicit all_matching_threads_iterator (target_ops *filter_target,
+  explicit all_matching_threads_iterator (process_stratum_target *filter_target,
 					  ptid_t filter_ptid);
 
   /* Create a one-past-end iterator.  */
@@ -188,7 +188,7 @@ private:
   thread_info *m_thr;
 
   /* The filter.  */
-  target_ops *m_filter_target;
+  process_stratum_target *m_filter_target;
   ptid_t m_filter_ptid;
 };
 
@@ -269,7 +269,8 @@ struct all_threads_safe_range
 struct all_matching_threads_range
 {
 public:
-  explicit all_matching_threads_range (target_ops *filter_target, ptid_t filter_ptid)
+  explicit all_matching_threads_range (process_stratum_target *filter_target,
+				       ptid_t filter_ptid)
     : m_filter_target (filter_target), m_filter_ptid (filter_ptid)
   {}
   all_matching_threads_range ()
@@ -283,7 +284,7 @@ public:
 
 private:
   /* The filter.  */
-  target_ops *m_filter_target;
+  process_stratum_target *m_filter_target;
   ptid_t m_filter_ptid;
 };
 
@@ -295,7 +296,7 @@ private:
 class all_non_exited_threads_range
 {
 public:
-  explicit all_non_exited_threads_range (target_ops *filter_target,
+  explicit all_non_exited_threads_range (process_stratum_target *filter_target,
 					 ptid_t filter_ptid)
     : m_filter_target (filter_target), m_filter_ptid (filter_ptid)
   {}
@@ -310,7 +311,7 @@ public:
   { return all_non_exited_threads_iterator (); }
 
 private:
-  target_ops *m_filter_target;
+  process_stratum_target *m_filter_target;
   ptid_t m_filter_ptid;
 };
 

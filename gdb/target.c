@@ -2118,7 +2118,7 @@ target_thread_handle_to_thread_info (const gdb_byte *thread_handle,
 void
 target_resume (ptid_t ptid, int step, enum gdb_signal signal)
 {
-  target_ops *curr_target = current_inferior ()->process_target ();
+  process_stratum_target *curr_target = current_inferior ()->process_target ();
 
   target_dcache_invalidate ();
 

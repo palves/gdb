@@ -67,7 +67,7 @@ all_matching_threads_iterator::m_inf_matches ()
 /* See thread-iter.h.  */
 
 all_matching_threads_iterator::all_matching_threads_iterator
-  (target_ops *filter_target, ptid_t filter_ptid)
+  (process_stratum_target *filter_target, ptid_t filter_ptid)
     : m_filter_target (filter_target),
       m_filter_ptid (filter_ptid)
 {

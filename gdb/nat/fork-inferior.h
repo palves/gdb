@@ -22,7 +22,7 @@
 
 #include <string>
 
-struct target_ops;
+struct process_stratum_target;
 
 /* Number of traps that happen between exec'ing the shell to run an
    inferior and when we finally get to the inferior code, not counting
@@ -52,7 +52,7 @@ extern pid_t fork_inferior (const char *exec_file_arg,
 /* Accept NTRAPS traps from the inferior.
 
    Return the ptid of the inferior being started.  */
-extern ptid_t startup_inferior (target_ops *proc_target,
+extern ptid_t startup_inferior (process_stratum_target *proc_target,
 				pid_t pid, int ntraps,
 				struct target_waitstatus *mystatus,
 				ptid_t *myptid);

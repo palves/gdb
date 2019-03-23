@@ -166,8 +166,8 @@ struct thread_db_info
 {
   struct thread_db_info *next;
 
-  /* The process_stratum target this thread_db_info is bound to.  */
-  target_ops *process_target;
+  /* The target this thread_db_info is bound to.  */
+  process_stratum_target *process_target;
 
   /* Process id this object refers to.  */
   int pid;
@@ -1364,12 +1364,20 @@ thread_db_target::detach (inferior *inf, int from_tty)
   unpush_target (this);
 }
 
+static process_stratum_target *
+proc_target_cast (target_ops *target)
+{
+  gdb_assert (target->stratum () == process_stratum);
+  return static_cast<process_stratum_target *> (target);
+}
+
 ptid_t
 thread_db_target::wait (ptid_t ptid, struct target_waitstatus *ourstatus,
 			int options)
 {
   struct thread_db_info *info;
-  target_ops *beneath = this->beneath ();
+
+  process_stratum_target *beneath = proc_target_cast (this->beneath ());
 
   ptid = beneath->wait (ptid, ourstatus, options);
 
@@ -1700,9 +1708,9 @@ thread_db_target::get_thread_local_address (ptid_t ptid,
 					    CORE_ADDR offset)
 {
   struct thread_info *thread_info;
-
+  process_stratum_target *beneath = proc_target_cast (this->beneath ());
   /* Find the matching thread.  */
-  thread_info = find_thread_ptid (this->beneath (), ptid);
+  thread_info = find_thread_ptid (beneath, ptid);
 
   /* We may not have discovered the thread yet.  */
   if (thread_info != NULL && thread_info->priv == NULL)
@@ -1712,8 +1720,7 @@ thread_db_target::get_thread_local_address (ptid_t ptid,
     {
       td_err_e err;
       psaddr_t address;
-      thread_db_info *info = get_thread_db_info (this->beneath (),
-						 ptid.pid ());
+      thread_db_info *info = get_thread_db_info (beneath, ptid.pid ());
       thread_db_thread_info *priv = get_thread_db_thread_info (thread_info);
 
       /* Finally, get the address of the variable.  */
@@ -1772,7 +1779,7 @@ thread_db_target::get_thread_local_address (ptid_t ptid,
 	      : (CORE_ADDR) (uintptr_t) address);
     }
 
-  return beneath ()->get_thread_local_address (ptid, lm, offset);
+  return beneath->get_thread_local_address (ptid, lm, offset);
 }
 
 /* Implement the to_get_ada_task_ptid target method for this target.  */

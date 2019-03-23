@@ -970,7 +970,8 @@ multiple_inferiors_p ()
 }
 
 static void
-mi_on_resume_1 (struct mi_interp *mi, target_ops *targ, ptid_t ptid)
+mi_on_resume_1 (struct mi_interp *mi,
+		process_stratum_target *targ, ptid_t ptid)
 {
   /* To cater for older frontends, emit ^running, but do it only once
      per each command.  We do it here, since at this point we know
@@ -1013,7 +1014,7 @@ mi_on_resume (ptid_t ptid)
 {
   struct thread_info *tp = NULL;
 
-  target_ops *target = current_inferior ()->process_target ();
+  process_stratum_target *target = current_inferior ()->process_target ();
   if (ptid == minus_one_ptid || ptid.is_pid ())
     tp = inferior_thread ();
   else

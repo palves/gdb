@@ -21,7 +21,7 @@
 #include "server.h"
 #include "tracepoint.h"
 
-struct target_ops *the_target;
+process_stratum_target *the_target;
 
 int
 set_desired_thread ()
@@ -301,9 +301,9 @@ start_non_stop (int nonstop)
 }
 
 void
-set_target_ops (struct target_ops *target)
+set_target_ops (process_stratum_target *target)
 {
-  the_target = XNEW (struct target_ops);
+  the_target = XNEW (process_stratum_target);
   memcpy (the_target, target, sizeof (*the_target));
 }
 

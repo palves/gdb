@@ -1271,7 +1271,7 @@ record_full_wait_1 (struct target_ops *ops,
 
                       if (gdbarch_software_single_step_p (gdbarch))
 			{
-			  target_ops *proc_target
+			  process_stratum_target *proc_target
 			    = current_inferior ()->process_target ();
 
 			  /* Try to insert the software single step breakpoint.

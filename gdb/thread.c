@@ -253,10 +253,8 @@ new_thread (struct inferior *inf, ptid_t ptid)
 }
 
 struct thread_info *
-add_thread_silent (target_ops *targ, ptid_t ptid)
+add_thread_silent (process_stratum_target *targ, ptid_t ptid)
 {
-  gdb_assert (targ->stratum () == process_stratum);
-
   inferior *inf;
 
   thread_info *tp = find_thread_ptid (targ, ptid);
@@ -312,7 +310,8 @@ add_thread_silent (target_ops *targ, ptid_t ptid)
 }
 
 struct thread_info *
-add_thread_with_info (target_ops *targ, ptid_t ptid, private_thread_info *priv)
+add_thread_with_info (process_stratum_target *targ, ptid_t ptid,
+		      private_thread_info *priv)
 {
   thread_info *result = add_thread_silent (targ, ptid);
 
@@ -326,7 +325,7 @@ add_thread_with_info (target_ops *targ, ptid_t ptid, private_thread_info *priv)
 }
 
 struct thread_info *
-add_thread (target_ops *targ, ptid_t ptid)
+add_thread (process_stratum_target *targ, ptid_t ptid)
 {
   return add_thread_with_info (targ, ptid, NULL);
 }
@@ -547,10 +546,8 @@ find_thread_by_handle (struct value *thread_handle, struct inferior *inf)
 
 /* Find a thread_info by matching PTID.  */
 struct thread_info *
-find_thread_ptid (target_ops *targ, ptid_t ptid)
+find_thread_ptid (process_stratum_target *targ, ptid_t ptid)
 {
-  gdb_assert (targ->stratum () == process_stratum);
-
   inferior *inf = find_inferior_ptid (targ, ptid);
   if (inf == NULL)
     return NULL;
@@ -594,7 +591,7 @@ any_thread_p ()
 }
 
 int
-thread_count (target_ops *proc_target)
+thread_count (process_stratum_target *proc_target)
 {
   auto rng = all_threads (proc_target);
   return std::distance (rng.begin (), rng.end ());
@@ -620,7 +617,7 @@ valid_global_thread_id (int global_id)
 }
 
 bool
-in_thread_list (target_ops *targ, ptid_t ptid)
+in_thread_list (process_stratum_target *targ, ptid_t ptid)
 {
   return find_thread_ptid (targ, ptid) != nullptr;
 }
@@ -798,7 +795,8 @@ get_last_thread_stack_temporary (thread_info *tp)
 }
 
 void
-thread_change_ptid (target_ops *targ, ptid_t old_ptid, ptid_t new_ptid)
+thread_change_ptid (process_stratum_target *targ,
+		    ptid_t old_ptid, ptid_t new_ptid)
 {
   struct inferior *inf;
   struct thread_info *tp;
@@ -818,7 +816,7 @@ thread_change_ptid (target_ops *targ, ptid_t old_ptid, ptid_t new_ptid)
 /* See gdbthread.h.  */
 
 void
-set_resumed (target_ops *targ, ptid_t ptid, bool resumed)
+set_resumed (process_stratum_target *targ, ptid_t ptid, bool resumed)
 {
   for (thread_info *tp : all_non_exited_threads (targ, ptid))
     {
@@ -862,7 +860,7 @@ thread_info::set_running (bool running)
 }
 
 void
-set_running (target_ops *targ, ptid_t ptid, bool running)
+set_running (process_stratum_target *targ, ptid_t ptid, bool running)
 {
   /* We try not to notify the observer if no thread has actually
      changed the running state -- merely to reduce the number of
@@ -892,7 +890,7 @@ set_executing_thread (thread_info *thr, bool executing)
 }
 
 void
-set_executing (target_ops *targ, ptid_t ptid, bool executing)
+set_executing (process_stratum_target *targ, ptid_t ptid, bool executing)
 {
   for (thread_info *tp : all_non_exited_threads (targ, ptid))
     set_executing_thread (tp, executing);
@@ -909,13 +907,13 @@ set_executing (target_ops *targ, ptid_t ptid, bool executing)
 /* See gdbthread.h.  */
 
 int
-threads_are_executing (target_ops *target)
+threads_are_executing (process_stratum_target *target)
 {
   return target->threads_executing;
 }
 
 void
-set_stop_requested (target_ops *targ, ptid_t ptid, bool stop)
+set_stop_requested (process_stratum_target *targ, ptid_t ptid, bool stop)
 {
   for (thread_info *tp : all_non_exited_threads (targ, ptid))
     tp->stop_requested = stop;
@@ -927,7 +925,7 @@ set_stop_requested (target_ops *targ, ptid_t ptid, bool stop)
 }
 
 void
-finish_thread_state (target_ops *targ, ptid_t ptid)
+finish_thread_state (process_stratum_target *targ, ptid_t ptid)
 {
   bool any_started = false;
 
@@ -1315,7 +1313,7 @@ switch_to_thread (thread_info *thr)
 /* See common/common-gdbthread.h.  */
 
 void
-switch_to_thread (target_ops *proc_target, ptid_t ptid)
+switch_to_thread (process_stratum_target *proc_target, ptid_t ptid)
 {
   thread_info *thr = find_thread_ptid (proc_target, ptid);
   switch_to_thread (thr);
@@ -1927,7 +1925,7 @@ print_selected_thread_frame (struct ui_out *uiout,
 static void
 update_threads_executing (void)
 {
-  target_ops *targ = current_inferior ()->process_target ();
+  process_stratum_target *targ = current_inferior ()->process_target ();
 
   if (targ == NULL)
     return;

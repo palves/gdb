@@ -196,7 +196,8 @@ reg_buffer::reg_buffer (gdbarch *gdbarch, bool has_pseudo)
     }
 }
 
-regcache::regcache (target_ops *target, gdbarch *gdbarch, const address_space *aspace_)
+regcache::regcache (process_stratum_target *target, gdbarch *gdbarch,
+		    const address_space *aspace_)
 /* The register buffers.  A read/write register cache can only hold
    [0 .. gdbarch_num_regs).  */
   : detached_regcache (gdbarch, false), m_aspace (aspace_), m_target (target)
@@ -351,7 +352,7 @@ reg_buffer::assert_regnum (int regnum) const
 std::forward_list<regcache *> regcache::current_regcache;
 
 struct regcache *
-get_thread_arch_aspace_regcache (target_ops *target,
+get_thread_arch_aspace_regcache (process_stratum_target *target,
 				 ptid_t ptid, struct gdbarch *gdbarch,
 				 struct address_space *aspace)
 {
@@ -370,7 +371,8 @@ get_thread_arch_aspace_regcache (target_ops *target,
 }
 
 struct regcache *
-get_thread_arch_regcache (target_ops *target, ptid_t ptid, struct gdbarch *gdbarch)
+get_thread_arch_regcache (process_stratum_target *target, ptid_t ptid,
+			  struct gdbarch *gdbarch)
 {
   scoped_restore_current_inferior restore_current_inferior;
   set_current_inferior (find_inferior_ptid (target, ptid));
@@ -381,10 +383,10 @@ get_thread_arch_regcache (target_ops *target, ptid_t ptid, struct gdbarch *gdbar
 
 static ptid_t current_thread_ptid;
 static struct gdbarch *current_thread_arch;
-static target_ops *current_thread_target;
+static process_stratum_target *current_thread_target;
 
 struct regcache *
-get_thread_regcache (target_ops *target, ptid_t ptid)
+get_thread_regcache (process_stratum_target *target, ptid_t ptid)
 {
   if (!current_thread_arch
       || target != current_thread_target
@@ -426,14 +428,14 @@ get_thread_regcache_for_ptid (ptid_t ptid)
   /* This method doesn't take a target_ops parameter because it's a
      common/ routine implemented by both gdb and gdbserver.  It always
      refers to a ptid of the current target. */
-  target_ops *proc_target = current_inferior ()->process_target ();
+  process_stratum_target *proc_target = current_inferior ()->process_target ();
   return get_thread_regcache (proc_target, ptid);
 }
 
 /* Observer for the target_changed event.  */
 
 static void
-regcache_observer_target_changed (struct target_ops *target)
+regcache_observer_target_changed (target_ops *target)
 {
   registers_changed ();
 }
@@ -462,7 +464,7 @@ regcache::regcache_thread_ptid_changed (ptid_t old_ptid, ptid_t new_ptid)
    Indicate that registers may have changed, so invalidate the cache.  */
 
 void
-registers_changed_ptid (target_ops *target, ptid_t ptid)
+registers_changed_ptid (process_stratum_target *target, ptid_t ptid)
 {
   for (auto oit = regcache::current_regcache.before_begin (),
 	 it = std::next (oit);
@@ -1567,7 +1569,8 @@ target_ops_no_register::xfer_partial (enum target_object object,
 class readwrite_regcache : public regcache
 {
 public:
-  readwrite_regcache (target_ops *target, struct gdbarch *gdbarch)
+  readwrite_regcache (process_stratum_target *target,
+		      struct gdbarch *gdbarch)
     : regcache (target, gdbarch, nullptr)
   {}
 };

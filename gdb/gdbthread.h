@@ -34,6 +34,7 @@ struct symtab;
 #include "common-gdbthread.h"
 
 struct inferior;
+struct process_stratum_target;
 
 /* Frontend view of the thread state.  Possible extensions: stepping,
    finishing, until(ling),...
@@ -419,14 +420,17 @@ extern void init_thread_list (void);
    that a new thread is found, and return the pointer to
    the new thread.  Caller my use this pointer to 
    initialize the private thread data.  */
-extern struct thread_info *add_thread (target_ops *targ, ptid_t ptid);
+extern struct thread_info *add_thread (process_stratum_target *targ,
+				       ptid_t ptid);
 
 /* Same as add_thread, but does not print a message about new
    thread.  */
-extern struct thread_info *add_thread_silent (target_ops *targ, ptid_t ptid);
+extern struct thread_info *add_thread_silent (process_stratum_target *targ,
+					      ptid_t ptid);
 
 /* Same as add_thread, and sets the private info.  */
-extern struct thread_info *add_thread_with_info (target_ops *targ, ptid_t ptid,
+extern struct thread_info *add_thread_with_info (process_stratum_target *targ,
+						 ptid_t ptid,
 						 private_thread_info *);
 
 /* Delete an existing thread list entry.  */
@@ -468,7 +472,7 @@ extern int show_inferior_qualified_tids (void);
 const char *print_thread_id (struct thread_info *thr);
 
 /* Boolean test for an already-known ptid.  */
-extern bool in_thread_list (target_ops *targ, ptid_t ptid);
+extern bool in_thread_list (process_stratum_target *targ, ptid_t ptid);
 
 /* Boolean test for an already-known global thread id (GDB's homegrown
    global id, not the system's).  */
@@ -477,7 +481,8 @@ extern int valid_global_thread_id (int global_id);
 extern thread_info *find_thread_ptid (inferior *inf, ptid_t ptid);
 
 /* Search function to lookup a thread by 'pid'.  */
-extern struct thread_info *find_thread_ptid (target_ops *targ, ptid_t ptid);
+extern struct thread_info *find_thread_ptid (process_stratum_target *targ,
+					     ptid_t ptid);
 
 /* Search function to lookup a thread by 'ptid'.  Only searches in
    threads of INF.  */
@@ -502,7 +507,8 @@ extern struct thread_info *any_thread_of_inferior (inferior *inf);
 extern struct thread_info *any_live_thread_of_inferior (inferior *inf);
 
 /* Change the ptid of thread OLD_PTID to NEW_PTID.  */
-void thread_change_ptid (target_ops *targ, ptid_t old_ptid, ptid_t new_ptid);
+void thread_change_ptid (process_stratum_target *targ,
+			 ptid_t old_ptid, ptid_t new_ptid);
 
 /* Iterator function to call a user-provided callback function
    once for each known thread.  */
@@ -516,7 +522,7 @@ extern struct thread_info *iterate_over_threads (thread_callback_func, void *);
 /* Likewise, but accept a filter PTID.  */
 
 inline all_matching_threads_range
-all_threads (target_ops *proc_target = nullptr,
+all_threads (process_stratum_target *proc_target = nullptr,
 	     ptid_t filter_ptid = minus_one_ptid)
 {
   return all_matching_threads_range (proc_target, filter_ptid);
@@ -539,7 +545,7 @@ all_threads (target_ops *proc_target = nullptr,
 */
 
 inline all_non_exited_threads_range
-all_non_exited_threads (target_ops *proc_target = nullptr,
+all_non_exited_threads (process_stratum_target *proc_target = nullptr,
 			ptid_t filter_ptid = minus_one_ptid)
 {
   return all_non_exited_threads_range (proc_target, filter_ptid);
@@ -561,7 +567,7 @@ all_threads_safe ()
   return {};
 }
 
-extern int thread_count (target_ops *proc_target);
+extern int thread_count (process_stratum_target *proc_target);
 
 extern bool any_thread_p ();
 
@@ -580,18 +586,21 @@ extern void switch_to_thread_no_regs (struct thread_info *thread);
 /* Marks or clears thread(s) PTID as resumed.  If PTID is
    MINUS_ONE_PTID, applies to all threads.  If ptid_is_pid(PTID) is
    true, applies to all threads of the process pointed at by PTID.  */
-extern void set_resumed (target_ops *targ, ptid_t ptid, bool resumed);
+extern void set_resumed (process_stratum_target *targ,
+			 ptid_t ptid, bool resumed);
 
 /* Marks thread PTID is running, or stopped. 
    If PTID is minus_one_ptid, marks all threads.  */
-extern void set_running (target_ops *targ, ptid_t ptid, bool running);
+extern void set_running (process_stratum_target *targ,
+			 ptid_t ptid, bool running);
 
 /* Marks or clears thread(s) PTID as having been requested to stop.
    If PTID is MINUS_ONE_PTID, applies to all threads.  If
    ptid_is_pid(PTID) is true, applies to all threads of the process
    pointed at by PTID.  If STOP, then the THREAD_STOP_REQUESTED
    observer is called with PTID as argument.  */
-extern void set_stop_requested (target_ops *targ, ptid_t ptid, bool stop);
+extern void set_stop_requested (process_stratum_target *targ,
+				ptid_t ptid, bool stop);
 
 /* Marks thread PTID as executing, or not.  If PTID is minus_one_ptid,
    marks all threads.
@@ -599,10 +608,11 @@ extern void set_stop_requested (target_ops *targ, ptid_t ptid, bool stop);
    Note that this is different from the running state.  See the
    description of state and executing fields of struct
    thread_info.  */
-extern void set_executing (target_ops *targ, ptid_t ptid, bool executing);
+extern void set_executing (process_stratum_target *targ,
+			   ptid_t ptid, bool executing);
 
 /* True if any (known or unknown) thread is or may be executing.  */
-extern int threads_are_executing (target_ops *targ);
+extern int threads_are_executing (process_stratum_target *targ);
 
 /* Merge the executing property of thread PTID over to its thread
    state property (frontend running/stopped view).
@@ -614,14 +624,14 @@ extern int threads_are_executing (target_ops *targ);
    If PTID is minus_one_ptid, go over all threads.
 
    Notifications are only emitted if the thread state did change.  */
-extern void finish_thread_state (target_ops *targ, ptid_t ptid);
+extern void finish_thread_state (process_stratum_target *targ, ptid_t ptid);
 
 /* Calls finish_thread_state on scope exit, unless release() is called
    to disengage.  */
 class scoped_finish_thread_state
 {
 public:
-  scoped_finish_thread_state (target_ops *target, ptid_t ptid)
+  scoped_finish_thread_state (process_stratum_target *target, ptid_t ptid)
     : m_target (target), m_ptid (ptid)
   {
     gdb_assert (m_ptid != null_ptid);
@@ -642,7 +652,7 @@ public:
   DISABLE_COPY_AND_ASSIGN (scoped_finish_thread_state);
 
 private:
-  target_ops *m_target;
+  process_stratum_target *m_target;
   ptid_t m_ptid;
 };
 
