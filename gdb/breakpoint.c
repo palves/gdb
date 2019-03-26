@@ -11989,18 +11989,16 @@ update_global_location_list (enum ugll_insert_mode insert_mode)
 		 around.  We simply always ignore hardware watchpoint
 		 traps we can no longer explain.  */
 
-	      inferior *found_inf = NULL;
+	      process_stratum_target *proc_target = nullptr;
 	      for (inferior *inf : all_inferiors ())
-		{
-		  if (inf->pspace == old_loc->pspace)
-		    {
-		      found_inf = inf;
-		      break;
-		    }
-		}
-	      if (found_inf != NULL)
+		if (inf->pspace == old_loc->pspace)
+		  {
+		    proc_target = inf->process_target ();
+		    break;
+		  }
+	      if (proc_target != nullptr)
 		old_loc->events_till_retirement
-		  = 3 * (thread_count (found_inf->process_target ()) + 1);
+		  = 3 * (thread_count (proc_target) + 1);
 	      else
 		old_loc->events_till_retirement = 1;
 	      old_loc->owner = NULL;
