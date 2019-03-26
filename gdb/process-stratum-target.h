@@ -60,4 +60,13 @@ public:
   bool threads_executing = false;
 };
 
+/* Downcast TARGET to process_stratum_target.  */
+
+static inline process_stratum_target *
+as_process_stratum_target (target_ops *target)
+{
+  gdb_assert (target->stratum () == process_stratum);
+  return static_cast<process_stratum_target *> (target);
+}
+
 #endif /* !defined (PROCESS_STRATUM_TARGET_H) */

@@ -381,7 +381,8 @@ bsd_uthread_target::wait (ptid_t ptid, struct target_waitstatus *status,
 {
   enum bfd_endian byte_order = gdbarch_byte_order (target_gdbarch ());
   CORE_ADDR addr;
-  target_ops *beneath = this->beneath ();
+  process_stratum_target *beneath
+    = as_process_stratum_target (this->beneath ());
 
   /* Pass the request to the layer beneath.  */
   ptid = beneath->wait (ptid, status, options);
@@ -468,7 +469,8 @@ bsd_uthread_target::update_thread_list ()
     {
       ptid_t ptid = ptid_t (pid, 0, addr);
 
-      target_ops *proc_target = this->beneath ();
+      process_stratum_target *proc_target
+	= as_process_stratum_target (this->beneath ());
       thread_info *thread = find_thread_ptid (proc_target, ptid);
       if (thread == nullptr || thread->state == THREAD_EXITED)
 	{

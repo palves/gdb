@@ -1364,20 +1364,14 @@ thread_db_target::detach (inferior *inf, int from_tty)
   unpush_target (this);
 }
 
-static process_stratum_target *
-proc_target_cast (target_ops *target)
-{
-  gdb_assert (target->stratum () == process_stratum);
-  return static_cast<process_stratum_target *> (target);
-}
-
 ptid_t
 thread_db_target::wait (ptid_t ptid, struct target_waitstatus *ourstatus,
 			int options)
 {
   struct thread_db_info *info;
 
-  process_stratum_target *beneath = proc_target_cast (this->beneath ());
+  process_stratum_target *beneath
+    = as_process_stratum_target (this->beneath ());
 
   ptid = beneath->wait (ptid, ourstatus, options);
 
@@ -1708,7 +1702,8 @@ thread_db_target::get_thread_local_address (ptid_t ptid,
 					    CORE_ADDR offset)
 {
   struct thread_info *thread_info;
-  process_stratum_target *beneath = proc_target_cast (this->beneath ());
+  process_stratum_target *beneath
+    = as_process_stratum_target (this->beneath ());
   /* Find the matching thread.  */
   thread_info = find_thread_ptid (beneath, ptid);
 
