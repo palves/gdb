@@ -478,6 +478,7 @@ extern bool in_thread_list (process_stratum_target *targ, ptid_t ptid);
    global id, not the system's).  */
 extern int valid_global_thread_id (int global_id);
 
+/* Find thread PTID of inferior INF.  */
 extern thread_info *find_thread_ptid (inferior *inf, ptid_t ptid);
 
 /* Search function to lookup a thread by 'pid'.  */
@@ -519,7 +520,27 @@ extern struct thread_info *iterate_over_threads (thread_callback_func, void *);
    iterators.  Must be done after struct thread_info is defined.  */
 #include "thread-iter.h"
 
-/* Likewise, but accept a filter PTID.  */
+/* Return a range that can be used to walk over threads, with
+   range-for.
+
+   Used like this, it walks over all threads of all inferiors of all
+   targets:
+
+       for (thread_info *thr : all_threads ())
+	 { .... }
+
+   FILTER_PTID can be used to filter out threads that don't match.
+   FILTER_PTID can be:
+
+   - minus_one_ptid, meaning walk all threads of all inferiors of
+     PROC_TARGET.  If PROC_TARGET is NULL, then of all targets.
+
+   - A process ptid, in which case walk all threads of the specified
+     process.  PROC_TARGET must be non-NULL in this case.
+
+   - A thread ptid, in which case walk that thread only.  PROC_TARGET
+     must be non-NULL in this case.
+*/
 
 inline all_matching_threads_range
 all_threads (process_stratum_target *proc_target = nullptr,
@@ -529,20 +550,8 @@ all_threads (process_stratum_target *proc_target = nullptr,
 }
 
 /* Return a range that can be used to walk over all non-exited threads
-   of all inferiors, with range-for.  FILTER_PTID can be used to
-   filter out thread that don't match.
-
-   PTID can be:
-
-   - minus_one_ptid: meaning call callback for all threads of TARG (if
-     TARG is NULL, then of all targets).
-
-   - A process ptid, in which case call callback for all threads of
-     given process.  TARG must be non-NULL in this case.
-
-   - A thread ptid, in which case call callback for that thread only.
-     TARG must be non-NULL in this case.
-*/
+   of all inferiors, with range-for.  Arguments are like all_threads
+   above.  */
 
 inline all_non_exited_threads_range
 all_non_exited_threads (process_stratum_target *proc_target = nullptr,
@@ -569,8 +578,6 @@ all_threads_safe ()
 
 extern int thread_count (process_stratum_target *proc_target);
 
-extern bool any_thread_p ();
-
 /* Return true if we have any thread in any inferior.  */
 extern bool any_thread_p ();
 
@@ -583,27 +590,28 @@ extern void switch_to_no_thread ();
 /* Switch from one thread to another.  Does not read registers.  */
 extern void switch_to_thread_no_regs (struct thread_info *thread);
 
-/* Marks or clears thread(s) PTID as resumed.  If PTID is
-   MINUS_ONE_PTID, applies to all threads.  If ptid_is_pid(PTID) is
-   true, applies to all threads of the process pointed at by PTID.  */
+/* Marks or clears thread(s) PTID of TARG as resumed.  If PTID is
+   MINUS_ONE_PTID, applies to all threads of TARG.  If
+   ptid_is_pid(PTID) is true, applies to all threads of the process
+   pointed at by {TARG,PTID}.  */
 extern void set_resumed (process_stratum_target *targ,
 			 ptid_t ptid, bool resumed);
 
-/* Marks thread PTID is running, or stopped. 
-   If PTID is minus_one_ptid, marks all threads.  */
+/* Marks thread PTID of TARG as running, or as stopped.  If PTID is
+   minus_one_ptid, marks all threads of TARG.  */
 extern void set_running (process_stratum_target *targ,
 			 ptid_t ptid, bool running);
 
-/* Marks or clears thread(s) PTID as having been requested to stop.
-   If PTID is MINUS_ONE_PTID, applies to all threads.  If
-   ptid_is_pid(PTID) is true, applies to all threads of the process
-   pointed at by PTID.  If STOP, then the THREAD_STOP_REQUESTED
-   observer is called with PTID as argument.  */
+/* Marks or clears thread(s) PTID of TARG as having been requested to
+   stop.  If PTID is MINUS_ONE_PTID, applies to all threads of TARG.
+   If ptid_is_pid(PTID) is true, applies to all threads of the process
+   pointed at by {TARG, PTID}.  If STOP, then the
+   THREAD_STOP_REQUESTED observer is called with PTID as argument.  */
 extern void set_stop_requested (process_stratum_target *targ,
 				ptid_t ptid, bool stop);
 
-/* Marks thread PTID as executing, or not.  If PTID is minus_one_ptid,
-   marks all threads.
+/* Marks thread PTID of TARG as executing, or not.  If PTID is
+   minus_one_ptid, marks all threads of TARG.
 
    Note that this is different from the running state.  See the
    description of state and executing fields of struct
@@ -611,17 +619,18 @@ extern void set_stop_requested (process_stratum_target *targ,
 extern void set_executing (process_stratum_target *targ,
 			   ptid_t ptid, bool executing);
 
-/* True if any (known or unknown) thread is or may be executing.  */
-extern int threads_are_executing (process_stratum_target *targ);
+/* True if any (known or unknown) thread of TARG is or may be
+   executing.  */
+extern bool threads_are_executing (process_stratum_target *targ);
 
-/* Merge the executing property of thread PTID over to its thread
-   state property (frontend running/stopped view).
+/* Merge the executing property of thread PTID of TARG over to its
+   thread state property (frontend running/stopped view).
 
    "not executing" -> "stopped"
    "executing"     -> "running"
    "exited"        -> "exited"
 
-   If PTID is minus_one_ptid, go over all threads.
+   If PTID is minus_one_ptid, go over all threads of TARG.
 
    Notifications are only emitted if the thread state did change.  */
 extern void finish_thread_state (process_stratum_target *targ, ptid_t ptid);

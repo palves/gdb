@@ -906,7 +906,7 @@ set_executing (process_stratum_target *targ, ptid_t ptid, bool executing)
 
 /* See gdbthread.h.  */
 
-int
+bool
 threads_are_executing (process_stratum_target *target)
 {
   return target->threads_executing;
