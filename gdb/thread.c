@@ -519,7 +519,18 @@ find_thread_id (struct inferior *inf, int thr_num)
   return NULL;
 }
 
-/* Find a thread_info by matching PTID.  */
+/* See gdbthread.h.  */
+
+struct thread_info *
+find_thread_ptid (process_stratum_target *targ, ptid_t ptid)
+{
+  inferior *inf = find_inferior_ptid (targ, ptid);
+  if (inf == NULL)
+    return NULL;
+  return find_thread_ptid (inf, ptid);
+}
+
+/* See gdbthread.h.  */
 
 struct thread_info *
 find_thread_ptid (inferior *inf, ptid_t ptid)
@@ -540,16 +551,6 @@ find_thread_by_handle (struct value *thread_handle, struct inferior *inf)
 	   (value_contents_all (thread_handle),
 	    TYPE_LENGTH (value_type (thread_handle)),
 	    inf);
-}
-
-/* Find a thread_info by matching PTID.  */
-struct thread_info *
-find_thread_ptid (process_stratum_target *targ, ptid_t ptid)
-{
-  inferior *inf = find_inferior_ptid (targ, ptid);
-  if (inf == NULL)
-    return NULL;
-  return find_thread_ptid (inf, ptid);
 }
 
 /*
