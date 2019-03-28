@@ -1701,7 +1701,6 @@ thread_apply_command (const char *tidlist, int from_tty)
 	  continue;
 	}
 
-      switch_to_thread (tp);
       thr_try_catch_cmd (tp, cmd, from_tty, flags);
     }
 }
