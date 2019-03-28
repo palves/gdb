@@ -1075,6 +1075,9 @@ print_thread_info_1 (struct ui_out *uiout, const char *requested_threads,
     gdb::optional<ui_out_emit_list> list_emitter;
     gdb::optional<ui_out_emit_table> table_emitter;
 
+    /* We'll be switching threads temporarily below.  */
+    scoped_restore_current_thread restore_thread;
+
     if (uiout->is_mi_like_p ())
       list_emitter.emplace (uiout, "threads");
     else
@@ -1084,31 +1087,25 @@ print_thread_info_1 (struct ui_out *uiout, const char *requested_threads,
 	   accommodate the largest entry.  */
 	size_t target_id_col_width = 17;
 
-	/* We'll be switching threads temporarily.  */
-	{
-	  /* XXX: should probably merge with the same scoped restore
-	     further below.  */
-	  scoped_restore_current_thread restore_thread;
-	  for (thread_info *tp : all_threads ())
-	    {
-	      if (!should_print_thread (requested_threads, default_inf_num,
-					global_ids, pid, tp))
-		continue;
+	for (thread_info *tp : all_threads ())
+	  {
+	    if (!should_print_thread (requested_threads, default_inf_num,
+				      global_ids, pid, tp))
+	      continue;
 
-	      if (!uiout->is_mi_like_p ())
-		{
-		  /* Switch inferiors so we're looking at the right
-		     target stack.  */
-		  switch_to_inferior_no_thread (tp->inf);
+	    if (!uiout->is_mi_like_p ())
+	      {
+		/* Switch inferiors so we're looking at the right
+		   target stack.  */
+		switch_to_inferior_no_thread (tp->inf);
 
-		  target_id_col_width
-		    = std::max (target_id_col_width,
-				thread_target_id_str (tp).size ());
-		}
+		target_id_col_width
+		  = std::max (target_id_col_width,
+			      thread_target_id_str (tp).size ());
+	      }
 
-	      ++n_threads;
-	    }
-	}
+	    ++n_threads;
+	  }
 
 	if (n_threads == 0)
 	  {
@@ -1132,9 +1129,6 @@ print_thread_info_1 (struct ui_out *uiout, const char *requested_threads,
 	uiout->table_header (1, ui_left, "frame", "Frame");
 	uiout->table_body ();
       }
-
-    /* We'll be switching threads temporarily.  */
-    scoped_restore_current_thread restore_thread;
 
     for (inferior *inf : all_inferiors ())
       for (thread_info *tp : inf->threads ())
