@@ -41,7 +41,21 @@ proc catch_follow_exec { } {
 	".*hit Catchpoint.*"
 
     gdb_test "info prog" \
-	"No selected thread."
+	"Program stopped at .*It stopped at breakpoint .*"
+
+    set ws "\[ \t\]"
+    set any "\[^\r\n\]*"
+
+    gdb_test "info threads" \
+	[multi_line \
+	     "Id${ws}+Target Id${ws}+Frame${ws}*" \
+	     "\\* 2\.1 ${any}"]
+
+    gdb_test "info inferiors" \
+	[multi_line \
+	     "Num${ws}+Description${ws}+Executable${ws}*" \
+	     "  1    <null> ${any}" \
+	     "\\* 2 ${any}"]
 }
 
 catch_follow_exec
