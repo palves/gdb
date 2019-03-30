@@ -93,6 +93,14 @@ extern void proceed (CORE_ADDR, enum gdb_signal);
    resumed.  */
 extern ptid_t user_visible_resume_ptid (int step);
 
+/* Return the process_stratum target that we will proceed, in the
+   perspective of the user/frontend.  If RESUME_PTID is
+   MINUS_ONE_PTID, then we'll resume all threads of all targets, so
+   the function returns NULL.  Otherwise, we'll be resuming a process
+   or thread of the current process, so we return the current
+   inferior's process stratum target.  */
+extern process_stratum_target *user_visible_resume_target (ptid_t resume_ptid);
+
 /* Return control to GDB when the inferior stops for real.  Print
    appropriate messages, remove breakpoints, give terminal our modes,
    and run the stop hook.  Returns true if the stop hook proceeded the

@@ -2283,12 +2283,14 @@ user_visible_resume_ptid (int step)
   return resume_ptid;
 }
 
+/* See infrun.h.  */
+
 process_stratum_target *
-user_visible_resume_target (ptid_t resume_ptid, inferior *cur_inf)
+user_visible_resume_target (ptid_t resume_ptid)
 {
   return (resume_ptid == minus_one_ptid
 	  ? NULL
-	  : cur_inf->process_target ());
+	  : current_inferior ()->process_target ());
 }
 
 /* Return a ptid representing the set of threads that we will resume,
@@ -2886,7 +2888,7 @@ clear_proceed_status (int step)
     {
       ptid_t resume_ptid = user_visible_resume_ptid (step);
       process_stratum_target *resume_target
-	= user_visible_resume_target (resume_ptid, current_inferior ());
+	= user_visible_resume_target (resume_ptid);
 
       /* In all-stop mode, delete the per-thread status of all threads
 	 we're about to resume, implicitly and explicitly.  */
@@ -3062,7 +3064,7 @@ proceed (CORE_ADDR addr, enum gdb_signal siggnal)
   ptid_t resume_ptid
     = user_visible_resume_ptid (cur_thr->control.stepping_command);
   process_stratum_target *resume_target
-    = user_visible_resume_target (resume_ptid, current_inferior ());
+    = user_visible_resume_target (resume_ptid);
 
   /* If an exception is thrown from this point on, make sure to
      propagate GDB's knowledge of the executing state to the
@@ -8436,9 +8438,7 @@ normal_stop (void)
   if (finish_ptid != null_ptid)
     {
       maybe_finish_thread_state.emplace
-	(user_visible_resume_target (finish_ptid,
-				     current_inferior ()),
-	 finish_ptid);
+	(user_visible_resume_target (finish_ptid), finish_ptid);
     }
 
   /* As we're presenting a stop, and potentially removing breakpoints,

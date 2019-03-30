@@ -1305,9 +1305,6 @@ jump_command (const char *arg, int from_tty)
 
 /* Continue program giving it specified signal.  */
 
-process_stratum_target *user_visible_resume_target (ptid_t resume_ptid,
-						    inferior *cur_inf);
-
 static void
 signal_command (const char *signum_exp, int from_tty)
 {
@@ -1360,7 +1357,7 @@ signal_command (const char *signum_exp, int from_tty)
 	 a whole process, or all threads of all processes.  */
       ptid_t resume_ptid = user_visible_resume_ptid (0);
       process_stratum_target *resume_target
-	= user_visible_resume_target (resume_ptid, current_inferior ());
+	= user_visible_resume_target (resume_ptid);
 
       thread_info *current = inferior_thread ();
 
