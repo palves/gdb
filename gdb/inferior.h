@@ -570,11 +570,14 @@ extern void exit_inferior_num_silent (int num);
 
 extern void inferior_appeared (struct inferior *inf, int pid);
 
-/* Search function to lookup an inferior by target 'pid'.  */
-extern struct inferior *find_inferior_pid (target_ops *targ, int pid);
+/* Search function to lookup an inferior of TARG by target 'pid'.  */
+extern struct inferior *find_inferior_pid (process_stratum_target *targ,
+					   int pid);
 
-/* Search function to lookup an inferior whose pid is equal to 'ptid.pid'. */
-extern struct inferior *find_inferior_ptid (target_ops *targ, ptid_t ptid);
+/* Search function to lookup an inferior of TARG whose pid is equal to
+   'ptid.pid'. */
+extern struct inferior *find_inferior_ptid (process_stratum_target *targ,
+					    ptid_t ptid);
 
 /* Search function to lookup an inferior by GDB 'num'.  */
 extern struct inferior *find_inferior_id (int num);
@@ -600,11 +603,11 @@ extern struct inferior *iterate_over_inferiors (int (*) (struct inferior *,
 
 /* Returns true if the inferior list has any process bound to
    PROC_TARGET with execution.  */
-extern bool have_inferiors_with_execution (target_ops *proc_target);
+extern bool have_inferiors_with_execution (process_stratum_target *proc_target);
 
 /* Returns the number of live inferiors running on PROC_TARGET (real
    live processes with execution).  */
-extern int number_of_live_inferiors (target_ops *proc_target);
+extern int number_of_live_inferiors (process_stratum_target *proc_target);
 
 /* Returns true if there are any live inferiors in the inferior list
    (not cores, not executables, real live processes).  */
@@ -661,7 +664,7 @@ all_inferiors_safe ()
 */
 
 inline all_inferiors_range
-all_inferiors (target_ops *proc_target = nullptr)
+all_inferiors (process_stratum_target *proc_target = nullptr)
 {
   return all_inferiors_range (proc_target);
 }
@@ -670,7 +673,7 @@ all_inferiors (target_ops *proc_target = nullptr)
    not zero, with range-for.  */
 
 inline all_non_exited_inferiors_range
-all_non_exited_inferiors (target_ops *proc_target = nullptr)
+all_non_exited_inferiors (process_stratum_target *proc_target = nullptr)
 {
   return all_non_exited_inferiors_range (proc_target);
 }

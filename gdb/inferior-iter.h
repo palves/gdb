@@ -36,7 +36,7 @@ public:
   typedef int difference_type;
 
   /* Create an iterator pointing at HEAD.  */
-  explicit all_inferiors_iterator (target_ops *proc_target,
+  explicit all_inferiors_iterator (process_stratum_target *proc_target,
 				   inferior *head)
     : m_proc_target (proc_target)
   {
@@ -68,8 +68,8 @@ private:
   void advance ()
   {
     /* The loop below is written in the natural way as-if we'd always
-       start at the beginning of the inferior list.  This fast forwards
-       the algorithm to the actual current position.  */
+       start at the beginning of the inferior list.  This
+       fast-forwards the algorithm to the actual current position.  */
     goto start;
 
     while (m_inf != NULL)
@@ -87,7 +87,7 @@ private:
 	    || m_proc_target == m_inf->process_target ());
   }
 
-  target_ops *m_proc_target;
+  process_stratum_target *m_proc_target;
   inferior *m_inf;
 };
 
@@ -110,7 +110,7 @@ using all_non_exited_inferiors_iterator
    inferiors with range-for.  */
 struct all_inferiors_range
 {
-  all_inferiors_range (target_ops *proc_target = nullptr)
+  all_inferiors_range (process_stratum_target *proc_target = nullptr)
     : m_filter_target (proc_target)
   {}
 
@@ -120,7 +120,7 @@ struct all_inferiors_range
   { return all_inferiors_iterator (); }
 
 private:
-  target_ops *m_filter_target;
+  process_stratum_target *m_filter_target;
 };
 
 /* Iterate over all inferiors, safely.  */
@@ -134,7 +134,7 @@ using all_inferiors_safe_iterator
 
 struct all_inferiors_safe_range
 {
-  explicit all_inferiors_safe_range (target_ops *filter_target)
+  explicit all_inferiors_safe_range (process_stratum_target *filter_target)
     : m_filter_target (filter_target)
   {}
 
@@ -149,7 +149,7 @@ struct all_inferiors_safe_range
 
 private:
   /* The filter.  */
-  target_ops *m_filter_target;
+  process_stratum_target *m_filter_target;
 };
 
 /* A range adapter that makes it possible to iterate over all
@@ -157,7 +157,7 @@ private:
 
 struct all_non_exited_inferiors_range
 {
-  explicit all_non_exited_inferiors_range (target_ops *filter_target)
+  explicit all_non_exited_inferiors_range (process_stratum_target *filter_target)
     : m_filter_target (filter_target)
   {}
 
@@ -172,7 +172,7 @@ struct all_non_exited_inferiors_range
 
 private:
   /* The filter.  */
-  target_ops *m_filter_target;
+  process_stratum_target *m_filter_target;
 };
 
 #endif /* !defined (INFERIOR_ITER_H) */

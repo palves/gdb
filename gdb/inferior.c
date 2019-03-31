@@ -221,14 +221,6 @@ exit_inferior (inferior *inf)
 }
 
 void
-exit_inferior_silent (target_ops *targ, int pid)
-{
-  struct inferior *inf = find_inferior_pid (targ, pid);
-
-  exit_inferior_1 (inf, 1);
-}
-
-void
 exit_inferior_silent (inferior *inf)
 {
   exit_inferior_1 (inf, 1);
@@ -283,7 +275,7 @@ find_inferior_id (int num)
 }
 
 struct inferior *
-find_inferior_pid (target_ops *targ, int pid)
+find_inferior_pid (process_stratum_target *targ, int pid)
 {
   /* Looking for inferior pid == 0 is always wrong, and indicative of
      a bug somewhere else.  There may be more than one with pid == 0,
@@ -300,7 +292,7 @@ find_inferior_pid (target_ops *targ, int pid)
 /* See inferior.h */
 
 struct inferior *
-find_inferior_ptid (target_ops *targ, ptid_t ptid)
+find_inferior_ptid (process_stratum_target *targ, ptid_t ptid)
 {
   return find_inferior_pid (targ, ptid.pid ());
 }
@@ -334,7 +326,7 @@ iterate_over_inferiors (int (*callback) (struct inferior *, void *),
 }
 
 bool
-have_inferiors_with_execution (target_ops *proc_target)
+have_inferiors_with_execution (process_stratum_target *proc_target)
 {
   for (inferior *inf : all_non_exited_inferiors (proc_target))
     if (inf->has_execution ())
@@ -348,7 +340,7 @@ have_inferiors_with_execution (target_ops *proc_target)
    in the middle of a 'mourn' operation.  */
 
 int
-number_of_live_inferiors (target_ops *proc_target)
+number_of_live_inferiors (process_stratum_target *proc_target)
 {
   int num_inf = 0;
 
