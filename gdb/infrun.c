@@ -2973,22 +2973,19 @@ schedlock_applies (struct thread_info *tp)
 					    execution_direction)));
 }
 
-extern void switch_to_inferior_no_thread (inferior *inf);
+/* Calls target_commit_resume on all targets.  */
 
 static void
 commit_resume_all_targets ()
 {
   scoped_restore_current_thread restore_thread;
 
-  for (inferior *inf : all_inferiors ())
-    {
-      if (inf->pid != 0
-	  && inf->process_target () != NULL)
-	{
-	  switch_to_inferior_no_thread (inf);
-	  target_commit_resume ();
-	}
-    }
+  for (inferior *inf : all_non_exited_inferiors ())
+    if (inf->has_execution ())
+      {
+	switch_to_inferior_no_thread (inf);
+	target_commit_resume ();
+      }
 }
 
 /* Basic routine for continuing the program in various fashions.
