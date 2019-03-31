@@ -498,7 +498,6 @@ print_inferior (struct ui_out *uiout, const char *requested_inferiors)
   uiout->table_header (17, ui_left, "exec", "Executable");
 
   uiout->table_body ();
-
   for (inferior *inf : all_inferiors ())
     {
       if (!number_is_in_list (requested_inferiors, inf->num))
