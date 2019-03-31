@@ -539,6 +539,7 @@ public:
   REGISTRY_FIELDS;
 
 private:
+  /* The inferior's target stack.  */
   target_stack m_stack;
 };
 
