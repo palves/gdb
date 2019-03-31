@@ -95,6 +95,8 @@ static int maybe_software_singlestep (struct gdbarch *gdbarch, CORE_ADDR pc);
 
 static void resume (gdb_signal sig);
 
+static void wait_for_inferior (inferior *inf);
+
 /* Asynchronous signal handler registered as event loop source for
    when we have pending events ready to be passed to the core.  */
 static struct async_event_handler *infrun_async_inferior_event_token;
@@ -588,15 +590,15 @@ holding the child stopped.  Try \"set detach-on-fork\" or \
 	   target.  */
 	auto target_ref = target_ops_ref::new_reference (target);
 
-	/* If we're vforking, we want to hold on to the parent until the
-	   child exits or execs.  At child exec or exit time we can
-	   remove the old breakpoints from the parent and detach or
-	   resume debugging it.  Otherwise, detach the parent now; we'll
-	   want to reuse it's program/address spaces, but we can't set
-	   them to the child before removing breakpoints from the
-	   parent, otherwise, the breakpoints module could decide to
-	   remove breakpoints from the wrong process (since they'd be
-	   assigned to the same address space).  */
+	/* If we're vforking, we want to hold on to the parent until
+	   the child exits or execs.  At child exec or exit time we
+	   can remove the old breakpoints from the parent and detach
+	   or resume debugging it.  Otherwise, detach the parent now;
+	   we'll want to reuse it's program/address spaces, but we
+	   can't set them to the child before removing breakpoints
+	   from the parent, otherwise, the breakpoints module could
+	   decide to remove breakpoints from the wrong process (since
+	   they'd be assigned to the same address space).  */
 
 	if (has_vforked)
 	  {
@@ -628,8 +630,8 @@ holding the child stopped.  Try \"set detach-on-fork\" or \
 
 	/* Note that the detach above makes PARENT_INF dangling.  */
 
-	/* Add the child thread to the appropriate lists, and switch to
-	   this new thread, before cloning the program space, and
+	/* Add the child thread to the appropriate lists, and switch
+	   to this new thread, before cloning the program space, and
 	   informing the solib layer about this new process.  */
 
 	set_current_inferior (child_inf);
@@ -3242,8 +3244,6 @@ proceed (CORE_ADDR addr, enum gdb_signal siggnal)
     mark_async_event_handler (infrun_async_inferior_event_token);
 }
 
-
-static void wait_for_inferior (inferior *inf);
 
 /* Start remote-debugging of a machine over a serial link.  */
 
