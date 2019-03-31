@@ -580,58 +580,62 @@ holding the child stopped.  Try \"set detach-on-fork\" or \
 
       parent_pspace = parent_inf->pspace;
 
-      /* Get a strong reference to the target before (maybe) detaching
-	 the parent.  Otherwise detaching could close the target.  */
       process_stratum_target *target = parent_inf->process_target ();
-      target->incref ();
 
-      /* If we're vforking, we want to hold on to the parent until the
-	 child exits or execs.  At child exec or exit time we can
-	 remove the old breakpoints from the parent and detach or
-	 resume debugging it.  Otherwise, detach the parent now; we'll
-	 want to reuse it's program/address spaces, but we can't set
-	 them to the child before removing breakpoints from the
-	 parent, otherwise, the breakpoints module could decide to
-	 remove breakpoints from the wrong process (since they'd be
-	 assigned to the same address space).  */
+      {
+	/* Hold a strong reference to the target while (maybe)
+	   detaching the parent.  Otherwise detaching could close the
+	   target.  */
+	auto target_ref = target_ops_ref::new_reference (target);
 
-      if (has_vforked)
-	{
-	  gdb_assert (child_inf->vfork_parent == NULL);
-	  gdb_assert (parent_inf->vfork_child == NULL);
-	  child_inf->vfork_parent = parent_inf;
-	  child_inf->pending_detach = 0;
-	  parent_inf->vfork_child = child_inf;
-	  parent_inf->pending_detach = detach_fork;
-	  parent_inf->waiting_for_vfork_done = 0;
-	}
-      else if (detach_fork)
-	{
-	  if (print_inferior_events)
-	    {
-	      /* Ensure that we have a process ptid.  */
-	      ptid_t process_ptid = ptid_t (parent_ptid.pid ());
+	/* If we're vforking, we want to hold on to the parent until the
+	   child exits or execs.  At child exec or exit time we can
+	   remove the old breakpoints from the parent and detach or
+	   resume debugging it.  Otherwise, detach the parent now; we'll
+	   want to reuse it's program/address spaces, but we can't set
+	   them to the child before removing breakpoints from the
+	   parent, otherwise, the breakpoints module could decide to
+	   remove breakpoints from the wrong process (since they'd be
+	   assigned to the same address space).  */
 
-	      target_terminal::ours_for_output ();
-	      fprintf_filtered (gdb_stdlog,
-				_("[Detaching after fork from "
-				  "parent %s]\n"),
-				target_pid_to_str (process_ptid));
-	    }
+	if (has_vforked)
+	  {
+	    gdb_assert (child_inf->vfork_parent == NULL);
+	    gdb_assert (parent_inf->vfork_child == NULL);
+	    child_inf->vfork_parent = parent_inf;
+	    child_inf->pending_detach = 0;
+	    parent_inf->vfork_child = child_inf;
+	    parent_inf->pending_detach = detach_fork;
+	    parent_inf->waiting_for_vfork_done = 0;
+	  }
+	else if (detach_fork)
+	  {
+	    if (print_inferior_events)
+	      {
+		/* Ensure that we have a process ptid.  */
+		ptid_t process_ptid = ptid_t (parent_ptid.pid ());
 
-	  target_detach (parent_inf, 0);
-	  parent_inf = NULL;
-	}
+		target_terminal::ours_for_output ();
+		fprintf_filtered (gdb_stdlog,
+				  _("[Detaching after fork from "
+				    "parent %s]\n"),
+				  target_pid_to_str (process_ptid));
+	      }
 
-      /* Note that the detach above makes PARENT_INF dangling.  */
+	    target_detach (parent_inf, 0);
+	    parent_inf = NULL;
+	  }
 
-      /* Add the child thread to the appropriate lists, and switch to
-	 this new thread, before cloning the program space, and
-	 informing the solib layer about this new process.  */
+	/* Note that the detach above makes PARENT_INF dangling.  */
 
-      set_current_inferior (child_inf);
-      push_target (target);
-      target->decref ();
+	/* Add the child thread to the appropriate lists, and switch to
+	   this new thread, before cloning the program space, and
+	   informing the solib layer about this new process.  */
+
+	set_current_inferior (child_inf);
+	push_target (target);
+      }
+
       add_thread_silent (target, child_ptid);
       inferior_ptid = child_ptid;
 

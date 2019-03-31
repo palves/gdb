@@ -1269,6 +1269,9 @@ struct target_ops_deleter
 /* A unique pointer for target_ops.  */
 typedef std::unique_ptr<target_ops, target_ops_deleter> target_ops_up;
 
+/* A gdb::ref_ptr pointer to a target_ops.  */
+typedef gdb::ref_ptr<target_ops, refcounted_object_ref_policy> target_ops_ref;
+
 /* Native target backends call this once at initialization time to
    inform the core about which is the target that can respond to "run"
    or "attach".  Note: native targets are always singletons.  */
