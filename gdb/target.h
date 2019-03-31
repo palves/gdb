@@ -1337,6 +1337,9 @@ extern target_connection *current_target_connection;
 
 extern target_ops *current_top_target ();
 
+/* Return the dummy target.  */
+extern target_ops *get_dummy_target ();
+
 /* Define easy words for doing these operations on our current target.  */
 
 #define	target_shortname	(current_top_target ()->shortname ())
