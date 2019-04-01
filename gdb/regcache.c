@@ -381,9 +381,9 @@ get_thread_arch_regcache (process_stratum_target *target, ptid_t ptid,
   return get_thread_arch_aspace_regcache (target, ptid, gdbarch, aspace);
 }
 
+static process_stratum_target *current_thread_target;
 static ptid_t current_thread_ptid;
 static struct gdbarch *current_thread_arch;
-static process_stratum_target *current_thread_target;
 
 struct regcache *
 get_thread_regcache (process_stratum_target *target, ptid_t ptid)
@@ -425,9 +425,9 @@ get_current_regcache (void)
 struct regcache *
 get_thread_regcache_for_ptid (ptid_t ptid)
 {
-  /* This method doesn't take a target_ops parameter because it's a
-     common/ routine implemented by both gdb and gdbserver.  It always
-     refers to a ptid of the current target. */
+  /* This function doesn't take a process_stratum_target parameter
+     because it's a common/ routine implemented by both gdb and
+     gdbserver.  It always refers to a ptid of the current target. */
   process_stratum_target *proc_target = current_inferior ()->process_target ();
   return get_thread_regcache (proc_target, ptid);
 }
@@ -435,7 +435,7 @@ get_thread_regcache_for_ptid (ptid_t ptid)
 /* Observer for the target_changed event.  */
 
 static void
-regcache_observer_target_changed (target_ops *target)
+regcache_observer_target_changed (struct target_ops *target)
 {
   registers_changed ();
 }

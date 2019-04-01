@@ -1378,7 +1378,7 @@ enum record_method
 record_btrace_target::record_method (ptid_t ptid)
 {
   process_stratum_target *proc_target = current_inferior ()->process_target ();
-  struct thread_info * const tp = find_thread_ptid (proc_target, ptid);
+  thread_info *const tp = find_thread_ptid (proc_target, ptid);
 
   if (tp == NULL)
     error (_("No thread."));
@@ -1528,13 +1528,10 @@ record_btrace_target::remove_breakpoint (struct gdbarch *gdbarch,
 void
 record_btrace_target::fetch_registers (struct regcache *regcache, int regno)
 {
-  struct btrace_insn_iterator *replay;
-  struct thread_info *tp;
-
-  tp = find_thread_ptid (regcache->target (), regcache->ptid ());
+  thread_info *tp = find_thread_ptid (regcache->target (), regcache->ptid ());
   gdb_assert (tp != NULL);
 
-  replay = tp->btrace.replay;
+  btrace_insn_iterator *replay = tp->btrace.replay;
   if (replay != NULL && !record_btrace_generating_corefile)
     {
       const struct btrace_insn *insn;
