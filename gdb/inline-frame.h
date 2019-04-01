@@ -40,9 +40,9 @@ void skip_inline_frames (thread_info *thread, struct bpstats *stop_chain);
 
 /* Forget about any hidden inlined functions in PTID, which is new or
    about to be resumed.  PTID may be minus_one_ptid (all processes of
-   PROC_TARGET) or a PID (all threads in this process).  */
+   TARGET) or a PID (all threads in this process of TARGET).  */
 
-void clear_inline_frame_state (target_ops *proc_target, ptid_t ptid);
+void clear_inline_frame_state (process_stratum_target *target, ptid_t ptid);
 
 /* Forget about any hidden inlined functions in THREAD, which is new
    or about to be resumed.  */

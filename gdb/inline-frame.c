@@ -96,22 +96,19 @@ find_inline_frame_state (thread_info *thread)
   return &state;
 }
 
-/* Forget about any hidden inlined functions in PTID, which is new or
-   about to be resumed.  PTID may be minus_one_ptid (all processes)
-   or a PID (all threads in this process).  */
+/* See inline-frame.h.  */
 
 void
-clear_inline_frame_state (target_ops *proc_target, ptid_t filter_ptid)
+clear_inline_frame_state (process_stratum_target *target, ptid_t filter_ptid)
 {
-  gdb_assert (proc_target != NULL
-	      && proc_target->stratum () == process_stratum);
+  gdb_assert (target != NULL);
 
   if (filter_ptid == minus_one_ptid || filter_ptid.is_pid ())
     {
-      auto matcher = [proc_target, &filter_ptid] (const inline_state &state)
+      auto matcher = [target, &filter_ptid] (const inline_state &state)
 	{
 	  thread_info *t = state.thread;
-	  return (t->inf->process_target () == proc_target
+	  return (t->inf->process_target () == target
 		  && t->ptid.matches (filter_ptid));
 	};
 
@@ -124,10 +121,10 @@ clear_inline_frame_state (target_ops *proc_target, ptid_t filter_ptid)
     }
 
 
-  auto matcher = [proc_target, &filter_ptid] (const inline_state &state)
+  auto matcher = [target, &filter_ptid] (const inline_state &state)
     {
       thread_info *t = state.thread;
-      return (t->inf->process_target () == proc_target
+      return (t->inf->process_target () == target
 	      && filter_ptid == t->ptid);
     };
 
