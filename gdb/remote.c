@@ -2409,8 +2409,8 @@ remote_target::remote_add_inferior (int fake_pid_p, int pid, int attached,
 }
 
 static remote_thread_info *get_remote_thread_info (thread_info *thread);
-static remote_thread_info *get_remote_thread_info
-  (process_stratum_target *target, ptid_t ptid);
+static remote_thread_info *get_remote_thread_info (remote_target *target,
+						   ptid_t ptid);
 
 /* Add thread PTID to GDB's thread list.  Tag it as executing/running
    according to RUNNING.  */
@@ -2547,7 +2547,7 @@ get_remote_thread_info (thread_info *thread)
 /* Return PTID's private thread data, creating it if necessary.  */
 
 static remote_thread_info *
-get_remote_thread_info (process_stratum_target *target, ptid_t ptid)
+get_remote_thread_info (remote_target *target, ptid_t ptid)
 {
   thread_info *thr = find_thread_ptid (target, ptid);
   return get_remote_thread_info (thr);
@@ -4391,14 +4391,15 @@ remote_target::process_initial_stop_replies (int from_tty)
   /* Consume the initial pending events.  */
   while (pending_stop_replies-- > 0)
     {
+      ptid_t waiton_ptid = minus_one_ptid;
       ptid_t event_ptid;
       struct target_waitstatus ws;
       int ignore_event = 0;
 
       memset (&ws, 0, sizeof (ws));
-      event_ptid = target_wait (minus_one_ptid, &ws, TARGET_WNOHANG);
+      event_ptid = target_wait (waiton_ptid, &ws, TARGET_WNOHANG);
       if (remote_debug)
-	print_target_wait_results (minus_one_ptid, event_ptid, &ws);
+	print_target_wait_results (waiton_ptid, event_ptid, &ws);
 
       switch (ws.kind)
 	{
@@ -5486,8 +5487,8 @@ remote_serial_quit_handler ()
 static void
 remote_unpush_target (remote_target *target)
 {
-  /* We have to unpush the target in all inferiors though, even
-     those that aren't running.  */
+  /* We have to unpush the target from all inferiors, even those that
+     aren't running.  */
   scoped_restore_current_inferior restore_current_inferior;
 
   for (inferior *inf : all_inferiors (target))
@@ -13502,7 +13503,7 @@ remote_target::set_disconnected_tracing (int val)
 int
 remote_target::core_of_thread (ptid_t ptid)
 {
-  struct thread_info *info = find_thread_ptid (this, ptid);
+  thread_info *info = find_thread_ptid (this, ptid);
 
   if (info != NULL && info->priv != NULL)
     return get_remote_thread_info (info)->core;
@@ -13993,13 +13994,12 @@ char *
 remote_target::pid_to_exec_file (int pid)
 {
   static gdb::optional<gdb::char_vector> filename;
-  struct inferior *inf;
   char *annex = NULL;
 
   if (packet_support (PACKET_qXfer_exec_file) != PACKET_ENABLE)
     return NULL;
 
-  inf = find_inferior_pid (this, pid);
+  inferior *inf = find_inferior_pid (this, pid);
   if (inf == NULL)
     internal_error (__FILE__, __LINE__,
 		    _("not currently attached to process %d"), pid);
