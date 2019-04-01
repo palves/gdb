@@ -356,6 +356,8 @@ get_thread_arch_aspace_regcache (process_stratum_target *target,
 				 ptid_t ptid, struct gdbarch *gdbarch,
 				 struct address_space *aspace)
 {
+  gdb_assert (target != nullptr);
+
   for (const auto &regcache : regcache::current_regcache)
     if (regcache->target () == target
 	&& regcache->ptid () == ptid
@@ -471,22 +473,27 @@ registers_changed_ptid (process_stratum_target *target, ptid_t ptid)
        it != regcache::current_regcache.end ();
        )
     {
-      if ((*it)->ptid ().matches (ptid))
+      struct regcache *regcache = *it;
+      if ((target == nullptr || regcache->target () == target)
+	  && regcache->ptid ().matches (ptid))
 	{
-	  delete *it;
+	  delete regcache;
 	  it = regcache::current_regcache.erase_after (oit);
 	}
       else
 	oit = it++;
     }
 
-  if (current_thread_ptid.matches (ptid))
+  if ((target == nullptr || current_thread_target == target)
+      && current_thread_ptid.matches (ptid))
     {
+      current_thread_target = NULL;
       current_thread_ptid = null_ptid;
       current_thread_arch = NULL;
     }
 
-  if (inferior_ptid.matches (ptid))
+  if ((target == nullptr || current_inferior ()->process_target () == target)
+      && inferior_ptid.matches (ptid))
     {
       /* We just deleted the regcache of the current thread.  Need to
 	 forget about any frames we have cached, too.  */
@@ -505,8 +512,7 @@ registers_changed_thread (thread_info *thread)
 void
 registers_changed (void)
 {
-  registers_changed_ptid (current_inferior ()->process_target (),
-			  minus_one_ptid);
+  registers_changed_ptid (nullptr, minus_one_ptid);
 
   /* Force cleanup of any alloca areas if using C alloca instead of
      a builtin alloca.  This particular call is used to clean up
@@ -1460,6 +1466,21 @@ public:
   }
 };
 
+/* Wrapper around get_thread_arch_aspace_regcache that does some self checks.  */
+
+static void
+test_get_thread_arch_aspace_regcache (process_stratum_target *target,
+				      ptid_t ptid, struct gdbarch *gdbarch,
+				      address_space *aspace)
+{
+  struct regcache *regcache
+    = get_thread_arch_aspace_regcache (target, ptid, gdbarch, aspace);
+  SELF_CHECK (regcache != NULL);
+  SELF_CHECK (regcache->target () == target);
+  SELF_CHECK (regcache->ptid () == ptid);
+  SELF_CHECK (regcache->aspace () == aspace);
+}
+
 static void
 current_regcache_test (void)
 {
@@ -1468,47 +1489,61 @@ current_regcache_test (void)
 
   ptid_t ptid1 (1), ptid2 (2), ptid3 (3);
 
-  /* Get regcache from ptid1, a new regcache is added to
-     current_regcache.  */
-  regcache *regcache = get_thread_arch_aspace_regcache (NULL, ptid1,
-							target_gdbarch (),
-							NULL);
+  test_target_ops test_target1;
+  test_target_ops test_target2;
 
-  SELF_CHECK (regcache != NULL);
-  SELF_CHECK (regcache->ptid () == ptid1);
+  /* Get regcache from (target1,ptid1), a new regcache is added to
+     current_regcache.  */
+  test_get_thread_arch_aspace_regcache (&test_target1, ptid1,
+					target_gdbarch (),
+					NULL);
   SELF_CHECK (regcache_access::current_regcache_size () == 1);
 
-  /* Get regcache from ptid2, a new regcache is added to
+  /* Get regcache from (target1,ptid2), a new regcache is added to
      current_regcache.  */
-  regcache = get_thread_arch_aspace_regcache (NULL, ptid2,
-					      target_gdbarch (),
-					      NULL);
-  SELF_CHECK (regcache != NULL);
-  SELF_CHECK (regcache->ptid () == ptid2);
+  test_get_thread_arch_aspace_regcache (&test_target1, ptid2,
+					target_gdbarch (),
+					NULL);
   SELF_CHECK (regcache_access::current_regcache_size () == 2);
 
-  /* Get regcache from ptid3, a new regcache is added to
+  /* Get regcache from (target1,ptid3), a new regcache is added to
      current_regcache.  */
-  regcache = get_thread_arch_aspace_regcache (NULL, ptid3,
-					      target_gdbarch (),
-					      NULL);
-  SELF_CHECK (regcache != NULL);
-  SELF_CHECK (regcache->ptid () == ptid3);
+  test_get_thread_arch_aspace_regcache (&test_target1, ptid3,
+					target_gdbarch (),
+					NULL);
   SELF_CHECK (regcache_access::current_regcache_size () == 3);
 
-  /* Get regcache from ptid2 again, nothing is added to
+  /* Get regcache from (target1,ptid2) again, nothing is added to
      current_regcache.  */
-  regcache = get_thread_arch_aspace_regcache (NULL, ptid2,
-					      target_gdbarch (),
-					      NULL);
-  SELF_CHECK (regcache != NULL);
-  SELF_CHECK (regcache->ptid () == ptid2);
+  test_get_thread_arch_aspace_regcache (&test_target1, ptid2,
+					target_gdbarch (),
+					NULL);
   SELF_CHECK (regcache_access::current_regcache_size () == 3);
 
-  /* Mark ptid2 is changed, so regcache of ptid2 should be removed from
-     current_regcache.  */
-  registers_changed_ptid (NULL, ptid2);
-  SELF_CHECK (regcache_access::current_regcache_size () == 2);
+  /* Get regcache from (target2,ptid2), a new regcache is added to
+     current_regcache, since this time we're using a differen
+     target.  */
+  test_get_thread_arch_aspace_regcache (&test_target2, ptid2,
+					target_gdbarch (),
+					NULL);
+  SELF_CHECK (regcache_access::current_regcache_size () == 4);
+
+  /* Mark that (target1,ptid2) changed.  The regcache of (target1,
+     ptid2) should be removed from current_regcache.  */
+  registers_changed_ptid (&test_target1, ptid2);
+  SELF_CHECK (regcache_access::current_regcache_size () == 3);
+
+  /* Get the regcache from (target2,ptid2) again, confirming the
+     registers_changed_ptid call above did not delete it.  */
+  test_get_thread_arch_aspace_regcache (&test_target2, ptid2,
+					target_gdbarch (),
+					NULL);
+  SELF_CHECK (regcache_access::current_regcache_size () == 3);
+
+  /* Confirm that marking all regcaches of all targets as changed
+     clears current_regcache.  */
+  registers_changed_ptid (nullptr, minus_one_ptid);
+  SELF_CHECK (regcache_access::current_regcache_size () == 0);
 }
 
 class target_ops_no_register : public test_target_ops

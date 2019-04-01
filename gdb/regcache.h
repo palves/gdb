@@ -428,8 +428,8 @@ private:
 
   /* If this is a read-write cache, which thread's registers is
      it connected to?  */
-  ptid_t m_ptid;
   process_stratum_target *m_target;
+  ptid_t m_ptid;
 
   friend struct regcache *
   get_thread_arch_aspace_regcache (process_stratum_target *target, ptid_t ptid,
