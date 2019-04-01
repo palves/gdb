@@ -121,7 +121,7 @@ struct ravenscar_thread_target final : public target_ops
 static ravenscar_thread_target ravenscar_ops;
 
 static ptid_t ravenscar_active_task (int cpu);
-static void ravenscar_update_inferior_ptid (target_ops *proc_target);
+static void ravenscar_update_inferior_ptid (process_stratum_target *target);
 static int has_ravenscar_runtime (void);
 static int ravenscar_runtime_initialized (void);
 static void ravenscar_inferior_created (struct target_ops *target,
@@ -210,7 +210,7 @@ get_base_thread_from_ravenscar_task (ptid_t ptid)
    update inferior_ptid accordingly.  */
 
 static void
-ravenscar_update_inferior_ptid (target_ops *proc_target)
+ravenscar_update_inferior_ptid (process_stratum_target *proc_target)
 {
   int base_cpu;
 
@@ -324,7 +324,8 @@ ravenscar_thread_target::wait (ptid_t ptid,
 			       struct target_waitstatus *status,
 			       int options)
 {
-  target_ops *beneath = this->beneath ();
+  process_stratum_target *beneath
+    = as_process_stratum_target (this->beneath ());
   ptid_t event_ptid;
 
   inferior_ptid = base_ptid;
@@ -352,7 +353,7 @@ ravenscar_thread_target::wait (ptid_t ptid,
 static void
 ravenscar_add_thread (struct ada_task_info *task)
 {
-  target_ops *targ = current_inferior ()->process_target ();
+  process_stratum_target *targ = current_inferior ()->process_target ();
   if (find_thread_ptid (targ, task->ptid) == NULL)
     add_thread (targ, task->ptid);
 }
@@ -558,7 +559,8 @@ ravenscar_inferior_created (struct target_ops *target, int from_tty)
       return;
     }
 
-  ravenscar_update_inferior_ptid (target);
+  /* XXX: Review this after rebasing. */
+  ravenscar_update_inferior_ptid (nullptr /* target */ );
   push_target (&ravenscar_ops);
 }
 

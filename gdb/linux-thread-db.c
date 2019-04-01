@@ -247,7 +247,7 @@ add_thread_db_info (void *handle)
    related to process PID, if any; NULL otherwise.  */
 
 static struct thread_db_info *
-get_thread_db_info (target_ops *targ, int pid)
+get_thread_db_info (process_stratum_target *targ, int pid)
 {
   struct thread_db_info *info;
 
@@ -264,7 +264,7 @@ get_thread_db_info (target_ops *targ, int pid)
    LIBTHREAD_DB_SO's dlopen'ed handle.  */
 
 static void
-delete_thread_db_info (target_ops *targ, int pid)
+delete_thread_db_info (process_stratum_target *targ, int pid)
 {
   struct thread_db_info *info, *info_prev;
 
@@ -1410,7 +1410,8 @@ thread_db_target::wait (ptid_t ptid, struct target_waitstatus *ourstatus,
 void
 thread_db_target::mourn_inferior ()
 {
-  target_ops *target_beneath = this->beneath ();
+  process_stratum_target *target_beneath
+    = as_process_stratum_target (this->beneath ());
 
   delete_thread_db_info (target_beneath, inferior_ptid.pid ());
 
@@ -1789,13 +1790,13 @@ thread_db_target::get_ada_task_ptid (long lwp, long thread)
 void
 thread_db_target::resume (ptid_t ptid, int step, enum gdb_signal signo)
 {
-  target_ops *beneath = this->beneath ();
-  struct thread_db_info *info;
+  process_stratum_target *beneath
+    = as_process_stratum_target (this->beneath ());
 
-  if (ptid == minus_one_ptid)
-    info = get_thread_db_info (beneath, inferior_ptid.pid ());
-  else
-    info = get_thread_db_info (beneath, ptid.pid ());
+  thread_db_info *info
+    = get_thread_db_info (beneath, (ptid == minus_one_ptid
+				    ? inferior_ptid.pid ()
+				    : ptid.pid ()));
 
   /* This workaround is only needed for child fork lwps stopped in a
      PTRACE_O_TRACEFORK event.  When the inferior is resumed, the

@@ -100,7 +100,7 @@ parse_spufs_run (ptid_t ptid, int *fd, CORE_ADDR *addr)
   if (gdbarch_bfd_arch_info (target_gdbarch ())->arch != bfd_arch_powerpc)
     return 0;
 
-  target_ops *proc_target = current_inferior ()->process_target ();
+  process_stratum_target *proc_target = current_inferior ()->process_target ();
 
   /* If we're called too early (e.g. after fork), we cannot
      access the inferior yet.  */

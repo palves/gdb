@@ -28,8 +28,6 @@ process_stratum_target::~process_stratum_target ()
 struct address_space *
 process_stratum_target::thread_address_space (ptid_t ptid)
 {
-  gdb_assert (this->stratum () == process_stratum);
-
   /* Fall-back to the "main" address space of the inferior.  */
   inferior *inf = find_inferior_ptid (this, ptid);
 
