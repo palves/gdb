@@ -58,6 +58,9 @@ public:
      stop events for all known threads, because any of those threads
      may have spawned new threads we haven't heard of yet.  */
   bool threads_executing = false;
+
+  /* The connection number.  Visible in "info connections".  */
+  int connection_number = 0;
 };
 
 /* Downcast TARGET to process_stratum_target.  */

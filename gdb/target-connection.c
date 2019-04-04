@@ -101,7 +101,7 @@ print_connection (struct ui_out *uiout, const char *requested_connections)
 
   for (const auto &it : g_process_targets)
     {
-      target_ops *t = it.second;
+      process_stratum_target *t = it.second;
 
       if (!number_is_in_list (requested_connections, t->connection_number))
 	continue;

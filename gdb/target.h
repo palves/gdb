@@ -439,8 +439,6 @@ struct target_ops
     /* To the target under this one.  */
     target_ops *beneath () const;
 
-    int connection_number = 0;
-
     /* Free resources associated with the target.  Note that singleton
        targets, like e.g., native targets, are global objects, not
        heap allocated, and are thus only deleted on GDB exit.  The

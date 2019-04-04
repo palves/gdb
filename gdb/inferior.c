@@ -427,7 +427,7 @@ print_selected_inferior (struct ui_out *uiout)
 }
 
 static std::string
-uiout_field_connection (target_ops *proc_target)
+uiout_field_connection (process_stratum_target *proc_target)
 {
   if (proc_target == NULL)
     {
