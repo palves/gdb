@@ -17,19 +17,17 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#if !defined (TARGET_CONNECTION_H)
+#ifndef TARGET_CONNECTION_H
 #define TARGET_CONNECTION_H
-
-#include <map>
 
 struct process_stratum_target;
 
-/* A map between connection number and representative process_stratum
-   target.  */
-typedef std::map<int, process_stratum_target *> process_targets_map;
+/* Add a process target to the connection list, if not already
+   added.  */
+void connection_list_add (process_stratum_target *t);
 
-/* Return the map between connection number and representative
-   process_stratum target.  */
-extern const process_targets_map &all_process_targets ();
+/* Remove a process target from the connection list.  */
+void connection_list_remove (process_stratum_target *t);
 
-#endif /* !defined (TARGET_CONNECTION_H) */
+
+#endif /* TARGET_CONNECTION_H */

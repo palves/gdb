@@ -50,7 +50,7 @@
 #include "terminal.h"
 #include <algorithm>
 #include <unordered_map>
-#include <map>
+#include "target-connection.h"
 
 static void generic_tls_error (void) ATTRIBUTE_NORETURN;
 
@@ -558,17 +558,6 @@ default_execution_direction (struct target_ops *self)
 to_execution_direction must be implemented for reverse async");
 }
 
-/* A map between connection number and process_stratum target.  */
-static process_targets_map g_process_targets;
-
-static int highest_target_connection_num;
-
-const process_targets_map &
-all_process_targets ()
-{
-  return g_process_targets;
-}
-
 /* Decref a target and close if, if there are no references left.  */
 
 static void
@@ -578,11 +567,7 @@ decref_target (target_ops *t)
   if (t->refcount () == 0)
     {
       if (t->stratum () == process_stratum)
-	{
-	  /* Drop it from the connection list.  */
-	  g_process_targets.erase (t->connection_number);
-	  t->connection_number = 0;
-	}
+	connection_list_remove (as_process_stratum_target (t));
       target_close (t);
     }
 }
@@ -596,12 +581,8 @@ target_stack::push (target_ops *t)
 
   strata stratum = t->stratum ();
 
-  if (stratum == process_stratum && t->connection_number == 0)
-    {
-      t->connection_number = ++highest_target_connection_num;
-      g_process_targets[t->connection_number]
-	= as_process_stratum_target (t);
-    }
+  if (stratum == process_stratum)
+    connection_list_add (as_process_stratum_target (t));
 
   /* If there's already a target at this stratum, remove it.  */
 

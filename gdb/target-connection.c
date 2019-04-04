@@ -19,10 +19,39 @@
 
 #include "defs.h"
 #include "target-connection.h"
-#include "target.h"
-#include "gdbcmd.h"
-#include "cli/cli-utils.h"
+
+#include <map>
+
 #include "inferior.h"
+#include "target.h"
+
+/* A map between connection number and representative process_stratum
+   target.  */
+static std::map<int, process_stratum_target *> g_process_targets;
+
+/* The highest connection number ever given to a target.  */
+static int highest_target_connection_num;
+
+/* See target-connection.h.  */
+
+void
+connection_list_add (process_stratum_target *t)
+{
+  if (t->connection_number == 0)
+    {
+      t->connection_number = ++highest_target_connection_num;
+      g_process_targets[t->connection_number] = t;
+    }
+}
+
+/* See target-connection.h.  */
+
+void
+connection_list_remove (process_stratum_target *t)
+{
+  g_process_targets.erase (t->connection_number);
+  t->connection_number = 0;
+}
 
 /* Prints the list of target connections and their details on UIOUT.
 
@@ -37,7 +66,7 @@ print_connection (struct ui_out *uiout, const char *requested_connections)
   size_t name_len = 0;
 
   /* Compute number of lines we will print.  */
-  for (const auto &it : all_process_targets ())
+  for (const auto &it : g_process_targets)
     {
       if (!number_is_in_list (requested_connections, it.first))
 	continue;
@@ -60,7 +89,7 @@ print_connection (struct ui_out *uiout, const char *requested_connections)
       return;
     }
 
-  ui_out_emit_table table_emitter (uiout, 4, all_process_targets ().size (),
+  ui_out_emit_table table_emitter (uiout, 4, g_process_targets.size (),
 				   "connections");
 
   uiout->table_header (1, ui_left, "current", "");
@@ -70,7 +99,7 @@ print_connection (struct ui_out *uiout, const char *requested_connections)
 
   uiout->table_body ();
 
-  for (const auto &it : all_process_targets ())
+  for (const auto &it : g_process_targets)
     {
       target_ops *t = it.second;
 
