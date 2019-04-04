@@ -22,8 +22,14 @@
 
 #include <map>
 
-struct target_ops;
+struct process_stratum_target;
 
-extern const std::map<int, target_ops *> &process_targets ();
+/* A map between connection number and representative process_stratum
+   target.  */
+typedef std::map<int, process_stratum_target *> process_targets_map;
+
+/* Return the map between connection number and representative
+   process_stratum target.  */
+extern const process_targets_map &all_process_targets ();
 
 #endif /* !defined (TARGET_CONNECTION_H) */

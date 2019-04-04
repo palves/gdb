@@ -558,12 +558,13 @@ default_execution_direction (struct target_ops *self)
 to_execution_direction must be implemented for reverse async");
 }
 
-static std::map<int, target_ops *> g_process_targets;
+/* A map between connection number and process_stratum target.  */
+static process_targets_map g_process_targets;
 
-static int highest_target_connection_num;;
+static int highest_target_connection_num;
 
-const std::map<int, target_ops *> &
-process_targets ()
+const process_targets_map &
+all_process_targets ()
 {
   return g_process_targets;
 }
@@ -598,7 +599,8 @@ target_stack::push (target_ops *t)
   if (stratum == process_stratum && t->connection_number == 0)
     {
       t->connection_number = ++highest_target_connection_num;
-      g_process_targets[t->connection_number] = t;
+      g_process_targets[t->connection_number]
+	= as_process_stratum_target (t);
     }
 
   /* If there's already a target at this stratum, remove it.  */

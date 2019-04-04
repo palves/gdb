@@ -37,7 +37,7 @@ print_connection (struct ui_out *uiout, const char *requested_connections)
   size_t name_len = 0;
 
   /* Compute number of lines we will print.  */
-  for (const auto &it : process_targets ())
+  for (const auto &it : all_process_targets ())
     {
       if (!number_is_in_list (requested_connections, it.first))
 	continue;
@@ -60,7 +60,7 @@ print_connection (struct ui_out *uiout, const char *requested_connections)
       return;
     }
 
-  ui_out_emit_table table_emitter (uiout, 4, process_targets ().size (),
+  ui_out_emit_table table_emitter (uiout, 4, all_process_targets ().size (),
 				   "connections");
 
   uiout->table_header (1, ui_left, "current", "");
@@ -70,7 +70,7 @@ print_connection (struct ui_out *uiout, const char *requested_connections)
 
   uiout->table_body ();
 
-  for (const auto &it : process_targets ())
+  for (const auto &it : all_process_targets ())
     {
       target_ops *t = it.second;
 
