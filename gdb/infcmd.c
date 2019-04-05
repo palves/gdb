@@ -2081,15 +2081,13 @@ finish_command (const char *arg, int from_tty)
 }
 
 
-/* Move to infrun.h.  */
-extern ptid_t previous_inferior_ptid;
-
 static void
 info_program_command (const char *args, int from_tty)
 {
   bpstat bs;
   int num, stat;
   ptid_t ptid;
+  process_stratum_target *proc_target;
 
   if (!target_has_execution)
     {
@@ -2098,14 +2096,17 @@ info_program_command (const char *args, int from_tty)
     }
 
   if (non_stop)
-    ptid = inferior_ptid;
+    {
+      ptid = inferior_ptid;
+      proc_target = current_inferior ()->process_target ();
+    }
   else
-    ptid = previous_inferior_ptid;
+    get_last_target_status (&proc_target, &ptid, nullptr);
 
   if (ptid == null_ptid || ptid == minus_one_ptid)
     error (_("No selected thread."));
 
-  thread_info *tp = inferior_thread ();
+  thread_info *tp = find_thread_ptid (proc_target, ptid);
 
   if (tp->state == THREAD_EXITED)
     error (_("Invalid selected thread."));

@@ -149,7 +149,7 @@ show_step_stop_if_no_debug (struct ui_file *file, int from_tty,
    inferior stopped in a different thread than it had been running
    in.  */
 
-ptid_t previous_inferior_ptid;
+static ptid_t previous_inferior_ptid;
 
 /* If set (default for legacy reasons), when following a fork, GDB
    will detach from one of the fork branches, child or parent.
