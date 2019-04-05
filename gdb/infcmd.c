@@ -867,12 +867,11 @@ continue_command (const char *args, int from_tty)
 	tp = inferior_thread ();
       else
 	{
-	  for (thread_info *it : all_threads ())
-	    if (it->control.stop_bpstat != NULL)
-	      {
-		tp = it;
-		break;
-	      }
+	  process_stratum_target *last_target;
+	  ptid_t last_ptid;
+
+	  get_last_target_status (&last_target, &last_ptid, nullptr);
+	  tp = find_thread_ptid (last_target, last_ptid);
 	}
       if (tp != NULL)
 	bs = tp->control.stop_bpstat;
