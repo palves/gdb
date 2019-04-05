@@ -1,6 +1,6 @@
-/* Interface between GDB and target environments, including files and processes
+/* List of target connections for GDB.
 
-   Copyright (C) 2017 Free Software Foundation, Inc.
+   Copyright (C) 2017-2019 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -28,6 +28,5 @@ void connection_list_add (process_stratum_target *t);
 
 /* Remove a process target from the connection list.  */
 void connection_list_remove (process_stratum_target *t);
-
 
 #endif /* TARGET_CONNECTION_H */

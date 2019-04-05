@@ -1,6 +1,6 @@
 /* List of target connections for GDB.
 
-   Copyright (C) 2017-2018 Free Software Foundation, Inc.
+   Copyright (C) 2017-2019 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -27,7 +27,7 @@
 
 /* A map between connection number and representative process_stratum
    target.  */
-static std::map<int, process_stratum_target *> g_process_targets;
+static std::map<int, process_stratum_target *> process_targets;
 
 /* The highest connection number ever given to a target.  */
 static int highest_target_connection_num;
@@ -40,7 +40,7 @@ connection_list_add (process_stratum_target *t)
   if (t->connection_number == 0)
     {
       t->connection_number = ++highest_target_connection_num;
-      g_process_targets[t->connection_number] = t;
+      process_targets[t->connection_number] = t;
     }
 }
 
@@ -49,7 +49,7 @@ connection_list_add (process_stratum_target *t)
 void
 connection_list_remove (process_stratum_target *t)
 {
-  g_process_targets.erase (t->connection_number);
+  process_targets.erase (t->connection_number);
   t->connection_number = 0;
 }
 
@@ -66,7 +66,7 @@ print_connection (struct ui_out *uiout, const char *requested_connections)
   size_t name_len = 0;
 
   /* Compute number of lines we will print.  */
-  for (const auto &it : g_process_targets)
+  for (const auto &it : process_targets)
     {
       if (!number_is_in_list (requested_connections, it.first))
 	continue;
@@ -89,7 +89,7 @@ print_connection (struct ui_out *uiout, const char *requested_connections)
       return;
     }
 
-  ui_out_emit_table table_emitter (uiout, 4, g_process_targets.size (),
+  ui_out_emit_table table_emitter (uiout, 4, process_targets.size (),
 				   "connections");
 
   uiout->table_header (1, ui_left, "current", "");
@@ -99,7 +99,7 @@ print_connection (struct ui_out *uiout, const char *requested_connections)
 
   uiout->table_body ();
 
-  for (const auto &it : g_process_targets)
+  for (const auto &it : process_targets)
     {
       process_stratum_target *t = it.second;
 
