@@ -107,10 +107,11 @@ extern process_stratum_target *user_visible_resume_target (ptid_t resume_ptid);
    target, false otherwise.  */
 extern int normal_stop (void);
 
-extern void get_last_target_status (ptid_t *ptid,
+extern void get_last_target_status (process_stratum_target **target,
+				    ptid_t *ptid,
 				    struct target_waitstatus *status);
 
-extern void set_last_target_status (ptid_t ptid,
+extern void set_last_target_status (process_stratum_target *target, ptid_t ptid,
 				    struct target_waitstatus status);
 
 /* Stop all threads.  Only returns after everything is halted.  */

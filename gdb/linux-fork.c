@@ -713,7 +713,7 @@ checkpoint_command (const char *args, int from_tty)
     error (_("checkpoint: call_function_by_hand returned null."));
 
   retpid = value_as_long (ret);
-  get_last_target_status (&last_target_ptid, &last_target_waitstatus);
+  get_last_target_status (nullptr, &last_target_ptid, &last_target_waitstatus);
 
   fp = find_fork_pid (retpid);
 

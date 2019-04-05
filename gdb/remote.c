@@ -4524,7 +4524,7 @@ remote_target::process_initial_stop_replies (int from_tty)
   /* For "info program".  */
   thread_info *thread = inferior_thread ();
   if (thread->state == THREAD_STOPPED)
-    set_last_target_status (inferior_ptid, thread->suspend.waitstatus);
+    set_last_target_status (this, inferior_ptid, thread->suspend.waitstatus);
 }
 
 /* Start the remote connection and sync state.  */

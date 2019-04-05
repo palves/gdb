@@ -382,9 +382,10 @@ show_stop_on_solib_events (struct ui_file *file, int from_tty,
 
 static int stop_print_frame;
 
-/* This is a cached copy of the pid/waitstatus of the last event
-   returned by target_wait()/deprecated_target_wait_hook().  This
-   information is returned by get_last_target_status().  */
+/* This is a cached copy of the target/ptid/waitstatus of the last
+   event returned by target_wait()/deprecated_target_wait_hook().
+   This information is returned by get_last_target_status().  */
+static process_stratum_target *target_last_proc_target;
 static ptid_t target_last_wait_ptid;
 static struct target_waitstatus target_last_waitstatus;
 
@@ -696,11 +697,12 @@ follow_fork (void)
 
   if (!non_stop)
     {
+      process_stratum_target *wait_target;
       ptid_t wait_ptid;
       struct target_waitstatus wait_status;
 
       /* Get the last target status returned by target_wait().  */
-      get_last_target_status (&wait_ptid, &wait_status);
+      get_last_target_status (&wait_target, &wait_ptid, &wait_status);
 
       /* If not stopped at a fork event, then there's nothing else to
 	 do.  */
@@ -711,15 +713,14 @@ follow_fork (void)
       /* Check if we switched over from WAIT_PTID, since the event was
 	 reported.  */
       if (wait_ptid != minus_one_ptid
-	  && inferior_ptid != wait_ptid)
+	  && (current_inferior ()->process_target () != wait_target
+	      || inferior_ptid != wait_ptid))
 	{
 	  /* We did.  Switch back to WAIT_PTID thread, to tell the
 	     target to follow it (in either direction).  We'll
 	     afterwards refuse to resume, and inform the user what
 	     happened.  */
-	  thread_info *wait_thread
-	    = find_thread_ptid (current_inferior ()->process_target (),
-				wait_ptid);
+	  thread_info *wait_thread = find_thread_ptid (wait_target, wait_ptid);
 	  switch_to_thread (wait_thread);
 	  should_resume = 0;
 	}
@@ -3288,7 +3289,7 @@ init_wait_for_inferior (void)
 
   clear_proceed_status (0);
 
-  target_last_wait_ptid = minus_one_ptid;
+  nullify_last_target_wait_ptid ();
 
   previous_inferior_ptid = inferior_ptid;
 }
@@ -3369,7 +3370,8 @@ infrun_thread_stop_requested (ptid_t ptid)
 static void
 infrun_thread_thread_exit (struct thread_info *tp, int silent)
 {
-  if (target_last_wait_ptid == tp->ptid)
+  if (target_last_proc_target == tp->inf->process_target ()
+      && target_last_wait_ptid == tp->ptid)
     nullify_last_target_wait_ptid ();
 }
 
@@ -4155,31 +4157,40 @@ init_thread_stepping_state (struct thread_info *tss)
   tss->step_after_step_resume_breakpoint = 0;
 }
 
-/* Set the cached copy of the last ptid/waitstatus.  */
+/* Set the cached copy of the last target/ptid/waitstatus.  */
 
 void
-set_last_target_status (ptid_t ptid, struct target_waitstatus status)
+set_last_target_status (process_stratum_target *target, ptid_t ptid,
+			target_waitstatus status)
 {
+  target_last_proc_target = target;
   target_last_wait_ptid = ptid;
   target_last_waitstatus = status;
 }
 
-/* Return the cached copy of the last pid/waitstatus returned by
-   target_wait()/deprecated_target_wait_hook().  The data is actually
-   cached by handle_inferior_event(), which gets called immediately
-   after target_wait()/deprecated_target_wait_hook().  */
+/* Return the cached copy of the last target/ptid/waitstatus returned
+   by target_wait()/deprecated_target_wait_hook().  The data is
+   actually cached by handle_inferior_event(), which gets called
+   immediately after target_wait()/deprecated_target_wait_hook().  */
 
 void
-get_last_target_status (ptid_t *ptidp, struct target_waitstatus *status)
+get_last_target_status (process_stratum_target **target, ptid_t *ptid,
+			target_waitstatus *status)
 {
-  *ptidp = target_last_wait_ptid;
-  *status = target_last_waitstatus;
+  if (target != nullptr)
+    *target = target_last_proc_target;
+  if (ptid != nullptr)
+    *ptid = target_last_wait_ptid;
+  if (status != nullptr)
+    *status = target_last_waitstatus;
 }
 
 void
 nullify_last_target_wait_ptid (void)
 {
+  target_last_proc_target = nullptr;
   target_last_wait_ptid = minus_one_ptid;
+  target_last_waitstatus = {};
 }
 
 /* Switch thread contexts.  */
@@ -5037,8 +5048,8 @@ handle_inferior_event_1 (struct execution_control_state *ecs)
       && handle_no_resumed (ecs))
     return;
 
-  /* Cache the last pid/waitstatus.  */
-  set_last_target_status (ecs->ptid, ecs->ws);
+  /* Cache the last target/ptid/waitstatus.  */
+  set_last_target_status (ecs->target, ecs->ptid, ecs->ws);
 
   /* Always clear state belonging to the previous time we stopped.  */
   stop_stack_dummy = STOP_NONE;
@@ -8285,10 +8296,9 @@ void
 print_stop_event (struct ui_out *uiout)
 {
   struct target_waitstatus last;
-  ptid_t last_ptid;
   struct thread_info *tp;
 
-  get_last_target_status (&last_ptid, &last);
+  get_last_target_status (nullptr, nullptr, &last);
 
   {
     scoped_restore save_uiout = make_scoped_restore (&current_uiout, uiout);
@@ -8406,9 +8416,8 @@ int
 normal_stop (void)
 {
   struct target_waitstatus last;
-  ptid_t last_ptid;
 
-  get_last_target_status (&last_ptid, &last);
+  get_last_target_status (nullptr, nullptr, &last);
 
   new_stop_id ();
 
