@@ -1042,6 +1042,9 @@ record_full_base_target::async (int enable)
   beneath ()->async (enable);
 }
 
+/* The PTID and STEP arguments last passed to
+   record_full_target::resume.  */
+static ptid_t record_full_resume_ptid = null_ptid;
 static int record_full_resume_step = 0;
 
 /* True if we've been resumed, and so each record_full_wait call should
@@ -1070,6 +1073,7 @@ static enum exec_direction_kind record_full_execution_dir = EXEC_FORWARD;
 void
 record_full_target::resume (ptid_t ptid, int step, enum gdb_signal signal)
 {
+  record_full_resume_ptid = inferior_ptid;
   record_full_resume_step = step;
   record_full_resumed = 1;
   record_full_execution_dir = ::execution_direction;
@@ -1196,7 +1200,8 @@ record_full_wait_1 (struct target_ops *ops,
 	  /* This is not a single step.  */
 	  ptid_t ret;
 	  CORE_ADDR tmp_pc;
-	  struct gdbarch *gdbarch = target_thread_architecture (inferior_ptid);
+	  struct gdbarch *gdbarch
+	    = target_thread_architecture (record_full_resume_ptid);
 
 	  while (1)
 	    {
