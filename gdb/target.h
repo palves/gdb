@@ -1319,20 +1319,6 @@ private:
   target_ops *m_stack[(int) debug_stratum + 1] {};
 };
 
-struct target_connection
-{
-  target_connection ();
-
-  int num;
-
-  /* The ops structure for our "current" target process.  This should
-     never be NULL.  If there is no target, it points to the
-     dummy_target.  */
-  target_ops *top_target;
-};
-
-extern target_connection *current_target_connection;
-
 /* The ops structure for our "current" target process.  This should
    never be NULL.  If there is no target, it points to the dummy_target.  */
 
