@@ -25,6 +25,7 @@
 #include "command.h"
 #include <vector>
 #include "gdbsupport/gdb_tilde_expand.h"
+#include "readline/tilde.h"
 
 namespace gdb {
 namespace option {
@@ -197,6 +198,8 @@ parse_option (gdb::array_view<const option_def_group> options_group,
   else if (check_for_argument (args, "--"))
     return {};
 
+  const char *org_args = *args;
+
   /* Skip the initial '-'.  */
   const char *arg = *args + 1;
 
@@ -252,7 +255,10 @@ parse_option (gdb::array_view<const option_def_group> options_group,
   *args += 1 + len;
   *args = skip_spaces (*args);
   if (completion != nullptr)
-    completion->word = *args;
+    {
+      completion->word = *args;
+      completion->tracker.advance_custom_word_point_by (*args - org_args);
+    }
 
   switch (match->type)
     {
@@ -436,22 +442,39 @@ parse_option (gdb::array_view<const option_def_group> options_group,
 	    error (_("-%s requires an argument"), match->name);
 	  }
 
+	bool unclosed;
 	const char *arg_start = *args;
-	std::string str = extract_string_maybe_quoted (args);
+	std::string str = extract_string_maybe_quoted (args, &unclosed);
 	if (*args == arg_start)
 	  error (_("-%s requires an argument"), match->name);
 
 	if (match->type == var_filename)
 	  {
-	    if (completion != nullptr && !isspace ((*args)[-1]))
+	    if (completion != nullptr
+		&& **args == '\0'
+		&& (unclosed /* || !isspace ((*args)[-1]) */))
 	      {
+		if (*arg_start == '\'' || *arg_start == '\"')
+		  {
+		    completion->tracker.set_quote_char (*arg_start);
+		    arg_start++;
+		  }
+
+		completion->tracker.advance_custom_word_point_by
+		  (arg_start - completion->word);
+		completion->word = arg_start;
 		*args = arg_start;
+
 		filename_completer (nullptr, completion->tracker,
-				    arg_start, arg_start);
+				    str.c_str (), str.c_str ());
 		return {};
 	      }
 
-	    str = gdb_tilde_expand (str.c_str ());
+	    // gdb_tilde_expand throws if it can't expand???
+	    //	    str = gdb_tilde_expand (str.c_str ());
+
+	    gdb::unique_xmalloc_ptr<char> expanded (tilde_expand (str.c_str ()));
+	    str = expanded.get ();
 	  }
 
 	option_value val;
@@ -484,11 +507,13 @@ complete_options (completion_tracker &tracker,
 
   if (text[0] == '-' && (!have_delimiter || *delimiter == '\0'))
     {
-      parse_option_completion_info completion_info {nullptr, tracker};
+      parse_option_completion_info completion_info {*args, tracker};
 
       while (1)
 	{
 	  *args = skip_spaces (*args);
+
+	  tracker.advance_custom_word_point_by (*args - completion_info.word);
 	  completion_info.word = *args;
 
 	  if (strcmp (*args, "-") == 0)
@@ -507,7 +532,8 @@ complete_options (completion_tracker &tracker,
 				args, &completion_info);
 	      if (!ov && !tracker.have_completions ())
 		{
-		  tracker.advance_custom_word_point_by (*args - text);
+		  tracker.advance_custom_word_point_by
+		    (*args - completion_info.word);
 		  return mode == PROCESS_OPTIONS_REQUIRE_DELIMITER;
 		}
 
@@ -522,7 +548,8 @@ complete_options (completion_tracker &tracker,
 		     command doesn't require a delimiter return false
 		     so that the caller tries to complete on the
 		     operand.  */
-		  tracker.advance_custom_word_point_by (*args - text);
+		  tracker.advance_custom_word_point_by
+		    (*args - completion_info.word);
 		  return mode == PROCESS_OPTIONS_REQUIRE_DELIMITER;
 		}
 
@@ -541,7 +568,7 @@ complete_options (completion_tracker &tracker,
 		  && *args > text && !isspace ((*args)[-1]))
 		{
 		  tracker.advance_custom_word_point_by
-		    (*args - text);
+		    (*args - completion_info.word);
 		  return true;
 		}
 
@@ -552,9 +579,6 @@ complete_options (completion_tracker &tracker,
 	    }
 	  else
 	    {
-	      tracker.advance_custom_word_point_by
-		(completion_info.word - text);
-
 	      /* If the command requires a delimiter, but we haven't
 		 seen one, then return true, so that the caller
 		 doesn't try to complete on whatever follows options,
@@ -575,11 +599,7 @@ complete_options (completion_tracker &tracker,
 	    }
 
 	  if (tracker.have_completions ())
-	    {
-	      tracker.advance_custom_word_point_by
-		(completion_info.word - text);
-	      return true;
-	    }
+	    return true;
 	}
     }
   else if (delimiter != nullptr)

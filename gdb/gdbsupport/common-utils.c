@@ -163,7 +163,7 @@ savestring (const char *ptr, size_t len)
 /* See documentation in common-utils.h.  */
 
 std::string
-extract_string_maybe_quoted (const char **arg)
+extract_string_maybe_quoted (const char **arg, bool *unclosed)
 {
   bool squote = false;
   bool dquote = false;
@@ -174,11 +174,24 @@ extract_string_maybe_quoted (const char **arg)
   /* Find the start of the argument.  */
   p = skip_spaces (p);
 
+  if (unclosed != nullptr)
+    *unclosed = true;
+
   /* Parse p similarly to gdb_argv buildargv function.  */
   while (*p != '\0')
     {
-      if (isspace (*p) && !squote && !dquote && !bsquote)
-	break;
+      if (*p == '\0')
+	{
+	  if (unclosed != nullptr)
+	    *unclosed = squote || dquote || bsquote;
+	  break;
+	}
+      else if (isspace (*p) && !squote && !dquote && !bsquote)
+	{
+	  if (unclosed != nullptr)
+	    *unclosed = false;
+	  break;
+	}
       else
 	{
 	  if (bsquote)
@@ -186,8 +199,6 @@ extract_string_maybe_quoted (const char **arg)
 	      bsquote = false;
 	      result += *p;
 	    }
-	  else if (*p == '\\')
-	    bsquote = true;
 	  else if (squote)
 	    {
 	      if (*p == '\'')
@@ -195,6 +206,8 @@ extract_string_maybe_quoted (const char **arg)
 	      else
 		result += *p;
 	    }
+	  else if (*p == '\\')
+	    bsquote = true;
 	  else if (dquote)
 	    {
 	      if (*p == '"')

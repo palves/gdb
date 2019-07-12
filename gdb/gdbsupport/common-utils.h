@@ -102,7 +102,8 @@ char *savestring (const char *ptr, size_t len);
    word, or, for quoted words, the first character after the closing
    quote.  */
 
-std::string extract_string_maybe_quoted (const char **arg);
+std::string extract_string_maybe_quoted (const char **arg,
+					 bool *unclosed = nullptr);
 
 /* The strerror() function can return NULL for errno values that are
    out of range.  Provide a "safe" version that always returns a
