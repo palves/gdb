@@ -723,7 +723,7 @@ COMMAND from SHELL_COMMAND, in alternative to |.  This is useful in\n\
 case COMMAND contains a | character."),
   },
 
-  gdb::option::string_option_def<add_inferior_cmd_opts> {
+  gdb::option::filename_option_def<add_inferior_cmd_opts> {
     "exec",
     [] (add_inferior_cmd_opts *opts) { return &opts->exec; },
     nullptr,

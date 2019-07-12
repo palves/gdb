@@ -24,6 +24,7 @@
 #include "cli/cli-setshow.h"
 #include "command.h"
 #include <vector>
+#include "gdbsupport/gdb_tilde_expand.h"
 
 namespace gdb {
 namespace option {
@@ -44,7 +45,8 @@ union option_value
   /* For var_enum options.  */
   const char *enumeration;
 
-  /* For var_string options.  This is malloc-allocated.  */
+  /* For var_string and var_filename options.  This is
+     malloc-allocated.  */
   char *string;
 };
 
@@ -86,7 +88,7 @@ struct option_def_and_value
   {
     if (value.has_value ())
       {
-	if (option.type == var_string)
+	if (option.type == var_string || option.type == var_filename)
 	  xfree (value->string);
       }
   }
@@ -103,7 +105,7 @@ private:
   {
     if (value.has_value ())
       {
-	if (option.type == var_string)
+	if (option.type == var_string || option.type == var_filename)
 	  value->string = nullptr;
       }
   }
@@ -425,6 +427,7 @@ parse_option (gdb::array_view<const option_def_group> options_group,
 	return option_def_and_value {*match, match_ctx, val};
       }
     case var_string:
+    case var_filename:
       {
 	if (check_for_argument (args, "--"))
 	  {
@@ -437,6 +440,19 @@ parse_option (gdb::array_view<const option_def_group> options_group,
 	std::string str = extract_string_maybe_quoted (args);
 	if (*args == arg_start)
 	  error (_("-%s requires an argument"), match->name);
+
+	if (match->type == var_filename)
+	  {
+	    if (completion != nullptr && !isspace ((*args)[-1]))
+	      {
+		*args = arg_start;
+		filename_completer (nullptr, completion->tracker,
+				    arg_start, arg_start);
+		return {};
+	      }
+
+	    str = gdb_tilde_expand (str.c_str ());
+	  }
 
 	option_value val;
 	val.string = xstrdup (str.c_str ());
@@ -602,6 +618,7 @@ save_option_value_in_ctx (gdb::optional<option_def_and_value> &ov)
 	= ov->value->enumeration;
       break;
     case var_string:
+    case var_filename:
       *ov->option.var_address.string (ov->option, ov->ctx)
 	= ov->value->string;
       ov->value->string = nullptr;
