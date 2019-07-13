@@ -151,6 +151,28 @@ noop_completer (struct cmd_list_element *ignore,
 {
 }
 
+static gdb::unique_xmalloc_ptr<char>
+quote_string (const char *str)
+{
+  std::string res;
+
+  for (size_t i = 0; str[i] != '\0'; i++)
+    {
+      switch (str[i])
+	{
+	case ' ':
+	case '\'':
+	case '\\':
+	case '"':
+	  res += '\\';
+	  break;
+	}
+	res += str[i];
+    }
+
+  return make_unique_xstrdup (res.c_str ());
+}
+
 /* Complete on filenames.  */
 
 void
@@ -160,11 +182,27 @@ filename_completer (struct cmd_list_element *ignore,
 {
   int subsequent_name;
 
+  const char *arg = text;
+  bool unclosed;
+  std::string str;
+  bool need_quoting;
+
+  if (text[-1] == '\'' || text[-1] == '"')
+    {
+      str = text;
+      need_quoting = false;
+    }
+  else
+    {
+      str = extract_string_maybe_quoted (&arg, &unclosed);
+      need_quoting = true;
+    }
+
   subsequent_name = 0;
   while (1)
     {
       gdb::unique_xmalloc_ptr<char> p_rl
-	(rl_filename_completion_function (text, subsequent_name));
+	(rl_filename_completion_function (str.c_str (), subsequent_name));
       if (p_rl == NULL)
 	break;
       /* We need to set subsequent_name to a non-zero value before the
@@ -177,6 +215,9 @@ filename_completer (struct cmd_list_element *ignore,
       const char *p = p_rl.get ();
       if (p[strlen (p) - 1] == '~')
 	continue;
+
+      if (need_quoting)
+	p_rl = quote_string (p_rl.get ());
 
       tracker.add_completion
 	(make_completion_match_str (std::move (p_rl), text, word));
