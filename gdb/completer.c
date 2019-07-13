@@ -191,6 +191,54 @@ filename_completer (struct cmd_list_element *ignore,
 #endif
 }
 
+#define ADVANCE_CHAR(_str, _strsize, _i)      (_i)++
+
+/* Return 1 if the portion of STRING ending at EINDEX is quoted (there
+   is an unclosed quoted string), or if the character at EINDEX is
+   quoted by a backslash. The characters that this recognizes need to
+   be the same as the contents of rl_completer_quote_characters. */
+
+static int
+gdb_completer_file_name_char_is_quoted (char *string, int eindex)
+{
+  int i, pass_next, c;
+
+  i = pass_next = 0;
+  while (i <= eindex)
+    {
+      c = string[i];
+
+      if (pass_next)
+	{
+	  pass_next = 0;
+	  if (i >= eindex)
+	    return 1;
+	  ADVANCE_CHAR (string, slen, i);
+	  continue;
+	}
+      else if (c == '\\')
+	{
+	  pass_next = 1;
+	  i++;
+	  continue;
+	}
+#if 0
+      else if (c == '\'' || c == '"')
+	{
+	  i = (c == '\'') ? skip_single_quoted (string, slen, ++i, 0)
+			  : skip_double_quoted (string, slen, ++i, SX_COMPLETE);
+	  if (i > eindex)
+	    CQ_RETURN(1);
+	  /* no increment, the skip_xxx functions go one past end */
+	}
+#endif
+      else
+	ADVANCE_CHAR (string, slen, i);
+    }
+
+  return 0;
+}
+
 /* The corresponding completer_handle_brkchars
    implementation.  */
 
@@ -203,6 +251,7 @@ filename_completer_handle_brkchars (struct cmd_list_element *ignore,
     (gdb_completer_file_name_break_characters);
 
   rl_completer_quote_characters = gdb_completer_file_name_quote_characters;
+  rl_char_is_quoted_p = gdb_completer_file_name_char_is_quoted;
 }
 
 /* Possible values for the found_quote flags word used by the completion
@@ -1318,6 +1367,7 @@ complete_line_internal_1 (completion_tracker &tracker,
      file name quote characters set (i.e., both single- and
      double-quotes).  */
   rl_completer_quote_characters = gdb_completer_expression_quote_characters;
+  rl_char_is_quoted_p = nullptr;
 
   /* Decide whether to complete on a list of gdb commands or on
      symbols.  */
