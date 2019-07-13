@@ -189,7 +189,8 @@ filename_completer (struct cmd_list_element *ignore,
 
   if (text[-1] == '\'' || text[-1] == '"')
     {
-      str = text;
+      arg--;
+      str = extract_string_maybe_quoted (&arg, &unclosed);
       need_escaping = false;
     }
   else

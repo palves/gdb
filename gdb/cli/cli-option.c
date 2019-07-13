@@ -445,14 +445,15 @@ parse_option (gdb::array_view<const option_def_group> options_group,
 	bool unclosed;
 	const char *arg_start = *args;
 	std::string str = extract_string_maybe_quoted (args, &unclosed);
-	if (*args == arg_start)
+	if ((match->type == var_string
+	     || completion == nullptr)
+	    && *args == arg_start)
 	  error (_("-%s requires an argument"), match->name);
 
 	if (match->type == var_filename)
 	  {
 	    if (completion != nullptr
-		&& **args == '\0'
-		&& (unclosed /* || !isspace ((*args)[-1]) */))
+		&& **args == '\0' && unclosed)
 	      {
 		if (*arg_start == '\'' || *arg_start == '\"')
 		  {
@@ -466,7 +467,7 @@ parse_option (gdb::array_view<const option_def_group> options_group,
 		*args = arg_start;
 
 		filename_completer (nullptr, completion->tracker,
-				    str.c_str (), str.c_str ());
+				    arg_start, arg_start);
 		return {};
 	      }
 
