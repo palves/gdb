@@ -695,55 +695,79 @@ add_inferior_with_spaces (void)
   return inf;
 }
 
+/* The options for the "add-inferior" command.  */
+
+struct add_inferior_cmd_opts
+{
+  unsigned copies = 1;
+
+  char *exec = nullptr;
+
+  add_inferior_cmd_opts () = default;
+  DISABLE_COPY_AND_ASSIGN (add_inferior_cmd_opts);
+
+  ~add_inferior_cmd_opts ()
+  {
+    xfree (exec);
+  }
+};
+
+static const gdb::option::option_def add_inferior_cmd_option_defs[] = {
+
+  gdb::option::uinteger_option_def<add_inferior_cmd_opts> {
+    "copies",
+    [] (add_inferior_cmd_opts *opts) { return &opts->copies; },
+    nullptr,
+    N_("Indicates to use the specified delimiter string to separate\n\
+COMMAND from SHELL_COMMAND, in alternative to |.  This is useful in\n\
+case COMMAND contains a | character."),
+  },
+
+  gdb::option::string_option_def<add_inferior_cmd_opts> {
+    "exec",
+    [] (add_inferior_cmd_opts *opts) { return &opts->exec; },
+    nullptr,
+    N_("Indicates to use the specified delimiter string to separate\n\
+COMMAND from SHELL_COMMAND, in alternative to |.  This is useful in\n\
+case COMMAND contains a | character."),
+  },
+
+};
+
+/* Create an option_def_group for the "add-inferior" command's
+   options, with OPTS as context.  */
+
+static inline gdb::option::option_def_group
+make_add_inferior_cmd_options_def_group (add_inferior_cmd_opts *opts)
+{
+  return {{add_inferior_cmd_option_defs}, opts};
+}
+
 /* add-inferior [-copies N] [-exec FILENAME]  */
 
 static void
 add_inferior_command (const char *args, int from_tty)
 {
-  int i, copies = 1;
-  gdb::unique_xmalloc_ptr<char> exec;
   symfile_add_flags add_flags = 0;
 
   if (from_tty)
     add_flags |= SYMFILE_VERBOSE;
 
-  if (args)
-    {
-      gdb_argv built_argv (args);
+  add_inferior_cmd_opts opts;
 
-      for (char **argv = built_argv.get (); *argv != NULL; argv++)
-	{
-	  if (**argv == '-')
-	    {
-	      if (strcmp (*argv, "-copies") == 0)
-		{
-		  ++argv;
-		  if (!*argv)
-		    error (_("No argument to -copies"));
-		  copies = parse_and_eval_long (*argv);
-		}
-	      else if (strcmp (*argv, "-exec") == 0)
-		{
-		  ++argv;
-		  if (!*argv)
-		    error (_("No argument to -exec"));
-		  exec.reset (tilde_expand (*argv));
-		}
-	    }
-	  else
-	    error (_("Invalid argument"));
-	}
-    }
+  auto grp = make_add_inferior_cmd_options_def_group (&opts);
+  gdb::option::process_options
+    (&args, gdb::option::PROCESS_OPTIONS_UNKNOWN_IS_ERROR, grp);
 
   scoped_restore_current_pspace_and_thread restore_pspace_thread;
 
-  for (i = 0; i < copies; ++i)
+  for (int i = 0; i < opts.copies; ++i)
     {
       struct inferior *inf = add_inferior_with_spaces ();
 
       printf_filtered (_("Added inferior %d\n"), inf->num);
 
-      if (exec != NULL)
+      if (opts.exec != NULL)
 	{
 	  /* Switch over temporarily, while reading executable and
 	     symbols.q.  */
@@ -751,10 +775,23 @@ add_inferior_command (const char *args, int from_tty)
 	  set_current_inferior (inf);
 	  switch_to_no_thread ();
 
-	  exec_file_attach (exec.get (), from_tty);
-	  symbol_file_add_main (exec.get (), add_flags);
+	  exec_file_attach (opts.exec, from_tty);
+	  symbol_file_add_main (opts.exec, add_flags);
 	}
     }
+}
+
+/* Completer for the pipe command.  */
+
+static void
+add_inferior_command_completer (struct cmd_list_element *ignore,
+				completion_tracker &tracker,
+				const char *text, const char *word_ignored)
+{
+  const auto grp = make_add_inferior_cmd_options_def_group (nullptr);
+  if (gdb::option::complete_options
+      (tracker, &text, gdb::option::PROCESS_OPTIONS_UNKNOWN_IS_ERROR, grp))
+    return;
 }
 
 /* clone-inferior [-copies N] [ID] */
@@ -902,7 +939,7 @@ Usage: add-inferior [-copies N] [-exec FILENAME]\n\
 N is the optional number of inferiors to add, default is 1.\n\
 FILENAME is the file name of the executable to use\n\
 as main program."));
-  set_cmd_completer (c, filename_completer);
+  set_cmd_completer_handle_brkchars (c, add_inferior_command_completer);
 
   add_com ("remove-inferiors", no_class, remove_inferior_command, _("\
 Remove inferior ID (or list of IDs).\n\
