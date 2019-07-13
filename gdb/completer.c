@@ -123,18 +123,23 @@ static const char gdb_completer_file_name_break_characters[] =
   " \t\n*|\"';:?><";
 #endif
 
-/* Characters that can be used to quote completion strings.  Note that
-   we can't include '"' because the gdb C parser treats such quoted
-   sequences as strings.  */
-static const char gdb_completer_quote_characters[] = "'";
+/* Characters that can be used to quote completion strings when
+   completing expressions.  Note that we can't include '"' because the
+   gdb C parser treats such quoted sequences as strings.  */
+static const char gdb_completer_expression_quote_characters[] = "'";
 
 /* Accessor for some completer data that may interest other files.  */
 
 const char *
 get_gdb_completer_quote_characters (void)
 {
-  return gdb_completer_quote_characters;
+  return gdb_completer_expression_quote_characters;
 }
+
+/* Characters that can be used to quote completion strings when
+   completing filenames.  Unlike when parsing expressions, here we can
+   include '"'.  */
+static const char gdb_completer_file_name_quote_characters[] = "'\"";
 
 /* This can be used for functions which don't want to complete on
    symbols but don't want to complete on anything else either.  */
@@ -196,6 +201,8 @@ filename_completer_handle_brkchars (struct cmd_list_element *ignore,
 {
   set_rl_completer_word_break_characters
     (gdb_completer_file_name_break_characters);
+
+  rl_completer_quote_characters = gdb_completer_file_name_quote_characters;
 }
 
 /* Possible values for the found_quote flags word used by the completion
@@ -364,7 +371,7 @@ advance_to_completion_word (completion_tracker &tracker,
   gdb_rl_completion_word_info info;
 
   info.word_break_characters = word_break_characters;
-  info.quote_characters = gdb_completer_quote_characters;
+  info.quote_characters = rl_completer_quote_characters;
   info.basic_quote_characters = rl_basic_quote_characters;
 
   int delimiter;
@@ -1306,6 +1313,12 @@ complete_line_internal_1 (completion_tracker &tracker,
   set_rl_completer_word_break_characters
     (current_language->la_word_break_characters());
 
+  /* Likewise for the quote characters.  If we later find out that we
+     are doing completions for file names, then we can switch to the
+     file name quote characters set (i.e., both single- and
+     double-quotes).  */
+  rl_completer_quote_characters = gdb_completer_expression_quote_characters;
+
   /* Decide whether to complete on a list of gdb commands or on
      symbols.  */
   tmp_command = (char *) alloca (point + 1);
@@ -1990,7 +2003,7 @@ completion_find_completion_word (completion_tracker &tracker, const char *text,
   gdb_rl_completion_word_info info;
 
   info.word_break_characters = rl_completer_word_break_characters;
-  info.quote_characters = gdb_completer_quote_characters;
+  info.quote_characters = rl_completer_quote_characters;
   info.basic_quote_characters = rl_basic_quote_characters;
 
   return gdb_rl_find_completion_word (&info, quote_char, NULL, text);
@@ -2328,7 +2341,7 @@ skip_quoted_chars (const char *str, const char *quotechars,
   const char *scan;
 
   if (quotechars == NULL)
-    quotechars = gdb_completer_quote_characters;
+    quotechars = rl_completer_quote_characters;
 
   if (breakchars == NULL)
     breakchars = current_language->la_word_break_characters();
