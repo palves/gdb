@@ -152,7 +152,7 @@ noop_completer (struct cmd_list_element *ignore,
 }
 
 static gdb::unique_xmalloc_ptr<char>
-quote_string (const char *str)
+escape_string (const char *str)
 {
   std::string res;
 
@@ -185,17 +185,17 @@ filename_completer (struct cmd_list_element *ignore,
   const char *arg = text;
   bool unclosed;
   std::string str;
-  bool need_quoting;
+  bool need_escaping;
 
   if (text[-1] == '\'' || text[-1] == '"')
     {
       str = text;
-      need_quoting = false;
+      need_escaping = false;
     }
   else
     {
       str = extract_string_maybe_quoted (&arg, &unclosed);
-      need_quoting = true;
+      need_escaping = true;
     }
 
   subsequent_name = 0;
@@ -216,8 +216,8 @@ filename_completer (struct cmd_list_element *ignore,
       if (p[strlen (p) - 1] == '~')
 	continue;
 
-      if (need_quoting)
-	p_rl = quote_string (p_rl.get ());
+      if (need_escaping)
+	p_rl = escape_string (p_rl.get ());
 
       tracker.add_completion
 	(make_completion_match_str (std::move (p_rl), text, word));
@@ -234,6 +234,57 @@ filename_completer (struct cmd_list_element *ignore,
 
 #define ADVANCE_CHAR(_str, _strsize, _i)      (_i)++
 
+/* Skip over a single-quoted string.  */
+
+static int
+skip_single_quoted (const char *string, size_t slen, int sind)
+{
+  int c = sind;
+
+  while (string[c] != '\0' && string[c] != '\'')
+    ADVANCE_CHAR (string, slen, c);
+
+  if (string[c] != '\0')
+    c++;
+  return c;
+}
+
+static int
+skip_double_quoted (char *string, size_t slen, int sind)
+{
+  int c;
+
+  bool pass_next = false;
+  int i = sind;
+  while ((c = string[i]))
+    {
+      if (pass_next)
+	{
+	  pass_next = false;
+	  ADVANCE_CHAR (string, slen, i);
+	  continue;
+	}
+      else if (c == '\\')
+	{
+	  pass_next = true;
+	  i++;
+	  continue;
+	}
+      else if (c != '"')
+	{
+	  ADVANCE_CHAR (string, slen, i);
+	  continue;
+	}
+      else
+	break;
+    }
+
+  if (c)
+    i++;
+
+  return i;
+}
+
 /* Return 1 if the portion of STRING ending at EINDEX is quoted (there
    is an unclosed quoted string), or if the character at EINDEX is
    quoted by a backslash. The characters that this recognizes need to
@@ -242,16 +293,17 @@ filename_completer (struct cmd_list_element *ignore,
 static int
 gdb_completer_file_name_char_is_quoted (char *string, int eindex)
 {
-  int i, pass_next, c;
+  size_t slen = strlen (string);
 
-  i = pass_next = 0;
+  int i = 0;
+  bool pass_next = false;
   while (i <= eindex)
     {
-      c = string[i];
+      int c = string[i];
 
       if (pass_next)
 	{
-	  pass_next = 0;
+	  pass_next = false;
 	  if (i >= eindex)
 	    return 1;
 	  ADVANCE_CHAR (string, slen, i);
@@ -259,20 +311,18 @@ gdb_completer_file_name_char_is_quoted (char *string, int eindex)
 	}
       else if (c == '\\')
 	{
-	  pass_next = 1;
+	  pass_next = true;
 	  i++;
 	  continue;
 	}
-#if 0
       else if (c == '\'' || c == '"')
 	{
-	  i = (c == '\'') ? skip_single_quoted (string, slen, ++i, 0)
-			  : skip_double_quoted (string, slen, ++i, SX_COMPLETE);
+	  i = (c == '\'') ? skip_single_quoted (string, slen, ++i)
+			  : skip_double_quoted (string, slen, ++i);
 	  if (i > eindex)
-	    CQ_RETURN(1);
-	  /* no increment, the skip_xxx functions go one past end */
+	    return 1;
+	  /* No increment, the skip_xxx functions go one past end.  */
 	}
-#endif
       else
 	ADVANCE_CHAR (string, slen, i);
     }
