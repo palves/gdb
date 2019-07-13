@@ -151,7 +151,7 @@ noop_completer (struct cmd_list_element *ignore,
 {
 }
 
-static gdb::unique_xmalloc_ptr<char>
+static std::string
 escape_string (const char *str)
 {
   std::string res;
@@ -170,7 +170,7 @@ escape_string (const char *str)
 	res += str[i];
     }
 
-  return make_unique_xstrdup (res.c_str ());
+  return res;
 }
 
 /* Complete on filenames.  */
@@ -217,10 +217,22 @@ filename_completer (struct cmd_list_element *ignore,
 	continue;
 
       if (need_escaping)
-	p_rl = escape_string (p_rl.get ());
+	{
+	  completion_match_for_lcd match_for_lcd;
 
-      tracker.add_completion
-	(make_completion_match_str (std::move (p_rl), text, word));
+	  std::string escaped = escape_string (p_rl.get ());
+
+	  match_for_lcd.set_match (escaped.c_str ());
+
+	  tracker.add_completion
+	    (make_completion_match_str (std::move (p_rl), text, word),
+	     &match_for_lcd);
+	}
+      else
+	{
+	  tracker.add_completion
+	    (make_completion_match_str (std::move (p_rl), text, word));
+	}
     }
 #if 0
   /* There is no way to do this just long enough to affect quote
