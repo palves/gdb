@@ -322,6 +322,13 @@ public:
 		       completion_match_for_lcd *match_for_lcd = NULL,
 		       const char *text = NULL, const char *word = NULL);
 
+  /* Add the completion NAME to the list of generated completions if
+     it is not there already.  If too many completions were already
+     found, this throws an error.  */
+  void add_completion (gdb::unique_xmalloc_ptr<char> name,
+		       const char *match_for_lcd,
+		       const char *text = NULL, const char *word = NULL);
+
   /* Add all completions matches in LIST.  Elements are moved out of
      LIST.  */
   void add_completions (completion_list &&list);

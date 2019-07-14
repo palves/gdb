@@ -173,6 +173,26 @@ escape_string (const char *str)
   return res;
 }
 
+static std::string
+escape_doublequote (const char *str)
+{
+  std::string res;
+
+  for (size_t i = 0; str[i] != '\0'; i++)
+    {
+      switch (str[i])
+	{
+	case '\\':
+	case '"':
+	  res += '\\';
+	  break;
+	}
+	res += str[i];
+    }
+
+  return res;
+}
+
 /* Complete on filenames.  */
 
 void
@@ -185,19 +205,13 @@ filename_completer (struct cmd_list_element *ignore,
   const char *arg = text;
   bool unclosed;
   std::string str;
-  bool need_escaping;
 
-  if (text[-1] == '\'' || text[-1] == '"')
+  if (rl_completion_quote_character)
     {
       arg--;
-      str = extract_string_maybe_quoted (&arg, &unclosed);
-      need_escaping = false;
+      gdb_assert (*arg == rl_completion_quote_character);
     }
-  else
-    {
-      str = extract_string_maybe_quoted (&arg, &unclosed);
-      need_escaping = true;
-    }
+  str = extract_string_maybe_quoted (&arg, &unclosed);
 
   subsequent_name = 0;
   while (1)
@@ -217,22 +231,24 @@ filename_completer (struct cmd_list_element *ignore,
       if (p[strlen (p) - 1] == '~')
 	continue;
 
-      if (need_escaping)
-	{
-	  completion_match_for_lcd match_for_lcd;
-
-	  std::string escaped = escape_string (p_rl.get ());
-
-	  match_for_lcd.set_match (escaped.c_str ());
-
-	  tracker.add_completion
-	    (make_completion_match_str (std::move (p_rl), text, word),
-	     &match_for_lcd);
-	}
-      else
+      if (rl_completion_quote_character == '\'')
 	{
 	  tracker.add_completion
 	    (make_completion_match_str (std::move (p_rl), text, word));
+	}
+      else if (rl_completion_quote_character == '\"')
+	{
+	  std::string escaped = escape_doublequote (p_rl.get ());
+	  tracker.add_completion
+	    (make_completion_match_str (std::move (p_rl), text, word),
+	     escaped.c_str ());
+	}
+      else
+	{
+	  std::string escaped = escape_string (p_rl.get ());
+	  tracker.add_completion
+	    (make_completion_match_str (std::move (p_rl), text, word),
+	     escaped.c_str ());
 	}
     }
 #if 0
@@ -1775,6 +1791,18 @@ completion_tracker::add_completion (gdb::unique_xmalloc_ptr<char> name,
 {
   if (!maybe_add_completion (std::move (name), match_for_lcd, text, word))
     throw_error (MAX_COMPLETIONS_REACHED_ERROR, _("Max completions reached."));
+}
+
+/* See completer.h.  */
+
+void
+completion_tracker::add_completion (gdb::unique_xmalloc_ptr<char> name,
+				    const char *match_for_lcd,
+				    const char *text, const char *word)
+{
+  completion_match_for_lcd m_f_lcd;
+  m_f_lcd.set_match (match_for_lcd);
+  add_completion (std::move (name), &m_f_lcd, text, word);
 }
 
 /* See completer.h.  */

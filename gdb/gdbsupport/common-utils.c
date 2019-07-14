@@ -197,7 +197,33 @@ extract_string_maybe_quoted (const char **arg, bool *unclosed)
 	  if (bsquote)
 	    {
 	      bsquote = false;
-	      result += *p;
+
+	      if (*p == '\n')
+		{
+		  /* \newline is treated as a line continuation.  */
+		}
+	      else if (dquote)
+		{
+		  switch (*p)
+		    {
+		    case '\"':
+		    case '\\':
+		      break;
+		    default:
+		      /* In double-quotes, backslashes preceding
+			 characters without a special meaning are left
+			 unmodified.  */
+		      result += '\\';
+		      break;
+		    }
+		  result += *p;
+		}
+	      else
+		{
+		  /* A non-quoted backslash ‘\’ preserves the literal
+		     value of the next character that follows.  */
+		  result += *p;
+		}
 	    }
 	  else if (squote)
 	    {
