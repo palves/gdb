@@ -172,10 +172,10 @@ public:
     freeargv (m_argv);
   }
 
-  /* Call buildargv on STR, storing the result in this object.  Any
-     previous state is freed.  STR may be NULL, in which case this
-     object is reset with a NULL array.  If buildargv fails due to
-     out-of-memory, call malloc_failure.  Therefore, the value is
+  /* Call gdb_buildargv on STR, storing the result in this object.
+     Any previous state is freed.  STR may be NULL, in which case this
+     object is reset with a NULL array.  If buildargv_bash fails due
+     to out-of-memory, call malloc_failure.  Therefore, the value is
      guaranteed to be non-NULL, unless the parameter itself is
      NULL.  */
 

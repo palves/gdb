@@ -94,6 +94,11 @@ void string_vappendf (std::string &dest, const char* fmt, va_list args)
 
 char *savestring (const char *ptr, size_t len);
 
+/* Like libiberty's buildargv but follows Bash's quoting rules.  Like
+   buildargv, the result must be freed with freeargv.  */
+
+char **gdb_buildargv (const char *input);
+
 /* Extract the next word from ARG.  The next word is defined as either,
    everything up to the next space, or, if the next word starts with either
    a single or double quote, then everything up to the closing quote.  The

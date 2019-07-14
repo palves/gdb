@@ -493,9 +493,9 @@ get_expr_block_and_pc (CORE_ADDR *pc)
   return block;
 }
 
-/* Call buildargv (via gdb_argv), set its result for S into *ARGVP but
-   calculate also the number of parsed arguments into *ARGCP.  If
-   buildargv has returned NULL then *ARGCP is set to zero.  */
+/* Call gdb_buildargv (via gdb_argv), set its result for S into ARGVP
+   *but calculate also the number of parsed arguments into ARGCP.  If
+   *buildargv has returned NULL then *ARGCP is set to zero.  */
 
 static void
 build_argc_argv (const char *s, int *argcp, char ***argvp)

@@ -3048,7 +3048,7 @@ ldirname (const char *filename)
 void
 gdb_argv::reset (const char *s)
 {
-  char **argv = buildargv (s);
+  char **argv = gdb_buildargv (s);
 
   if (s != NULL && argv == NULL)
     malloc_failure (0);

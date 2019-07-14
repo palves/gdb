@@ -258,6 +258,56 @@ extract_string_maybe_quoted (const char **arg, bool *unclosed)
   return result;
 }
 
+/* See common-utils.h.  */
+
+char **
+gdb_buildargv (const char *input)
+{
+  char **argv = NULL;
+
+  if (input != nullptr)
+    {
+      int argc = 0;
+      int maxargc = 0;
+
+      input = skip_spaces (input);
+
+      do
+	{
+	  /* Pick off ARGV[ARGC].  */
+
+	  if (maxargc == 0 || argc >= (maxargc - 1))
+	    {
+	      /* ARGV needs initialization, or expansion.  */
+	      if (argv == nullptr)
+		{
+		  maxargc = 8;
+		  argv = XNEWVEC (char *, maxargc);
+		}
+	      else
+		{
+		  maxargc *= 2;
+		  argv = XRESIZEVEC (char *, argv, maxargc);
+		}
+	      argv[argc] = nullptr;
+	    }
+
+	  /* Scan argument.  */
+	  std::string arg
+	    = extract_string_maybe_quoted (&input, nullptr);
+
+	  argv[argc] = xstrdup (arg.c_str ());
+	  argc++;
+	  argv[argc] = nullptr;
+
+	  input = skip_spaces (input);
+	}
+      while (*input != '\0');
+    }
+
+  return argv;
+}
+
 /* The bit offset of the highest byte in a ULONGEST, for overflow
    checking.  */
 
