@@ -84,8 +84,6 @@ static void follow_inferior_reset_breakpoints (void);
 
 static int currently_stepping (struct thread_info *tp);
 
-void nullify_last_target_wait_ptid (void);
-
 static void insert_hp_step_resume_breakpoint_at_frame (struct frame_info *);
 
 static void insert_step_resume_breakpoint_at_caller (struct frame_info *);
@@ -3112,7 +3110,7 @@ init_wait_for_inferior (void)
 
   clear_proceed_status (0);
 
-  target_last_wait_ptid = minus_one_ptid;
+  nullify_last_target_wait_ptid ();
 
   previous_inferior_ptid = inferior_ptid;
 }
@@ -3865,22 +3863,25 @@ set_last_target_status (ptid_t ptid, struct target_waitstatus status)
   target_last_waitstatus = status;
 }
 
-/* Return the cached copy of the last pid/waitstatus returned by
-   target_wait()/deprecated_target_wait_hook().  The data is actually
-   cached by handle_inferior_event(), which gets called immediately
-   after target_wait()/deprecated_target_wait_hook().  */
+/* Return the cached copy of the last ptid/waitstatus returned
+   by target_wait()/deprecated_target_wait_hook().  The data is
+   actually cached by handle_inferior_event(), which gets called
+   immediately after target_wait()/deprecated_target_wait_hook().  */
 
 void
-get_last_target_status (ptid_t *ptidp, struct target_waitstatus *status)
+get_last_target_status (ptid_t *ptid, struct target_waitstatus *status)
 {
-  *ptidp = target_last_wait_ptid;
-  *status = target_last_waitstatus;
+  if (ptid != nullptr)
+    *ptid = target_last_wait_ptid;
+  if (status != nullptr)
+    *status = target_last_waitstatus;
 }
 
 void
 nullify_last_target_wait_ptid (void)
 {
   target_last_wait_ptid = minus_one_ptid;
+  target_last_waitstatus = {};
 }
 
 /* Switch thread contexts.  */
@@ -7842,10 +7843,9 @@ void
 print_stop_event (struct ui_out *uiout, bool displays)
 {
   struct target_waitstatus last;
-  ptid_t last_ptid;
   struct thread_info *tp;
 
-  get_last_target_status (&last_ptid, &last);
+  get_last_target_status (nullptr, &last);
 
   {
     scoped_restore save_uiout = make_scoped_restore (&current_uiout, uiout);
@@ -7964,9 +7964,8 @@ int
 normal_stop (void)
 {
   struct target_waitstatus last;
-  ptid_t last_ptid;
 
-  get_last_target_status (&last_ptid, &last);
+  get_last_target_status (nullptr, &last);
 
   new_stop_id ();
 

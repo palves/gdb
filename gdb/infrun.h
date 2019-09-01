@@ -107,6 +107,8 @@ extern void get_last_target_status (ptid_t *ptid,
 extern void set_last_target_status (ptid_t ptid,
 				    struct target_waitstatus status);
 
+extern void nullify_last_target_wait_ptid ();
+
 /* Stop all threads.  Only returns after everything is halted.  */
 extern void stop_all_threads (void);
 
