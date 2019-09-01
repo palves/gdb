@@ -682,7 +682,7 @@ struct target_ops
     virtual bool has_memory () { return false; }
     virtual bool has_stack () { return false; }
     virtual bool has_registers () { return false; }
-    virtual bool has_execution (ptid_t) { return false; }
+    virtual bool has_execution (inferior *inf) { return false; }
 
     /* Control thread execution.  */
     virtual thread_control_capabilities get_thread_control_capabilities ()
@@ -1787,9 +1787,10 @@ extern int target_has_registers_1 (void);
    case this will become true after to_create_inferior or
    to_attach.  */
 
-extern int target_has_execution_1 (ptid_t);
+extern bool target_has_execution_1 (inferior *inf);
 
-/* Like target_has_execution_1, but always passes inferior_ptid.  */
+/* Like target_has_execution_1, but always passes
+   current_inferior().  */
 
 extern int target_has_execution_current (void);
 
