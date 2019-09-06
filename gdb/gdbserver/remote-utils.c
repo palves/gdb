@@ -1210,7 +1210,7 @@ prepare_resume_reply (char *buf, ptid_t ptid,
 
 	saved_thread = current_thread;
 
-	switch_to_thread (ptid);
+	switch_to_thread (the_target, ptid);
 
 	regp = current_target_desc ()->expedite_regs;
 

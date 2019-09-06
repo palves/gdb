@@ -110,10 +110,6 @@ static std::unordered_map<const target_info *, target_open_ftype *>
 
 static struct target_ops *the_debug_target;
 
-/* The target stack.  */
-
-static target_stack g_target_stack;
-
 /* Top of target stack.  */
 /* The target structure we are currently using to talk to a process
    or file or whatever "inferior" we have.  */
@@ -121,7 +117,7 @@ static target_stack g_target_stack;
 target_ops *
 current_top_target ()
 {
-  return g_target_stack.top ();
+  return current_inferior ()->top_target ();
 }
 
 /* Command list for target.  */
@@ -226,7 +222,9 @@ target_has_registers_1 (void)
 bool
 target_has_execution_1 (inferior *inf)
 {
-  for (target_ops *t = current_top_target (); t != NULL; t = t->beneath ())
+  for (target_ops *t = inf->top_target ();
+       t != nullptr;
+       t = inf->find_target_beneath (t))
     if (t->has_execution (inf))
       return true;
 
@@ -501,13 +499,16 @@ target_terminal::info (const char *arg, int from_tty)
 bool
 target_supports_terminal_ours (void)
 {
-  /* This can be called before there is any target, so we must check
-     for nullptr here.  */
-  target_ops *top = current_top_target ();
+  /* The current top target is the target at the top of the target
+     stack of the current inferior.  While normally there's always an
+     inferior, we must check for nullptr here because we can get here
+     very early during startup, before the initial inferior is first
+     created.  */
+  inferior *inf = current_inferior ();
 
-  if (top == nullptr)
+  if (inf == nullptr)
     return false;
-  return top->supports_terminal_ours ();
+  return inf->top_target ()->supports_terminal_ours ();
 }
 
 static void
@@ -553,19 +554,32 @@ default_execution_direction (struct target_ops *self)
 to_execution_direction must be implemented for reverse async");
 }
 
+/* Decref a target and close if, if there are no references left.  */
+
+static void
+decref_target (target_ops *t)
+{
+  t->decref ();
+  if (t->refcount () == 0)
+    target_close (t);
+}
+
 /* See target.h.  */
 
 void
 target_stack::push (target_ops *t)
 {
-  /* If there's already a target at this stratum, remove it.  */
+  t->incref ();
+
   strata stratum = t->stratum ();
+
+  /* If there's already a target at this stratum, remove it.  */
 
   if (m_stack[stratum] != NULL)
     {
       target_ops *prev = m_stack[stratum];
       m_stack[stratum] = NULL;
-      target_close (prev);
+      decref_target (prev);
     }
 
   /* Now add the new one.  */
@@ -580,15 +594,15 @@ target_stack::push (target_ops *t)
 void
 push_target (struct target_ops *t)
 {
-  g_target_stack.push (t);
+  current_inferior ()->push_target (t);
 }
 
-/* See target.h  */
+/* See target.h.  */
 
 void
 push_target (target_ops_up &&t)
 {
-  g_target_stack.push (t.get ());
+  current_inferior ()->push_target (t.get ());
   t.release ();
 }
 
@@ -597,7 +611,7 @@ push_target (target_ops_up &&t)
 int
 unpush_target (struct target_ops *t)
 {
-  return g_target_stack.unpush (t);
+  return current_inferior ()->unpush_target (t);
 }
 
 /* See target.h.  */
@@ -629,10 +643,13 @@ target_stack::unpush (target_ops *t)
   if (m_top == stratum)
     m_top = t->beneath ()->stratum ();
 
-  /* Finally close the target.  Note we do this after unchaining, so
-     any target method calls from within the target_close
-     implementation don't end up in T anymore.  */
-  target_close (t);
+  /* Finally close the target, if there are no inferiors
+     referencing this target still.  Note we do this after unchaining,
+     so any target method calls from within the target_close
+     implementation don't end up in T anymore.  Do leave the target
+     open if we have are other inferiors referencing this target
+     still.  */
+  decref_target (t);
 
   return true;
 }
@@ -674,12 +691,13 @@ pop_all_targets (void)
   pop_all_targets_above (dummy_stratum);
 }
 
-/* Return 1 if T is now pushed in the target stack.  Return 0 otherwise.  */
+/* Return true if T is now pushed in the current inferior's target
+   stack.  Return false otherwise.  */
 
-int
-target_is_pushed (struct target_ops *t)
+bool
+target_is_pushed (target_ops *t)
 {
-  return g_target_stack.is_pushed (t);
+  return current_inferior ()->target_is_pushed (t);
 }
 
 /* Default implementation of to_get_thread_local_address.  */
@@ -1956,14 +1974,14 @@ target_pre_inferior (int from_tty)
 /* Callback for iterate_over_inferiors.  Gets rid of the given
    inferior.  */
 
-static int
-dispose_inferior (struct inferior *inf, void *args)
+static void
+dispose_inferior (inferior *inf)
 {
   /* Not all killed inferiors can, or will ever be, removed from the
      inferior list.  Killed inferiors clearly don't need to be killed
      again, so, we're done.  */
   if (inf->pid == 0)
-    return 0;
+    return;
 
   thread_info *thread = any_thread_of_inferior (inf);
   if (thread != NULL)
@@ -1976,8 +1994,6 @@ dispose_inferior (struct inferior *inf, void *args)
       else
 	target_detach (inf, 0);
     }
-
-  return 0;
 }
 
 /* This is to be called by the open routine before it does
@@ -1988,12 +2004,12 @@ target_preopen (int from_tty)
 {
   dont_repeat ();
 
-  if (have_inferiors ())
+  if (current_inferior ()->pid != 0)
     {
       if (!from_tty
-	  || !have_live_inferiors ()
+	  || !target_has_execution
 	  || query (_("A program is being debugged already.  Kill it? ")))
-	iterate_over_inferiors (dispose_inferior, NULL);
+	dispose_inferior (current_inferior ());
       else
 	error (_("Program not killed."));
     }
@@ -2035,9 +2051,16 @@ target_detach (inferior *inf, int from_tty)
 
   prepare_for_detach ();
 
+  /* Hold a strong reference because detaching may unpush the
+     target.  */
+  auto proc_target_ref = target_ops_ref::new_reference (inf->process_target ());
+
   current_top_target ()->detach (inf, from_tty);
 
-  registers_changed_ptid (save_pid_ptid);
+  process_stratum_target *proc_target
+    = as_process_stratum_target (proc_target_ref.get ());
+
+  registers_changed_ptid (proc_target, save_pid_ptid);
 
   /* We have to ensure we have no frame cache left.  Normally,
      registers_changed_ptid (save_pid_ptid) calls reinit_frame_cache when
@@ -2085,6 +2108,8 @@ target_pid_to_str (ptid_t ptid)
 const char *
 target_thread_name (struct thread_info *info)
 {
+  gdb_assert (info->inf == current_inferior ());
+
   return current_top_target ()->thread_name (info);
 }
 
@@ -2108,16 +2133,18 @@ target_thread_info_to_thread_handle (struct thread_info *tip)
 void
 target_resume (ptid_t ptid, int step, enum gdb_signal signal)
 {
+  process_stratum_target *curr_target = current_inferior ()->process_target ();
+
   target_dcache_invalidate ();
 
   current_top_target ()->resume (ptid, step, signal);
 
-  registers_changed_ptid (ptid);
+  registers_changed_ptid (curr_target, ptid);
   /* We only set the internal executing state here.  The user/frontend
      running state is set at a higher level.  This also clears the
      thread's stop_pc as side effect.  */
-  set_executing (ptid, 1);
-  clear_inline_frame_state (ptid);
+  set_executing (curr_target, ptid, 1);
+  clear_inline_frame_state (curr_target, ptid);
 }
 
 /* If true, target_commit_resume is a nop.  */
@@ -2542,7 +2569,6 @@ target_get_osdata (const char *type)
   return target_read_stralloc (t, TARGET_OBJECT_OSDATA, type);
 }
 
-
 /* Determine the current address space of thread PTID.  */
 
 struct address_space *
@@ -2561,7 +2587,7 @@ target_thread_address_space (ptid_t ptid)
 target_ops *
 target_ops::beneath () const
 {
-  return g_target_stack.find_beneath (this);
+  return current_inferior ()->find_target_beneath (this);
 }
 
 void
@@ -3157,7 +3183,7 @@ target_stack::find_beneath (const target_ops *t) const
 struct target_ops *
 find_target_at (enum strata stratum)
 {
-  return g_target_stack.at (stratum);
+  return current_inferior ()->target_at (stratum);
 }
 
 
@@ -3253,6 +3279,14 @@ dummy_make_corefile_notes (struct target_ops *self,
 
 static dummy_target the_dummy_target;
 
+/* See target.h.  */
+
+target_ops *
+get_dummy_target ()
+{
+  return &the_dummy_target;
+}
+
 static const target_info dummy_target_info = {
   "None",
   N_("None"),
@@ -3339,7 +3373,33 @@ target_interrupt ()
 void
 target_pass_ctrlc (void)
 {
-  current_top_target ()->pass_ctrlc ();
+  /* Pass the Ctrl-C to the first inferior that has a thread
+     running.  */
+  for (inferior *inf : all_inferiors ())
+    {
+      target_ops *proc_target = inf->process_target ();
+      if (proc_target == NULL)
+	continue;
+
+      for (thread_info *thr : inf->threads ())
+	{
+	  /* A thread can be THREAD_STOPPED and executing, while
+	     running an infcall.  */
+	  if (thr->state == THREAD_RUNNING || thr->executing)
+	    {
+	      /* We can get here quite deep in target layers.  Avoid
+		 switching thread context or anything that would
+		 communicate with the target (e.g., to fetch
+		 registers), or flushing e.g., the frame cache.  We
+		 just switch inferior in order to be able to call
+		 through the target_stack.  */
+	      scoped_restore_current_inferior restore_inferior;
+	      set_current_inferior (inf);
+	      current_top_target ()->pass_ctrlc ();
+	      return;
+	    }
+	}
+    }
 }
 
 /* See target.h.  */
@@ -3987,10 +4047,8 @@ set_write_memory_permission (const char *args, int from_tty,
 }
 
 void
-initialize_targets (void)
+_initialize_target (void)
 {
-  push_target (&the_dummy_target);
-
   the_debug_target = new debug_target ();
 
   add_info ("target", info_target_command, targ_desc);

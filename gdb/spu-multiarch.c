@@ -100,13 +100,15 @@ parse_spufs_run (ptid_t ptid, int *fd, CORE_ADDR *addr)
   if (gdbarch_bfd_arch_info (target_gdbarch ())->arch != bfd_arch_powerpc)
     return 0;
 
+  process_stratum_target *proc_target = current_inferior ()->process_target ();
+
   /* If we're called too early (e.g. after fork), we cannot
      access the inferior yet.  */
-  if (find_inferior_ptid (ptid) == NULL)
+  if (find_inferior_ptid (proc_target, ptid) == NULL)
     return 0;
 
   /* Get PPU-side registers.  */
-  regcache = get_thread_arch_regcache (ptid, target_gdbarch ());
+  regcache = get_thread_arch_regcache (proc_target, ptid, target_gdbarch ());
   tdep = gdbarch_tdep (target_gdbarch ());
 
   /* Fetch instruction preceding current NIP.  */

@@ -43,6 +43,7 @@ struct inferior;
 #include "infrun.h" /* For enum exec_direction_kind.  */
 #include "breakpoint.h" /* For enum bptype.  */
 #include "gdbsupport/scoped_restore.h"
+#include "gdbsupport/refcounted-object.h"
 
 /* This include file defines the interface between the main part
    of the debugger, and the part which is target-specific, or
@@ -430,6 +431,7 @@ struct target_info
 };
 
 struct target_ops
+  : public refcounted_object
   {
     /* Return this target's stratum.  */
     virtual strata stratum () const = 0;
@@ -448,10 +450,10 @@ struct target_ops
     virtual const target_info &info () const = 0;
 
     /* Name this target type.  */
-    const char *shortname ()
+    const char *shortname () const
     { return info ().shortname; }
 
-    const char *longname ()
+    const char *longname () const
     { return info ().longname; }
 
     /* Close the target.  This is where the target can handle
@@ -697,6 +699,8 @@ struct target_ops
       TARGET_DEFAULT_RETURN (false);
     virtual void async (int)
       TARGET_DEFAULT_NORETURN (tcomplain ());
+    virtual int async_wait_fd ()
+      TARGET_DEFAULT_NORETURN (noprocess ());
     virtual void thread_events (int)
       TARGET_DEFAULT_IGNORE ();
     /* This method must be implemented in some situations.  See the
@@ -1261,6 +1265,9 @@ struct target_ops_deleter
 /* A unique pointer for target_ops.  */
 typedef std::unique_ptr<target_ops, target_ops_deleter> target_ops_up;
 
+/* A gdb::ref_ptr pointer to a target_ops.  */
+typedef gdb::ref_ptr<target_ops, refcounted_object_ref_policy> target_ops_ref;
+
 /* Native target backends call this once at initialization time to
    inform the core about which is the target that can respond to "run"
    or "attach".  Note: native targets are always singletons.  */
@@ -1314,6 +1321,9 @@ private:
    never be NULL.  If there is no target, it points to the dummy_target.  */
 
 extern target_ops *current_top_target ();
+
+/* Return the dummy target.  */
+extern target_ops *get_dummy_target ();
 
 /* Define easy words for doing these operations on our current target.  */
 
@@ -2363,7 +2373,7 @@ extern void pop_all_targets_at_and_above (enum strata stratum);
    strictly above ABOVE_STRATUM.  */
 extern void pop_all_targets_above (enum strata above_stratum);
 
-extern int target_is_pushed (struct target_ops *t);
+extern bool target_is_pushed (target_ops *t);
 
 extern CORE_ADDR target_translate_tls_address (struct objfile *objfile,
 					       CORE_ADDR offset);
