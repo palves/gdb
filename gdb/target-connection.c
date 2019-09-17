@@ -106,7 +106,7 @@ print_connection (struct ui_out *uiout, const char *requested_connections)
 
   uiout->table_header (1, ui_left, "current", "");
   uiout->table_header (4, ui_left, "number", "Num");
-  uiout->table_header (name_len + 1, ui_left, "name", "Name");
+  uiout->table_header (name_len + 1, ui_left, "what", "What");
   uiout->table_header (17, ui_left, "description", "Description");
 
   uiout->table_body ();
