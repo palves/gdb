@@ -2251,6 +2251,9 @@ do_target_resume (ptid_t resume_ptid, int step, enum gdb_signal sig)
   target_resume (resume_ptid, step, sig);
 
   target_commit_resume ();
+
+  if (target_can_async_p ())
+    target_async (1);
 }
 
 /* Resume the inferior.  SIG is the signal to give the inferior
@@ -4565,7 +4568,7 @@ THREAD_STOPPED_BY (hw_breakpoint)
 /* Save the thread's event and stop reason to process it later.  */
 
 static void
-save_waitstatus (struct thread_info *tp, struct target_waitstatus *ws)
+save_waitstatus (struct thread_info *tp, const target_waitstatus *ws)
 {
   if (debug_infrun)
     {
@@ -4723,8 +4726,8 @@ stop_all_threads (void)
 	    pass = -1;
 
 	  wait_one_event event = wait_one ();
-	  target_waitstatus &ws = event.ws;
-	  ptid_t &event_ptid = event.ptid;
+	  const target_waitstatus &ws = event.ws;
+	  const ptid_t &event_ptid = event.ptid;
 
 	  if (debug_infrun)
 	    {

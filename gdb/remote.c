@@ -277,7 +277,8 @@ public: /* data */
 
   /* The status of the stub support for the various vCont actions.  */
   vCont_action_support supports_vCont;
-  /* Whether vCont support was probed already.  */
+  /* Whether vCont support was probed already.  This is a workaround
+     until packet_support is per-connection.  */
   bool supports_vCont_probed;
 
   /* True if the user has pressed Ctrl-C, but the target hasn't
@@ -6635,8 +6636,6 @@ remote_target::commit_resume ()
     }
 
   vcont_builder.flush ();
-
-  target_async (1);
 }
 
 

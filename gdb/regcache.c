@@ -397,8 +397,8 @@ struct regcache *
 get_thread_regcache_for_ptid (ptid_t ptid)
 {
   /* This function doesn't take a process_stratum_target parameter
-     because it's a common/ routine implemented by both gdb and
-     gdbserver.  It always refers to a ptid of the current target. */
+     because it's a gdbsupport/ routine implemented by both gdb and
+     gdbserver.  It always refers to a ptid of the current target.  */
   process_stratum_target *proc_target = current_inferior ()->process_target ();
   return get_thread_regcache (proc_target, ptid);
 }

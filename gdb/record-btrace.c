@@ -2156,7 +2156,7 @@ record_btrace_target::resume (ptid_t ptid, int step, enum gdb_signal signal)
   /* We just indicate the resume intent here.  The actual stepping happens in
      record_btrace_wait below.
 
-      For all-stop targets, we only step INFERIOR_PTID and continue others.  */
+     For all-stop targets, we only step INFERIOR_PTID and continue others.  */
 
   process_stratum_target *proc_target = current_inferior ()->process_target ();
 
