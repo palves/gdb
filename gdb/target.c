@@ -1979,31 +1979,6 @@ target_pre_inferior (int from_tty)
   agent_capability_invalidate ();
 }
 
-/* Callback for iterate_over_inferiors.  Gets rid of the given
-   inferior.  */
-
-static void
-dispose_inferior (inferior *inf)
-{
-  /* Not all killed inferiors can, or will ever be, removed from the
-     inferior list.  Killed inferiors clearly don't need to be killed
-     again, so, we're done.  */
-  if (inf->pid == 0)
-    return;
-
-  thread_info *thread = any_thread_of_inferior (inf);
-  if (thread != NULL)
-    {
-      switch_to_thread (thread);
-
-      /* Core inferiors actually should be detached, not killed.  */
-      if (target_has_execution)
-	target_kill ();
-      else
-	target_detach (inf, 0);
-    }
-}
-
 /* This is to be called by the open routine before it does
    anything.  */
 
@@ -2017,7 +1992,14 @@ target_preopen (int from_tty)
       if (!from_tty
 	  || !target_has_execution
 	  || query (_("A program is being debugged already.  Kill it? ")))
-	dispose_inferior (current_inferior ());
+	{
+	  /* Core inferiors actually should be detached, not
+	     killed.  */
+	  if (target_has_execution)
+	    target_kill ();
+	  else
+	    target_detach (current_inferior (), 0);
+	}
       else
 	error (_("Program not killed."));
     }
@@ -4055,7 +4037,7 @@ set_write_memory_permission (const char *args, int from_tty,
 }
 
 void
-_initialize_target (void)
+_initialize_target ()
 {
   the_debug_target = new debug_target ();
 

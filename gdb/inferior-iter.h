@@ -36,8 +36,7 @@ public:
   typedef int difference_type;
 
   /* Create an iterator pointing at HEAD.  */
-  explicit all_inferiors_iterator (process_stratum_target *proc_target,
-				   inferior *head)
+  all_inferiors_iterator (process_stratum_target *proc_target, inferior *head)
     : m_proc_target (proc_target)
   {
     /* Advance M_INF to the first inferior's position.  */

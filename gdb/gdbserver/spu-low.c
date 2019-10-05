@@ -649,7 +649,7 @@ spu_sw_breakpoint_from_kind (int kind, int *size)
   return breakpoint;
 }
 
-static struct target_ops spu_target_ops = {
+static process_stratum_target spu_target_ops = {
   spu_create_inferior,
   NULL,  /* post_create_inferior */
   spu_attach,

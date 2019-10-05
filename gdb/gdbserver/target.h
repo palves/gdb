@@ -709,7 +709,7 @@ ptid_t mywait (ptid_t ptid, struct target_waitstatus *ourstatus, int options,
 	       int connected_wait);
 
 /* Prepare to read or write memory from the inferior process.  See the
-   corresponding target_ops methods for more details.  */
+   corresponding process_stratum_target methods for more details.  */
 
 int prepare_to_access_memory (void);
 void done_accessing_memory (void);

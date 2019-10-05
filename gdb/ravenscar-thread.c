@@ -372,9 +372,8 @@ ravenscar_thread_target::wait (ptid_t ptid,
 static void
 ravenscar_add_thread (struct ada_task_info *task)
 {
-  process_stratum_target *targ = current_inferior ()->process_target ();
-  if (find_thread_ptid (targ, task->ptid) == NULL)
-    add_thread (targ, task->ptid);
+  if (find_thread_ptid (current_inferior (), task->ptid) == NULL)
+    add_thread (current_inferior ()->process_target (), task->ptid);
 }
 
 void

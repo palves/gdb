@@ -4737,30 +4737,28 @@ stop_all_threads (void)
 	    pass = -1;
 
 	  wait_one_event event = wait_one ();
-	  const target_waitstatus &ws = event.ws;
-	  const ptid_t &event_ptid = event.ptid;
 
 	  if (debug_infrun)
 	    {
 	      fprintf_unfiltered (gdb_stdlog,
 				  "infrun: stop_all_threads %s %s\n",
-				  target_waitstatus_to_string (&ws).c_str (),
-				  target_pid_to_str (event_ptid).c_str ());
+				  target_waitstatus_to_string (&event.ws).c_str (),
+				  target_pid_to_str (event.ptid).c_str ());
 	    }
 
-	  if (ws.kind == TARGET_WAITKIND_NO_RESUMED
-	      || ws.kind == TARGET_WAITKIND_THREAD_EXITED
-	      || ws.kind == TARGET_WAITKIND_EXITED
-	      || ws.kind == TARGET_WAITKIND_SIGNALLED)
+	  if (event.ws.kind == TARGET_WAITKIND_NO_RESUMED
+	      || event.ws.kind == TARGET_WAITKIND_THREAD_EXITED
+	      || event.ws.kind == TARGET_WAITKIND_EXITED
+	      || event.ws.kind == TARGET_WAITKIND_SIGNALLED)
 	    {
 	      /* All resumed threads exited
 		 or one thread/process exited/signalled.  */
 	    }
 	  else
 	    {
-	      thread_info *t = find_thread_ptid (event.target, event_ptid);
+	      thread_info *t = find_thread_ptid (event.target, event.ptid);
 	      if (t == NULL)
-		t = add_thread (event.target, event_ptid);
+		t = add_thread (event.target, event.ptid);
 
 	      t->stop_requested = 0;
 	      t->executing = 0;
@@ -4769,15 +4767,15 @@ stop_all_threads (void)
 
 	      /* This may be the first time we see the inferior report
 		 a stop.  */
-	      inferior *inf = find_inferior_ptid (event.target, event_ptid);
+	      inferior *inf = find_inferior_ptid (event.target, event.ptid);
 	      if (inf->needs_setup)
 		{
 		  switch_to_thread_no_regs (t);
 		  setup_inferior (0);
 		}
 
-	      if (ws.kind == TARGET_WAITKIND_STOPPED
-		  && ws.value.sig == GDB_SIGNAL_0)
+	      if (event.ws.kind == TARGET_WAITKIND_STOPPED
+		  && event.ws.value.sig == GDB_SIGNAL_0)
 		{
 		  /* We caught the event that we intended to catch, so
 		     there's no event pending.  */
@@ -4806,7 +4804,7 @@ stop_all_threads (void)
 
 		  if (debug_infrun)
 		    {
-		      std::string statstr = target_waitstatus_to_string (&ws);
+		      std::string statstr = target_waitstatus_to_string (&event.ws);
 
 		      fprintf_unfiltered (gdb_stdlog,
 					  "infrun: target_wait %s, saving "
@@ -4818,10 +4816,10 @@ stop_all_threads (void)
 		    }
 
 		  /* Record for later.  */
-		  save_waitstatus (t, &ws);
+		  save_waitstatus (t, &event.ws);
 
-		  sig = (ws.kind == TARGET_WAITKIND_STOPPED
-			 ? ws.value.sig : GDB_SIGNAL_0);
+		  sig = (event.ws.kind == TARGET_WAITKIND_STOPPED
+			 ? event.ws.value.sig : GDB_SIGNAL_0);
 
 		  if (displaced_step_fixup (t, sig) < 0)
 		    {

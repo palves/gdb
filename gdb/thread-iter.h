@@ -92,8 +92,8 @@ public:
 
   /* Creates an iterator that iterates over all threads that match
      FILTER_PTID.  */
-  explicit all_matching_threads_iterator (process_stratum_target *filter_target,
-					  ptid_t filter_ptid);
+  all_matching_threads_iterator (process_stratum_target *filter_target,
+				 ptid_t filter_ptid);
 
   /* Create a one-past-end iterator.  */
   all_matching_threads_iterator ()
@@ -214,8 +214,8 @@ struct all_threads_safe_range
 struct all_matching_threads_range
 {
 public:
-  explicit all_matching_threads_range (process_stratum_target *filter_target,
-				       ptid_t filter_ptid)
+  all_matching_threads_range (process_stratum_target *filter_target,
+			      ptid_t filter_ptid)
     : m_filter_target (filter_target), m_filter_ptid (filter_ptid)
   {}
   all_matching_threads_range ()
@@ -241,8 +241,8 @@ private:
 class all_non_exited_threads_range
 {
 public:
-  explicit all_non_exited_threads_range (process_stratum_target *filter_target,
-					 ptid_t filter_ptid)
+  all_non_exited_threads_range (process_stratum_target *filter_target,
+				ptid_t filter_ptid)
     : m_filter_target (filter_target), m_filter_ptid (filter_ptid)
   {}
 
