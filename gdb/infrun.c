@@ -71,6 +71,7 @@
 #include "gdbsupport/scope-exit.h"
 #include "gdbsupport/forward-scope-exit.h"
 #include "gdb_select.h"
+#include <unordered_map>
 
 /* Prototypes for local functions */
 
@@ -2872,12 +2873,22 @@ commit_resume_all_targets ()
 {
   scoped_restore_current_thread restore_thread;
 
+  /* Map between process_target and a representative inferior.  This
+     is to avoid committing a resume in the same target more than
+     once.  Resumptions must be idempotent, so this is an
+     optimization.  */
+  std::unordered_map<process_stratum_target *, inferior *> conn_inf;
+
   for (inferior *inf : all_non_exited_inferiors ())
     if (inf->has_execution ())
-      {
-	switch_to_inferior_no_thread (inf);
-	target_commit_resume ();
-      }
+      conn_inf[inf->process_target ()] = inf;
+
+  for (const auto &ci : conn_inf)
+    {
+      inferior *inf = ci.second;
+      switch_to_inferior_no_thread (inf);
+      target_commit_resume ();
+    }
 }
 
 /* Check that all the targets we're about to resume are in non-stop
