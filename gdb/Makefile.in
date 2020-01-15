@@ -1974,9 +1974,9 @@ gdb-gdb.py: $(srcdir)/gdb-gdb.py.in
 gdb-gdb.gdb: $(srcdir)/gdb-gdb.gdb.in
 	$(SHELL) config.status $@
 
-config.h: stamp-h ; @true
-stamp-h: $(srcdir)/config.in config.status
-	$(SHELL) config.status config.h
+gdb-config.h: stamp-h ; @true
+stamp-h: $(srcdir)/gdb-config.in config.status
+	$(SHELL) config.status gdb-config.h
 
 nm.h: stamp-nmh ; @true
 stamp-nmh: config.status
