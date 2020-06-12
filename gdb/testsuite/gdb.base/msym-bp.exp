@@ -1,0 +1,75 @@
+# This testcase is part of GDB, the GNU debugger.
+
+# Copyright 2020 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Test that when setting breakpoints, a global function does not mask
+# out a static function, with and without debug info.
+
+standard_testfile .c msym-bp-2.c
+
+proc test {debug} {
+    global testfile srcfile srcfile2
+    global decimal
+
+    if {$debug} {
+	set options "debug"
+    } else {
+	set options ""
+    }
+
+    if { [prepare_for_testing "failed to prepare" $testfile-$debug \
+	      [list $srcfile $srcfile2] $options] } {
+	return -1
+    }
+
+    # Should find two locations: the static foo in the msym-bp.c file,
+    # and the extern foo in the msym-bp-2.c file.  Same result
+    # expected before and after running to main.
+    proc test_break {prefix} {
+	global decimal
+
+	with_test_prefix $prefix {
+	    gdb_test "break foo" "\\(2 locations\\)"
+
+	    if {$options == "debug"} {
+		gdb_test "info breakpoint" \
+		    [multi_line \
+			 ".*\.1.*in foo at .*msym-bp.c:$decimal" \
+			 ".*\.2.*in foo at .*msym-bp-2.c:$decimal"]
+	    } else {
+		gdb_test "info breakpoint" \
+		    [multi_line \
+			 ".*\.1.*<foo\\+$decimal>" \
+			 ".*\.2.*<foo\\+$decimal>"]
+	    }
+	}
+    }
+
+    test_break "before run"
+
+    if ![runto_main] {
+	fail "can't run to main"
+	return
+    }
+
+    delete_breakpoints
+
+    test_break "at main"
+}
+
+foreach_with_prefix debug {0 1} {
+    test $debug
+}

@@ -4248,41 +4248,6 @@ minsym_found (struct linespec_state *self, struct objfile *objfile,
     add_sal_to_sals (self, result, &sal, msymbol->natural_name (), 0);
 }
 
-/* A helper function to classify a minimal_symbol_type according to
-   priority.  */
-
-static int
-classify_mtype (enum minimal_symbol_type t)
-{
-  switch (t)
-    {
-    case mst_file_text:
-    case mst_file_data:
-    case mst_file_bss:
-      /* Intermediate priority.  */
-      return 1;
-
-    case mst_solib_trampoline:
-      /* Lowest priority.  */
-      return 2;
-
-    default:
-      /* Highest priority.  */
-      return 0;
-    }
-}
-
-/* Callback for std::sort that sorts symbols by priority.  */
-
-static bool
-compare_msyms (const bound_minimal_symbol &a, const bound_minimal_symbol &b)
-{
-  enum minimal_symbol_type ta = MSYMBOL_TYPE (a.minsym);
-  enum minimal_symbol_type tb = MSYMBOL_TYPE (b.minsym);
-
-  return classify_mtype (ta) < classify_mtype (tb);
-}
-
 /* Helper for search_minsyms_for_name that adds the symbol to the
    result.  */
 
@@ -4369,23 +4334,78 @@ search_minsyms_for_name (struct collect_info *info,
 	}
     }
 
+  auto pmsymbol_type = [] (enum minimal_symbol_type type)
+    {
+      switch (type)
+      {
+#define CASE(T) case T: return #T
+	CASE (mst_unknown);
+	CASE (mst_text);
+	CASE (mst_text_gnu_ifunc);
+	CASE (mst_data_gnu_ifunc);
+	CASE (mst_slot_got_plt);
+	CASE (mst_data);
+	CASE (mst_bss);
+	CASE (mst_abs);
+	CASE (mst_solib_trampoline);
+	CASE (mst_file_text);
+	CASE (mst_file_data);
+	CASE (mst_file_bss);
+#undef CASE
+      };
+
+      gdb_assert_not_reached ("");
+    };
+
   if (!minsyms.empty ())
     {
-      int classification;
-
-      std::sort (minsyms.begin (), minsyms.end (), compare_msyms);
-
-      /* Now the minsyms are in classification order.  So, we walk
-	 over them and process just the minsyms with the same
-	 classification as the very first minsym in the list.  */
-      classification = classify_mtype (MSYMBOL_TYPE (minsyms[0].minsym));
+      static const auto msymbol_type_is_static = [] (enum minimal_symbol_type type)
+	{
+	  switch (type)
+	    {
+	    case mst_file_text:
+	    case mst_file_data:
+	    case mst_file_bss:
+	      return true;
+	    default:
+	      return false;
+	    }
+	};
 
       for (const bound_minimal_symbol &item : minsyms)
 	{
-	  if (classify_mtype (MSYMBOL_TYPE (item.minsym)) != classification)
-	    break;
+	  bool masked = false;
+	  if (MSYMBOL_TYPE (item.minsym) == mst_solib_trampoline)
+	    {
+	      for (const bound_minimal_symbol &item2 : minsyms)
+		{
+		  if (&item2 == &item)
+		    continue;
 
-	  info->result.minimal_symbols->push_back (item);
+		  if (msymbol_type_is_static (MSYMBOL_TYPE (item2.minsym)))
+		    continue;
+
+		  if (strcmp (item.minsym->linkage_name (),
+			      item2.minsym->linkage_name ()) != 0)
+		    continue;
+
+		  /* Found a global minsym with the same name as the
+		     trampoline.  Don't add this trampoline symbol
+		     location.  */
+		  masked = true;
+		  break;
+		}
+	    }
+
+	  if (0)
+	    fprintf_unfiltered (gdb_stdlog, "%s: %s: %s: masked=%d\n",
+				item.minsym->linkage_name (),
+				pmsymbol_type (MSYMBOL_TYPE (item.minsym)),
+				phex (BMSYMBOL_VALUE_ADDRESS (item), 0),
+				masked);
+
+	  if (!masked)
+	    info->result.minimal_symbols->push_back (item);
 	}
     }
 }
