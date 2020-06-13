@@ -242,7 +242,8 @@ struct private_thread_info
    strong reference, and is thus not accounted for in the thread's
    refcount.  */
 
-class thread_info : public refcounted_object
+class thread_info : public refcounted_object,
+		    public intrusive_list_node<thread_info>
 {
 public:
   explicit thread_info (inferior *inf, ptid_t ptid);
@@ -253,7 +254,6 @@ public:
   /* Mark this thread as running and notify observers.  */
   void set_running (bool running);
 
-  intrusive_list_node<thread_info> thread_list_node;
   ptid_t ptid;			/* "Actual process id";
 				    In fact, this may be overloaded with 
 				    kernel thread id, etc.  */
@@ -409,16 +409,12 @@ public:
   struct thread_info *step_over_next = NULL;
 };
 
-using thread_intrusive_member_node
-  = intrusive_member_node<thread_info, &thread_info::thread_list_node>;
-
 /* Iterator over all threads.  Note that dereferencing this iterator
    returns a thread_info reference, not a pointer.  Most code in GDB
    for legacy reasons works with pointers, so will use all_threads(),
    inf->threads(), etc. instead, which iterate over threads with
    pointers.  See thread-iter.h.  */
-using thread_instrusive_list_iterator
-  = intrusive_list_iterator<thread_info, thread_intrusive_member_node>;
+using thread_instrusive_list_iterator = intrusive_list_iterator<thread_info>;
 
 /* A gdb::ref_ptr pointer to a thread_info.  */
 

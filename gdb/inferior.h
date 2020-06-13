@@ -380,7 +380,7 @@ public:
   { return target_has_execution_1 (this); }
 
   /* This inferior's thread list, sorted by creation order.  */
-  intrusive_list<thread_info, thread_intrusive_member_node> thread_list;
+  intrusive_list<thread_info> thread_list;
   /* A map of ptid_t to thread_info*, for average O(1) ptid_t
      lookup.  */
   std::unordered_map<ptid_t, thread_info *, hash_ptid_t> thread_map;
