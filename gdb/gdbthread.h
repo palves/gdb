@@ -32,6 +32,7 @@ struct symtab;
 #include "gdbsupport/refcounted-object.h"
 #include "gdbsupport/common-gdbthread.h"
 #include "gdbsupport/forward-scope-exit.h"
+#include "gdbsupport/intrusive_list.h"
 
 struct inferior;
 struct process_stratum_target;
@@ -252,7 +253,7 @@ public:
   /* Mark this thread as running and notify observers.  */
   void set_running (bool running);
 
-  struct thread_info *next = NULL;
+  intrusive_list_node<thread_info> thread_list_node;
   ptid_t ptid;			/* "Actual process id";
 				    In fact, this may be overloaded with 
 				    kernel thread id, etc.  */
@@ -407,6 +408,17 @@ public:
   struct thread_info *step_over_prev = NULL;
   struct thread_info *step_over_next = NULL;
 };
+
+using thread_intrusive_member_node
+  = intrusive_member_node<thread_info, &thread_info::thread_list_node>;
+
+/* Iterator over all threads.  Note that dereferencing this iterator
+   returns a thread_info reference, not a pointer.  Most code in GDB
+   for legacy reasons works with pointers, so will use all_threads(),
+   inf->threads(), etc. instead, which iterate over threads with
+   pointers.  See thread-iter.h.  */
+using thread_instrusive_list_iterator
+  = intrusive_list_iterator<thread_info, thread_intrusive_member_node>;
 
 /* A gdb::ref_ptr pointer to a thread_info.  */
 

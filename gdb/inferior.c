@@ -137,6 +137,18 @@ add_inferior (int pid)
 }
 
 void
+inferior::clear_thread_list (bool silent)
+{
+  thread_list.clear_and_dispose ([=] (thread_info *thr)
+    {
+      set_thread_exited (thr, silent);
+      if (thr->deletable ())
+	delete thr;
+    });
+  thread_map.clear ();
+}
+
+void
 delete_inferior (struct inferior *todel)
 {
   struct inferior *inf, *infprev;
@@ -150,13 +162,7 @@ delete_inferior (struct inferior *todel)
   if (!inf)
     return;
 
-  /* Two passes to simply avoid the unnecessary work of updating the
-     thread list prev/next pointers and the ptid map.  */
-  for (thread_info *tp : inf->threads ())
-    set_thread_exited (tp, true);
-  for (thread_info *tp : inf->threads_safe ())
-    if (tp->deletable ())
-      delete tp;
+  inf->clear_thread_list (true);
 
   if (infprev)
     infprev->next = inf->next;
@@ -187,16 +193,7 @@ exit_inferior_1 (struct inferior *inftoex, int silent)
   if (!inf)
     return;
 
-  /* Two passes to simply avoid the unnecessary work of updating the
-     thread list prev/next pointers and the ptid map for each
-     thread.  */
-  for (thread_info *tp : inf->threads ())
-    set_thread_exited (tp, silent);
-  for (thread_info *tp : inf->threads_safe ())
-    if (tp->deletable ())
-      delete tp;
-  inf->thread_list = NULL;
-  inf->thread_map.clear ();
+  inf->clear_thread_list (silent);
 
   gdb::observers::inferior_exit.notify (inf);
 

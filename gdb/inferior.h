@@ -380,8 +380,10 @@ public:
   /* Pointer to next inferior in singly-linked list of inferiors.  */
   struct inferior *next = NULL;
 
-  /* This inferior's thread list.  */
-  thread_info *thread_list = nullptr;
+  /* This inferior's thread list, sorted by creation order.  */
+  intrusive_list<thread_info, thread_intrusive_member_node> thread_list;
+  /* A map of ptid_t to thread_info*, for average O(1) ptid_t
+     lookup.  */
   std::unordered_map<ptid_t, thread_info *, hash_ptid_t> thread_map;
 
   /* Returns a range adapter covering the inferior's threads,
@@ -391,7 +393,12 @@ public:
 	 { .... }
   */
   inf_threads_range threads ()
-  { return inf_threads_range (this->thread_list); }
+  {
+    if (this->thread_list.empty ())
+      return inf_threads_range (nullptr);
+    else
+      return inf_threads_range (&this->thread_list.front ());
+  }
 
   /* Returns a range adapter covering the inferior's non-exited
      threads.  Used like this:
@@ -400,7 +407,12 @@ public:
 	 { .... }
   */
   inf_non_exited_threads_range non_exited_threads ()
-  { return inf_non_exited_threads_range (this->thread_list); }
+  {
+    if (this->thread_list.empty ())
+      return inf_non_exited_threads_range (nullptr);
+    else
+      return inf_non_exited_threads_range (&this->thread_list.front ());
+  }
 
   /* Like inferior::threads(), but returns a range adapter that can be
      used with range-for, safely.  I.e., it is safe to delete the
@@ -411,7 +423,16 @@ public:
 	 delete f;
   */
   inline safe_inf_threads_range threads_safe ()
-  { return safe_inf_threads_range (this->thread_list); }
+  {
+    if (this->thread_list.empty ())
+      return safe_inf_threads_range (nullptr);
+    else
+      return safe_inf_threads_range (&this->thread_list.front ());
+  }
+
+  /* Delete all threads in the thread list.  If SILENT, exit threads
+     silently.  */
+  void clear_thread_list (bool silent);
 
   /* Convenient handle (GDB inferior id).  Unique across all
      inferiors.  */

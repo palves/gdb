@@ -19,11 +19,37 @@
 #ifndef COMMON_NEXT_ITERATOR_H
 #define COMMON_NEXT_ITERATOR_H
 
-/* An iterator that uses the 'next' field of a type to iterate.  This
-   can be used with various GDB types that are stored as linked
-   lists.  */
-
+/* How to get a next item, for items that have a "next" field.  */
 template<typename T>
+struct next_iterator_next
+{
+  static T *get (T *item)
+  {
+    return item->next;
+  }
+};
+
+/* How to get the next item, for intrusive_list items, which might
+   store the "next" field in a member node instead of a "next" field
+   directly.  */
+template<typename InstructiveIterator>
+struct next_iterator_instrusive
+{
+  using pointer = typename InstructiveIterator::pointer;
+
+  static pointer get (pointer item)
+  {
+    InstructiveIterator it (item);
+    ++it;
+    return &*it;
+  }
+};
+
+/* An iterator that uses the 'next' field of a type to iterate.  This
+   can be used with various GDB types that are stored as intrusive
+   linked lists.  */
+
+template<typename T, typename Next = next_iterator_next<T>>
 struct next_iterator
 {
   typedef next_iterator self_type;
@@ -61,7 +87,7 @@ struct next_iterator
 
   self_type &operator++ ()
   {
-    m_item = m_item->next;
+    m_item = Next::get (m_item);
     return *this;
   }
 

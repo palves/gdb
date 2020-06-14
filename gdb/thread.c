@@ -217,18 +217,8 @@ init_thread_list (void)
 {
   highest_thread_num = 0;
 
-  for (thread_info *tp : all_threads_safe ())
-    {
-      inferior *inf = tp->inf;
-
-      if (tp->deletable ())
-	delete tp;
-      else
-	set_thread_exited (tp, 1);
-
-      inf->thread_list = NULL;
-      inf->thread_map.clear ();
-    }
+  for (inferior *inf : all_inferiors ())
+    inf->clear_thread_list (true);
 }
 
 /* Allocate a new thread of inferior INF with target id PTID and add
@@ -239,16 +229,7 @@ new_thread (struct inferior *inf, ptid_t ptid)
 {
   thread_info *tp = new thread_info (inf, ptid);
 
-  if (inf->thread_list == NULL)
-    inf->thread_list = tp;
-  else
-    {
-      struct thread_info *last;
-
-      for (last = inf->thread_list; last->next != NULL; last = last->next)
-	;
-      last->next = tp;
-    }
+  inf->thread_list.push_back (*tp);
 
   /* A thread with this ptid should not exist yet.  */
   gdb_assert (inf->thread_map.find (ptid) == inf->thread_map.end ());
@@ -463,29 +444,21 @@ delete_thread_1 (thread_info *thr, bool silent)
 {
   gdb_assert (thr != nullptr);
 
-  struct thread_info *tp, *tpprev = NULL;
+  set_thread_exited (thr, silent);
 
-  for (tp = thr->inf->thread_list; tp; tpprev = tp, tp = tp->next)
-    if (tp == thr)
-      break;
-
-  if (!tp)
-    return;
-
-  set_thread_exited (tp, silent);
-
-  if (!tp->deletable ())
+  if (!thr->deletable ())
     {
        /* Will be really deleted some other time.  */
        return;
      }
 
-  if (tpprev)
-    tpprev->next = tp->next;
-  else
-    tp->inf->thread_list = tp->next;
+  auto it = thr->inf->thread_list.iterator_to (*thr);
+  thr->inf->thread_list.erase (it);
 
-  delete tp;
+  size_t nr_deleted = thr->inf->thread_map.erase (thr->ptid);
+  gdb_assert (nr_deleted == 1);
+
+  delete thr;
 }
 
 /* Delete thread THREAD and notify of thread exit.  If this is the
@@ -631,7 +604,9 @@ in_thread_list (process_stratum_target *targ, ptid_t ptid)
 thread_info *
 first_thread_of_inferior (inferior *inf)
 {
-  return inf->thread_list;
+  if (inf->thread_list.empty ())
+    return nullptr;
+  return &inf->thread_list.front ();
 }
 
 thread_info *
@@ -2120,7 +2095,7 @@ update_threads_executing (void)
 
       /* If the process has no threads, then it must be we have a
 	 process-exit event pending.  */
-      if (inf->thread_list == NULL)
+      if (inf->thread_list.empty ())
 	{
 	  targ->threads_executing = true;
 	  return;
