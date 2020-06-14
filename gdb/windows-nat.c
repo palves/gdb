@@ -317,7 +317,9 @@ struct windows_nat_target final : public x86_nat_target<inf_child_target>
 
   bool stopped_by_sw_breakpoint () override
   {
-    return current_windows_thread->stopped_at_software_breakpoint;
+    windows_thread_info *th
+      = thread_rec (inferior_ptid, DONT_INVALIDATE_CONTEXT);
+    return th->stopped_at_software_breakpoint;
   }
 
   bool supports_stopped_by_sw_breakpoint () override
@@ -1131,11 +1133,15 @@ display_selector (HANDLE thread, DWORD sel)
 static void
 display_selectors (const char * args, int from_tty)
 {
-  if (!current_windows_thread)
+  if (inferior_ptid == null_ptid)
     {
       puts_filtered ("Impossible to display selectors now.\n");
       return;
     }
+
+  windows_thread_info *current_windows_thread
+    = thread_rec (inferior_ptid, DONT_INVALIDATE_CONTEXT);
+
   if (!args)
     {
 #ifdef __x86_64__
@@ -1369,12 +1375,11 @@ fake_create_process (void)
        (unsigned) GetLastError ());
       /*  We can not debug anything in that case.  */
     }
-  current_windows_thread
-    = windows_add_thread (ptid_t (current_event.dwProcessId,
-				  current_event.dwThreadId, 0),
-			  current_event.u.CreateThread.hThread,
-			  current_event.u.CreateThread.lpThreadLocalBase,
-			  true /* main_thread_p */);
+  windows_add_thread (ptid_t (current_event.dwProcessId, 0,
+			      current_event.dwThreadId),
+		      current_event.u.CreateThread.hThread,
+		      current_event.u.CreateThread.lpThreadLocalBase,
+		      true /* main_thread_p */);
   return current_event.dwThreadId;
 }
 
@@ -1547,10 +1552,9 @@ windows_nat_target::get_windows_debug_event (int pid,
       thread_id = stop->thread_id;
       *ourstatus = stop->status;
 
-      inferior_ptid = ptid_t (current_event.dwProcessId, thread_id, 0);
-      current_windows_thread = thread_rec (inferior_ptid,
-					   INVALIDATE_CONTEXT);
-      current_windows_thread->reload_context = 1;
+      ptid_t ptid (current_event.dwProcessId, thread_id);
+      th = thread_rec (ptid, INVALIDATE_CONTEXT);
+      th->reload_context = 1;
 
       return thread_id;
     }
@@ -1766,14 +1770,6 @@ windows_nat_target::get_windows_debug_event (int pid,
       thread_id = 0;
       CHECK (windows_continue (continue_status, desired_stop_thread_id, 0));
     }
-  else
-    {
-      inferior_ptid = ptid_t (current_event.dwProcessId, thread_id, 0);
-      current_windows_thread = th;
-      if (!current_windows_thread)
-	current_windows_thread = thread_rec (inferior_ptid,
-					     INVALIDATE_CONTEXT);
-    }
 
 out:
   return thread_id;
@@ -1830,19 +1826,24 @@ windows_nat_target::wait (ptid_t ptid, struct target_waitstatus *ourstatus,
 	{
 	  ptid_t result = ptid_t (current_event.dwProcessId, retval, 0);
 
-	  if (current_windows_thread != nullptr)
+	  if (ourstatus->kind != TARGET_WAITKIND_EXITED
+	      && ourstatus->kind !=  TARGET_WAITKIND_SIGNALLED)
 	    {
-	      current_windows_thread->stopped_at_software_breakpoint = false;
-	      if (current_event.dwDebugEventCode == EXCEPTION_DEBUG_EVENT
-		  && ((current_event.u.Exception.ExceptionRecord.ExceptionCode
-		       == EXCEPTION_BREAKPOINT)
-		      || (current_event.u.Exception.ExceptionRecord.ExceptionCode
-			  == STATUS_WX86_BREAKPOINT))
-		  && windows_initialization_done)
+	      windows_thread_info *th = thread_rec (result, INVALIDATE_CONTEXT);
+
+	      if (th != nullptr)
 		{
-		  current_windows_thread->stopped_at_software_breakpoint
-		    = true;
-		  current_windows_thread->pc_adjusted = false;
+		  th->stopped_at_software_breakpoint = false;
+		  if (current_event.dwDebugEventCode == EXCEPTION_DEBUG_EVENT
+		      && ((current_event.u.Exception.ExceptionRecord.ExceptionCode
+			   == EXCEPTION_BREAKPOINT)
+			  || (current_event.u.Exception.ExceptionRecord.ExceptionCode
+			      == STATUS_WX86_BREAKPOINT))
+		      && windows_initialization_done)
+		    {
+		      th->stopped_at_software_breakpoint = true;
+		      th->pc_adjusted = false;
+		    }
 		}
 	    }
 
@@ -2202,7 +2203,7 @@ windows_nat_target::detach (inferior *inf, int from_tty)
     }
 
   x86_cleanup_dregs ();
-  inferior_ptid = null_ptid;
+  switch_to_no_thread ();
   detach_inferior (inf);
 
   maybe_unpush_target ();
