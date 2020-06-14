@@ -52,6 +52,7 @@ struct thread_info;
 #include "symfile-add-flags.h"
 #include "gdbsupport/refcounted-object.h"
 #include "gdbsupport/forward-scope-exit.h"
+#include "gdbsupport/intrusive_list.h"
 
 #include "gdbsupport/common-inferior.h"
 #include "gdbthread.h"
@@ -336,7 +337,8 @@ extern void switch_to_inferior_no_thread (inferior *inf);
    listed exactly once in the inferior list, so placing an inferior in
    the inferior list is an implicit, not counted strong reference.  */
 
-class inferior : public refcounted_object
+class inferior : public refcounted_object,
+		 public intrusive_list_node<inferior>
 {
 public:
   explicit inferior (int pid);
@@ -376,9 +378,6 @@ public:
 
   bool has_execution ()
   { return target_has_execution_1 (this); }
-
-  /* Pointer to next inferior in singly-linked list of inferiors.  */
-  struct inferior *next = NULL;
 
   /* This inferior's thread list, sorted by creation order.  */
   intrusive_list<thread_info, thread_intrusive_member_node> thread_list;
@@ -643,7 +642,11 @@ private:
 
 /* Traverse all inferiors.  */
 
-extern struct inferior *inferior_list;
+extern intrusive_list<inferior> inferior_list;
+
+/* Iterator over inferior_list.  Regular code will want to use the
+   all_inferiors() function instead.  */
+using inferior_list_iterator = intrusive_list_iterator<inferior>;
 
 /* Pull in the internals of the inferiors ranges and iterators.  Must
    be done after struct inferior is defined.  */

@@ -42,7 +42,7 @@
 
 DEFINE_REGISTRY (inferior, REGISTRY_ACCESS_FIELD)
 
-struct inferior *inferior_list = NULL;
+intrusive_list<inferior> inferior_list;
 static int highest_inferior_num;
 
 /* See inferior.h.  */
@@ -99,16 +99,7 @@ add_inferior_silent (int pid)
 {
   inferior *inf = new inferior (pid);
 
-  if (inferior_list == NULL)
-    inferior_list = inf;
-  else
-    {
-      inferior *last;
-
-      for (last = inferior_list; last->next != NULL; last = last->next)
-	;
-      last->next = inf;
-    }
+  inferior_list.push_back (*inf);
 
   gdb::observers::inferior_added.notify (inf);
 
@@ -149,25 +140,12 @@ inferior::clear_thread_list (bool silent)
 }
 
 void
-delete_inferior (struct inferior *todel)
+delete_inferior (struct inferior *inf)
 {
-  struct inferior *inf, *infprev;
-
-  infprev = NULL;
-
-  for (inf = inferior_list; inf; infprev = inf, inf = inf->next)
-    if (inf == todel)
-      break;
-
-  if (!inf)
-    return;
-
   inf->clear_thread_list (true);
 
-  if (infprev)
-    infprev->next = inf->next;
-  else
-    inferior_list = inf->next;
+  auto it = inferior_list.iterator_to (*inf);
+  inferior_list.erase (it);
 
   gdb::observers::inferior_removed.notify (inf);
 
@@ -182,17 +160,8 @@ delete_inferior (struct inferior *todel)
    exit of its threads.  */
 
 static void
-exit_inferior_1 (struct inferior *inftoex, int silent)
+exit_inferior_1 (struct inferior *inf, int silent)
 {
-  struct inferior *inf;
-
-  for (inf = inferior_list; inf; inf = inf->next)
-    if (inf == inftoex)
-      break;
-
-  if (!inf)
-    return;
-
   inf->clear_thread_list (silent);
 
   gdb::observers::inferior_exit.notify (inf);
@@ -360,22 +329,14 @@ have_live_inferiors (void)
 void
 prune_inferiors (void)
 {
-  inferior *ss;
-
-  ss = inferior_list;
-  while (ss)
+  for (inferior *inf : all_inferiors_safe ())
     {
-      if (!ss->deletable ()
-	  || !ss->removable
-	  || ss->pid != 0)
-	{
-	  ss = ss->next;
-	  continue;
-	}
+      if (!inf->deletable ()
+	  || !inf->removable
+	  || inf->pid != 0)
+	continue;
 
-      inferior *ss_next = ss->next;
-      delete_inferior (ss);
-      ss = ss_next;
+      delete_inferior (inf);
     }
 }
 

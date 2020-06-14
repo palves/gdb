@@ -3708,12 +3708,11 @@ do_target_wait (ptid_t wait_ptid, execution_control_state *ecs, int options)
       if (do_wait (inf))
 	return true;
 
-  for (inferior *inf = inferior_list;
-       inf != NULL && inf->num < inf_num;
-       inf = inf->next)
-    if (inferior_matches (inf))
-      if (do_wait (inf))
-	return true;
+  for (inferior *inf : all_inferiors ())
+    if (inf->num < inf_num
+	&& inferior_matches (inf)
+	&& do_wait (inf))
+      return true;
 
   ecs->ws.kind = TARGET_WAITKIND_IGNORE;
   return false;

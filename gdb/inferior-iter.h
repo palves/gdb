@@ -114,7 +114,12 @@ struct all_inferiors_range
   {}
 
   all_inferiors_iterator begin () const
-  { return all_inferiors_iterator (m_filter_target, inferior_list); }
+  {
+    if (inferior_list.empty ())
+      return all_inferiors_iterator ();
+    else
+      return all_inferiors_iterator (m_filter_target, &inferior_list.front ());
+  }
   all_inferiors_iterator end () const
   { return all_inferiors_iterator (); }
 
@@ -143,8 +148,12 @@ struct all_inferiors_safe_range
 
   all_inferiors_safe_iterator begin () const
   {
-    return (all_inferiors_safe_iterator
-	    (all_inferiors_iterator (m_filter_target, inferior_list)));
+    if (inferior_list.empty ())
+      return all_inferiors_safe_iterator ();
+    else
+      return (all_inferiors_safe_iterator
+	      (all_inferiors_iterator (m_filter_target,
+				       &inferior_list.front ())));
   }
 
   all_inferiors_safe_iterator end () const
@@ -169,7 +178,13 @@ struct all_non_exited_inferiors_range
   {}
 
   all_non_exited_inferiors_iterator begin () const
-  { return all_non_exited_inferiors_iterator (m_filter_target, inferior_list); }
+  {
+    if (inferior_list.empty ())
+      return all_non_exited_inferiors_iterator ();
+    else
+      return all_non_exited_inferiors_iterator (m_filter_target,
+						&inferior_list.front ());
+  }
   all_non_exited_inferiors_iterator end () const
   { return all_non_exited_inferiors_iterator (); }
 
