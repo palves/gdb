@@ -193,7 +193,7 @@ clear_thread_inferior_resources (struct thread_info *tp)
 
 /* Set the TP's state as exited.  */
 
-static void
+void
 set_thread_exited (thread_info *tp, int silent)
 {
   /* Dead threads don't need to step-over.  Remove from queue.  */
@@ -227,6 +227,7 @@ init_thread_list (void)
 	set_thread_exited (tp, 1);
 
       inf->thread_list = NULL;
+      inf->thread_map.clear ();
     }
 }
 
@@ -248,6 +249,11 @@ new_thread (struct inferior *inf, ptid_t ptid)
 	;
       last->next = tp;
     }
+
+  /* A thread with this ptid should not exist yet.  */
+  gdb_assert (inf->thread_map.find (ptid) == inf->thread_map.end ());
+
+  inf->thread_map[ptid] = tp;
 
   return tp;
 }
@@ -806,7 +812,13 @@ thread_change_ptid (process_stratum_target *targ,
   inf->pid = new_ptid.pid ();
 
   tp = find_thread_ptid (inf, old_ptid);
+  gdb_assert (tp != nullptr);
+
+  int num_erased = inf->thread_map.erase (old_ptid);
+  gdb_assert (num_erased == 1);
+
   tp->ptid = new_ptid;
+  inf->thread_map[new_ptid] = tp;
 
   gdb::observers::thread_ptid_changed.notify (old_ptid, new_ptid);
 }

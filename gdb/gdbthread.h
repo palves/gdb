@@ -436,6 +436,10 @@ extern struct thread_info *add_thread_with_info (process_stratum_target *targ,
 /* Delete an existing thread list entry.  */
 extern void delete_thread (struct thread_info *thread);
 
+/* Mark the thread exited, but don't delete it or remove it from the
+   inferior thread list.  */
+extern void set_thread_exited (thread_info *tp, int silent);
+
 /* Delete an existing thread list entry, and be quiet about it.  Used
    after the process this thread having belonged to having already
    exited, for example.  */
