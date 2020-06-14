@@ -379,7 +379,7 @@ public:
   struct inferior *next = NULL;
 
   /* This inferior's thread list, sorted by creation order.  */
-  intrusive_list<thread_info, thread_intrusive_member_node> thread_list;
+  intrusive_list<thread_info> thread_list;
 
   /* Returns a range adapter covering the inferior's threads,
      including exited threads.  Used like this:
