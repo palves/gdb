@@ -58,6 +58,8 @@ struct thread_info;
 
 #include "process-stratum-target.h"
 
+#include <unordered_map>
+
 struct infcall_suspend_state;
 struct infcall_control_state;
 
@@ -380,6 +382,9 @@ public:
 
   /* This inferior's thread list, sorted by creation order.  */
   intrusive_list<thread_info> thread_list;
+  /* A map of ptid_t to thread_info*, for average O(1) ptid_t lookup.
+     Not that exited threads do not appear in the map.  */
+  std::unordered_map<ptid_t, thread_info *, hash_ptid_t> ptid_thread_map;
 
   /* Returns a range adapter covering the inferior's threads,
      including exited threads.  Used like this:

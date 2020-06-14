@@ -145,6 +145,7 @@ inferior::clear_thread_list (bool silent)
       if (thr->deletable ())
 	delete thr;
     });
+  ptid_thread_map.clear ();
 }
 
 void

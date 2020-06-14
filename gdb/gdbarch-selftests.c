@@ -86,6 +86,7 @@ register_to_value_test (struct gdbarch *gdbarch)
   scoped_restore_current_pspace_and_thread restore_pspace_thread;
 
   mock_inferior.thread_list.push_back (mock_thread);
+  mock_inferior.ptid_thread_map[mock_ptid] = &mock_thread;
 
   /* Add the mock inferior to the inferior list so that look ups by
      target+ptid can find it.  */
