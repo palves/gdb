@@ -90,8 +90,9 @@ register_to_value_test (struct gdbarch *gdbarch)
 
   /* Add the mock inferior to the inferior list so that look ups by
      target+ptid can find it.  */
-  scoped_restore restore_inferior_list
-    = make_scoped_restore (&inferior_list, &mock_inferior);
+  intrusive_list<inferior> save_inferior_list (std::move (inferior_list));
+  SCOPE_EXIT { inferior_list = std::move (save_inferior_list); };
+  inferior_list.push_back (mock_inferior);
 
   /* Switch to the mock inferior.  */
   switch_to_inferior_no_thread (&mock_inferior);
