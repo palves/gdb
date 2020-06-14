@@ -26,7 +26,9 @@
 /* A forward iterator that iterates over a given inferior's
    threads.  */
 
-using inf_threads_iterator = next_iterator<thread_info>;
+using inf_threads_iterator
+  = next_iterator<thread_info,
+		  next_iterator_instrusive<thread_instrusive_list_iterator>>;
 
 /* A forward iterator that iterates over all threads of all
    inferiors.  */
