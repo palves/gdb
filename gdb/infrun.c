@@ -6483,6 +6483,26 @@ process_event_stop_test (struct execution_control_state *ecs)
       stop_stack_dummy = what.call_dummy;
     }
 
+  if (ecs->event_thread->control.stop_bpstat != nullptr)
+    {
+      unsigned int mask
+	= ecs->event_thread->control.stop_bpstat->simd_lane_mask;
+
+      if (mask != 0x0)
+	{
+	  int current_simd_lane = ecs->event_thread->current_simd_lane ();
+	  /* If previous SIMD lane matches the SIMD lane mask, do not
+	     change it.  Otherwise, find a new one.  */
+	  if (!is_simd_lane_active (mask, current_simd_lane))
+	    {
+	      /* If a specific SIMD lane caused the stop, then switch
+		 the thread to this lane.  */
+	      int lane = find_first_active_simd_lane (mask);
+	      ecs->event_thread->set_current_simd_lane (lane);
+	    }
+	}
+    }
+
   /* A few breakpoint types have callbacks associated (e.g.,
      bp_jit_event).  Run them now.  */
   bpstat_run_callbacks (ecs->event_thread->control.stop_bpstat);
@@ -8559,8 +8579,16 @@ normal_stop (void)
       SWITCH_THRU_ALL_UIS ()
 	{
 	  target_terminal::ours_for_output ();
-	  printf_filtered (_("[Switching to %s]\n"),
-			   target_pid_to_str (inferior_ptid).c_str ());
+	  thread_info *current_thread = inferior_thread ();
+	  std::string lane_info;
+
+	  if (current_thread->has_simd_lanes ())
+	    lane_info = " lane "
+	      + std::to_string (current_thread->current_simd_lane ());
+
+	  printf_filtered (_("[Switching to %s%s]\n"),
+			   target_pid_to_str (inferior_ptid).c_str (),
+			   lane_info.c_str ());
 	  annotate_thread_changed ();
 	}
       previous_inferior_ptid = inferior_ptid;

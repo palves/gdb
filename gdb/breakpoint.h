@@ -625,7 +625,7 @@ struct breakpoint_ops
 				  gdb::unique_xmalloc_ptr<char>,
 				  gdb::unique_xmalloc_ptr<char>,
 				  enum bptype, enum bpdisp, int, int,
-				  int, const struct breakpoint_ops *,
+				  int, int, const struct breakpoint_ops *,
 				  int, int, int, unsigned);
 
   /* Given the location (second parameter), this method decodes it and
@@ -721,6 +721,7 @@ struct breakpoint
   /* Chain of command lines to execute when this breakpoint is
      hit.  */
   counted_command_line commands;
+  bool is_cmd_for_all_lanes = false;
   /* Stack depth (address of frame).  If nonzero, break only if fp
      equals this.  */
   struct frame_id frame_id = null_frame_id;
@@ -764,6 +765,10 @@ struct breakpoint
   /* Thread number for thread-specific breakpoint, or -1 if don't
      care.  */
   int thread = -1;
+
+  /* SIMD lane number for thread specific breakpoint, or -1 if don't
+     care.  It is taken into consideration iff THREAD is specified.  */
+  int simd_lane_num = -1;
 
   /* Ada task number for task-specific breakpoint, or 0 if don't
      care.  */
@@ -1159,6 +1164,7 @@ struct bpstats
 
     /* The associated command list.  */
     counted_command_line commands;
+    bool is_cmd_for_all_lanes;
 
     /* Old value associated with a watchpoint.  */
     value_ref_ptr old_val;
@@ -1172,6 +1178,9 @@ struct bpstats
     /* Tell bpstat_print and print_bp_stop_message how to print stuff
        associated with this element of the bpstat chain.  */
     enum bp_print_how print_it;
+
+    /* Tell which SIMD lanes are hit the BP.  */
+    unsigned int simd_lane_mask;
   };
 
 enum inf_context
