@@ -409,6 +409,23 @@ amdgcn_skip_prologue (struct gdbarch *gdbarch, CORE_ADDR start_pc)
   return start_pc;
 }
 
+
+static unsigned int
+amdgcn_rocm_active_lanes_mask (struct gdbarch *gdbarch, thread_info *tp)
+{
+  /* Check that the wave_id is valid.  */
+
+  uint64_t exec_mask;
+  if (amd_dbgapi_wave_get_info
+      (get_amd_dbgapi_process_id (tp->inf), get_amd_dbgapi_wave_id (tp->ptid),
+       AMD_DBGAPI_WAVE_INFO_EXEC_MASK,
+       sizeof (exec_mask), &exec_mask)
+      != AMD_DBGAPI_STATUS_SUCCESS)
+    return 0;
+
+  return exec_mask;
+}
+
 static struct gdbarch *
 amdgcn_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 {
@@ -575,6 +592,9 @@ amdgcn_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
     error (_ ("amd_dbgapi_architecture_get_info failed"));
 
   set_gdbarch_max_insn_length (gdbarch, max_insn_length);
+
+  /* Lane debugging.  */
+  set_gdbarch_active_lanes_mask (gdbarch, amdgcn_rocm_active_lanes_mask);
 
   if (amd_dbgapi_architecture_get_info (
           architecture_id,

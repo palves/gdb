@@ -87,7 +87,9 @@ thread_info::has_simd_lanes ()
   if (this->inf == nullptr)
     return false;
 
-  gdbarch *arch = this->inf->gdbarch;
+  scoped_restore_current_thread restore_thread;
+  switch_to_inferior_no_thread (this->inf);
+  gdbarch *arch = target_thread_architecture (this->ptid);
   return gdbarch_active_lanes_mask_p (arch) != 0;
 }
 
@@ -100,7 +102,10 @@ thread_info::active_simd_lanes_mask ()
 
   if (has_simd_lanes ())
     {
-      gdbarch *arch = this->inf->gdbarch;
+      scoped_restore_current_thread restore_thread;
+      switch_to_inferior_no_thread (this->inf);
+      gdbarch *arch = target_thread_architecture (this->ptid);
+
       if (gdbarch_active_lanes_mask_p (arch) != 0)
 	return gdbarch_active_lanes_mask (arch, this);
     }
