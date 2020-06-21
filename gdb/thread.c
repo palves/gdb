@@ -1504,6 +1504,286 @@ info_threads_command_completer (struct cmd_list_element *ignore,
     }
 }
 
+/* Helper for print_lane_info.  Returns true if LANE should be
+   printed.  If REQUESTED_LANES, a list of GDB ids/ranges, is not
+   NULL, only print LANE if its ID is included in the list.  */
+
+static bool
+should_print_lane (const char *requested_lanes, thread_info *thr, int lane)
+{
+  if (requested_lanes != NULL && *requested_lanes != '\0')
+    {
+      if (!number_is_in_list (requested_lanes, lane))
+	return false;
+    }
+
+  return true;
+}
+
+/* Print one row in the "info lanes" table.  TP is the thread related
+   to the printed row.  LANE is the lane of the thread to be printed.
+   IS_CURRENT shows whether we print the current lane of the current
+   thread.  SHOW_GLOBAL_IDS indicates whther global IDs should be
+   shown.  */
+
+static void
+print_lane_row (ui_out *uiout, thread_info *tp,
+		int lane, bool is_current,
+		bool show_global_ids)
+{
+  ui_out_emit_tuple tuple_emitter (uiout, NULL);
+
+  if (!uiout->is_mi_like_p ())
+    {
+      if (is_current)
+	uiout->field_string ("current", "*");
+      else
+	uiout->field_skip ("current");
+
+      uiout->field_signed ("id", lane);
+    }
+
+  if (show_global_ids || uiout->is_mi_like_p ())
+    uiout->field_signed ("gid", tp->global_num); /* XXX */
+
+  uiout->field_string ("active",
+		       tp->is_simd_lane_active (lane) ? "Y" : "N");
+
+  /* For the CLI, we stuff everything into the target-id field.  This
+     is a gross hack to make the output come out looking correct.  The
+     underlying problem here is that ui-out has no way to specify that
+     a field's space allocation should be shared by several fields.
+     For MI, we do the right thing instead.  */
+
+  if (uiout->is_mi_like_p ())
+    {
+      uiout->field_string ("target-id", target_pid_to_str (tp->ptid));
+
+      const char *extra_info = target_extra_thread_info (tp);
+      if (extra_info != nullptr)
+	uiout->field_string ("details", extra_info);
+
+      const char *name = (tp->name != nullptr
+			  ? tp->name
+			  : target_thread_name (tp));
+      if (name != NULL)
+	uiout->field_string ("name", name);
+    }
+  else
+    {
+      uiout->field_string ("target-id",
+			   thread_target_id_str (tp).c_str ());
+    }
+
+  if (uiout->is_mi_like_p ())
+    {
+      if (tp->state == THREAD_RUNNING)
+	uiout->field_string ("state", "running");
+      else
+	uiout->field_string ("state", "stopped");
+    }
+
+  if (tp->state == THREAD_RUNNING)
+    uiout->text ("(running)\n");
+  else if (tp->is_simd_lane_active (lane))
+    {
+      print_stack_frame (get_selected_frame (NULL),
+			 /* For MI output, print frame level.  */
+			 uiout->is_mi_like_p (),
+			 LOCATION, 0);
+    }
+  else
+    {
+      /* Lanes in this row are inactive.  This can happen if the
+	 current thread enters a conditional branch or all lanes in
+	 the thread are inactive.  */
+      uiout->text ("(inactive)\n");
+    }
+}
+
+/* Like print_lane_info, but in addition, GLOBAL_IDS indicates whether
+   REQUESTED_LANES is a list of global or per-inferior lane ids.  */
+
+static void
+print_lane_info (struct ui_out *uiout, const char *requested_lanes,
+		 bool global_ids, bool show_global_ids)
+{
+  update_thread_list ();
+
+#if 0
+  /* Whether we saw any thread.  */
+  bool any_thread = false;
+#endif
+
+  thread_info *thr = (inferior_ptid != null_ptid
+		      ? inferior_thread () : nullptr);
+
+  if (thr == nullptr)
+    {
+      uiout->message (_("No thread selected.\n"));
+      return;
+    }
+
+  scoped_restore_current_simd_lane restore_lane (thr);
+
+  {
+    /* For backward compatibility, we make a list for MI.  A table is
+       preferable for the CLI, though, because it shows table
+       headers.  */
+    gdb::optional<ui_out_emit_list> list_emitter;
+    gdb::optional<ui_out_emit_table> table_emitter;
+
+    int n_lanes = 0;
+
+    /* The width of the "Target Id" column.  Grown below to
+       accommodate the largest entry.  */
+    size_t target_id_col_width = 17;
+
+    /* Ask the AMD_DBGAPI_WAVE_INFO_LANE_COUNT.  */
+
+    for (int lane = 0; lane < 64; ++lane)
+      {
+	if (!should_print_lane (requested_lanes, thr, lane))
+	  continue;
+
+	if (!uiout->is_mi_like_p ())
+	  {
+	    target_id_col_width
+	      = std::max (target_id_col_width,
+			  thread_target_id_str (thr).size ());
+	  }
+
+	++n_lanes;
+      }
+
+    if (n_lanes == 0)
+      {
+	if (requested_lanes == NULL || *requested_lanes == '\0')
+	  uiout->message (_("No lanes.\n"));
+	else
+	  uiout->message (_("No lanes match '%s'.\n"),
+			  requested_lanes);
+	return;
+      }
+
+    if (uiout->is_mi_like_p ())
+      list_emitter.emplace (uiout, "lanes");
+    else
+      {
+	table_emitter.emplace (uiout, show_global_ids ? 6 : 5,
+			       n_lanes, "lanes");
+
+	uiout->table_header (1, ui_left, "current", "");
+	uiout->table_header (12, ui_left, "id", "Id");
+	if (show_global_ids)
+	  uiout->table_header (4, ui_left, "gid", "GId");
+	uiout->table_header (target_id_col_width, ui_left,
+			     "active", "Active");
+	uiout->table_header (target_id_col_width, ui_left,
+			     "target-id", "Target Id");
+	uiout->table_header (1, ui_left, "frame", "Frame");
+	uiout->table_body ();
+      }
+
+    int selected_lane = thr->current_simd_lane ();
+
+    for (int lane = 0; lane < 64 /* XXX */; ++lane)
+      {
+	if (!should_print_lane (requested_lanes, thr, lane))
+	  continue;
+
+	thr->set_current_simd_lane (lane);
+
+	print_lane_row (uiout, thr, lane, lane == selected_lane,
+			show_global_ids);
+      }
+
+    /* This end scope restores the current lane and the frame selected
+       before the "info lanes" command, and it finishes the ui-out
+       list or table.  */
+  }
+
+#if 0
+  if (requested_lanes == NULL)
+    {
+      if (uiout->is_mi_like_p () && inferior_ptid != null_ptid)
+	uiout->field_signed ("current-lane-id", thr->current_simd_lane ());
+
+      if (inferior_ptid != null_ptid && current_exited)
+	uiout->message ("\n\
+The current thread <Thread ID %s> has terminated.  See `help thread'.\n",
+			print_thread_id (inferior_thread ()));
+      else if (any_thread && inferior_ptid == null_ptid)
+	uiout->message ("\n\
+No selected thread.  See `help thread'.\n");
+    }
+#endif
+}
+
+/* The options for the "info threads" command.  */
+
+struct info_lanes_opts
+{
+  /* For "-gid".  */
+  bool show_global_ids = false;
+};
+
+static const gdb::option::option_def info_lanes_option_defs[] = {
+
+  gdb::option::flag_option_def<info_lanes_opts> {
+    "gid",
+    [] (info_lanes_opts *opts) { return &opts->show_global_ids; },
+    N_("Show global lane IDs."),
+  },
+
+};
+
+/* Create an option_def_group for the "info threads" options, with
+   IT_OPTS as context.  */
+
+static inline gdb::option::option_def_group
+make_info_lanes_options_def_group (info_lanes_opts *opts)
+{
+  return {{info_lanes_option_defs}, opts};
+}
+
+/* Implementation of the "info lanes" command.  */
+
+static void
+info_lanes_command (const char *arg, int from_tty)
+{
+  info_lanes_opts opts;
+
+  auto grp = make_info_lanes_options_def_group (&opts);
+  gdb::option::process_options
+    (&arg, gdb::option::PROCESS_OPTIONS_UNKNOWN_IS_ERROR, grp);
+
+  print_lane_info (current_uiout, arg, false, opts.show_global_ids);
+}
+
+/* Completer for the "info threads" command.  */
+
+static void
+info_lanes_command_completer (struct cmd_list_element *ignore,
+			      completion_tracker &tracker,
+			      const char *text, const char *word_ignored)
+{
+  const auto grp = make_info_lanes_options_def_group (nullptr);
+
+  if (gdb::option::complete_options
+      (tracker, &text, gdb::option::PROCESS_OPTIONS_UNKNOWN_IS_ERROR, grp))
+    return;
+
+  /* Convenience to let the user know what the option can accept.  */
+  if (*text == '\0')
+    {
+      gdb::option::complete_on_all_options (tracker, grp);
+      /* Keep this "ID" in sync with what "help info lanes"
+	 says.  */
+      tracker.add_completion (make_unique_xstrdup ("ID"));
+    }
+}
+
 /* See gdbthread.h.  */
 
 void
@@ -2552,12 +2832,32 @@ Usage: info threads [OPTION]... [ID]...\n\
 \n\
 Options:\n\
 %OPTIONS%\
+\n\n\
 If ID is given, it is a space-separated list of IDs of threads to display.\n\
 Otherwise, all threads are displayed."),
 			       info_threads_opts);
 
   c = add_info ("threads", info_threads_command, info_threads_help.c_str ());
   set_cmd_completer_handle_brkchars (c, info_threads_command_completer);
+
+  const auto info_lanes_opts = make_info_lanes_options_def_group (nullptr);
+
+  /* Note: keep this "ID" in sync with what "info threads [TAB]"
+     suggests.  */
+  static std::string info_lanes_help
+    = gdb::option::build_help (_("\
+Display currently known lanes.\n\
+Usage: info lanes [OPTION]... [ID]...\n\
+\n\
+Options:\n\
+%OPTIONS%\
+\n\n\
+If ID is given, it is a space-separated list of IDs of lanes to display.\n\
+Otherwise, all lanes are displayed."),
+			       info_lanes_opts);
+
+  c = add_info ("lanes", info_lanes_command, info_lanes_help.c_str ());
+  set_cmd_completer_handle_brkchars (c, info_lanes_command_completer);
 
   add_prefix_cmd ("thread", class_run, thread_command, _("\
 Use this command to switch between threads.\n\
