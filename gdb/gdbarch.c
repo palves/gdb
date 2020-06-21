@@ -2330,7 +2330,7 @@ gdbarch_active_lanes_mask_p (struct gdbarch *gdbarch)
   return gdbarch->active_lanes_mask != NULL;
 }
 
-unsigned int
+simd_lanes_mask_t
 gdbarch_active_lanes_mask (struct gdbarch *gdbarch, thread_info *tp)
 {
   gdb_assert (gdbarch != NULL);

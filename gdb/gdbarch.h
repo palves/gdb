@@ -115,6 +115,9 @@ enum function_call_return_method
   return_method_struct,
 };
 
+/* "64-bits ought to be enough for anybody."  ;-) */
+typedef uint64_t simd_lanes_mask_t;
+
 
 
 /* The following are pre-initialized by GDBARCH.  */
@@ -405,8 +408,8 @@ extern void set_gdbarch_dummy_id (struct gdbarch *gdbarch, gdbarch_dummy_id_ftyp
 
 extern int gdbarch_active_lanes_mask_p (struct gdbarch *gdbarch);
 
-typedef unsigned int (gdbarch_active_lanes_mask_ftype) (struct gdbarch *gdbarch, thread_info *tp);
-extern unsigned int gdbarch_active_lanes_mask (struct gdbarch *gdbarch, thread_info *tp);
+typedef simd_lanes_mask_t (gdbarch_active_lanes_mask_ftype) (struct gdbarch *gdbarch, thread_info *tp);
+extern simd_lanes_mask_t gdbarch_active_lanes_mask (struct gdbarch *gdbarch, thread_info *tp);
 extern void set_gdbarch_active_lanes_mask (struct gdbarch *gdbarch, gdbarch_active_lanes_mask_ftype *active_lanes_mask);
 
 /* Implement DUMMY_ID and PUSH_DUMMY_CALL, then delete

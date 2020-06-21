@@ -30,6 +30,7 @@
 #include "gdbsupport/array-view.h"
 #include "gdbsupport/function-view.h"
 #include "cli/cli-script.h"
+#include "gdbarch.h"
 
 struct block;
 struct gdbpy_breakpoint_object;
@@ -1180,7 +1181,7 @@ struct bpstats
     enum bp_print_how print_it;
 
     /* Tell which SIMD lanes are hit the BP.  */
-    unsigned int simd_lane_mask;
+    simd_lanes_mask_t simd_lane_mask;
   };
 
 enum inf_context

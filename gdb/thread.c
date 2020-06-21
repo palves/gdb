@@ -95,7 +95,7 @@ thread_info::has_simd_lanes ()
 
 /* See gdbthread.h.  */
 
-unsigned int
+simd_lanes_mask_t
 thread_info::active_simd_lanes_mask ()
 {
   gdb_assert (this->inf != nullptr);
@@ -126,7 +126,7 @@ thread_info::current_simd_lane ()
       /* NOTE: This can silently change the selected lane.  */
       if (!is_simd_lane_active (lane))
 	{
-	  unsigned int active_mask = active_simd_lanes_mask ();
+	  simd_lanes_mask_t active_mask = active_simd_lanes_mask ();
 	  lane = find_first_active_simd_lane (active_mask);
 	  if (lane < 0)
 	    lane = 0;
@@ -150,14 +150,14 @@ thread_info::set_current_simd_lane (int lane)
 bool
 thread_info::is_simd_lane_active (int lane)
 {
-  unsigned int mask = active_simd_lanes_mask ();
+  simd_lanes_mask_t mask = active_simd_lanes_mask ();
   return (mask & (0x1 << lane)) != 0;
 }
 
 /* See gdbthread.h.  */
 
 int
-find_first_active_simd_lane (unsigned int mask)
+find_first_active_simd_lane (simd_lanes_mask_t mask)
 {
   int result = -1;
 
@@ -175,7 +175,7 @@ find_first_active_simd_lane (unsigned int mask)
 /* See gdbthread.h.  */
 
 bool
-is_simd_lane_active (unsigned int mask, int lane)
+is_simd_lane_active (simd_lanes_mask_t mask, int lane)
 {
   return ((mask >> lane) & 0x1) == 0x1;
 }
@@ -1153,7 +1153,8 @@ thread_target_id_str (thread_info *tp)
 
 static void
 print_thread_row (struct ui_out *uiout, thread_info *tp,
-		  bool is_active, bool is_current, unsigned int display_mask,
+		  bool is_active, bool is_current,
+		  simd_lanes_mask_t display_mask,
 		  int show_global_ids)
 {
   /* Vector of lanes to display in this row.  */
@@ -1359,8 +1360,8 @@ print_thread_info_1 (struct ui_out *uiout, const char *requested_threads,
 	  /* Switch to the thread (and inferior / target).  */
 	  switch_to_thread (tp);
 
-	  unsigned int active_lanes_mask = tp->active_simd_lanes_mask ();
-	  unsigned int selected_lane_mask = 0x0;
+	  simd_lanes_mask_t active_lanes_mask = tp->active_simd_lanes_mask ();
+	  simd_lanes_mask_t selected_lane_mask = 0x0;
 	  bool current = (tp == current_thread);
 
 	  if (active_lanes_mask != 0)
@@ -1369,7 +1370,7 @@ print_thread_info_1 (struct ui_out *uiout, const char *requested_threads,
 
 	      /* SIMD lanes, which we are going to display are non-zero
 		 in this mask.  */
-	      unsigned int active_lanes_to_display = active_lanes_mask;
+	      simd_lanes_mask_t active_lanes_to_display = active_lanes_mask;
 
 	      if (current)
 		{
@@ -1856,7 +1857,7 @@ thr_try_catch_cmd (thread_info *thr, const char *cmd, int from_tty,
   try
     {
       bool should_execute = true;
-      unsigned int active_lanes_mask = thr->active_simd_lanes_mask ();
+      simd_lanes_mask_t active_lanes_mask = thr->active_simd_lanes_mask ();
       scoped_restore_current_simd_lane restore_lane {thr};
 
       /* Try to execute the command for all lanes.  */

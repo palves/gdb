@@ -455,7 +455,7 @@ M;struct type *;register_type;int reg_nr;reg_nr
 m;struct frame_id;dummy_id;struct frame_info *this_frame;this_frame;;default_dummy_id;;0
 
 # Return the active SIMD lanes mask for a thread TP.
-M;unsigned int;active_lanes_mask;thread_info *tp;tp
+M;simd_lanes_mask_t;active_lanes_mask;thread_info *tp;tp
 
 # Implement DUMMY_ID and PUSH_DUMMY_CALL, then delete
 # deprecated_fp_regnum.
@@ -1358,6 +1358,9 @@ enum function_call_return_method
      structure return pointer would normally be passed in r8.  */
   return_method_struct,
 };
+
+/* "64-bits ought to be enough for anybody."  ;-) */
+typedef uint64_t simd_lanes_mask_t;
 
 EOF
 

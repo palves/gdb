@@ -6485,7 +6485,7 @@ process_event_stop_test (struct execution_control_state *ecs)
 
   if (ecs->event_thread->control.stop_bpstat != nullptr)
     {
-      unsigned int mask
+      simd_lanes_mask_t mask
 	= ecs->event_thread->control.stop_bpstat->simd_lane_mask;
 
       if (mask != 0x0)

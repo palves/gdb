@@ -410,10 +410,12 @@ amdgcn_skip_prologue (struct gdbarch *gdbarch, CORE_ADDR start_pc)
 }
 
 
-static unsigned int
+static simd_lanes_mask_t
 amdgcn_rocm_active_lanes_mask (struct gdbarch *gdbarch, thread_info *tp)
 {
   /* Check that the wave_id is valid.  */
+
+  gdb_static_assert (sizeof (simd_lanes_mask_t) >= sizeof (uint64_t));
 
   uint64_t exec_mask;
   if (amd_dbgapi_wave_get_info

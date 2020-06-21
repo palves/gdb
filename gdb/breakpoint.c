@@ -4388,9 +4388,9 @@ bpstat_do_actions_1 (bpstat *bsp)
 	  cmd = cmd->next;
 	}
 
-      unsigned int execution_mask = thread->has_simd_lanes ()
-	? bs->simd_lane_mask
-	: 0x1;
+      simd_lanes_mask_t execution_mask = (thread->has_simd_lanes ()
+					  ? bs->simd_lane_mask
+					  : 0x1);
 
       while (cmd != NULL)
 	{
@@ -5186,7 +5186,7 @@ bpstat_check_breakpoint_conditions (bpstat bs, thread_info *thread)
       return;
     }
 
-  unsigned int lanes_mask = thread->active_simd_lanes_mask ();
+  simd_lanes_mask_t lanes_mask = thread->active_simd_lanes_mask ();
 
   if (b->thread != -1
       && b->thread == thread->global_num
@@ -5279,7 +5279,7 @@ bpstat_check_breakpoint_conditions (bpstat bs, thread_info *thread)
 	  try
 	    {
 	      scoped_restore_current_simd_lane restore_lane {thread};
-	      unsigned int condition_mask = 0x0;
+	      simd_lanes_mask_t condition_mask = 0x0;
 
 	      /* Evaluate the condition for all SIMD lanes which might have
 		 caused the stop.  */

@@ -129,7 +129,7 @@ parse_thread_id (const char *tidstr, const char **end, int *simd_lane_num)
       p1 = dot + 1;
       lane_num = get_positive_number_trailer (&p1, 0, number);
 
-      if (lane_num >= (sizeof (unsigned int)) * 8)
+      if (lane_num >= (sizeof (simd_lanes_mask_t)) * 8)
 	error (_("Incorrect SIMD lane number: %d."), lane_num);
 
       if (simd_lane_num != nullptr)

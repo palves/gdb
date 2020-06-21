@@ -27,6 +27,7 @@ struct symtab;
 #include "frame.h"
 #include "ui-out.h"
 #include "btrace.h"
+#include "gdbarch.h"
 #include "target/waitstatus.h"
 #include "cli/cli-utils.h"
 #include "gdbsupport/refcounted-object.h"
@@ -450,7 +451,7 @@ public:
   bool has_simd_lanes ();
 
   /* Return active lanes mask for this thread.  */
-  unsigned int active_simd_lanes_mask ();
+  simd_lanes_mask_t active_simd_lanes_mask ();
 
   /* Return the current simd lane.  */
   int current_simd_lane ();
@@ -869,10 +870,10 @@ extern void thread_select (const char *tidstr, class thread_info *thr,
                            int simd_lane_num = -1);
 
 /* Return the number of the first active lane in MASK or -1 if MASK is 0x0.  */
-extern int find_first_active_simd_lane (unsigned int mask);
+extern int find_first_active_simd_lane (simd_lanes_mask_t mask);
 
 /* Return true, if LANE is unmasked in MASK.  */
-extern bool is_simd_lane_active (unsigned int mask, int lane);
+extern bool is_simd_lane_active (simd_lanes_mask_t mask, int lane);
 
 /* Execute function FUNC for all unmasked lanes in MASK. FUNC should
    match the following:
@@ -883,7 +884,7 @@ extern bool is_simd_lane_active (unsigned int mask, int lane);
    to the current call.  If FUNC returns false, the loop breaks.  */
 template<typename Func, typename... Args>
 void
-for_active_lanes (unsigned int mask, Func func, Args &...args)
+for_active_lanes (simd_lanes_mask_t mask, Func func, Args &...args)
 {
   int lane = 0;
 
