@@ -2653,6 +2653,71 @@ thread_command (const char *tidstr, int from_tty)
     }
 }
 
+/* Switch to the specified lane, or print the current lane.  */
+
+static void
+lane_command (const char *tidstr, int from_tty)
+{
+  if (tidstr == NULL)
+    {
+      if (inferior_ptid == null_ptid)
+	error (_("No thread selected"));
+
+      if (target_has_stack)
+	{
+	  struct thread_info *tp = inferior_thread ();
+	  std::string lane_info;
+	  std::vector<int> lanes;
+
+	  int lane;
+	  if (tp->has_simd_lanes ())
+	    {
+	      lane = tp->current_simd_lane ();
+	      lane_info = " lane " + std::to_string (lane);
+	      lanes.push_back (lane);
+	    }
+	  else
+	    lane = 0;
+
+	  if (tp->state == THREAD_EXITED)
+	    printf_filtered (_("[Current lane is %d (%s%s) (exited)]\n"),
+			     lane,
+			     target_pid_to_str (inferior_ptid).c_str (),
+			     lane_info.c_str ());
+	  else
+	    printf_filtered (_("[Current lane is %d (%s%s)]\n"),
+			     lane,
+			     target_pid_to_str (inferior_ptid).c_str (),
+			     lane_info.c_str ());
+	}
+      else
+	error (_("No stack."));
+    }
+  else
+    {
+      int prev_lane = inferior_thread ()->current_simd_lane ();
+
+      int lane = parse_and_eval_long (tidstr);
+      /// XXX check if valid.
+
+      /* Print if the lane has not changed, otherwise an event will be
+	 sent.  */
+      if (prev_lane == lane)
+	{
+	  print_selected_thread_frame (current_uiout,
+				       USER_SELECTED_THREAD
+				       | USER_SELECTED_FRAME);
+	}
+      else
+	{
+	  inferior_thread ()->set_current_simd_lane (lane);
+
+	  gdb::observers::user_selected_context_changed.notify
+	    (USER_SELECTED_THREAD | USER_SELECTED_FRAME);
+	}
+    }
+}
+
 /* Implementation of `thread name'.  */
 
 static void
@@ -2979,6 +3044,11 @@ Otherwise, all lanes are displayed."),
 
   c = add_info ("lanes", info_lanes_command, info_lanes_help.c_str ());
   set_cmd_completer_handle_brkchars (c, info_lanes_command_completer);
+
+  add_prefix_cmd ("lane", class_run, lane_command, _("\
+Use this command to switch between lanes.\n\
+The new lane ID must be currently known."),
+		  &lane_cmd_list, "lane ", 1, &cmdlist);
 
   add_prefix_cmd ("thread", class_run, thread_command, _("\
 Use this command to switch between threads.\n\
