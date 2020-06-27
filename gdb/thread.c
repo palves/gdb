@@ -1643,9 +1643,10 @@ print_lane_info (struct ui_out *uiout, const char *requested_lanes,
        accommodate the largest entry.  */
     size_t target_id_col_width = 17;
 
-    /* Ask the AMD_DBGAPI_WAVE_INFO_LANE_COUNT.  */
+    gdbarch *arch = target_thread_architecture (thr->ptid);
+    int lane_count = gdbarch_supported_lanes_count (arch, thr);
 
-    for (int lane = 0; lane < 64; ++lane)
+    for (int lane = 0; lane < lane_count; ++lane)
       {
 	if (!should_print_lane (requested_lanes, thr, lane))
 	  continue;
@@ -1691,7 +1692,7 @@ print_lane_info (struct ui_out *uiout, const char *requested_lanes,
 
     int selected_lane = thr->current_simd_lane ();
 
-    for (int lane = 0; lane < 64 /* XXX */; ++lane)
+    for (int lane = 0; lane < lane_count; ++lane)
       {
 	if (!should_print_lane (requested_lanes, thr, lane))
 	  continue;

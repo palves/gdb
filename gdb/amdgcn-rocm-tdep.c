@@ -409,23 +409,41 @@ amdgcn_skip_prologue (struct gdbarch *gdbarch, CORE_ADDR start_pc)
   return start_pc;
 }
 
+/* Convenience wrapper around amd_dbgapi_wave_get_info.  */
+
+template<typename Res>
+static amd_dbgapi_status_t
+wave_get_info (thread_info *tp, amd_dbgapi_wave_info_t query, Res *res)
+{
+  return (amd_dbgapi_wave_get_info
+	  (get_amd_dbgapi_process_id (tp->inf),
+	   get_amd_dbgapi_wave_id (tp->ptid),
+	   query,
+	   sizeof (*res), res));
+}
 
 static simd_lanes_mask_t
 amdgcn_rocm_active_lanes_mask (struct gdbarch *gdbarch, thread_info *tp)
 {
-  /* Check that the wave_id is valid.  */
-
   gdb_static_assert (sizeof (simd_lanes_mask_t) >= sizeof (uint64_t));
 
   uint64_t exec_mask;
-  if (amd_dbgapi_wave_get_info
-      (get_amd_dbgapi_process_id (tp->inf), get_amd_dbgapi_wave_id (tp->ptid),
-       AMD_DBGAPI_WAVE_INFO_EXEC_MASK,
-       sizeof (exec_mask), &exec_mask)
+  if (wave_get_info (tp, AMD_DBGAPI_WAVE_INFO_EXEC_MASK, &exec_mask)
       != AMD_DBGAPI_STATUS_SUCCESS)
     return 0;
 
   return exec_mask;
+}
+
+static int
+amdgcn_rocm_supported_lanes_count (struct gdbarch *gdbarch, thread_info *tp)
+{
+  amd_dbgapi_lane_id_t count;
+  if (wave_get_info (tp, AMD_DBGAPI_WAVE_INFO_LANE_COUNT, &count)
+      != AMD_DBGAPI_STATUS_SUCCESS)
+    return 0;
+
+  return count;
 }
 
 static struct gdbarch *
@@ -597,6 +615,7 @@ amdgcn_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 
   /* Lane debugging.  */
   set_gdbarch_active_lanes_mask (gdbarch, amdgcn_rocm_active_lanes_mask);
+  set_gdbarch_supported_lanes_count (gdbarch, amdgcn_rocm_supported_lanes_count);
 
   if (amd_dbgapi_architecture_get_info (
           architecture_id,

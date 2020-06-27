@@ -204,6 +204,7 @@ struct gdbarch
   gdbarch_register_type_ftype *register_type;
   gdbarch_dummy_id_ftype *dummy_id;
   gdbarch_active_lanes_mask_ftype *active_lanes_mask;
+  gdbarch_supported_lanes_count_ftype *supported_lanes_count;
   int deprecated_fp_regnum;
   gdbarch_push_dummy_call_ftype *push_dummy_call;
   int call_dummy_location;
@@ -571,6 +572,7 @@ verify_gdbarch (struct gdbarch *gdbarch)
   /* Skip verify of register_type, has predicate.  */
   /* Skip verify of dummy_id, invalid_p == 0 */
   /* Skip verify of active_lanes_mask, has predicate.  */
+  /* Skip verify of supported_lanes_count, has predicate.  */
   /* Skip verify of deprecated_fp_regnum, invalid_p == 0 */
   /* Skip verify of push_dummy_call, has predicate.  */
   /* Skip verify of call_dummy_location, invalid_p == 0 */
@@ -1450,6 +1452,12 @@ gdbarch_dump (struct gdbarch *gdbarch, struct ui_file *file)
   fprintf_unfiltered (file,
                       "gdbarch_dump: static_transform_name = <%s>\n",
                       host_address_to_string (gdbarch->static_transform_name));
+  fprintf_unfiltered (file,
+                      "gdbarch_dump: gdbarch_supported_lanes_count_p() = %d\n",
+                      gdbarch_supported_lanes_count_p (gdbarch));
+  fprintf_unfiltered (file,
+                      "gdbarch_dump: supported_lanes_count = <%s>\n",
+                      host_address_to_string (gdbarch->supported_lanes_count));
   fprintf_unfiltered (file,
                       "gdbarch_dump: sw_breakpoint_from_kind = <%s>\n",
                       host_address_to_string (gdbarch->sw_breakpoint_from_kind));
@@ -2345,6 +2353,30 @@ set_gdbarch_active_lanes_mask (struct gdbarch *gdbarch,
                                gdbarch_active_lanes_mask_ftype active_lanes_mask)
 {
   gdbarch->active_lanes_mask = active_lanes_mask;
+}
+
+int
+gdbarch_supported_lanes_count_p (struct gdbarch *gdbarch)
+{
+  gdb_assert (gdbarch != NULL);
+  return gdbarch->supported_lanes_count != NULL;
+}
+
+int
+gdbarch_supported_lanes_count (struct gdbarch *gdbarch, thread_info *tp)
+{
+  gdb_assert (gdbarch != NULL);
+  gdb_assert (gdbarch->supported_lanes_count != NULL);
+  if (gdbarch_debug >= 2)
+    fprintf_unfiltered (gdb_stdlog, "gdbarch_supported_lanes_count called\n");
+  return gdbarch->supported_lanes_count (gdbarch, tp);
+}
+
+void
+set_gdbarch_supported_lanes_count (struct gdbarch *gdbarch,
+                                   gdbarch_supported_lanes_count_ftype supported_lanes_count)
+{
+  gdbarch->supported_lanes_count = supported_lanes_count;
 }
 
 int
