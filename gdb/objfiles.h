@@ -697,6 +697,14 @@ public:
      store these here rather than in struct block.  Static links must be
      allocated on the objfile's obstack.  */
   htab_up static_links;
+
+  /* Associate a DW_AT_LLVM_lane_pc expression to all functions that
+     have one.  */
+  htab_up lane_pcs;
+
+  /* Associate a DW_AT_LLVM_active_lane location to all functions that
+     have one.  */
+  htab_up active_lanes;
 };
 
 /* A deleter for objfile.  */
@@ -833,5 +841,21 @@ extern void objfile_register_static_link
 
 extern const struct dynamic_prop *objfile_lookup_static_link
   (struct objfile *objfile, const struct block *block);
+
+extern void objfile_register_lane_pc
+  (struct objfile *objfile,
+   const struct block *function,
+   const struct dynamic_prop *lane_pc);
+
+extern const dynamic_prop *objfile_lookup_lane_pc
+  (struct objfile *objfile, const block *function);
+
+extern void objfile_register_active_lane
+  (struct objfile *objfile,
+   const struct block *function,
+   const struct dynamic_prop *active_lane);
+
+extern const dynamic_prop *objfile_lookup_active_lane
+  (struct objfile *objfile, const block *function);
 
 #endif /* !defined (OBJFILES_H) */

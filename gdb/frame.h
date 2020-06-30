@@ -755,6 +755,9 @@ extern const struct block *get_selected_block (CORE_ADDR *addr_in_block);
 
 extern struct symbol *get_frame_function (struct frame_info *);
 
+/* Return the block for the function executing in frame FRAME.  */
+extern const struct block *get_frame_function_block (struct frame_info *frame);
+
 extern CORE_ADDR get_pc_function_start (CORE_ADDR);
 
 extern struct frame_info *find_relative_frame (struct frame_info *, int *);

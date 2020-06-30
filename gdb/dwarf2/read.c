@@ -13215,6 +13215,32 @@ read_func_scope (struct die_info *die, struct dwarf2_cu *cu)
 			    cu->addr_type ());
     }
 
+  /* Obviously a hack.  XXX */
+#define DW_AT_LLVM_lane_pc 1
+#define DW_AT_LLVM_active_lane 2
+
+  /* If there's a conceptual program location expression, record
+     it.  */
+  attr = dwarf2_attr (die, DW_AT_LLVM_active_lane, cu);
+  if (attr != nullptr)
+    {
+      newobj->active_lane
+	= XOBNEW (&objfile->objfile_obstack, struct dynamic_prop);
+      attr_to_dynamic_prop (attr, die, cu, newobj->active_lane,
+			    cu->addr_type ());
+    }
+
+  /* If there's a conceptual program location expression, record
+     it.  */
+  attr = dwarf2_attr (die, DW_AT_LLVM_lane_pc, cu);
+  if (attr != nullptr)
+    {
+      newobj->lane_pc
+	= XOBNEW (&objfile->objfile_obstack, struct dynamic_prop);
+      attr_to_dynamic_prop (attr, die, cu, newobj->lane_pc,
+			    cu->addr_type ());
+    }
+
   cu->list_in_scope = cu->get_builder ()->get_local_symbols ();
 
   if (die->child != NULL)
@@ -13281,6 +13307,11 @@ read_func_scope (struct die_info *die, struct dwarf2_cu *cu)
   dwarf2_record_block_ranges (die, block, baseaddr, cu);
 
   gdbarch_make_symbol_special (gdbarch, cstk.name, objfile);
+
+  if (cstk.lane_pc != nullptr)
+    objfile_register_lane_pc (objfile, block, cstk.lane_pc);
+  if (cstk.active_lane != nullptr)
+    objfile_register_active_lane (objfile, block, cstk.active_lane);
 
   /* Attach template arguments to function.  */
   if (!template_args.empty ())
@@ -17604,7 +17635,7 @@ read_base_type (struct die_info *die, struct dwarf2_cu *cu)
 }
 
 /* Parse dwarf attribute if it's a block, reference or constant and put the
-   resulting value of the attribute into struct bound_prop.
+   resulting value of the attribute into struct dynamic_prop.
    Returns 1 if ATTR could be resolved into PROP, 0 otherwise.  */
 
 static int

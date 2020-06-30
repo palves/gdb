@@ -97,6 +97,14 @@ struct context_stack
 
     struct dynamic_prop *static_link;
 
+    /* Expression that computes the lane pc of the lexically enclosing
+       function, if any.  NULL otherwise.  */
+    dynamic_prop *lane_pc = nullptr;
+
+    /* Expression that computes the active lane mask of the lexically
+       enclosing function, if any.  NULL otherwise.  */
+    dynamic_prop *active_lane = nullptr;
+
     /* PC where this context starts */
 
     CORE_ADDR start_addr;

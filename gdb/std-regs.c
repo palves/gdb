@@ -25,6 +25,9 @@
 #include "gdbtypes.h"
 #include "value.h"
 #include "gdbarch.h"
+#include "block.h"
+#include "objfiles.h"
+#include "dwarf2/loc.h"
 
 static struct value *
 value_of_builtin_frame_fp_reg (struct frame_info *frame, const void *baton)
@@ -91,6 +94,37 @@ value_of_builtin_frame_ps_reg (struct frame_info *frame, const void *baton)
   error (_("Standard register ``$ps'' is not available for this target"));
 }
 
+static struct value *
+value_of_builtin_frame_lane_pc_reg (struct frame_info *frame,
+				    const void *baton)
+{
+  struct gdbarch *gdbarch = get_frame_arch (frame);
+
+  const block *func = get_frame_function_block (frame);
+  if (func != nullptr)
+    {
+      objfile *objf = block_objfile (func);
+      const dynamic_prop *prop = objfile_lookup_lane_pc (objf, func);
+      if (prop != nullptr)
+	{
+	  CORE_ADDR lane_pc;
+	  if (dwarf2_evaluate_property (prop, frame, NULL, &lane_pc))
+	    {
+	      struct type *func_ptr_type
+		= builtin_type (gdbarch)->builtin_func_ptr;
+	      struct value *val = allocate_value (func_ptr_type);
+	      gdb_byte *buf = value_contents_raw (val);
+
+	      gdbarch_address_to_pointer (gdbarch, func_ptr_type,
+					  buf, lane_pc);
+	      return val;
+	    }
+	}
+    }
+
+  return value_of_builtin_frame_pc_reg (frame, baton);
+}
+
 void _initialize_frame_reg ();
 void
 _initialize_frame_reg ()
@@ -102,4 +136,16 @@ _initialize_frame_reg ()
   user_reg_add_builtin ("pc", value_of_builtin_frame_pc_reg, NULL);
   user_reg_add_builtin ("sp", value_of_builtin_frame_sp_reg, NULL);
   user_reg_add_builtin ("ps", value_of_builtin_frame_ps_reg, NULL);
+
+  /* Frame based $lane_pc, $active_lane.  These come into play with
+     SIMD/SIMT lane debugging.  */
+
+  /* The lane's contextual PC.  If the thread does not have lanes, or
+     if the lane is active, then this returns $pc.  */
+  user_reg_add_builtin ("lane_pc", value_of_builtin_frame_lane_pc_reg, NULL);
+
+#if 0
+  /* The lane's active lane execution mask.  */
+  user_reg_add_builtin ("active_lane", value_of_builtin_frame_active_lane_reg, NULL);
+#endif
 }
