@@ -44,6 +44,7 @@
 #include "hashtab.h"
 #include "valprint.h"
 #include "cli/cli-option.h"
+#include "dwarf2/loc.h"
 
 /* The sentinel frame terminates the innermost end of the frame chain.
    If unwound, it returns the information needed to construct an
@@ -1705,6 +1706,31 @@ has_stack_frames (void)
   return 1;
 }
 
+bool
+is_inactive_frame (frame_info *frame)
+{
+  value *pc = get_frame_lane_pc_val (frame);
+  return (pc != nullptr && value_optimized_out (pc));
+}
+
+static frame_info *
+skip_inactive_frames (frame_info *frame)
+{
+  while (frame != nullptr && is_inactive_frame (frame))
+    frame = get_prev_frame (frame);
+  return frame;
+}
+
+frame_info *
+get_current_active_frame ()
+{
+  frame_info *curr = get_current_frame ();
+  frame_info *frame = skip_inactive_frames (curr);
+  if (frame != nullptr)
+    return frame;
+  return curr;
+}
+
 /* Return the selected frame.  Always non-NULL (unless there isn't an
    inferior sufficient for creating a frame) in which case an error is
    thrown.  */
@@ -1719,7 +1745,7 @@ get_selected_frame (const char *message)
       /* Hey!  Don't trust this.  It should really be re-finding the
 	 last selected frame of the currently selected thread.  This,
 	 though, is better than nothing.  */
-      select_frame (get_current_frame ());
+      select_frame (get_current_active_frame ());
     }
   /* There is always a frame.  */
   gdb_assert (selected_frame != NULL);
@@ -1849,6 +1875,15 @@ get_next_frame (struct frame_info *this_frame)
     return this_frame->next;
   else
     return NULL;
+}
+
+struct frame_info *
+get_next_active_frame (struct frame_info *this_frame)
+{
+  frame_info *frame = get_next_frame (this_frame);
+  while (frame != nullptr && is_inactive_frame (frame))
+    frame = get_next_frame (frame);
+  return frame;
 }
 
 /* Return the frame that THIS_FRAME calls.  If THIS_FRAME is the
@@ -2418,6 +2453,15 @@ get_prev_frame (struct frame_info *this_frame)
   return get_prev_frame_always (this_frame);
 }
 
+struct frame_info *
+get_prev_active_frame (struct frame_info *this_frame)
+{
+  frame_info *frame = get_prev_frame (this_frame);
+  while (frame != nullptr && is_inactive_frame (frame))
+    frame = get_prev_frame (frame);
+  return frame;
+}
+
 struct frame_id
 get_prev_frame_id_by_id (struct frame_id id)
 {
@@ -2460,6 +2504,39 @@ get_frame_pc_if_available (struct frame_info *frame, CORE_ADDR *pc)
     }
 
   return 1;
+}
+
+value *
+get_frame_lane_pc_val (struct frame_info *frame)
+{
+  const block *func = get_frame_function_block (frame);
+  if (func != nullptr)
+    {
+      objfile *objf = block_objfile (func);
+      const dynamic_prop *prop = objfile_lookup_lane_pc (objf, func);
+      if (prop != nullptr)
+	{
+	  struct gdbarch *gdbarch = get_frame_arch (frame);
+
+	  CORE_ADDR lane_pc;
+	  if (dwarf2_evaluate_property (prop, frame, NULL, &lane_pc))
+	    {
+	      struct type *func_ptr_type
+		= builtin_type (gdbarch)->builtin_func_ptr;
+	      struct value *val = allocate_value (func_ptr_type);
+	      gdb_byte *buf = value_contents_raw (val);
+
+	      gdbarch_address_to_pointer (gdbarch, func_ptr_type,
+					  buf, lane_pc);
+	      return val;
+	    }
+
+	  return (allocate_optimized_out_value
+		  (builtin_type (gdbarch)->builtin_void));
+	}
+    }
+
+  return nullptr;
 }
 
 /* Return an address that falls within THIS_FRAME's code block.  */

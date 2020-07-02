@@ -1882,7 +1882,7 @@ restore_selected_frame (struct frame_id a_frame_id, int frame_level)
 
   /* Nothing else to do, the frame layout really changed.  Select the
      innermost stack frame.  */
-  select_frame (get_current_frame ());
+  select_frame (get_current_active_frame ());
 
   /* Warn the user.  */
   if (frame_level > 0 && !current_uiout->is_mi_like_p ())

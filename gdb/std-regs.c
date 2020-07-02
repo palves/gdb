@@ -98,30 +98,9 @@ static struct value *
 value_of_builtin_frame_lane_pc_reg (struct frame_info *frame,
 				    const void *baton)
 {
-  struct gdbarch *gdbarch = get_frame_arch (frame);
-
-  const block *func = get_frame_function_block (frame);
-  if (func != nullptr)
-    {
-      objfile *objf = block_objfile (func);
-      const dynamic_prop *prop = objfile_lookup_lane_pc (objf, func);
-      if (prop != nullptr)
-	{
-	  CORE_ADDR lane_pc;
-	  if (dwarf2_evaluate_property (prop, frame, NULL, &lane_pc))
-	    {
-	      struct type *func_ptr_type
-		= builtin_type (gdbarch)->builtin_func_ptr;
-	      struct value *val = allocate_value (func_ptr_type);
-	      gdb_byte *buf = value_contents_raw (val);
-
-	      gdbarch_address_to_pointer (gdbarch, func_ptr_type,
-					  buf, lane_pc);
-	      return val;
-	    }
-	}
-    }
-
+  value *pc = get_frame_lane_pc_val (frame);
+  if (pc != nullptr && !value_optimized_out (pc))
+    return pc;
   return value_of_builtin_frame_pc_reg (frame, baton);
 }
 

@@ -306,6 +306,12 @@ enum frame_type
    error.  */
 extern struct frame_info *get_current_frame (void);
 
+/* Like get_current_frame, but when focused on a SIMD lane, skips
+   frames where the lane was not active.  */
+extern frame_info *get_current_active_frame ();
+
+extern bool is_inactive_frame (frame_info *frame);
+
 /* Does the current target interface have enough state to be able to
    query the current inferior for frame info, and is the inferior in a
    state where that is possible?  */
@@ -343,6 +349,11 @@ extern void select_frame (struct frame_info *);
 extern struct frame_info *get_prev_frame (struct frame_info *);
 extern struct frame_info *get_next_frame (struct frame_info *);
 
+/* Like get_prev_frame and get_next_frame, but when focused on a SIMD
+   lane, skip frames where the lane was inactive.  */
+extern frame_info *get_prev_active_frame (frame_info *);
+extern frame_info *get_next_active_frame (frame_info *);
+
 /* Like get_next_frame(), but allows return of the sentinel frame.  NULL
    is never returned.  */
 extern struct frame_info *get_next_frame_sentinel_okay (struct frame_info *);
@@ -375,6 +386,12 @@ extern CORE_ADDR get_frame_pc (struct frame_info *);
 
 extern int get_frame_pc_if_available (struct frame_info *frame,
 				      CORE_ADDR *pc);
+
+/* When not debugging a SIMD lane, returns NULL.  When debugging a
+   SIMD lane, this returns the lane's conceptual source PC.  For an
+   inactive divergent lane, returns an optimized out value if the
+   divergence happened in an earlier frame.  */
+extern value *get_frame_lane_pc_val (struct frame_info *frame);
 
 /* An address (not necessarily aligned to an instruction boundary)
    that falls within THIS frame's code block.
@@ -760,7 +777,8 @@ extern const struct block *get_frame_function_block (struct frame_info *frame);
 
 extern CORE_ADDR get_pc_function_start (CORE_ADDR);
 
-extern struct frame_info *find_relative_frame (struct frame_info *, int *);
+extern struct frame_info *find_relative_frame
+  (struct frame_info *, int *, bool skip_inactive_frames = false);
 
 /* Wrapper over print_stack_frame modifying current_uiout with UIOUT for
    the function call.  */
