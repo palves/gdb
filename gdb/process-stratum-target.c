@@ -84,6 +84,16 @@ process_stratum_target::has_execution (inferior *inf)
   return inf->pid != 0;
 }
 
+bool
+process_stratum_target::has_events ()
+{
+  /* In target-sync mode, as soon as we have resumed threads, we want
+     infrun to call us so we can block in the wait method.  It's
+     possible though that there are other targets, so only do this if
+     infrun actually resumed some of our threads.  */
+  return this->threads_executing;
+}
+
 /* See process-stratum-target.h.  */
 
 std::set<process_stratum_target *>
