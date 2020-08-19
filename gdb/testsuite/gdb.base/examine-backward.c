@@ -92,6 +92,9 @@ const int TestStringsW[] = {
 int
 main (void)
 {
+  /* Clang++ eliminates the variables if nothing references them.  */
+  int dummy = Barrier[0] + TestStrings[0] + TestStringsH[0] + TestStringsW[0];
+
   /* Backward disassemble test requires at least 20 instructions in
      this function.  Adding a simple bubble sort.  */
   int i, j;
