@@ -562,6 +562,9 @@ elf_object_p (bfd *abfd)
   elf_debug_file (i_ehdrp);
 #endif
 
+  if (elf_elfheader (abfd)->e_ident[EI_OSABI] == 0)
+    elf_elfheader (abfd)->e_ident[EI_OSABI] = ELFOSABI_AMDGPU_HSA;
+
   /* Reject ET_CORE (header indicates core file, not object file) */
   if (i_ehdrp->e_type == ET_CORE)
     goto got_wrong_format_error;
