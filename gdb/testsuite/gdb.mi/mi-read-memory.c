@@ -13,8 +13,15 @@ initialize (void)
     }
 }
 
+static void
+initialize_done (void)
+{
+}
+
 int
 main ()
 {
   initialize ();
+  initialize_done ();
+  return 0;
 }

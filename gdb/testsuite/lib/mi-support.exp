@@ -1012,6 +1012,28 @@ proc mi_run_with_cli {args} {
     return [eval mi_run_cmd_full 0 $args]
 }
 
+
+# Just like clean_restart but works with the MI interface.
+
+proc mi_clean_restart { executable } {
+    global srcdir
+    global subdir
+    global srcfile
+
+    mi_gdb_exit
+
+    mi_gdb_start
+
+    mi_gdb_reinitialize_dir $srcdir/$subdir
+
+    if {$executable != ""} {
+	set binfile [standard_output_file ${executable}]
+	return [mi_gdb_load ${binfile}]
+    }
+
+    return 0
+}
+
 #
 # Just like run-to-main but works with the MI interface
 #
