@@ -31,8 +31,13 @@ enum { MAX_BYTES = 16 };
 void
 pack (unsigned char b[MAX_BYTES], int size, int nr)
 {
-  static long long val[] = { 0x123456789abcdefLL, 01234567123456701234567LL, 12345678901234567890ULL};
-  volatile static int e = 1;
+  /* Made const to address:
+       error: within a __host__ __device__ function, only __shared__
+       variables or const variables without device memory qualifier
+       may be marked 'static'.
+  */
+  static const long long val[] = { 0x123456789abcdefLL, 01234567123456701234567LL, 12345678901234567890ULL};
+  static const int e = 1;
   int i;
   for (i = 0; i < nr; i++)
     {
@@ -41,7 +46,7 @@ pack (unsigned char b[MAX_BYTES], int size, int nr)
 	/* Little endian.  */
 	offset = sizeof (long long) - size;
       else
-	/* Big endian endian.  */
+	/* Big endian.  */
 	offset = 0;
       memcpy (b + size * i, (char *) val + sizeof (long long) * i + offset, size);
     }
