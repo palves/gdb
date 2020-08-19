@@ -95,6 +95,13 @@ proc skip_opencl_tests {} {
     return 1
 }
 
+# So we can override skip_trace_tests.
+load_lib "trace-support.exp"
+
+proc skip_trace_tests {} {
+    return 1
+}
+
 # So we can override skip_hipcc_tests.
 load_lib rocm.exp
 

@@ -18,6 +18,9 @@
 # Support procedures for trace testing
 #
 
+proc skip_trace_tests {} {
+    return 0
+}
 
 #
 # Program counter / stack pointer / frame pointer for supported targets.
