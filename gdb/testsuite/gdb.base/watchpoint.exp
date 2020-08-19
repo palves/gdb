@@ -604,9 +604,9 @@ proc test_watch_location {} {
     gdb_continue_to_breakpoint "func5 breakpoint here"
 
     # Check first if a null pointer can be dereferenced on the target.
-    gdb_test_multiple "p *nullptr" "" {
+    gdb_test_multiple "p *null_ptr" "" {
 	-re "Cannot access memory at address 0x0.*$gdb_prompt $" {
-	    gdb_test "watch -location nullptr->p->x" \
+	    gdb_test "watch -location null_ptr->p->x" \
 		"Cannot access memory at address 0x0"
 	}
 	-re ".*$gdb_prompt $" {
@@ -948,7 +948,8 @@ proc do_tests {} {
     # elsewhere.
     # On sparc-sun-sunos4.1.3, GDB was running all the way to the marker4 
     # breakpoint before stopping for the watchpoint.  I don't know why.
-    if {[istarget "hppa*-*-*"]} then {
+    if {[istarget "hppa*-*-*"]
+	&& !istarget "amdgcn-amd-amdhsa"} {
 	test_watchpoint_triggered_in_syscall
     }
 

@@ -30,7 +30,14 @@ int ival2 = -1;
 int ival3 = -1;
 int ival4 = -1;
 int ival5 = -1;
-char buf[30] = "testtesttesttesttesttesttestte";
+
+char buf[30] = {
+  't', 'e', 's', 't', 't', 'e', 's', 't',
+  't', 'e', 's', 't', 't', 'e', 's', 't',
+  't', 'e', 's', 't', 't', 'e', 's', 't',
+  't', 'e', 's', 't', 't', 'e'
+};
+
 struct foo
 {
   int val;
@@ -59,7 +66,7 @@ struct foo5
   struct { int x; } *p;
 };
 
-struct foo5 *nullptr;
+struct foo5 *null_ptr;
 
 void marker1 ()
 {
@@ -187,9 +194,11 @@ int main ()
   marker2 ();
   if (doread)
     {
+#ifndef __AMDGPU__
       static char msg[] = "type stuff for buf now:";
       write (1, msg, sizeof (msg) - 1);
       read (0, &buf[0], 5);
+#endif
     }
   marker4 ();
 
