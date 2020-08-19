@@ -86,7 +86,7 @@ gdb_test_multiple "cont" "continue to marker1" {
 	fail "continue to marker1 (demangling)"
     }
 }
-gdb_test "up" " in main .*" "up from marker1"
+gdb_test "up" " in [main_name].* .*" "up from marker1"
 
 # As of Feb 1999, GCC does not issue info about volatility of vars, so
 # these tests are all expected to fail if GCC is the compiler. -sts

@@ -630,13 +630,18 @@ proc runto { function args } {
     return 1
 }
 
+# The main() function's name.  Overridden by some board files.
+proc main_name {} {
+    return "main"
+}
+
 # Ask gdb to run until we hit a breakpoint at main.
 #
 # N.B. This function deletes all existing breakpoints.
 # If you don't want that, use gdb_start_cmd.
 
 proc runto_main { } {
-    return [runto main no-message]
+    return [runto [main_name] no-message]
 }
 
 ### Continue, and expect to hit a breakpoint.

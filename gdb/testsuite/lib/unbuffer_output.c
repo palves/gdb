@@ -25,6 +25,7 @@
 static void
 gdb_unbuffer_output (void)
 {
+#ifndef __AMDGPU__
   /* Always force this for Windows testing.  To a native Windows
      program running under a Cygwin shell/ssh, stdin is really a
      Windows pipe, thus not a tty and its outputs ends up fully
@@ -36,4 +37,5 @@ gdb_unbuffer_output (void)
       setvbuf (stdout, NULL, _IONBF, BUFSIZ);
       setvbuf (stderr, NULL, _IONBF, BUFSIZ);
     }
+#endif
 }

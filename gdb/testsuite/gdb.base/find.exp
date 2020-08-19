@@ -42,10 +42,15 @@ set two_patterns_found "${newline}2 patterns found\[.\]"
 
 # Test string pattern.
 
+set int8_search_buf "_ZL15int8_search_buf"
+set int16_search_buf "_ZL16int16_search_buf"
+set int32_search_buf "_ZL16int32_search_buf"
+set int64_search_buf "_ZL16int64_search_buf"
+
 gdb_test_no_output "set *(int32_t*) &int8_search_buf\[10\] = 0x61616161" ""
 
 gdb_test "find &int8_search_buf\[0\], +sizeof(int8_search_buf), 'a', 'a', 'a'" \
-    "${hex_number}.*<int8_search_buf\\+10>${newline}${hex_number}.*<int8_search_buf\\+11>${two_patterns_found}" \
+    "${hex_number}.*<$int8_search_buf\\+10>${newline}${hex_number}.*<$int8_search_buf\\+11>${two_patterns_found}" \
     "find string pattern"
 
 # Test not finding pattern because search range too small, with
@@ -58,13 +63,13 @@ gdb_test "find &int8_search_buf\[0\], +10+3, \"aaaa\"" \
 # Increase the search range by 1 and we should find the pattern.
 
 gdb_test "find &int8_search_buf\[0\], +10+3+1, 'a', 'a', 'a', 'a'" \
-    "${hex_number}.*<int8_search_buf\\+10>${one_pattern_found}" \
+    "${hex_number}.*<$int8_search_buf\\+10>${one_pattern_found}" \
     "pattern found at end of range"
 
 # Test max-count, $_ and $numfound.
 
 gdb_test "find /1 &int8_search_buf\[0\], +sizeof(int8_search_buf), 'a', 'a', 'a'" \
-    "${hex_number}.*<int8_search_buf\\+10>${one_pattern_found}" \
+    "${hex_number}.*<$int8_search_buf\\+10>${one_pattern_found}" \
     "max-count"
 
 gdb_test "print \$_" \
@@ -79,25 +84,25 @@ gdb_test "print \$numfound" \
 # They can be specified in either order.
 
 gdb_test "find /1b &int8_search_buf\[0\], +sizeof(int8_search_buf), 0x61, 0x61, 0x61" \
-    "${hex_number}.*<int8_search_buf\\+10>${one_pattern_found}" \
+    "${hex_number}.*<$int8_search_buf\\+10>${one_pattern_found}" \
     "size,max-count, /1b"
 
 gdb_test "find /b1 &int8_search_buf\[0\], +sizeof(int8_search_buf), 0x61, 0x61, 0x61" \
-    "${hex_number}.*<int8_search_buf\\+10>${one_pattern_found}" \
+    "${hex_number}.*<$int8_search_buf\\+10>${one_pattern_found}" \
     "size,max-count, /b1"
 
 gdb_test "find /b /1 &int8_search_buf\[0\], +sizeof(int8_search_buf), 0x61, 0x61, 0x61" \
-    "${hex_number}.*<int8_search_buf\\+10>${one_pattern_found}" \
+    "${hex_number}.*<$int8_search_buf\\+10>${one_pattern_found}" \
     "size,max-count, /b/1"
 
 gdb_test "find /1 /b &int8_search_buf\[0\], +sizeof(int8_search_buf), 0x61, 0x61, 0x61" \
-    "${hex_number}.*<int8_search_buf\\+10>${one_pattern_found}" \
+    "${hex_number}.*<$int8_search_buf\\+10>${one_pattern_found}" \
     "size,max-count, /1/b"
 
 # Test specifying end address.
 
 gdb_test "find /b &int8_search_buf\[0\], &int8_search_buf\[0\]+sizeof(int8_search_buf), 0x61, 0x61, 0x61, 0x61" \
-    "${hex_number}.*<int8_search_buf\\+10>${one_pattern_found}" \
+    "${hex_number}.*<$int8_search_buf\\+10>${one_pattern_found}" \
     "find byte pattern with end address"
 
 # Test 16-bit pattern.
@@ -105,11 +110,11 @@ gdb_test "find /b &int8_search_buf\[0\], &int8_search_buf\[0\]+sizeof(int8_searc
 gdb_test_no_output "set int16_search_buf\[10\] = 0x1234" ""
 
 gdb_test "find /h &int16_search_buf\[0\], +sizeof(int16_search_buf), 0x1234" \
-    "${hex_number}.*<int16_search_buf\\+20>${one_pattern_found}" \
+    "${hex_number}.*<$int16_search_buf\\+20>${one_pattern_found}" \
     "find 16-bit pattern"
 
 gdb_test "find &int16_search_buf\[0\], +sizeof(int16_search_buf), (int16_t) 0x1234" \
-    "${hex_number}.*<int16_search_buf\\+20>${one_pattern_found}" \
+    "${hex_number}.*<$int16_search_buf\\+20>${one_pattern_found}" \
     "find 16-bit pattern"
 
 # Test 32-bit pattern.
@@ -117,11 +122,11 @@ gdb_test "find &int16_search_buf\[0\], +sizeof(int16_search_buf), (int16_t) 0x12
 gdb_test_no_output "set int32_search_buf\[10\] = 0x12345678" ""
 
 gdb_test "find &int32_search_buf\[0\], +sizeof(int32_search_buf), (int32_t) 0x12345678" \
-    "${hex_number}.*<int32_search_buf\\+40>${one_pattern_found}" \
+    "${hex_number}.*<$int32_search_buf\\+40>${one_pattern_found}" \
     "find 32-bit pattern"
 
 gdb_test "find /w &int32_search_buf\[0\], +sizeof(int32_search_buf), 0x12345678" \
-    "${hex_number}.*<int32_search_buf\\+40>${one_pattern_found}" \
+    "${hex_number}.*<$int32_search_buf\\+40>${one_pattern_found}" \
     "find 32-bit pattern"
 
 # Test 64-bit pattern.
@@ -129,11 +134,11 @@ gdb_test "find /w &int32_search_buf\[0\], +sizeof(int32_search_buf), 0x12345678"
 gdb_test_no_output "set int64_search_buf\[10\] = 0xfedcba9876543210LL" ""
 
 gdb_test "find &int64_search_buf\[0\], +sizeof(int64_search_buf), (int64_t) 0xfedcba9876543210LL" \
-    "${hex_number}.*<int64_search_buf\\+80>${one_pattern_found}" \
+    "${hex_number}.*<$int64_search_buf\\+80>${one_pattern_found}" \
     "find 64-bit pattern"
 
 gdb_test "find /g &int64_search_buf\[0\], +sizeof(int64_search_buf), 0xfedcba9876543210LL" \
-    "${hex_number}.*<int64_search_buf\\+80>${one_pattern_found}" \
+    "${hex_number}.*<$int64_search_buf\\+80>${one_pattern_found}" \
     "find 64-bit pattern"
 
 # Test mixed-sized patterns.
@@ -143,7 +148,7 @@ gdb_test_no_output "set *(int16_t*) &search_buf\[11\] = 0x6363" ""
 gdb_test_no_output "set *(int32_t*) &search_buf\[13\] = 0x64646464" ""
 
 gdb_test "find &search_buf\[0\], +100, (int8_t) 0x62, (int16_t) 0x6363, (int32_t) 0x64646464" \
-    "${hex_number}${one_pattern_found}" \
+    "${hex_number}( <.*>)?${one_pattern_found}" \
     "find mixed-sized pattern"
 
 # Test search spanning a large range, in the particular case of native
@@ -155,8 +160,10 @@ set CHUNK_SIZE 16000 ;# see findcmd.c
 gdb_test_no_output "set *(int32_t*) &search_buf\[0*${CHUNK_SIZE}+100\] = 0x12345678" ""
 gdb_test_no_output "set *(int32_t*) &search_buf\[1*${CHUNK_SIZE}+100\] = 0x12345678" ""
 
+set hex_number_maybe_sym "${hex_number}( <.*>)?"
+
 gdb_test "find /w search_buf, +search_buf_size, 0x12345678" \
-    "${hex_number}${newline}${hex_number}${two_patterns_found}" \
+    "${hex_number_maybe_sym}${newline}${hex_number_maybe_sym}${two_patterns_found}" \
     "search spanning large range"
 
 # For native targets, test a pattern straddling a chunk boundary.
@@ -164,9 +171,10 @@ gdb_test "find /w search_buf, +search_buf_size, 0x12345678" \
 if [isnative] {
     gdb_test_no_output "set *(int32_t*) &search_buf\[${CHUNK_SIZE}-1\] = 0xfdb97531" ""
     gdb_test "find /w search_buf, +search_buf_size, 0xfdb97531" \
-    "${hex_number}${one_pattern_found}" \
+    "${hex_number_maybe_sym}${one_pattern_found}" \
     "find pattern straddling chunk boundary"
 }
 
 # Check GDB buffer overflow.
-gdb_test "find int64_search_buf, +64/8*100, int64_search_buf" " <int64_search_buf>\r\n1 pattern found\\."
+gdb_test "find int64_search_buf, +64/8*100, int64_search_buf" \
+    " <$int64_search_buf>\r\n1 pattern found\\."

@@ -1,0 +1,267 @@
+# Copyright 2020 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# This file is a dejagnu "board file" and is used to run the testsuite
+# against C/C++ device code compiled with hipcc.
+#
+# Example usage:
+#  bash$ export GDB_HIP_CLANG_PLUGIN_PATH=/home/pedro/rocm/clang-plugin
+#  bash$ make check RUNTESTFLAGS='--target_board=hip'
+
+load_generic_config "unix"
+process_multilib_options ""
+
+set_board_info compiler [find_hipcc]
+set_board_info c++compiler [find_hipcc]
+
+set_board_info gdb,cannot_call_functions 1
+
+set_board_info gdb,can_reverse 0
+set_board_info gdb,use_precord 0
+
+# Supposedly we need this currently, but if we add it, then testcases
+# like e.g., gdb.base/find.exp regress.  Heh.
+#
+# set_board_info debug_flags "-ggdb"
+
+# Override the target set in build/gdb/testsuite/site.exp.
+set target_alias amdgcn-amd-amdhsa
+set target_triplet amdgcn-amd-amdhsa
+
+# This is needed otherwise dejagnu tries to rsh to host "hip".
+load_board_description "local-board"
+
+# So we can override skip_gdbserver_tests.
+load_lib gdbserver-support.exp
+
+if {[info exists env(GDB_HIP_CLANG_PLUGIN_PATH)]} {
+    set gdb_hip_clang_plugin_path $env(GDB_HIP_CLANG_PLUGIN_PATH)
+} else {
+    error "Must set GDB_HIP_CLANG_PLUGIN_PATH in environment."
+}
+
+proc skip_gdbserver_tests {} {
+    return 1
+}
+
+proc skip_fortran_tests {} {
+    return 1
+}
+
+proc skip_ada_tests {} {
+    return 1
+}
+
+proc skip_go_tests {} {
+    return 1
+}
+
+proc skip_d_tests {} {
+    return 1
+}
+
+proc skip_rust_tests {} {
+    return 1
+}
+
+proc skip_shlib_tests {} {
+    return 1
+}
+
+proc skip_btrace_tests {} {
+    return 1
+}
+
+proc skip_compile_feature_tests {} {
+    return 1
+}
+
+# So we can override skip_opencl_tests.
+load_lib "opencl.exp"
+
+proc skip_opencl_tests {} {
+    return 1
+}
+
+# So we can override skip_hipcc_tests.
+load_lib rocm.exp
+
+# Yup, we don't want to run the gdb.rocm/ tests against this board.
+# That would be kind of recursive.  Those tests really expect that
+# "main()" is host code and start kernels themselves.
+proc skip_hipcc_tests {} {
+    return 1
+}
+
+# Override this to fail faster.  If we let the default run, tests
+# compile successfully, but fail at link time.
+proc gdb_compile_pthreads {source dest type options} {
+    unsupported "skipped compiling [file tail $source]: pthreads tests disabled on HIP"
+    return -1
+}
+
+proc main_name { } {
+    return "gdb_hip_test_main"
+}
+
+# As a speed optimization, avoid recompiling the driver over and over
+# for each testcase program.
+global gdb_saved_hip_driver_obj
+set gdb_saved_hip_driver_obj ""
+
+# True if compiling lib/hip-driver.cc.  If true, we don't want to
+# force-include hip-test.h.
+global compiling_hip_driver
+set compiling_hip_driver 0
+
+proc hip_get_compile_language {options} {
+    foreach lang {c++ rust ada f77 f90 go hip} {
+	if {[lsearch -exact $options $lang] != -1} {
+	    return $lang
+	}
+    }
+
+    return c
+}
+
+# Override gdb_compile, to inject our driver, which has a host main()
+# function that starts a device kernel that calls the testcase's entry
+# point (main renamed to gdb_hip_test_main).
+
+if { [info procs hip_org_gdb_compile] == "" } {
+    rename gdb_compile hip_org_gdb_compile
+}
+proc gdb_compile {source dest type options} {
+    global srcdir objdir
+    global gdb_saved_hip_driver_obj
+    global compiling_hip_driver
+
+    set lang [hip_get_compile_language {$options}]
+
+    if {[lsearch -exact $options getting_compiler_info] == -1
+	&& ($lang == "c" || $lang == "c++")} {
+
+	global CC_FOR_TARGET
+	if {[board_info target exists compiler]} {
+	    set compiler [target_info compiler]
+	} elseif {[info exists CC_FOR_TARGET]} {
+	    set compiler $CC_FOR_TARGET
+	}
+	if {[string first "hipcc" $compiler] != -1} {
+
+	    # Since we have to use "-x hip" when compiling source
+	    # files (see below), we can't mix source and object input
+	    # files in the same compilation.  Fix that by forcing
+	    # separate compilation for each input file that doesn't
+	    # look like an object file, and replacing the
+	    # corresponding SOURCE array element with the resulting
+	    # object file.
+	    if { $type == "executable" } {
+		set new_source {}
+		foreach src $source {
+		    if {[file extension $src] != ".o"} {
+			set out [standard_temp_file [file tail $src].o]
+			gdb_compile $src $out object $options
+			lappend new_source $out
+		    } else {
+			lappend new_source $src
+		    }
+		}
+		set source $new_source
+	    }
+
+	    # Remove "c++" from the options, so that gdb's gdb_compile
+	    # doesn't append "-x c++", overriding "-x hip".
+	    set idx [lsearch -exact $options "c++"]
+	    set options [lreplace $options $idx $idx]
+
+	    # Force language to hip (-x hip) because hipcc doesn't
+	    # treat .c files as hip files, only .cc/.cpp.  Don't force
+	    # language (-x ...) when linking however, otherwise we
+	    # would get:
+	    #
+	    #  gdb/build/gdb/testsuite/outputs/gdb.base/break/break0.o:1:41:
+	    #  error: source file is not valid UTF-8
+	    #  <U+007F>ELF<U+0002><U+0001><U+0001><U+0000><U+0000><U+0000><U+0000>...."
+	    #
+	    # ... because -x hip would make Clang blindly treat the
+	    # input .o files as hip.
+	    #
+	    # We need explicit -O0, because hipcc optimizes by
+	    # default.
+	    #
+	    # -fgpu-rdc enables separate compilation mode, so we can
+	    # compile the kernel from multiple translation units.
+	    #
+	    # The plugin forces __device__ on global variables.
+
+	    global gdb_hip_clang_plugin_path
+	    set plugin_args "-Xclang -load \
+			     -Xclang $gdb_hip_clang_plugin_path/force-cuda-device-globals.so\
+			     -Xclang -add-plugin\
+			     -Xclang force-cuda-device-globals"
+
+	    # Uncomment to debug the plugin.
+	    # append plugin_args " -Xclang -plugin-arg-force-cuda-device-globals -Xclang -debug"
+
+	    set hip_options "early_flags=-O0 -fgpu-rdc $plugin_args"
+	    if {$type != "executable"} {
+		append hip_options " -x hip"
+	    }
+
+	    # Make HIP/C++ look a little bit more like C.
+	    if {$lang == "c"} {
+		append hip_options "\
+				    -Wno-writable-strings\
+				    -Wno-return-type\
+				    -Wno-c++11-narrowing"
+	    }
+
+	    if {!$compiling_hip_driver} {
+		lappend options "$hip_options -include ${srcdir}/lib/hip-test.h"
+	    } else {
+		lappend options "$hip_options"
+	    }
+
+	    if { $type == "executable" } {
+
+		if { $gdb_saved_hip_driver_obj == "" } {
+		    verbose "compiling hip-driver"
+		    set hip_driver_src ${srcdir}/lib/hip-driver.cc
+		    set hip_driver_obj ${objdir}/hip-driver.o
+
+		    set compiling_hip_driver 1
+		    set result [gdb_compile "${hip_driver_src}" "${hip_driver_obj}" object {debug}]
+		    set compiling_hip_driver 0
+
+		    if { $result != "" } {
+			return $result
+		    }
+		    if {[is_remote host]} {
+			set gdb_saved_hip_driver_obj hip-driver.o
+		    } else {
+			set gdb_saved_hip_driver_obj ${objdir}/hip-driver.o
+		    }
+		    # Link a copy of the output object, because the
+		    # original may be automatically deleted.
+		    remote_download host $hip_driver_obj $gdb_saved_hip_driver_obj
+		}
+		lappend options "ldflags=$gdb_saved_hip_driver_obj"
+	    }
+	}
+    }
+
+    hip_org_gdb_compile $source $dest $type $options
+}

@@ -1031,7 +1031,7 @@ proc mi_run_to_main { } {
     mi_gdb_reinitialize_dir $srcdir/$subdir
     mi_gdb_load ${binfile}
 
-    mi_runto main
+    mi_runto [main_name]
 }
 
 

@@ -59,6 +59,8 @@ multf (float v1, float v2)
   return v1 * v2;
 }
 
+#ifndef __cplusplus
+
 float
 multf_noproto (v1, v2)
   float v1, v2;
@@ -66,11 +68,15 @@ multf_noproto (v1, v2)
   return v1 * v2;
 }
 
+#endif
+
 double
 mult (double v1, double v2)
 {
   return v1 * v2;
 }
+
+#ifndef __cplusplus
 
 double
 mult_noproto (v1, v2)
@@ -79,11 +85,15 @@ mult_noproto (v1, v2)
   return v1 * v2;
 }
 
+#endif
+
 uint8_t
 add8 (uint8_t v1, uint8_t v2)
 {
   return v1 + v2;
 }
+
+#ifndef __cplusplus
 
 uint8_t
 add8_noproto (v1, v2)
@@ -91,3 +101,5 @@ add8_noproto (v1, v2)
 {
   return v1 + v2;
 }
+
+#endif
