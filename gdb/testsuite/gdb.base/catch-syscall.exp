@@ -13,6 +13,18 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+# [Sun Aug 16 00:02:18 2020] amdgpu 0000:2f:00.0: amdgpu: [gfxhub0] no-retry page fault (src_id:0 ring:88 vmid:15 pasid:32772, for process catch-syscall pid 17935 thread catch-syscall pid 17935)
+# [Sun Aug 16 00:02:18 2020] amdgpu 0000:2f:00.0: amdgpu:   in page starting at address 0x0000000000000000 from client 27
+# [Sun Aug 16 00:02:18 2020] amdgpu 0000:2f:00.0: amdgpu: VM_L2_PROTECTION_FAULT_STATUS:0x00F012B0
+# [Sun Aug 16 00:02:18 2020] amdgpu 0000:2f:00.0: amdgpu:          Faulty UTCL2 client ID: 0x9
+# [Sun Aug 16 00:02:18 2020] amdgpu 0000:2f:00.0: amdgpu:          MORE_FAULTS: 0x0
+# [Sun Aug 16 00:02:18 2020] amdgpu 0000:2f:00.0: amdgpu:          WALKER_ERROR: 0x0
+# [Sun Aug 16 00:02:18 2020] amdgpu 0000:2f:00.0: amdgpu:          PERMISSION_FAULTS: 0xb
+# [Sun Aug 16 00:02:18 2020] amdgpu 0000:2f:00.0: amdgpu:          MAPPING_ERROR: 0x0
+# [Sun Aug 16 00:02:18 2020] amdgpu 0000:2f:00.0: amdgpu:          RW: 0x0
+# [Sun Aug 16 00:02:18 2020] amdgpu: Evicting PASID 0x8004 queues
+# [Sun Aug 16 00:03:55 2020] kfd kfd: amdgpu: Process 19632 (pasid 0x8004) got unhandled exception
+return
 
 # This program tests the 'catch syscall' functionality.
 #
