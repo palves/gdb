@@ -41,7 +41,16 @@ int
 main (int argc, char **argv, char **envp)
 {
     if (argc == 12345) {  /* an unlikely value < 2^16, in case uninited */ /* set breakpoint 6 here */
-	fprintf (stderr, "usage:  factorial <number>\n");
+	/* fprintf disabled because:
+
+	    gdb compile failed, error: ../../../src/gdb/testsuite/gdb.base/break.c:44:9: in function gdb_rocm_main i32 (i32, i8**): unsupported call to variadic function fprintf
+
+	   Unfortunately, -fcuda-allow-variadic-functions is not
+	   supported for hip.
+
+	  fputs and stderr aren't available either.  */
+        // fprintf (stderr, "usage:  factorial <number>\n");
+	printf ("usage:  factorial <number>\n");
 	return 1;
     }
     printf ("%d\n", factorial (atoi ("6")));  /* set breakpoint 1 here */
