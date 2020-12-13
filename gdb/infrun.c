@@ -1261,15 +1261,15 @@ struct step_over_info
      and address of the instruction the breakpoint is set at.  We'll
      skip inserting all breakpoints here.  Valid iff ASPACE is
      non-NULL.  */
-  const address_space *aspace;
-  CORE_ADDR address;
+  const address_space *aspace = nullptr;
+  CORE_ADDR address = 0;
 
   /* The instruction being stepped over triggers a nonsteppable
      watchpoint.  If true, we'll skip inserting watchpoints.  */
-  int nonsteppable_watchpoint_p;
+  int nonsteppable_watchpoint_p = 0;
 
   /* The thread's global number.  */
-  int thread;
+  int thread = -1;
 };
 
 /* The step-over info of the location that is being stepped over.
@@ -3558,6 +3558,23 @@ do_target_wait (ptid_t wait_ptid, execution_control_state *ecs,
   return false;
 }
 
+/* An event reported by wait_one.  */
+
+struct wait_one_event
+{
+  /* The target the event came out of.  */
+  process_stratum_target *target;
+
+  /* The PTID the event was for.  */
+  ptid_t ptid;
+
+  /* The waitstatus.  */
+  target_waitstatus ws;
+};
+
+static bool handle_one (const wait_one_event &event);
+static int finish_step_over (struct execution_control_state *ecs);
+
 /* Prepare and stabilize the inferior for detaching it.  E.g.,
    detaching while a thread is displaced stepping is a recipe for
    crashing it, as nothing would readjust the PC out of the scratch
@@ -3569,58 +3586,73 @@ prepare_for_detach (void)
   struct inferior *inf = current_inferior ();
   ptid_t pid_ptid = ptid_t (inf->pid);
 
-  /* Is any thread of this process displaced stepping?  If not,
-     there's nothing else to do.  */
-  if (displaced_step_in_progress (inf))
-    return;
+  scoped_restore restore_detaching = make_scoped_restore (&inf->detaching, true);
 
   infrun_debug_printf ("displaced-stepping in-process while detaching");
 
-  scoped_restore restore_detaching = make_scoped_restore (&inf->detaching, true);
-
-  while (displaced_step_in_progress (inf))
+  /* Remove all threads of INF from the global step-over chain.  We
+     want to stop any ongoing step-over, not start any new one.  */
+  thread_info *next;
+  for (thread_info *tp = global_thread_step_over_chain_head;
+       tp != nullptr;
+       tp = next)
     {
-      struct execution_control_state ecss;
-      struct execution_control_state *ecs;
+      next = global_thread_step_over_chain_next (tp);
+      if (tp->inf == inf)
+	global_thread_step_over_chain_remove (tp);
+    }
 
-      ecs = &ecss;
-      memset (ecs, 0, sizeof (*ecs));
-
-      overlay_cache_invalid = 1;
-      /* Flush target cache before starting to handle each event.
-	 Target was running and cache could be stale.  This is just a
-	 heuristic.  Running threads may modify target memory, but we
-	 don't get any event.  */
-      target_dcache_invalidate ();
-
-      do_target_wait (pid_ptid, ecs, 0);
-
-      if (debug_infrun)
-	print_target_wait_results (pid_ptid, ecs->ptid, &ecs->ws);
-
-      /* If an error happens while handling the event, propagate GDB's
-	 knowledge of the executing state to the frontend/user running
-	 state.  */
-      scoped_finish_thread_state finish_state (inf->process_target (),
-					       minus_one_ptid);
-
-      /* Now figure out what to do with the result of the result.  */
-      handle_inferior_event (ecs);
-
-      /* No error, don't finish the state yet.  */
-      finish_state.release ();
-
-      /* Breakpoints and watchpoints are not installed on the target
-	 at this point, and signals are passed directly to the
-	 inferior, so this must mean the process is gone.  */
-      if (!ecs->wait_some_more)
+  /* If we were already in the middle of an inline step-over, and the
+     thread stepping belongs to the inferior we're detaching, we need
+     to restart the threads of other inferiors.  */
+  if (step_over_info.thread != -1)
+    {
+      thread_info *thr = find_thread_global_id (step_over_info.thread);
+      if (thr->inf == inf)
 	{
-	  restore_detaching.release ();
-	  error (_("Program exited while detaching"));
+	  clear_step_over_info ();
+
+	  execution_control_state ecs {};
+	  ecs.ptid = thr->ptid;
+	  ecs.event_thread = thr;
+	  ecs.ws.kind = TARGET_WAITKIND_IGNORE;
+
+	  /* Since we removed threads of INF from the step-over chain,
+	     we know this won't start a step-over for INF.  */
+	  finish_step_over (&ecs);
+	  return;
 	}
     }
 
-  restore_detaching.release ();
+  while (displaced_step_in_progress (inf))
+    {
+      for (thread_info *thr : inf->non_exited_threads ())
+	{
+	  if (thr->displaced_step_state.in_progress ())
+	    {
+	      if (thr->executing)
+		{
+		  if (!thr->stop_requested)
+		    {
+		      target_stop (thr->ptid);
+		      thr->stop_requested = true;
+		    }
+		}
+	      else
+		thr->resumed = false;
+	    }
+	}
+
+      wait_one_event event;
+
+      event.target = inf->process_target ();
+      event.ptid = do_target_wait_1 (inf, pid_ptid, &event.ws, 0);
+
+      if (debug_infrun)
+	print_target_wait_results (pid_ptid, event.ptid, &event.ws);
+
+      handle_one (event);
+    }
 }
 
 /* Wait for control to return from inferior to debugger.
@@ -4371,20 +4403,6 @@ poll_one_curr_target (struct target_waitstatus *ws)
   return event_ptid;
 }
 
-/* An event reported by wait_one.  */
-
-struct wait_one_event
-{
-  /* The target the event came out of.  */
-  process_stratum_target *target;
-
-  /* The PTID the event was for.  */
-  ptid_t ptid;
-
-  /* The waitstatus.  */
-  target_waitstatus ws;
-};
-
 /* Wait for one event out of any target.  */
 
 static wait_one_event
@@ -4565,6 +4583,156 @@ mark_non_executing_threads (process_stratum_target *target,
   set_resumed (target, mark_ptid, false);
 }
 
+/* Handle one event after stopping threads (attempting to stability
+   one or more inferiors).  If the eventing thread reports back any
+   interesting event, we leave it pending.  If the eventing thread was
+   in the middle of a displaced step, we cancel/finish it.  */
+
+static bool
+handle_one (const wait_one_event &event)
+{
+  infrun_debug_printf
+    ("%s %s", target_waitstatus_to_string (&event.ws).c_str (),
+     target_pid_to_str (event.ptid).c_str ());
+
+  if (event.ws.kind == TARGET_WAITKIND_NO_RESUMED)
+    {
+      /* All resumed threads exited.  */
+      return true;
+    }
+  else if (event.ws.kind == TARGET_WAITKIND_THREAD_EXITED
+	   || event.ws.kind == TARGET_WAITKIND_EXITED
+	   || event.ws.kind == TARGET_WAITKIND_SIGNALLED)
+    {
+      /* One thread/process exited/signalled.  */
+
+      thread_info *t = nullptr;
+
+      /* The target may have reported just a pid.  If so, try
+	 the first non-exited thread.  */
+      if (event.ptid.is_pid ())
+	{
+	  int pid  = event.ptid.pid ();
+	  inferior *inf = find_inferior_pid (event.target, pid);
+	  for (thread_info *tp : inf->non_exited_threads ())
+	    {
+	      t = tp;
+	      break;
+	    }
+
+	  /* If there is no available thread, the event would
+	     have to be appended to a per-inferior event list,
+	     which does not exist (and if it did, we'd have
+	     to adjust run control command to be able to
+	     resume such an inferior).  We assert here instead
+	     of going into an infinite loop.  */
+	  gdb_assert (t != nullptr);
+
+	  infrun_debug_printf
+	    ("using %s", target_pid_to_str (t->ptid).c_str ());
+	}
+      else
+	{
+	  t = find_thread_ptid (event.target, event.ptid);
+	  /* Check if this is the first time we see this thread.
+	     Don't bother adding if it individually exited.  */
+	  if (t == nullptr
+	      && event.ws.kind != TARGET_WAITKIND_THREAD_EXITED)
+	    t = add_thread (event.target, event.ptid);
+	}
+
+      if (t != nullptr)
+	{
+	  /* Set the threads as non-executing to avoid
+	     another stop attempt on them.  */
+	  switch_to_thread_no_regs (t);
+	  mark_non_executing_threads (event.target, event.ptid,
+				      event.ws);
+	  save_waitstatus (t, &event.ws);
+	  t->stop_requested = false;
+	}
+    }
+  else
+    {
+      thread_info *t = find_thread_ptid (event.target, event.ptid);
+      if (t == NULL)
+	t = add_thread (event.target, event.ptid);
+
+      t->stop_requested = 0;
+      t->executing = 0;
+      t->resumed = false;
+      t->control.may_range_step = 0;
+
+      /* This may be the first time we see the inferior report
+	 a stop.  */
+      inferior *inf = find_inferior_ptid (event.target, event.ptid);
+      if (inf->needs_setup)
+	{
+	  switch_to_thread_no_regs (t);
+	  setup_inferior (0);
+	}
+
+      if (event.ws.kind == TARGET_WAITKIND_STOPPED
+	  && event.ws.value.sig == GDB_SIGNAL_0)
+	{
+	  /* We caught the event that we intended to catch, so
+	     there's no event pending.  */
+	  t->suspend.waitstatus.kind = TARGET_WAITKIND_IGNORE;
+	  t->suspend.waitstatus_pending_p = 0;
+
+	  if (displaced_step_finish (t, GDB_SIGNAL_0)
+	      == DISPLACED_STEP_FINISH_STATUS_NOT_EXECUTED)
+	    {
+	      /* Add it back to the step-over queue.  */
+	      infrun_debug_printf
+		("displaced-step of %s canceled",
+		 target_pid_to_str (t->ptid).c_str ());
+
+	      t->control.trap_expected = 0;
+	      if (!t->inf->detaching)
+		global_thread_step_over_chain_enqueue (t);
+	    }
+	}
+      else
+	{
+	  enum gdb_signal sig;
+	  struct regcache *regcache;
+
+	  infrun_debug_printf
+	    ("target_wait %s, saving status for %d.%ld.%ld",
+	     target_waitstatus_to_string (&event.ws).c_str (),
+	     t->ptid.pid (), t->ptid.lwp (), t->ptid.tid ());
+
+	  /* Record for later.  */
+	  save_waitstatus (t, &event.ws);
+
+	  sig = (event.ws.kind == TARGET_WAITKIND_STOPPED
+		 ? event.ws.value.sig : GDB_SIGNAL_0);
+
+	  if (displaced_step_finish (t, sig)
+	      == DISPLACED_STEP_FINISH_STATUS_NOT_EXECUTED)
+	    {
+	      /* Add it back to the step-over queue.  */
+	      t->control.trap_expected = 0;
+	      if (!t->inf->detaching)
+		global_thread_step_over_chain_enqueue (t);
+	    }
+
+	  regcache = get_thread_regcache (t);
+	  t->suspend.stop_pc = regcache_read_pc (regcache);
+
+	  infrun_debug_printf ("saved stop_pc=%s for %s "
+			       "(currently_stepping=%d)",
+			       paddress (target_gdbarch (),
+					 t->suspend.stop_pc),
+			       target_pid_to_str (t->ptid).c_str (),
+			       currently_stepping (t));
+	}
+    }
+
+  return false;
+}
+
 /* See infrun.h.  */
 
 void
@@ -4678,144 +4846,8 @@ stop_all_threads (void)
 	  for (int i = 0; i < waits_needed; i++)
 	    {
 	      wait_one_event event = wait_one ();
-
-	      infrun_debug_printf
-		("%s %s", target_waitstatus_to_string (&event.ws).c_str (),
-		 target_pid_to_str (event.ptid).c_str ());
-
-	      if (event.ws.kind == TARGET_WAITKIND_NO_RESUMED)
-		{
-		  /* All resumed threads exited.  */
-		  break;
-		}
-	      else if (event.ws.kind == TARGET_WAITKIND_THREAD_EXITED
-		       || event.ws.kind == TARGET_WAITKIND_EXITED
-		       || event.ws.kind == TARGET_WAITKIND_SIGNALLED)
-		{
-		  /* One thread/process exited/signalled.  */
-
-		  thread_info *t = nullptr;
-
-		  /* The target may have reported just a pid.  If so, try
-		     the first non-exited thread.  */
-		  if (event.ptid.is_pid ())
-		    {
-		      int pid  = event.ptid.pid ();
-		      inferior *inf = find_inferior_pid (event.target, pid);
-		      for (thread_info *tp : inf->non_exited_threads ())
-			{
-			  t = tp;
-			  break;
-			}
-
-		      /* If there is no available thread, the event would
-			 have to be appended to a per-inferior event list,
-			 which does not exist (and if it did, we'd have
-			 to adjust run control command to be able to
-			 resume such an inferior).  We assert here instead
-			 of going into an infinite loop.  */
-		      gdb_assert (t != nullptr);
-
-		      infrun_debug_printf
-			("using %s", target_pid_to_str (t->ptid).c_str ());
-		    }
-		  else
-		    {
-		      t = find_thread_ptid (event.target, event.ptid);
-		      /* Check if this is the first time we see this thread.
-			 Don't bother adding if it individually exited.  */
-		      if (t == nullptr
-			  && event.ws.kind != TARGET_WAITKIND_THREAD_EXITED)
-			t = add_thread (event.target, event.ptid);
-		    }
-
-		  if (t != nullptr)
-		    {
-		      /* Set the threads as non-executing to avoid
-			 another stop attempt on them.  */
-		      switch_to_thread_no_regs (t);
-		      mark_non_executing_threads (event.target, event.ptid,
-						  event.ws);
-		      save_waitstatus (t, &event.ws);
-		      t->stop_requested = false;
-		    }
-		}
-	      else
-		{
-		  thread_info *t = find_thread_ptid (event.target, event.ptid);
-		  if (t == NULL)
-		    t = add_thread (event.target, event.ptid);
-
-		  t->stop_requested = 0;
-		  t->executing = 0;
-		  t->resumed = false;
-		  t->control.may_range_step = 0;
-
-		  /* This may be the first time we see the inferior report
-		     a stop.  */
-		  inferior *inf = find_inferior_ptid (event.target, event.ptid);
-		  if (inf->needs_setup)
-		    {
-		      switch_to_thread_no_regs (t);
-		      setup_inferior (0);
-		    }
-
-		  if (event.ws.kind == TARGET_WAITKIND_STOPPED
-		      && event.ws.value.sig == GDB_SIGNAL_0)
-		    {
-		      /* We caught the event that we intended to catch, so
-			 there's no event pending.  */
-		      t->suspend.waitstatus.kind = TARGET_WAITKIND_IGNORE;
-		      t->suspend.waitstatus_pending_p = 0;
-
-		      if (displaced_step_finish (t, GDB_SIGNAL_0)
-			  == DISPLACED_STEP_FINISH_STATUS_NOT_EXECUTED)
-			{
-			  /* Add it back to the step-over queue.  */
-			  infrun_debug_printf
-			    ("displaced-step of %s canceled: adding back to "
-			     "the step-over queue",
-			      target_pid_to_str (t->ptid).c_str ());
-
-			  t->control.trap_expected = 0;
-			  global_thread_step_over_chain_enqueue (t);
-			}
-		    }
-		  else
-		    {
-		      enum gdb_signal sig;
-		      struct regcache *regcache;
-
-		      infrun_debug_printf
-			("target_wait %s, saving status for %d.%ld.%ld",
-			 target_waitstatus_to_string (&event.ws).c_str (),
-			 t->ptid.pid (), t->ptid.lwp (), t->ptid.tid ());
-
-		      /* Record for later.  */
-		      save_waitstatus (t, &event.ws);
-
-		      sig = (event.ws.kind == TARGET_WAITKIND_STOPPED
-			     ? event.ws.value.sig : GDB_SIGNAL_0);
-
-		      if (displaced_step_finish (t, sig)
-			  == DISPLACED_STEP_FINISH_STATUS_NOT_EXECUTED)
-			{
-			  /* Add it back to the step-over queue.  */
-			  t->control.trap_expected = 0;
-			  global_thread_step_over_chain_enqueue (t);
-			}
-
-		      regcache = get_thread_regcache (t);
-		      t->suspend.stop_pc = regcache_read_pc (regcache);
-
-		      infrun_debug_printf ("saved stop_pc=%s for %s "
-					   "(currently_stepping=%d)",
-					   paddress (target_gdbarch (),
-						     t->suspend.stop_pc),
-					   target_pid_to_str (t->ptid).c_str (),
-					   currently_stepping (t));
-		    }
-		}
+	      if (handle_one (event))
+		break;
 	    }
 	}
     }
@@ -5512,6 +5544,13 @@ restart_threads (struct thread_info *event_thread)
 
   for (thread_info *tp : all_non_exited_threads ())
     {
+      if (tp->inf->detaching)
+	{
+	  infrun_debug_printf ("restart threads: [%s] inferior detaching",
+			       target_pid_to_str (tp->ptid).c_str ());
+	  continue;
+	}
+
       switch_to_thread_no_regs (tp);
 
       if (tp == event_thread)
