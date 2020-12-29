@@ -22,9 +22,17 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <string.h>
+#include <signal.h>
 
 /* Number of threads we'll create.  */
 int n_threads = 10;
+
+int mypid;
+
+static void
+setup_done (void)
+{
+}
 
 /* Entry point for threads.  Loops forever.  */
 
@@ -65,6 +73,11 @@ int
 main (int argc, char **argv)
 {
   int i;
+
+  signal (SIGUSR1, SIG_IGN);
+
+  mypid = getpid ();
+  setup_done ();
 
   if (argc > 1)
     n_threads = atoi (argv[1]);

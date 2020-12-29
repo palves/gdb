@@ -43,6 +43,7 @@ proc test {target_non_stop non_stop displaced} {
     save_vars { GDBFLAGS } {
 	append GDBFLAGS " -ex \"maint set target-non-stop $target_non_stop\""
 	append GDBFLAGS " -ex \"set non-stop $non_stop\""
+	append GDBFLAGS " -ex \"set schedule-multiple on\""
 	append GDBFLAGS " -ex \"set displaced $displaced\""
 	clean_restart $binfile
     }
@@ -52,9 +53,30 @@ proc test {target_non_stop non_stop displaced} {
 
     set any "\[^\r\n\]*"
 
+    gdb_test "add-inferior" "Added inferior 2.*"
+    gdb_test "inferior 2" "Switching to .*"
+
+    gdb_load $binfile
+    if ![runto setup_done] then {
+	fail "can't run to setup_done"
+	kill_wait_spawned_process $test_spawn_id
+	return
+    }
+
+    # Get the PID of the test process.
+    set pid_inf2 ""
+    gdb_test_multiple "p mypid" "get pid of inferior 2" {
+	-re " = ($decimal)\r\n$gdb_prompt $" {
+	    set pid_inf2 $expect_out(1,string)
+	    pass $gdb_test_name
+	}
+    }
+
     set attempts 10
     for {set attempt 1} { $attempt <= $attempts } { incr attempt } {
 	with_test_prefix "iter $attempt" {
+	    gdb_test "inferior 1" "Switching to .*"
+
 	    set attached 0
 	    set eperm 0
 	    set test "attach"
@@ -84,21 +106,26 @@ proc test {target_non_stop non_stop displaced} {
 		# In non-stop, we will see one stop per thread after
 		# the prompt.
 		set stops 0
+		set tid_re "$::decimal\.$::decimal"
 		set test "seen all stops"
 		for {set thread 1} { $thread <= $n_threads } { incr thread } {
-		    gdb_test_multiple "" $test {
-			-re "Thread $::decimal ${any} stopped" {
+		    if {[gdb_test_multiple "" $test {
+			-re "Thread ${tid_re} ${any} stopped" {
 			    incr stops
 			}
+		    }] != 0} {
+			break
 		    }
 		}
 
 		# This we haven't seen all stops, then the
 		# gdb_test_multiple in the loop above will have
 		# already issued a FAIL.
-		if {$stops == $n_threads} {
-		    pass $test
+		if {$stops != $n_threads} {
+		    kill_wait_spawned_process $test_spawn_id
+		    return
 		}
+		pass $test
 	    }
 
 	    # Set threads stepping over a breakpoint continuously.
@@ -131,6 +158,7 @@ proc test {target_non_stop non_stop displaced} {
 	    sleep 1
 
 	    set running_count 0
+	    set interrupted 0
 	    gdb_test_multiple "info threads" "all threads running" {
 		-re "\\(running\\)" {
 		    incr running_count
@@ -141,6 +169,7 @@ proc test {target_non_stop non_stop displaced} {
 		    # non-stop mode.  Explicitly interrupt.  This
 		    # doesn't test the same code paths in GDB, but
 		    # it's still something.
+		    set interrupted 1
 		    gdb_test_multiple "interrupt" "" {
 			-re "$gdb_prompt " {
 			    gdb_test_multiple "" $gdb_test_name {
@@ -152,11 +181,27 @@ proc test {target_non_stop non_stop displaced} {
 		    }
 		}
 		-re "$gdb_prompt $" {
-		    gdb_assert {$running_count == ($n_threads + 1)} $gdb_test_name
+		    gdb_assert {$running_count == ($n_threads + 1) * 2} $gdb_test_name
 		}
 	    }
 
 	    gdb_test "detach" "Detaching from.*"
+
+	    if {!$interrupted} {
+		# Now test whether inferior 2's thread were really left
+		# running.  Currently an inline step-over stops all
+		# threads of all processes.  If detach aborts such a step
+		# over, then threads of other inferiors should be
+		# re-resumed.  Test for that by sending a signal to
+		# inferior 2.
+		remote_exec target "kill -SIGUSR1 ${pid_inf2}"
+
+		gdb_test_multiple "" "stop with SIGUSR1" {
+		    -re "received signal SIGUSR1" {
+			pass $gdb_test_name
+		    }
+		}
+	    }
 
 	    delete_breakpoints
 	}
