@@ -2727,6 +2727,8 @@ notice_new_inferior (thread_info *thr, int leave_running, int from_tty)
   attach_post_wait ("" /* args */, from_tty, mode);
 }
 
+void keep_going_XXX ();
+
 /*
  * detach_command --
  * takes a program previously attached to and detaches it.
@@ -2745,6 +2747,19 @@ detach_command (const char *args, int from_tty)
 
   if (inferior_ptid == null_ptid)
     error (_("The program is not being run."));
+
+  thread_info *need_resume = nullptr;
+  for (thread_info *thr : all_threads (current_inferior ()->process_target ()))
+    {
+      if (thr->inf == current_inferior ())
+	continue;
+
+      if (thr->state == THREAD_RUNNING)
+	{
+	  need_resume = thr;
+	  break;
+	}
+    }
 
   query_if_trace_running (from_tty);
 
@@ -2766,6 +2781,14 @@ detach_command (const char *args, int from_tty)
 
   if (deprecated_detach_hook)
     deprecated_detach_hook ();
+
+  if (need_resume != nullptr && !target_is_non_stop_p ())
+    {
+      fprintf_unfiltered (gdb_stdlog, "XXX: need_resume=1\n");
+      keep_going_XXX ();
+    }
+  else
+    fprintf_unfiltered (gdb_stdlog, "XXX: need_resume=0\n");
 }
 
 /* Disconnect from the current target without resuming it (leaving it

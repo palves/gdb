@@ -185,7 +185,14 @@ proc test {target_non_stop non_stop displaced} {
 		}
 	    }
 
-	    gdb_test "detach" "Detaching from.*"
+	    gdb_test_multiple "detach" "" {
+		-re "$gdb_prompt " {
+		    pass $gdb_test_name
+		}
+		-re "\\\[linux-nat\\\]" {
+		    exp_continue
+		}
+	    }
 
 	    if {!$interrupted} {
 		# Now test whether inferior 2's thread were really left

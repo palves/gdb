@@ -7088,6 +7088,10 @@ process_event_stop_test (struct execution_control_state *ecs)
   keep_going (ecs);
 }
 
+bool
+switch_back_to_stepped_thread_tail (process_stratum_target *resume_target,
+				    ptid_t resume_ptid);
+
 /* In all-stop mode, if we're currently stepping but have stopped in
    some other thread, we may need to switch back to the stepped
    thread.  Returns true we set the inferior running, false if we left
@@ -7098,8 +7102,6 @@ switch_back_to_stepped_thread (struct execution_control_state *ecs)
 {
   if (!target_is_non_stop_p ())
     {
-      struct thread_info *stepping_thread;
-
       /* If any thread is blocked on some internal breakpoint, and we
 	 simply need to step over that breakpoint to get it going
 	 again, do that first.  */
@@ -7162,70 +7164,10 @@ switch_back_to_stepped_thread (struct execution_control_state *ecs)
       if (!signal_program[ecs->event_thread->suspend.stop_signal])
 	ecs->event_thread->suspend.stop_signal = GDB_SIGNAL_0;
 
-      /* Do all pending step-overs before actually proceeding with
-	 step/next/etc.  */
-      if (start_step_over ())
+      if (switch_back_to_stepped_thread_tail (ecs->target, ecs->ptid))
 	{
 	  prepare_to_wait (ecs);
 	  return true;
-	}
-
-      /* Look for the stepping/nexting thread.  */
-      stepping_thread = NULL;
-
-      for (thread_info *tp : all_non_exited_threads ())
-	{
-	  switch_to_thread_no_regs (tp);
-
-	  /* Ignore threads of processes the caller is not
-	     resuming.  */
-	  if (!sched_multi
-	      && (tp->inf->process_target () != ecs->target
-		  || tp->inf->pid != ecs->ptid.pid ()))
-	    continue;
-
-	  /* When stepping over a breakpoint, we lock all threads
-	     except the one that needs to move past the breakpoint.
-	     If a non-event thread has this set, the "incomplete
-	     step-over" check above should have caught it earlier.  */
-	  if (tp->control.trap_expected)
-	    {
-	      internal_error (__FILE__, __LINE__,
-			      "[%s] has inconsistent state: "
-			      "trap_expected=%d\n",
-			      target_pid_to_str (tp->ptid).c_str (),
-			      tp->control.trap_expected);
-	    }
-
-	  /* Did we find the stepping thread?  */
-	  if (tp->control.step_range_end)
-	    {
-	      /* Yep.  There should only one though.  */
-	      gdb_assert (stepping_thread == NULL);
-
-	      /* The event thread is handled at the top, before we
-		 enter this loop.  */
-	      gdb_assert (tp != ecs->event_thread);
-
-	      /* If some thread other than the event thread is
-		 stepping, then scheduler locking can't be in effect,
-		 otherwise we wouldn't have resumed the current event
-		 thread in the first place.  */
-	      gdb_assert (!schedlock_applies (tp));
-
-	      stepping_thread = tp;
-	    }
-	}
-
-      if (stepping_thread != NULL)
-	{
-	  infrun_debug_printf ("switching back to stepped thread");
-
-	  if (keep_going_stepped_thread (stepping_thread))
-	    {
-	      prepare_to_wait (ecs);
-	      return true;
-	    }
 	}
 
       switch_to_thread (ecs->event_thread);
@@ -7233,6 +7175,106 @@ switch_back_to_stepped_thread (struct execution_control_state *ecs)
 
   return false;
 }
+
+bool
+switch_back_to_stepped_thread_tail (process_stratum_target *resume_target,
+				    ptid_t resume_ptid)
+{
+      /* Do all pending step-overs before actually proceeding with
+	 step/next/etc.  */
+      if (start_step_over ())
+	return true;
+
+      for (thread_info *tp : all_threads_safe ())
+	{
+	  if (tp->state == THREAD_EXITED)
+	    continue;
+
+	  if (tp->suspend.waitstatus_pending_p)
+	    continue;
+
+	  /* Ignore threads of processes the caller is not
+	     resuming.  */
+	  if (!sched_multi
+	      && (tp->inf->process_target () != resume_target
+		  || tp->inf->pid != resume_ptid.pid ()))
+	    continue;
+
+	  if (tp->control.trap_expected)
+	    {
+	      infrun_debug_printf ("switching back to stepped thread (step-over)");
+
+	      if (keep_going_stepped_thread (tp))
+		return true;
+	    }
+	}
+
+      for (thread_info *tp : all_threads_safe ())
+	{
+	  if (tp->state == THREAD_EXITED)
+	    continue;
+
+	  if (tp->suspend.waitstatus_pending_p)
+	    continue;
+
+	  /* Ignore threads of processes the caller is not
+	     resuming.  */
+	  if (!sched_multi
+	      && (tp->inf->process_target () != resume_target
+		  || tp->inf->pid != resume_ptid.pid ()))
+	    continue;
+
+	  /* Did we find the stepping thread?  */
+	  if (tp->control.step_range_end)
+	    {
+	      infrun_debug_printf ("switching back to stepped thread (stepping)");
+
+	      if (keep_going_stepped_thread (tp))
+		return true;
+	    }
+	}
+
+  return false;
+}
+
+void keep_going_XXX ();
+
+void
+keep_going_XXX ()
+{
+  if (target_is_non_stop_p ())
+    return;
+
+  process_stratum_target *resume_target = current_inferior ()->process_target ();
+
+  for (thread_info *thr : all_threads (resume_target))
+    {
+      if (thr->state != THREAD_RUNNING)
+	continue;
+
+      if (thr->suspend.waitstatus_pending_p)
+	return;
+
+      if (thr->executing)
+	return;
+    }
+
+  if (switch_back_to_stepped_thread_tail (nullptr, minus_one_ptid))
+    return;
+
+  for (thread_info *thr : all_threads (resume_target))
+    {
+      if (thr->state != THREAD_RUNNING)
+	continue;
+
+      execution_control_state ecs;
+      reset_ecs (&ecs, thr);
+      switch_to_thread (thr);
+      keep_going (&ecs);
+      return;
+    }
+}
+
 
 /* Set a previously stepped thread back to stepping.  Returns true on
    success, false if the resume is not possible (e.g., the thread
