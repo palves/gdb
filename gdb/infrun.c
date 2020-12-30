@@ -3573,7 +3573,7 @@ struct wait_one_event
 };
 
 static bool handle_one (const wait_one_event &event);
-static int finish_step_over (struct execution_control_state *ecs);
+static void restart_threads (struct thread_info *event_thread);
 
 /* Prepare and stabilize the inferior for detaching it.  E.g.,
    detaching while a thread is displaced stepping is a recipe for
@@ -3585,10 +3585,9 @@ prepare_for_detach (void)
 {
   struct inferior *inf = current_inferior ();
   ptid_t pid_ptid = ptid_t (inf->pid);
+  scoped_restore_current_thread restore_thread;
 
   scoped_restore restore_detaching = make_scoped_restore (&inf->detaching, true);
-
-  infrun_debug_printf ("displaced-stepping in-process while detaching");
 
   /* Remove all threads of INF from the global step-over chain.  We
      want to stop any ongoing step-over, not start any new one.  */
@@ -3607,25 +3606,34 @@ prepare_for_detach (void)
      to restart the threads of other inferiors.  */
   if (step_over_info.thread != -1)
     {
+      infrun_debug_printf ("inline step-over in-process while detaching");
+
       thread_info *thr = find_thread_global_id (step_over_info.thread);
       if (thr->inf == inf)
 	{
-	  clear_step_over_info ();
-
-	  execution_control_state ecs {};
-	  ecs.ptid = thr->ptid;
-	  ecs.event_thread = thr;
-	  ecs.ws.kind = TARGET_WAITKIND_IGNORE;
-
 	  /* Since we removed threads of INF from the step-over chain,
 	     we know this won't start a step-over for INF.  */
-	  finish_step_over (&ecs);
-	  return;
+	  clear_step_over_info ();
+
+	  if (target_is_non_stop_p ())
+	    {
+	      /* Start a new step-over in another thread if there's
+		 one that needs it.  */
+	      start_step_over ();
+
+	      /* Restart all other threads (except the
+		 previously-stepping thread, since that one is still
+		 running).  */
+	      if (!step_over_info_valid_p ())
+		restart_threads (thr);
+	    }
 	}
     }
 
   while (displaced_step_in_progress (inf))
     {
+      infrun_debug_printf ("displaced-stepping in-process while detaching");
+
       for (thread_info *thr : inf->non_exited_threads ())
 	{
 	  if (thr->displaced_step_state.in_progress ())
