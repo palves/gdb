@@ -3626,6 +3626,11 @@ prepare_for_detach (void)
 		 running).  */
 	      if (!step_over_info_valid_p ())
 		restart_threads (thr);
+
+	      /* If all threads had pending events, nothing is
+		 actually resumed.  Let the event loop we may have
+		 something to process.  */
+	      mark_async_event_handler (infrun_async_inferior_event_token);
 	    }
 	}
     }
