@@ -2789,6 +2789,10 @@ detach_command (const char *args, int from_tty)
     }
   else
     fprintf_unfiltered (gdb_stdlog, "XXX: need_resume=0\n");
+
+  /* If all threads had pending events, nothing is actually resumed.
+     Let the event loop we may have something to process.  */
+  mark_infrun_async_event_handler ();
 }
 
 /* Disconnect from the current target without resuming it (leaving it
