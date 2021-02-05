@@ -1001,10 +1001,13 @@ linux_nat_switch_fork (ptid_t new_ptid)
   registers_changed ();
 }
 
-/* Handle the exit of a single thread LP.  */
+/* Handle the exit of a single thread LP.
+
+   If DEL_THREAD is true, delete the thread_info associated to LP, if
+   it exists.  */
 
 static void
-exit_lwp (struct lwp_info *lp)
+exit_lwp (struct lwp_info *lp, bool del_thread)
 {
   struct thread_info *th = find_thread_ptid (linux_target, lp->ptid);
 
@@ -1014,7 +1017,8 @@ exit_lwp (struct lwp_info *lp)
 	printf_unfiltered (_("[%s exited]\n"),
 			   target_pid_to_str (lp->ptid).c_str ());
 
-      delete_thread (th);
+      if (del_thread)
+	delete_thread (th);
     }
 
   delete_lwp (lp->ptid);
@@ -2188,7 +2192,7 @@ wait_lwp (struct lwp_info *lp)
 
   if (thread_dead)
     {
-      exit_lwp (lp);
+      exit_lwp (lp, true);
       return 0;
     }
 
@@ -2925,6 +2929,7 @@ linux_nat_filter_event (int lwpid, int status)
   if (WIFEXITED (status) || WIFSIGNALED (status))
     {
       if (!report_thread_events
+	  && lp->last_resume_kind != resume_step
 	  && num_lwps (lp->ptid.pid ()) > 1)
 	{
 	  linux_nat_debug_printf ("%s exited.",
@@ -2933,7 +2938,7 @@ linux_nat_filter_event (int lwpid, int status)
 	  /* If there is at least one more LWP, then the exit signal
 	     was not the end of the debugged application and should be
 	     ignored.  */
-	  exit_lwp (lp);
+	  exit_lwp (lp, true);
 	  return;
 	}
 
@@ -3100,7 +3105,7 @@ check_zombie_leaders (void)
 	     thread execs).  */
 
 	  linux_nat_debug_printf ("Thread group leader %d vanished.", inf->pid);
-	  exit_lwp (leader_lp);
+	  exit_lwp (leader_lp, true);
 	}
     }
 }
@@ -3112,18 +3117,28 @@ check_zombie_leaders (void)
 
 static ptid_t
 filter_exit_event (struct lwp_info *event_child,
-		   struct target_waitstatus *ourstatus)
+		   struct target_waitstatus *ourstatus,
+		   resume_kind last_resume_kind)
 {
   ptid_t ptid = event_child->ptid;
 
   if (num_lwps (ptid.pid ()) > 1)
     {
-      if (report_thread_events)
-	ourstatus->kind = TARGET_WAITKIND_THREAD_EXITED;
+      /* If we decide to report the thread exited event to the core, we must
+         not delete the thread_info structure ourselves.   */
+      if (report_thread_events
+	  || last_resume_kind == resume_step)
+	{
+	  ourstatus->kind = TARGET_WAITKIND_THREAD_EXITED;
+	  /* Delete lwp, but not thread_info, infrun will need it to process
+	     the event.  */
+	  exit_lwp (event_child, false);
+	}
       else
-	ourstatus->kind = TARGET_WAITKIND_IGNORE;
-
-      exit_lwp (event_child);
+	{
+	  ourstatus->kind = TARGET_WAITKIND_IGNORE;
+	  exit_lwp (event_child, true);
+	}
     }
 
   return ptid;
@@ -3346,7 +3361,7 @@ linux_nat_wait_1 (ptid_t ptid, struct target_waitstatus *ourstatus,
     lp->core = linux_common_core_of_thread (lp->ptid);
 
   if (ourstatus->kind == TARGET_WAITKIND_EXITED)
-    return filter_exit_event (lp, ourstatus);
+    return filter_exit_event (lp, ourstatus, last_resume_kind);
 
   return lp->ptid;
 }

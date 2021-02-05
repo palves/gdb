@@ -317,6 +317,8 @@ public:
      visibility because proc-service uses it.  */
   virtual const regs_info *get_regs_info () = 0;
 
+  bool supports_stepped_thread_exited () override;
+
 private:
 
   /* Handle a GNU/Linux extended wait response.  If we see a clone,

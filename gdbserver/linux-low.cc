@@ -2312,6 +2312,7 @@ linux_process_target::filter_event (int lwpid, int wstat)
 	 not the end of the debugged application and should be
 	 ignored, unless GDB wants to hear about thread exits.  */
       if (cs.report_thread_events
+	  || thread->last_resume_kind == resume_step
 	  || last_thread_of_process_p (pid_of (thread)))
 	{
 	  /* Since events are serialized to GDB core, and we can't
@@ -2895,7 +2896,8 @@ linux_process_target::filter_exit_event (lwp_info *event_child,
 
   if (!last_thread_of_process_p (pid_of (thread)))
     {
-      if (cs.report_thread_events)
+      if (cs.report_thread_events
+	  || thread->last_resume_kind == resume_step)
 	ourstatus->kind = TARGET_WAITKIND_THREAD_EXITED;
       else
 	ourstatus->kind = TARGET_WAITKIND_IGNORE;
@@ -7124,6 +7126,12 @@ linux_process_target::thread_handle (ptid_t ptid, gdb_byte **handle,
   return thread_db_thread_handle (ptid, handle, handle_len);
 }
 #endif
+
+bool
+linux_process_target::supports_stepped_thread_exited ()
+{
+  return true;
+}
 
 /* Default implementation of linux_target_ops method "set_pc" for
    32-bit pc register which is literally named "pc".  */
