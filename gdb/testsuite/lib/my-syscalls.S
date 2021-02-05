@@ -62,3 +62,7 @@ NAME ## _syscall:		;\
 /* int my_execve (const char *file, char *argv[], char *envp[]);  */
 
 SYSCALL (my_execve, __NR_execve)
+
+/* void my_exit (int code);  */
+
+SYSCALL (my_exit, __NR_exit)
