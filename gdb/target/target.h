@@ -83,8 +83,14 @@ extern void target_continue (ptid_t ptid, enum gdb_signal signal);
    the debugging target from the stack; GDB isn't prepared to get back
    to the prompt with a debugging target but without the frame cache,
    stop_pc, etc., set up.  OPTIONS is a bitwise OR of TARGET_W*
-   options.  */
+   options.
 
+   Unless thread exit event reporting has been explicitly enabled
+   (target_thread_events in gdb, QThreadEvents/cs.report_thread_events
+   in gdbserver), targets are free to not report thread exit events
+   for threads that were run free.  Targets should report thread exit
+   events for threads that were stepped, regardless of whether thread
+   exit events were requested.  */
 extern ptid_t target_wait (ptid_t ptid, struct target_waitstatus *status,
 			   target_wait_flags options);
 

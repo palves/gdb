@@ -844,6 +844,10 @@ M;void;displaced_step_fixup;struct displaced_step_copy_insn_closure *closure, CO
 M;displaced_step_prepare_status;displaced_step_prepare;thread_info *thread, CORE_ADDR &displaced_pc;thread, displaced_pc
 
 # Clean up after a displaced step of THREAD.
+#
+# It is possible for the displaced-stepped instruction to have caused the
+# thread to exit.  The implementation can detect this case by checking if
+# WS.kind is TARGET_WAITKIND_THREAD_EXITED.
 m;displaced_step_finish_status;displaced_step_finish;thread_info *thread, const target_waitstatus &ws;thread, ws;;NULL;;(! gdbarch->displaced_step_finish) != (! gdbarch->displaced_step_prepare)
 
 # Return the closure associated to the displaced step buffer that is at ADDR.
