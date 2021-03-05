@@ -2764,17 +2764,26 @@ schedlock_applies (struct thread_info *tp)
 static void
 maybe_set_commit_resumed_all_process_targets ()
 {
-  for (process_stratum_target *target : all_non_exited_process_targets ())
+  scoped_restore_current_thread restore_thread;
+
+  for (inferior *inf : all_non_exited_inferiors ())
     {
-      gdb_assert (!target->commit_resumed_state);
+      process_stratum_target *proc_target = inf->process_target ();
+
+      if (proc_target->commit_resumed_state)
+	{
+	  /* We already set this in a previous iteration, via another
+	     inferior sharing the process_stratum target.  */
+	  continue;
+	}
 
       /* If the target has no resumed threads, it would be useless to
 	 ask it to commit the resumed threads.  */
-      if (!target->threads_executing)
+      if (!proc_target->threads_executing)
 	{
 	  infrun_debug_printf ("not re-enabling forward progress for target "
 			       "%s, no resumed threads",
-			       target->shortname ());
+			       proc_target->shortname ());
 	  continue;
 	}
 
@@ -2783,7 +2792,7 @@ maybe_set_commit_resumed_all_process_targets ()
 	 commit its resumed threads: handling the status might lead to
 	 resuming more threads.  */
       bool has_thread_with_pending_status = false;
-      for (thread_info *thread : all_non_exited_threads (target))
+      for (thread_info *thread : all_non_exited_threads (proc_target))
 	if (thread->resumed && thread->suspend.waitstatus_pending_p)
 	  {
 	    has_thread_with_pending_status = true;
@@ -2793,15 +2802,24 @@ maybe_set_commit_resumed_all_process_targets ()
       if (has_thread_with_pending_status)
 	{
 	  infrun_debug_printf ("not requesting commit-resumed for target %s, a"
-			       "thread has a pending waitstatus",
-			       target->shortname ());
+			       " thread has a pending waitstatus",
+			       proc_target->shortname ());
+	  continue;
+	}
+
+      switch_to_inferior_no_thread (inf);
+
+      if (target_has_events ())
+	{
+	  infrun_debug_printf ("not requesting commit-resumed for target %s, "
+			       "target has events", proc_target->shortname ());
 	  continue;
 	}
 
       infrun_debug_printf ("enabling commit-resumed for target %s",
-			   target->shortname());
+			   proc_target->shortname());
 
-      target->commit_resumed_state = true;
+      proc_target->commit_resumed_state = true;
     }
 }
 
@@ -2810,16 +2828,19 @@ maybe_call_commit_resumed_all_process_targets ()
 {
   scoped_restore_current_thread restore_thread;
 
-  for (process_stratum_target *target : all_non_exited_process_targets ())
+  for (inferior *inf : all_non_exited_inferiors ())
     {
-      if (!target->commit_resumed_state)
+      process_stratum_target *proc_target = inf->process_target ();
+
+      if (!proc_target->commit_resumed_state)
 	continue;
 
-      infrun_debug_printf ("calling commit_resumed for target %s",
-			   target->shortname());
+      switch_to_inferior_no_thread (inf);
 
-      switch_to_target_no_thread (target);
-      target->commit_resumed ();
+      infrun_debug_printf ("calling commit_resumed for target %s",
+			   proc_target->shortname());
+
+      target_commit_resumed ();
     }
 }
 
