@@ -225,12 +225,6 @@ public:
   void close () override;
   void async (int) override;
   ptid_t wait (ptid_t, struct target_waitstatus *, target_wait_flags) override;
-
-  bool has_events () override
-  {
-    return true;
-  }
-
   bool stopped_by_watchpoint () override;
   bool stopped_data_address (CORE_ADDR *) override;
 

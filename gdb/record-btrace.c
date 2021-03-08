@@ -119,11 +119,6 @@ public:
   void resume (ptid_t, int, enum gdb_signal) override;
   ptid_t wait (ptid_t, struct target_waitstatus *, target_wait_flags) override;
 
-  bool has_events () override
-  {
-    return true;
-  }
-
   void stop (ptid_t) override;
   void update_thread_list () override;
   bool thread_alive (ptid_t ptid) override;

@@ -3617,18 +3617,6 @@ do_target_wait_1 (inferior *inf, ptid_t ptid,
   return event_ptid;
 }
 
-/* True if INF has any resumed thread with a pending status.  */
-
-static bool
-has_resumed_pending_threads (inferior *inf)
-{
-  for (thread_info *tp : inf->non_exited_threads ())
-    if (tp->resumed && tp->suspend.waitstatus_pending_p)
-      return true;
-
-  return false;
-}
-
 /* Wrapper for target_wait that first checks whether threads have
    pending statuses to report before actually asking the target for
    more events.  Polls for events from all inferiors/targets.  */
@@ -3647,18 +3635,8 @@ do_target_wait (ptid_t wait_ptid, execution_control_state *ecs,
 
   auto inferior_matches = [&wait_ptid] (inferior *inf)
     {
-      if (inf->process_target () == nullptr)
-	return false;
-
-      if (!ptid_t (inf->pid).matches (wait_ptid))
-	return false;
-
-      if (has_resumed_pending_threads (inf))
-	return true;
-
-      switch_to_inferior_no_thread (inf);
-
-      return target_has_events ();
+      return (inf->process_target () != NULL
+	      && ptid_t (inf->pid).matches (wait_ptid));
     };
 
   /* First see how many matching inferiors we have.  */

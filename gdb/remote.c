@@ -6804,11 +6804,8 @@ remote_target::has_events ()
 	 error.  */
       if (rs->remote_desc->bufcnt != 0)
 	return true;
-
-      return false;
     }
-  else
-    return process_stratum_target::has_events ();
+  return false;
 }
 
 /* Non-stop version of target_stop.  Uses `vCont;t' to stop a remote

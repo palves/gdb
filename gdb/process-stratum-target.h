@@ -63,8 +63,6 @@ public:
   bool has_registers () override;
   bool has_execution (inferior *inf) override;
 
-  bool has_events () override;
-
   /* True if any thread is, or may be executing.  We need to track
      this separately because until we fully sync the thread list, we
      won't know whether the target is fully stopped, even if we see
