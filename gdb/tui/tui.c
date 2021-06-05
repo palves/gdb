@@ -383,6 +383,10 @@ tui_enable (void)
       if (!gdb_stderr->isatty ())
 	error (_("Cannot enable the TUI when output is not a terminal"));
 
+      /* This must be done before the newterm below, otherwise we end
+	 up with a messed up (main) terminal.  */
+      init_mouse_screen ();
+
       s = newterm (NULL, stdout, stdin);
 #ifdef __MINGW32__
       /* The MinGW port of ncurses requires $TERM to be unset in order

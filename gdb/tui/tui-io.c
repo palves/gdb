@@ -946,6 +946,34 @@ tui_initialize_io (void)
 #endif
 }
 
+/* Dispatch the correct tui function based upon the mouse event.  */
+
+static void
+tui_dispatch_mouse_event (const MEVENT &mev)
+{
+  for (tui_win_info *wi : all_tui_windows ())
+    if (mev.x > wi->x && mev.x < wi->x + wi->width - 1
+	&& mev.y > wi->y && mev.y < wi->y + wi->height - 1)
+      {
+	if ((mev.bstate & BUTTON1_CLICKED) != 0
+	    || (mev.bstate & BUTTON2_CLICKED) != 0
+	    || (mev.bstate & BUTTON3_CLICKED) != 0)
+	  {
+	    int button = (mev.bstate & BUTTON1_CLICKED) != 0 ? 1
+	      :         ((mev.bstate & BUTTON2_CLICKED) != 0 ? 2
+			 : 3);
+	    wi->click (mev.x - wi->x - 1, mev.y - wi->y - 1, button);
+	  }
+#ifdef BUTTON5_PRESSED
+	else if ((mev.bstate & BUTTON4_PRESSED) != 0)
+	  wi->backward_scroll (3);
+	else if ((mev.bstate & BUTTON5_PRESSED) != 0)
+	  wi->forward_scroll (3);
+#endif
+	break;
+      }
+}
+
 /* Dispatch the correct tui function based upon the control
    character.  */
 static unsigned int
@@ -959,7 +987,9 @@ tui_dispatch_ctrl_char (unsigned int ch)
 
   /* If no window has the focus, or if the focus window can't scroll,
      just pass the character through.  */
-  if (win_info == NULL || !win_info->can_scroll ())
+  if (win_info == NULL
+      || (win_info != TUI_CMD_WIN
+	  && !win_info->can_scroll ()))
     return ch;
 
   switch (ch)
@@ -988,30 +1018,8 @@ tui_dispatch_ctrl_char (unsigned int ch)
     case KEY_MOUSE:
 	{
 	  MEVENT mev;
-	  if (getmouse (&mev) != OK)
-	    break;
-
-	  for (tui_win_info *wi : all_tui_windows ())
-	    if (mev.x > wi->x && mev.x < wi->x + wi->width - 1
-		&& mev.y > wi->y && mev.y < wi->y + wi->height - 1)
-	      {
-		if ((mev.bstate & BUTTON1_CLICKED) != 0
-		    || (mev.bstate & BUTTON2_CLICKED) != 0
-		    || (mev.bstate & BUTTON3_CLICKED) != 0)
-		  {
-		    int button = (mev.bstate & BUTTON1_CLICKED) != 0 ? 1
-		      :         ((mev.bstate & BUTTON2_CLICKED) != 0 ? 2
-				 : 3);
-		    wi->click (mev.x - wi->x - 1, mev.y - wi->y - 1, button);
-		  }
-#ifdef BUTTON5_PRESSED
-		else if ((mev.bstate & BUTTON4_PRESSED) != 0)
-		  wi->backward_scroll (3);
-		else if ((mev.bstate & BUTTON5_PRESSED) != 0)
-		  wi->forward_scroll (3);
-#endif
-		break;
-	      }
+	  if (getmouse (&mev) == OK)
+	    tui_dispatch_mouse_event (mev);
 	}
       break;
 #endif
@@ -1067,6 +1075,251 @@ tui_inject_newline_into_command_window ()
     }
 }
 
+/* True if the mouse thread is the one reading stdin.  */
+static volatile bool mouse_thread_stdin = false;
+static volatile bool mouse_thread_stdin_out = false;
+
+/* The handle to the mouse thread.  */
+static pthread_t mouse_thread;
+
+/* Pipe used to wake up / interrupt the mouse thread.  */
+static int intr_mouse_thread[2];
+
+/* Pipe used to feed input data into the magic mouse screen.  */
+static int mouse_input_pipe[2];
+
+/* Data we've read from stdin but did not want passed to ncurses.  */
+static std::vector<int> mouse_chars;
+
+/* True if the next tut_getc_1 should drain from CHARS.  */
+static bool drain_mouse_chars;
+
+/* Enable debugging the mouse screen and thread processing.  */
+static bool debug_mouse_thread = 0;
+
+/* The escape sequence header for a mouse event.  */
+static const unsigned char mouse_seq[] = { 27, '[', 'M' };
+/* Pointer to the next expected character in a mouse escape sequence.
+   If we haven't seen any character of the sequence yet, this points
+   to the first character of MOUSE_SEQ.  If we've seen the whole
+   sequence header, this points to one-past-last of MOUSE_SEQ.  */
+static const unsigned char *mouse_seq_pos = nullptr;
+
+/* True if the last key we got out of gdb_wgetch was a KEY_MOUSE.  In
+   that case, continue reading chars using the magic mouse screen.  */
+static bool last_key_was_mouse = false;
+
+/* The mouse screen used to read mouse keys.  This screen's main
+   window has the keypad enabled so that it processes mouse escape
+   sequences.  But instead of reading from stdin, it reads from a
+   pipe.  This pipe is filled with data read from stdin, but filtered
+   -- it won't ever include non-mouse escape sequences.  This means
+   that reading from this curses screen either returns KEY_MOUSE, or
+   regular ASCII key, never KEY_UP, etc.  */
+static SCREEN *mouse_screen;
+
+/* Write CH to the mouse input pipe.  */
+
+static void
+write_mouse_pipe (int ch)
+{
+  unsigned char buf = ch;
+  write (mouse_input_pipe[1], &buf, 1);
+}
+
+/* Wake up the mouse thread.  */
+
+static void
+wake_mouse_thread ()
+{
+  unsigned char buf = '+';
+  write (intr_mouse_thread[1], &buf, 1);
+}
+
+/* Flush the INTR_MOUSE_THREAD pipe.  */
+
+static void
+flush_intr_mouse_pipe ()
+{
+  int ret;
+
+  do
+    {
+      char buf;
+      ret = read (intr_mouse_thread[0], &buf, 1);
+    }
+  while (ret >= 0 || (ret == -1 && errno == EINTR));
+}
+
+/* Flush data out of stdin, into the MOUSE_INPUT_PIPE.  Except, if we
+   see an escape sequence that isn't a mouse escape sequence, don't
+   put it in the pipe.  The idea is that we never want ncurses to see
+   non-mouse escape sequences.  We want to pass those directly to
+   readline.  E.g., we don't want ncurses to return KEY_UP, we want
+   readline instead to see the "key up" escape sequence, and call
+   "previous-history".  */
+
+static void *
+mouse_thread_fn (void *)
+{
+  /* XXXX: Block signals in parent before spawning this.  */
+
+  while (1)
+    {
+      fd_set readfds;
+
+      FD_ZERO (&readfds);
+      FD_SET (intr_mouse_thread[0], &readfds);
+
+      if (mouse_thread_stdin)
+	FD_SET (0, &readfds);
+
+      if (select (intr_mouse_thread[0] + 1, &readfds, NULL, NULL, NULL) == -1)
+	{
+	  if (errno == EINTR)
+	    continue;
+
+	  /* XXX: shouldn't throw...  */
+	  perror_with_name (("select"));
+	}
+
+      if (FD_ISSET (0, &readfds))
+	{
+	  unsigned char ch;
+	  int n = read (0, &ch, 1);
+	  if (n == 1)
+	    {
+	      if (ch == *mouse_seq_pos)
+		{
+		  /* Looks like another character part of a mouse
+		     escape sequence.  */
+		  mouse_seq_pos++;
+
+		  if (mouse_seq_pos == mouse_seq + sizeof (mouse_seq))
+		    {
+		      /* Yup, we saw "ESC [ M".  */
+
+		      if (debug_mouse_thread)
+			fprintf (stderr, "thread: got mouse sequence header\n");
+
+		      for (size_t i = 0; i < sizeof (mouse_seq); i++)
+			{
+			  write_mouse_pipe (mouse_seq[i]);
+			  if (debug_mouse_thread)
+			    fprintf (stderr, "thread: %c (%d) ",
+				     mouse_seq[i], mouse_seq[i]);
+			}
+
+		      mouse_seq_pos = mouse_seq;
+		    }
+		}
+	      else if (mouse_seq_pos > mouse_seq)
+		{
+		  if (debug_mouse_thread)
+		    fprintf (stderr,
+			     "thread: non-mouse escape sequence, STOP!\n");
+
+		  /* Store the sequence in MOUSE_CHARS instead of in
+		     the pipe.  We don't want ncurses to see it.  */
+		  for (size_t i = 0; i < mouse_seq_pos - mouse_seq; i++)
+		    {
+		      mouse_chars.push_back (mouse_seq[i]);
+		      if (debug_mouse_thread)
+			fprintf (stderr, "thread: %c (%d) ",
+				 mouse_seq[i], mouse_seq[i]);
+		    }
+		  mouse_chars.push_back (ch);
+		  if (debug_mouse_thread)
+		    fprintf (stderr, "thread: %c (%d) ", ch, ch);
+
+		  /* The mainline code is blocked in wgetch, and we
+		     need to wake it up, but we don't want to let
+		     ncurses see this sequence.  Solve this by putting
+		     a 0/NIL character in the pipe.  That pass through
+		     wgetch and we will end up returning 0 to
+		     readline, which readline interprets as "no op",
+		     exactly what we want.  Phew!  */
+		  write_mouse_pipe (0);
+
+		  /* Reset the sequence position pointer, and stop
+		     reading stdin until the mainline code tells us
+		     otherwise.  */
+		  mouse_seq_pos = mouse_seq;
+		  mouse_thread_stdin = false;
+		}
+	      else
+		{
+		  write_mouse_pipe (ch);
+
+		  if (debug_mouse_thread)
+		    fprintf (stderr, "thread: %c (%d) ", ch, ch);
+		}
+	    }
+	  else
+	    {
+	      if (debug_mouse_thread)
+		fprintf (stderr, "thread: => -1!");
+	    }
+	  if (debug_mouse_thread)
+	    fflush (stderr);
+	}
+
+      if (FD_ISSET (intr_mouse_thread[0], &readfds))
+	{
+	  int ret;
+
+	  if (debug_mouse_thread)
+	    fprintf (stderr, "break thread\n");
+
+	  do
+	    {
+	      char buf;
+	      ret = read (intr_mouse_thread[0], &buf, 1);
+	    }
+	  while (ret == -1 && errno == EINTR);
+
+	  mouse_thread_stdin_out = mouse_thread_stdin;
+	  continue;
+	}
+    }
+
+  return nullptr;
+}
+
+/* Initialize the special mouse screen, and all auxiliary bits.  */
+
+void
+init_mouse_screen ()
+{
+  /* Pseudo-stdin pipe for the ncurses mouse "terminal".  */
+  if (gdb_pipe_cloexec (mouse_input_pipe) != 0)
+    error (_("Cannot create pipe for mouse"));
+
+  /* The self-trick pipe used to wake up / interrupt the mouse
+     thread.  */
+  if (gdb_pipe_cloexec (intr_mouse_thread) != 0)
+    error (_("Cannot create pipe for mouse interruption"));
+  fcntl (intr_mouse_thread[0], F_SETFL, O_NONBLOCK);
+  fcntl (intr_mouse_thread[1], F_SETFL, O_NONBLOCK);
+
+  /* Create the mouse terminal.  It reads from the mouse input pipe,
+     and writes nowhere.  */
+  FILE *in = fdopen (mouse_input_pipe[0], "r");
+  FILE *out = fopen ("/dev/null", "w+");
+  setvbuf (in, NULL, _IONBF, BUFSIZ);
+
+  mouse_screen = newterm (NULL, out, in);
+  mousemask (ALL_MOUSE_EVENTS, NULL);
+
+  /* Enable the keypad, we want to use this terminal to process mouse
+     escape codes.  */
+  WINDOW *w = stdscr;
+  keypad (w, TRUE);
+
+  /* Spawn the mouse thread.  */
+  pthread_create (&mouse_thread, nullptr, mouse_thread_fn, nullptr);
+}
+
 /* Main worker for tui_getc.  Get a character from the command window.
    This is called from the readline package, but wrapped in a
    try/catch by tui_getc.  */
@@ -1084,14 +1337,251 @@ tui_getc_1 (FILE *fp)
   tui_readline_output (0, 0);
 #endif
 
-  ch = gdb_wgetch (w);
+  if (tui_win_with_focus () == TUI_CMD_WIN && current_ui->command_editing)
+    {
+      if (drain_mouse_chars)
+	{
+	  ch = mouse_chars.front ();
+	  mouse_chars.erase (mouse_chars.begin ());
+	  if (debug_mouse_thread)
+	    fprintf (stderr, "drain: got %c (%d), ", ch, ch);
+	  if (mouse_chars.empty ())
+	    {
+	      drain_mouse_chars = false;
+	      if (debug_mouse_thread)
+		fprintf (stderr, " : done\r\n");
+	    }
+	  else
+	    call_stdin_event_handler_again_p = 1;
+	  return ch;
+	}
+      else if (!last_key_was_mouse)
+	{
+	  ch = gdb_wgetch (w);
+	}
 
-  /* Handle prev/next/up/down here.  */
-  ch = tui_dispatch_ctrl_char (ch);
-  
+      if (last_key_was_mouse || key_is_start_sequence (ch))
+	{
+	  /* Process this key sequence with the special mouse ncurses
+	     screen, which has the keypad enabled, and reads from
+	     MOUSE_INPUT_PIPE.  */
+
+	  /* Set the current screen to the mouse screen.  */
+	  WINDOW *prev_stdscr = stdscr;
+	  SCREEN *prev_s = set_term (mouse_screen);
+	  /* The mouse WINDOW.  */
+	  WINDOW *mw = stdscr;
+
+	  if (last_key_was_mouse)
+	    {
+	      if (debug_mouse_thread)
+		fprintf (stderr, "last key was mouse\r\n");
+	    }
+
+	  /* If we're just starting a sequence, block waiting for the
+	     whole sequence.  If we're here because we returned a
+	     mouse event before and we're now draining the curses
+	     buffer, disable blocking.  */
+	  if (last_key_was_mouse)
+	    nodelay (mw, TRUE);
+	  else
+	    nodelay (mw, FALSE);
+
+	  flush_intr_mouse_pipe ();
+
+	  /* If we're starting a new sequence, reset the sequence
+	     position.  If we last saw a mouse key, then the mouse
+	     thread may have read a partial mouse event out of stdin,
+	     so we need to let it continue the sequence where it left
+	     it last.  */
+	  if (!last_key_was_mouse)
+	    mouse_seq_pos = &mouse_seq[1];
+
+	  /* Set the thread reading from stdin.  */
+	  mouse_thread_stdin = true;
+	  wake_mouse_thread ();
+	  while (!mouse_thread_stdin_out)
+	    ;
+
+	  using namespace std::chrono;
+
+	  steady_clock::time_point before = steady_clock::now ();
+
+	  /* Read one cooked key out of the mouse window.  */
+	  ch = gdb_wgetch (mw);
+
+	  steady_clock::time_point after = steady_clock::now ();
+
+	  auto diff = after - before;
+	  seconds s = duration_cast<seconds> (diff);
+	  microseconds us = duration_cast<microseconds> (diff - s);
+	  if (debug_mouse_thread)
+	    fprintf (stderr, "wgetch took: %ld.%06ld\n",
+		     (long) s.count (),
+		     (long) us.count ());
+
+	  /* Tell the thread to stop reading stdin, and wait until it
+	     acknowledges it.  */
+	  mouse_thread_stdin = false;
+	  wake_mouse_thread ();
+	  while (mouse_thread_stdin_out)
+	    ;
+
+	  if (ch == ERR)
+	    {
+	      /* We get here if the previous key returned was a mouse
+		 key, and thus disabled blocked in order to flush all
+		 keys.  ERR means there are no more keys in the curses
+		 buffer.  */
+	      if (debug_mouse_thread)
+		fprintf (stderr, "got ERR\r\n");
+
+	      /* Stop draining curses.  */
+	      last_key_was_mouse = false;
+
+	      /* If the thread saw a non-mouse escape sequence, we
+		 need to drain it next.  */
+	      if (!mouse_chars.empty ())
+		{
+		  drain_mouse_chars = true;
+		  call_stdin_event_handler_again_p = 1;
+		}
+
+	      ch = 0;
+	    }
+	  else if (ch == KEY_MOUSE)
+	    {
+	      if (debug_mouse_thread)
+		fprintf (stderr, "KEY_MOUSE\n");
+
+	      /* Process this mouse key, and set up to drain other
+		 keys that ncurses may have read into its internal
+		 buffer already.  */
+	      last_key_was_mouse = true;
+	      call_stdin_event_handler_again_p = 1;
+
+	      /* Get the mouse event.  This must be called with the
+		 mouse screen as current.  */
+	      MEVENT mev;
+	      if (getmouse (&mev) == OK)
+		{
+		  /* Now handle the mouse event.  This must be done
+		     with the normal screen as current.  */
+		  set_term (prev_s);
+		  stdscr = prev_stdscr;
+
+		  /* Handle prev/next/up/down here.  */
+		  tui_dispatch_mouse_event (mev);
+		}
+
+	      return 0;
+	    }
+	  else
+	    {
+	      if (debug_mouse_thread)
+		fprintf (stderr, "not KEY_MOUSE, %c (%d)\n", ch, ch);
+
+	      last_key_was_mouse = false;
+
+	      /* Drain data buffered on the ncurses side and/or in the
+		 pipe.  */
+	      nodelay (mw, TRUE);
+
+	      /* Data already in MOUSE_CHARS must be returned to
+		 readline _after_ the data ncurses already fetched
+		 from the pipe into its own internal buffer.  IOW, the
+		 ncurses buffered data must be prepended into
+		 MOUSE_CHARS.  Start by draining ncurses data into a
+		 temporary vector.  */
+	      std::vector<int> tmp_chars;
+	      int ch2 = gdb_wgetch (mw);
+	      if (ch2 != ERR)
+		{
+		  if (debug_mouse_thread)
+		    fprintf (stderr, "more data!: %c (%d)", ch2, ch2);
+		  gdb_assert (ch2 != KEY_MOUSE);
+		  tmp_chars.push_back (ch2);
+		  while (1)
+		    {
+		      ch2 = gdb_wgetch (mw);
+		      if (ch2 == ERR)
+			{
+			  if (debug_mouse_thread)
+			    fprintf (stderr, ", ERR");
+			  break;
+			}
+		      else
+			{
+			  if (debug_mouse_thread)
+			    fprintf (stderr, ", %c (%d)", ch2, ch2);
+			  gdb_assert (ch2 != KEY_MOUSE);
+			  tmp_chars.push_back (ch2);
+			}
+		    }
+		  if (debug_mouse_thread)
+		    {
+		      fprintf (stderr, "\n");
+		      fflush (stderr);
+		    }
+		}
+
+	      nodelay (mw, FALSE);
+
+	      /* Now append the data that was already in MOUSE_CHARS
+		 in the temporary vector.  */
+	      tmp_chars.insert (tmp_chars.end (),
+				mouse_chars.begin (), mouse_chars.end ());
+
+	      /* And make the result the new MOUSE_CHARS.  */
+	      mouse_chars = std::move (tmp_chars);
+
+	      if (debug_mouse_thread)
+		fprintf (stderr, "got %c (%d), ", ch, ch);
+	      if (!mouse_chars.empty ())
+		{
+		  drain_mouse_chars = true;
+		  call_stdin_event_handler_again_p = 1;
+		}
+	    }
+
+	  /* Restore the regular screen as current.  */
+	  set_term (prev_s);
+	  stdscr = prev_stdscr;
+	}
+      else
+	{
+	  if (debug_mouse_thread)
+	    fprintf (stderr, "tui_get_c_1: not escape: %c (%d)\n", ch, ch);
+	}
+    }
+  else
+    {
+      using namespace std::chrono;
+
+      steady_clock::time_point before = steady_clock::now ();
+
+      ch = gdb_wgetch (w);
+
+      steady_clock::time_point after = steady_clock::now ();
+
+      auto diff = after - before;
+      seconds s = duration_cast<seconds> (diff);
+      microseconds us = duration_cast<microseconds> (diff - s);
+#if 0
+      fprintf (stderr, "wgetch took: %ld.%06ld\n",
+	       (long) s.count (),
+	       (long) us.count ());
+#endif
+
+      /* Handle prev/next/up/down here.  */
+      ch = tui_dispatch_ctrl_char (ch);
+    }
+
   if (ch == KEY_BACKSPACE)
     return '\b';
 
+#if 0
+  /* XXX: see about re-enabling this.  */
   if (current_ui->command_editing && key_is_start_sequence (ch))
     {
       int ch_pending;
@@ -1117,6 +1607,7 @@ tui_getc_1 (FILE *fp)
 	  call_stdin_event_handler_again_p = 1;
 	}
     }
+#endif
 
   return ch;
 }

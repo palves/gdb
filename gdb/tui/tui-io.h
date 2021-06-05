@@ -60,4 +60,7 @@ extern cli_ui_out *tui_old_uiout;
    next line.  */
 extern void tui_inject_newline_into_command_window ();
 
+/* Initialize the mouse screen.  */
+extern void init_mouse_screen ();
+
 #endif /* TUI_TUI_IO_H */
