@@ -37,6 +37,8 @@ static volatile sig_atomic_t got_sigpipe = 0;
 static void
 handle_sigpipe (int)
 {
+  signal (SIGPIPE, handle_sigpipe);
+
   got_sigpipe = 1;
 }
 
