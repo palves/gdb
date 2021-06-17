@@ -37,8 +37,6 @@ static volatile sig_atomic_t got_sigpipe = 0;
 static void
 handle_sigpipe (int)
 {
-  signal (SIGPIPE, handle_sigpipe);
-
   got_sigpipe = 1;
 }
 
@@ -47,8 +45,14 @@ handle_sigpipe (int)
 static void
 test_sigpipe ()
 {
-  auto *osig = signal (SIGPIPE, handle_sigpipe);
-  SCOPE_EXIT { signal (SIGPIPE, osig); };
+  struct sigaction new_action, old_action;
+
+  new_action.sa_handler = handle_sigpipe;
+  sigemptyset (&new_action.sa_mask);
+  new_action.sa_flags = 0;
+
+  sigaction (SIGPIPE, &new_action, &old_action);
+  SCOPE_EXIT { sigaction (SIGPIPE, &old_action, nullptr); };
 
 #ifdef HAVE_SIGPROCMASK
   /* Make sure SIGPIPE isn't blocked.  */
