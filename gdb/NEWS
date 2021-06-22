@@ -239,6 +239,11 @@ QMemTags
   Request the remote to store the specified allocation tags to the requested
   memory range.
 
+stepped-thread-exited feature in qSupported
+  Indicates that GDB is expecting thread exit (w) stop replies for
+  threads that were single-stepping, even when QThreadEvents is not in
+  effect.
+
 * Guile API
 
   ** Improved support for rvalue reference values:

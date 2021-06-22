@@ -23463,6 +23463,10 @@ are:
 @tab @code{no resumed thread left stop reply}
 @tab Tracking thread lifetime.
 
+@item @code{stepped-thread-exited-stop-reply}
+@tab @code{stepped thread exited stop reply}
+@tab Tracking thread lifetime.
+
 @end multitable
 
 @node Remote Stub
@@ -40953,7 +40957,11 @@ hex strings.
 The thread exited, and @var{AA} is the exit status.  This response
 should not be sent by default; @value{GDBN} requests it with the
 @ref{QThreadEvents} packet.  See also @ref{thread create event} above.
-@var{AA} is formatted as a big-endian hex string.
+If @value{GDBN} reported support for the @samp{stepped-thread-exited}
+@samp{qSupported} feature (@pxref{qSupported}), the remote stub should
+send this response for stepping threads that exit, even if thread
+create/exit events are disabled with @samp{QThreadEvents:0}.  @var{AA}
+is formatted as a big-endian hex string.
 
 @item N
 There are no resumed threads left in the target.  In other words, even
@@ -41870,6 +41878,16 @@ including @samp{exec-events+} in its @samp{qSupported} reply.
 @item vContSupported
 This feature indicates whether @value{GDBN} wants to know the
 supported actions in the reply to @samp{vCont?} packet.
+
+@item stepped-thread-exited
+This feature indicates whether @value{GDBN} expects thread exited
+events for stepping threads, even if @samp{QThreadEvents:1} was not
+requested.  This can also be used as indication that @value{GDBN}
+understands the @samp{w} stop reply (@pxref{thread exit event}) in
+all-stop mode.  Prior versions of @value{GDBN} considered such a
+response an error.  @value{GDBN} does not expect such events unless
+the stub also reports that it reports them by including
+@samp{stepped-thread-exited+} in its @samp{qSupported} reply.
 @end table
 
 Stubs should ignore any unknown values for
@@ -42143,6 +42161,11 @@ These are the currently defined stub features and their properties:
 @tab @samp{-}
 @tab No
 
+@item @samp{stepped-thread-exited}
+@tab No
+@tab @samp{-}
+@tab No
+
 @item @samp{memory-tagging}
 @tab No
 @tab @samp{-}
@@ -42362,6 +42385,9 @@ The remote stub understands the @samp{QThreadEvents} packet.
 @item no-resumed
 The remote stub reports the @samp{N} stop reply.
 
+@item stepped-thread-exited
+The remote stub reports the @samp{w} stop reply for single-stepped
+threads that exit.
 
 @item memory-tagging
 The remote stub supports and implements the required memory tagging

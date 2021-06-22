@@ -500,6 +500,10 @@ public:
   /* Returns true if the target supports memory tagging facilities.  */
   virtual bool supports_memory_tagging ();
 
+  /* Returns true if the target supports returning
+     TARGET_WAITKIND_THREAD_EXITED for stepping threads.  */
+  virtual bool supports_stepped_thread_exited();
+
   /* Return the allocated memory tags of type TYPE associated with
      [ADDRESS, ADDRESS + LEN) in TAGS.
 
@@ -541,6 +545,9 @@ int kill_inferior (process_info *proc);
 
 #define target_supports_memory_tagging() \
   the_target->supports_memory_tagging ()
+
+#define target_supports_stepped_thread_exited() \
+  the_target->supports_stepped_thread_exited ()
 
 #define target_handle_new_gdb_connection()		 \
   the_target->handle_new_gdb_connection ()

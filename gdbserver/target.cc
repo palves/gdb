@@ -471,6 +471,12 @@ process_stratum_target::supports_memory_tagging ()
 }
 
 bool
+process_stratum_target::supports_stepped_thread_exited ()
+{
+  return false;
+}
+
+bool
 process_stratum_target::fetch_memtags (CORE_ADDR address, size_t len,
 				       gdb::byte_vector &tags, int type)
 {

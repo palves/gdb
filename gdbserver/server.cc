@@ -85,6 +85,10 @@ bool run_once;
 /* Whether to report TARGET_WAITKIND_NO_RESUMED events.  */
 static bool report_no_resumed;
 
+/* Whether to report TARGET_WAITKIND_THREAD_EXITED events when a
+   stepping thread exits.  */
+static bool report_stepped_thread_exited;
+
 /* The event loop checks this to decide whether to continue accepting
    events.  */
 static bool keep_processing_events = true;
@@ -2398,6 +2402,13 @@ handle_query (char *own_buf, int packet_len, int *new_packet_len_p)
 		     events.  */
 		  report_no_resumed = true;
 		}
+	      else if (feature == "stepped-thread-exited+")
+		{
+		  /* GDB understands & expects
+		     TARGET_WAITKIND_THREAD_EXITED for stepping
+		     threads that exit.  */
+		  report_stepped_thread_exited = true;
+		}
 	      else if (feature == "memory-tagging+")
 		{
 		  /* GDB supports memory tagging features.  */
@@ -2520,6 +2531,9 @@ handle_query (char *own_buf, int packet_len, int *new_packet_len_p)
       strcat (own_buf, ";QThreadEvents+");
 
       strcat (own_buf, ";no-resumed+");
+
+      if (target_supports_stepped_thread_exited ())
+	strcat (own_buf, ";stepped-thread-exited+");
 
       if (target_supports_memory_tagging ())
 	strcat (own_buf, ";memory-tagging+");
@@ -2954,9 +2968,21 @@ resume (struct thread_resume *actions, size_t num_actions)
 	  return;
 	}
 
+      if (cs.last_status.kind == TARGET_WAITKIND_THREAD_EXITED
+	  && !report_stepped_thread_exited)
+	{
+	  /* report_stepped_thread_exited also indicates whether the
+	     client supports the 'w' stop reply in all-stop mode.  At
+	     least return error.  */
+	  sprintf (cs.own_buf, "E.Thread exited.");
+	  disable_async_io ();
+	  return;
+	}
+
       if (cs.last_status.kind != TARGET_WAITKIND_EXITED
 	  && cs.last_status.kind != TARGET_WAITKIND_SIGNALLED
-	  && cs.last_status.kind != TARGET_WAITKIND_NO_RESUMED)
+	  && cs.last_status.kind != TARGET_WAITKIND_NO_RESUMED
+	  && cs.last_status.kind != TARGET_WAITKIND_THREAD_EXITED)
 	current_thread->last_status = cs.last_status;
 
       /* From the client's perspective, all-stop mode always stops all

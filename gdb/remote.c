@@ -2180,6 +2180,11 @@ enum {
   /* Support TARGET_WAITKIND_NO_RESUMED.  */
   PACKET_no_resumed,
 
+  /* Support TARGET_WAITKIND_THREAD_EXITED / 'w' stop replies when
+     single-stepped threads exit.  Also indicates that GDB understands
+     'w' stop replies in the all-stop protocol.  */
+  PACKET_stepped_thread_exited,
+
   /* Support for memory tagging, allocation tag fetch/store
      packets and the tag violation stop replies.  */
   PACKET_memory_tagging_feature,
@@ -5331,6 +5336,8 @@ static const struct protocol_feature remote_protocol_features[] = {
   { "vContSupported", PACKET_DISABLE, remote_supported_packet, PACKET_vContSupported },
   { "QThreadEvents", PACKET_DISABLE, remote_supported_packet, PACKET_QThreadEvents },
   { "no-resumed", PACKET_DISABLE, remote_supported_packet, PACKET_no_resumed },
+  { "stepped-thread-exited", PACKET_DISABLE, remote_supported_packet,
+    PACKET_stepped_thread_exited },
   { "memory-tagging", PACKET_DISABLE, remote_supported_packet,
     PACKET_memory_tagging_feature },
 };
@@ -5426,6 +5433,9 @@ remote_target::remote_query_supported ()
 
       if (packet_set_cmd_state (PACKET_no_resumed) != AUTO_BOOLEAN_FALSE)
 	remote_query_supported_append (&q, "no-resumed+");
+
+      if (packet_set_cmd_state (PACKET_stepped_thread_exited) != AUTO_BOOLEAN_FALSE)
+	remote_query_supported_append (&q, "stepped-thread-exited+");
 
       if (packet_set_cmd_state (PACKET_memory_tagging_feature)
 	  != AUTO_BOOLEAN_FALSE)
@@ -8207,6 +8217,7 @@ remote_target::wait_as (ptid_t ptid, target_waitstatus *status,
       status->kind = TARGET_WAITKIND_STOPPED;
       status->value.sig = GDB_SIGNAL_0;
       break;
+
     case 'F':		/* File-I/O request.  */
       /* GDB may access the inferior memory while handling the File-I/O
 	 request, but we don't want GDB accessing memory while waiting
@@ -8219,7 +8230,8 @@ remote_target::wait_as (ptid_t ptid, target_waitstatus *status,
 	 again.  Keep waiting for events.  */
       rs->waiting_for_stop_reply = 1;
       break;
-    case 'N': case 'T': case 'S': case 'X': case 'W':
+
+    case 'N': case 'T': case 'S': case 'X': case 'W': case 'w':
       {
 	/* There is a stop reply to handle.  */
 	rs->waiting_for_stop_reply = 0;
@@ -8232,9 +8244,11 @@ remote_target::wait_as (ptid_t ptid, target_waitstatus *status,
 	event_ptid = process_stop_reply (stop_reply, status);
 	break;
       }
+
     case 'O':		/* Console output.  */
       remote_console_output (buf + 1);
       break;
+
     case '\0':
       if (rs->last_sent_signal != GDB_SIGNAL_0)
 	{
@@ -15244,6 +15258,10 @@ Show the maximum size of the address (in bits) in a memory packet."), NULL,
 
   add_packet_config_cmd (&remote_protocol_packets[PACKET_no_resumed],
 			 "N stop reply", "no-resumed-stop-reply", 0);
+
+  add_packet_config_cmd (&remote_protocol_packets[PACKET_stepped_thread_exited],
+			 "w stop reply (after step)",
+			 "stepped-thread-exited-stop-reply", 0);
 
   add_packet_config_cmd (&remote_protocol_packets[PACKET_memory_tagging_feature],
 			 "memory-tagging-feature", "memory-tagging-feature", 0);
