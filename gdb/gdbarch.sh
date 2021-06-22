@@ -844,7 +844,7 @@ M;void;displaced_step_fixup;struct displaced_step_copy_insn_closure *closure, CO
 M;displaced_step_prepare_status;displaced_step_prepare;thread_info *thread, CORE_ADDR &displaced_pc;thread, displaced_pc
 
 # Clean up after a displaced step of THREAD.
-m;displaced_step_finish_status;displaced_step_finish;thread_info *thread, gdb_signal sig;thread, sig;;NULL;;(! gdbarch->displaced_step_finish) != (! gdbarch->displaced_step_prepare)
+m;displaced_step_finish_status;displaced_step_finish;thread_info *thread, const target_waitstatus &ws;thread, ws;;NULL;;(! gdbarch->displaced_step_finish) != (! gdbarch->displaced_step_prepare)
 
 # Return the closure associated to the displaced step buffer that is at ADDR.
 F;const displaced_step_copy_insn_closure *;displaced_step_copy_insn_closure_by_addr;inferior *inf, CORE_ADDR addr;inf, addr
