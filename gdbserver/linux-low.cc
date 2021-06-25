@@ -2953,7 +2953,6 @@ linux_process_target::wait_1 (ptid_t ptid, target_waitstatus *ourstatus,
   int report_to_gdb;
   int trace_event;
   int in_step_range;
-  int any_resumed;
 
   if (debug_threads)
     {
@@ -2971,23 +2970,11 @@ linux_process_target::wait_1 (ptid_t ptid, target_waitstatus *ourstatus,
   in_step_range = 0;
   ourstatus->kind = TARGET_WAITKIND_IGNORE;
 
-  auto status_pending_p_any = [&] (thread_info *thread)
-    {
-      return status_pending_p_callback (thread, minus_one_ptid);
-    };
-
-  auto not_stopped = [&] (thread_info *thread)
-    {
-      return not_stopped_callback (thread, minus_one_ptid);
-    };
-
-  /* Find a resumed LWP, if any.  */
-  if (find_thread (status_pending_p_any) != NULL)
-    any_resumed = 1;
-  else if (find_thread (not_stopped) != NULL)
-    any_resumed = 1;
-  else
-    any_resumed = 0;
+  auto any_resumed = [&] (thread_info *thread)
+  {
+    return (status_pending_p_callback (thread, minus_one_ptid)
+	    || not_stopped_callback (thread, minus_one_ptid));
+  };
 
   if (step_over_bkpt == null_ptid)
     pid = wait_for_event (ptid, &w, options);
@@ -2999,7 +2986,16 @@ linux_process_target::wait_1 (ptid_t ptid, target_waitstatus *ourstatus,
       pid = wait_for_event (step_over_bkpt, &w, options & ~WNOHANG);
     }
 
-  if (pid == 0 || (pid == -1 && !any_resumed))
+  if (pid == -1)
+    {
+      /* Check if we have any resumed LWP.  If not, then report
+	 TARGET_WAITKIND_NO_RESUMED.  If we do, ignore the -1
+	 return.  */
+      if (find_thread (any_resumed) != nullptr)
+	pid = 0;
+    }
+
+  if (pid == 0)
     {
       gdb_assert (target_options & TARGET_WNOHANG);
 
