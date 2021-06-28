@@ -3943,6 +3943,8 @@ remote_target::update_thread_list ()
 
 	  if (!context.contains_thread (tp->ptid))
 	    {
+	      /* Not found.  */
+
 	      /* Do not remove the thread if it is the last thread in
 		 the inferior.  This situation happens when we have a
 		 pending exit process status to process.  Otherwise we
@@ -3951,7 +3953,22 @@ remote_target::update_thread_list ()
 	      if (has_single_non_exited_thread (tp->inf))
 		continue;
 
-	      /* Not found.  */
+	      /* If the thread was stepping, then don't delete it yet,
+		 let infrun process the thread exit event which should
+		 come shortly.  If this thread was stepping over a
+		 breakpoint, we want infrun to see the exit so it can
+		 free the displaced stepping buffer (if used), and
+		 maybe start a new step-over in another thread (if any
+		 is waiting).  */
+	      remote_thread_info *remote_thr = get_remote_thread_info (tp);
+	      if (packet_support (PACKET_stepped_thread_exited) == PACKET_ENABLE
+		  && remote_thr->get_resume_state () != resume_state::NOT_RESUMED
+		  && remote_thr->resume_info ().step)
+		continue;
+
+	      /* The core doesn't particularly care about the thread,
+		 and a THREAD_EXITED event is likely not coming.  Go
+		 ahead and delete it immediately.  */
 	      delete_thread (tp);
 	    }
 	}
