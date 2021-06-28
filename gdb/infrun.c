@@ -4961,6 +4961,55 @@ handle_one (const wait_one_event &event)
   return false;
 }
 
+/* Helper for stop_all_threads.  wait_one waits for events until it
+   sees a TARGET_WAITKIND_NO_RESUMED.  When it sees one, it disables
+   target_async for the target and no longer waits for events from
+   that target.  TARGET_WAITKIND_NO_RESUMED can be delayed though,
+   consider:
+
+    #1 - threads 2-5 are stopped, thread 1 is running
+
+    #2 - target reports breakpoint hit for thread 1, event is queued
+
+    #3 - target reports no-resumed left, event is queued
+
+    #4 - user resumes all threads
+
+    #5 - gdb decides to stop all threads, stops threads 1-5
+
+    #6 - wait_one returns the queued breakpoint hit for thread 1
+
+    #7 - wait_one returns the queued no-resumed event, wait_one stops
+	 waiting for events from target
+
+    #8 - we still haven't seen the stops for threads 2-5, so we do
+	 another pass
+
+    #9 - if the target is not async wait_one doesn't wait on the
+	 target, so it won't see the stops.
+
+    #a - we'd loop forever with WAITS_NEEDED > 0.
+
+   To handle this, we need to explicitly (re-)enable target async on
+   all targets that can async.  */
+
+static void
+reenable_target_async ()
+{
+  for (inferior *inf : all_inferiors ())
+    {
+      process_stratum_target *target = inf->process_target ();
+      if (target != nullptr
+	  && target->threads_executing
+	  && target->can_async_p ()
+	  && !target->is_async_p ())
+	{
+	  switch_to_inferior_no_thread (inf);
+	  target_async (1);
+	}
+    }
+}
+
 /* See infrun.h.  */
 
 void
@@ -5070,6 +5119,8 @@ stop_all_threads (void)
 	     threads stopped.  */
 	  if (pass > 0)
 	    pass = -1;
+
+	  reenable_target_async ();
 
 	  for (int i = 0; i < waits_needed; i++)
 	    {
