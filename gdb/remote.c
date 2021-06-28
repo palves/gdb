@@ -1084,12 +1084,10 @@ enum class resume_state
   RESUMED,
 };
 
-/* Information about a thread's pending vCont-resume.  Used when a thread is in
-   the remote_resume_state::RESUMED_PENDING_VCONT state.  remote_target::resume
-   stores this information which is then picked up by
-   remote_target::commit_resume to know which is the proper action for this
-   thread to include in the vCont packet.  */
-struct resumed_pending_vcont_info
+/* Information about a thread's resume state.  Used when a thread is
+   in the resume_state::RESUMED_PENDING_VCONT or resume_state::RESUMED
+   states.  */
+struct resume_info
 {
   /* True if the last resume call for this thread was a step request, false
      if a continue request.  */
@@ -1133,45 +1131,54 @@ struct remote_thread_info : public private_thread_info
   void set_resumed_pending_vcont (bool step, gdb_signal sig)
   {
     m_resume_state = resume_state::RESUMED_PENDING_VCONT;
-    m_resumed_pending_vcont_info.step = step;
-    m_resumed_pending_vcont_info.sig = sig;
+    m_resume_info.step = step;
+    m_resume_info.sig = sig;
+  }
+
+  /* Put the thread in the VCONT_RESUMED state.  */
+  void set_resumed (bool step, gdb_signal sig)
+  {
+    m_resume_state = resume_state::RESUMED;
+    m_resume_info.step = step;
+    m_resume_info.sig = sig;
   }
 
   /* Get the information this thread's pending vCont-resumption.
 
-     Must only be called if the thread is in the RESUMED_PENDING_VCONT resume
-     state.  */
-  const struct resumed_pending_vcont_info &resumed_pending_vcont_info () const
+     Must only be called if the thread is in the RESUMED_PENDING_VCONT
+     or RESUMED states.  */
+  const struct resume_info &resume_info () const
   {
-    gdb_assert (m_resume_state == resume_state::RESUMED_PENDING_VCONT);
+    gdb_assert (m_resume_state == resume_state::RESUMED_PENDING_VCONT
+		|| m_resume_state == resume_state::RESUMED);
 
-    return m_resumed_pending_vcont_info;
-  }
-
-  /* Put the thread in the VCONT_RESUMED state.  */
-  void set_resumed ()
-  {
-    m_resume_state = resume_state::RESUMED;
+    return m_resume_info;
   }
 
 private:
-  /* Resume state for this thread.  This is used to implement vCont action
-     coalescing (only when the target operates in non-stop mode).
+  /* Resume state for this thread.  This is used to implement vCont
+     action coalescing (only when the target operates in non-stop
+     mode), and also generally be able to retrieve the last resume
+     action on a given thread.
 
-     remote_target::resume moves the thread to the RESUMED_PENDING_VCONT state,
-     which notes that this thread must be considered in the next commit_resume
-     call.
+     In non-stop mode, remote_target::resume moves the thread to the
+     RESUMED_PENDING_VCONT state, which notes that this thread must be
+     considered in the next commit_resume call.  In all-stop,
+     remote_target::resume resumes the thread immediately and moves it
+     to the RESUMED state.
 
-     remote_target::commit_resume sends a vCont packet with actions for the
-     threads in the RESUMED_PENDING_VCONT state and moves them to the
-     VCONT_RESUMED state.
+     In non-stop mode, remote_target::commit_resume sends a vCont
+     packet with actions for the threads in the RESUMED_PENDING_VCONT
+     state and moves them to the VCONT_RESUMED state.
+     remote_target::commit_resume is a no-op in all-stop mode.
 
-     When reporting a stop to the core for a thread, that thread is moved back
-     to the NOT_RESUMED state.  */
+     When reporting a stop to the core for a thread, that thread is
+     moved back to the NOT_RESUMED state.  */
   enum resume_state m_resume_state = resume_state::NOT_RESUMED;
 
-  /* Extra info used if the thread is in the RESUMED_PENDING_VCONT state.  */
-  struct resumed_pending_vcont_info m_resumed_pending_vcont_info;
+  /* Extra info used if the thread is in the RESUMED_PENDING_VCONT or
+     RESUMED state.  */
+  struct resume_info m_resume_info;
 };
 
 remote_state::remote_state ()
@@ -2548,7 +2555,7 @@ remote_target::remote_add_thread (ptid_t ptid, bool running, bool executing)
 
   /* We start by assuming threads are resumed.  That state then gets updated
      when we process a matching stop reply.  */
-  get_remote_thread_info (thread)->set_resumed ();
+  get_remote_thread_info (thread)->set_resumed (false, GDB_SIGNAL_0);
 
   set_executing (this, ptid, executing);
   set_running (this, ptid, running);
@@ -4835,7 +4842,7 @@ remote_target::start_remote (int from_tty, int extended_p)
 	     non-threaded target as single-threaded; add a main
 	     thread.  */
 	  thread_info *tp = add_current_inferior_and_thread (wait_status);
-	  get_remote_thread_info (tp)->set_resumed ();
+	  get_remote_thread_info (tp)->set_resumed (false, GDB_SIGNAL_0);
 	}
       else
 	{
@@ -6426,6 +6433,13 @@ remote_target::resume (ptid_t ptid, int step, enum gdb_signal siggnal)
 {
   struct remote_state *rs = get_remote_state ();
 
+  remote_thread_info *remote_thr;
+
+  if (minus_one_ptid == ptid || ptid.is_pid ())
+    remote_thr = get_remote_thread_info (this, inferior_ptid);
+  else
+    remote_thr = get_remote_thread_info (this, ptid);
+
   /* When connected in non-stop mode, the core resumes threads
      individually.  Resuming remote threads directly in target_resume
      would thus result in sending one packet per thread.  Instead, to
@@ -6435,13 +6449,6 @@ remote_target::resume (ptid_t ptid, int step, enum gdb_signal siggnal)
      able to do vCont action coalescing.  */
   if (target_is_non_stop_p () && ::execution_direction != EXEC_REVERSE)
     {
-      remote_thread_info *remote_thr;
-
-      if (minus_one_ptid == ptid || ptid.is_pid ())
-	remote_thr = get_remote_thread_info (this, inferior_ptid);
-      else
-	remote_thr = get_remote_thread_info (this, ptid);
-
       /* We don't expect the core to ask to resume an already resumed (from
          its point of view) thread.  */
       gdb_assert (remote_thr->get_resume_state () == resume_state::NOT_RESUMED);
@@ -6467,7 +6474,8 @@ remote_target::resume (ptid_t ptid, int step, enum gdb_signal siggnal)
 
   /* Update resumed state tracked by the remote target.  */
   for (thread_info *tp : all_non_exited_threads (this, ptid))
-    get_remote_thread_info (tp)->set_resumed ();
+    get_remote_thread_info (tp)->set_resumed (false, GDB_SIGNAL_0);
+  remote_thr->set_resumed (step, siggnal);
 
   /* We are about to start executing the inferior, let's register it
      with the event loop.  NOTE: this is the one place where all the
@@ -6777,8 +6785,7 @@ remote_target::commit_resumed ()
       for (const auto &stop_reply : rs->stop_reply_queue)
 	gdb_assert (stop_reply->ptid != tp->ptid);
 
-      const resumed_pending_vcont_info &info
-	= remote_thr->resumed_pending_vcont_info ();
+      const resume_info &info = remote_thr->resume_info ();
 
       /* Check if we need to send a specific action for this thread.  If not,
          it will be included in a wildcard resume instead.  */
@@ -6786,7 +6793,7 @@ remote_target::commit_resumed ()
 	  || !get_remote_inferior (tp->inf)->may_wildcard_vcont)
 	vcont_builder.push_action (tp->ptid, info.step, info.sig);
 
-      remote_thr->set_resumed ();
+      remote_thr->set_resumed (info.step, info.sig);
     }
 
   /* Now check whether we can send any process-wide wildcard.  This is
@@ -6874,8 +6881,7 @@ remote_target::remote_stop_ns (ptid_t ptid)
       if (remote_thr->get_resume_state ()
 	  == resume_state::RESUMED_PENDING_VCONT)
 	{
-	  const resumed_pending_vcont_info &info
-	    = remote_thr->resumed_pending_vcont_info ();
+	  const resume_info &info = remote_thr->resume_info ();
 	  if (info.sig != GDB_SIGNAL_0)
 	    {
 	      /* This signal must be forwarded to the inferior.  We
@@ -6904,8 +6910,7 @@ remote_target::remote_stop_ns (ptid_t ptid)
 	    /* Check that the thread wasn't resumed with a signal.
 	       Generating a phony stop would result in losing the
 	       signal.  */
-	    const resumed_pending_vcont_info &info
-	      = remote_thr->resumed_pending_vcont_info ();
+	    const resume_info &info = remote_thr->resume_info ();
 	    gdb_assert (info.sig == GDB_SIGNAL_0);
 
 	    stop_reply *sr = new stop_reply ();
@@ -6926,7 +6931,7 @@ remote_target::remote_stop_ns (ptid_t ptid)
 	       queue, we'll end up reporting a stop event to the core
 	       for that thread while it is running on the remote
 	       target... that would be bad.  */
-	    remote_thr->set_resumed ();
+	    remote_thr->set_resumed (false, GDB_SIGNAL_0);
 	  }
       }
 
