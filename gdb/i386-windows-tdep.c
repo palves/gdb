@@ -102,30 +102,6 @@ i386_windows_auto_wide_charset (void)
   return "UTF-16";
 }
 
-static const struct insn_pattern i386_sigbe_bytes[] = {
-  /* movl       $-4,%eax */
-  { 0xb8, 0xff },
-  { 0xfc, 0xff },
-  { 0xff, 0xff },
-  { 0xff, 0xff },
-  { 0xff, 0xff },
-  /* xadd       %eax,$tls::stackptr(%ebx) */
-  { 0x0f, 0xff },
-  { 0xc1, 0xff },
-  { 0x83, 0xff },
-  { 0x00, 0x00 }, /* 4 bytes for tls::stackptr */
-  { 0x00, 0x00 },
-  { 0x00, 0x00 },
-  { 0x00, 0x00 }
-};
-
-#define COUNT(x) (sizeof(x)/sizeof(x[0]))
-
-static const struct insn_pattern_sequence i386_sigbe =
-  {
-    i386_sigbe_bytes, COUNT(i386_sigbe_bytes)
-  };
-
 /* Implement the "push_dummy_call" gdbarch method.  */
 
 static CORE_ADDR
@@ -194,13 +170,29 @@ i386_windows_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
   set_gdbarch_push_dummy_call (gdbarch, i386_windows_push_dummy_call);
 }
 
+/* Sigwrapper unwinder instruction patterns for i386.  */
+
+static const gdb_byte i386_sigbe_bytes[] = {
+  0xb8, 0xfc, 0xff, 0xff, 0xff,			/* movl $-4,%eax */
+  0x0f, 0xc1, 0x83,				/* xadd %eax,$tls::stackptr(%ebx) */
+  /* 4 bytes for tls::stackptr operand.  */
+};
+
+static const gdb::array_view<const gdb_byte> i386_sig_patterns[] {
+  { i386_sigbe_bytes },
+};
+
+/* The sigwrapper unwinder on i386.  */
+
+static const cygwin_sigwrapper_frame_unwind
+  i386_cygwin_sigwrapper_frame_unwind (i386_sig_patterns);
+
 /* gdbarch initialization for Cygwin on i386.  */
 
 static void
 i386_cygwin_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
 {
-  cygwin_sigwrapper_frame_unwind_set_sigbe_pattern (&i386_sigbe);
-  frame_unwind_append_unwinder (gdbarch, &cygwin_sigwrapper_frame_unwind);
+  frame_unwind_append_unwinder (gdbarch, &i386_cygwin_sigwrapper_frame_unwind);
 
   i386_windows_init_abi_common (info, gdbarch);
   cygwin_init_abi (info, gdbarch);

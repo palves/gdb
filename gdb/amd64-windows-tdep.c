@@ -1334,67 +1334,36 @@ amd64_windows_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
   set_gdbarch_long_bit (gdbarch, 32);
 }
 
+/* Sigwrapper unwinder instruction patterns for AMD64.  */
+
+static const gdb_byte amd64_sigbe_bytes[] = {
+  0x49, 0xc7, 0xc3, 0xf8, 0xff, 0xff, 0xff,	/* movq $-8,%r11 */
+  0x4d, 0x0f, 0xc1, 0x9a,			/* xaddq %r11,$tls::stackptr(%r10) */
+  /* 4 bytes for tls::stackptr operand.  */
+};
+
+static const gdb_byte amd64_sigdelayed_bytes[] = {
+  0x49, 0xc7, 0xc3, 0xf8, 0xff, 0xff, 0xff,	/* movq $-8,%r11 */
+  0x4d, 0x0f, 0xc1, 0x9c, 0x24,			/* xaddq %r11,$tls::stackptr(%r12) */
+  /* 4 bytes for tls::stackptr operand.  */
+};
+
+static const gdb::array_view<const gdb_byte> amd64_sig_patterns[] {
+  { amd64_sigbe_bytes },
+  { amd64_sigdelayed_bytes },
+};
+
+/* The sigwrapper unwinder on AMD64.  */
+
+static const cygwin_sigwrapper_frame_unwind
+  amd64_cygwin_sigwrapper_frame_unwind (amd64_sig_patterns);
+
 /* gdbarch initialization for Cygwin on AMD64.  */
-
-static const struct insn_pattern amd64_sigbe_bytes[] = {
-  /* movq	$-8,%r11 */
-  { 0x49, 0xff },
-  { 0xc7, 0xff },
-  { 0xc3, 0xff },
-  { 0xf8, 0xff },
-  { 0xff, 0xff },
-  { 0xff, 0xff },
-  { 0xff, 0xff },
-  /* xaddq	%r11,$tls::stackptr(%r10) */
-  { 0x4d, 0xff },
-  { 0x0f, 0xff },
-  { 0xc1, 0xff },
-  { 0x9a, 0xff },
-  { 0x00, 0x00 }, /* 4 bytes for tls::stackptr */
-  { 0x00, 0x00 },
-  { 0x00, 0x00 },
-  { 0x00, 0x00 }
-};
-
-static const struct insn_pattern amd64_sigdelayed_bytes[] = {
-  /* movq	$-8,%r11 */
-  { 0x49, 0xff },
-  { 0xc7, 0xff },
-  { 0xc3, 0xff },
-  { 0xf8, 0xff },
-  { 0xff, 0xff },
-  { 0xff, 0xff },
-  { 0xff, 0xff },
-  /* xaddq	%r11,$tls::stackptr(%r12) */
-  { 0x4d, 0xff },
-  { 0x0f, 0xff },
-  { 0xc1, 0xff },
-  { 0x9c, 0xff },
-  { 0x24, 0xff },
-  { 0x00, 0x00 }, /* 4 bytes for tls::stackptr */
-  { 0x00, 0x00 },
-  { 0x00, 0x00 },
-  { 0x00, 0x00 }
-};
-
-#define COUNT(x) (sizeof(x)/sizeof(x[0]))
-
-static const struct insn_pattern_sequence amd64_sigbe =
-  {
-    amd64_sigbe_bytes, COUNT(amd64_sigbe_bytes)
-  };
-
-static const struct insn_pattern_sequence amd64_sigdelayed =
-  {
-    amd64_sigdelayed_bytes, COUNT(amd64_sigdelayed_bytes)
-  };
 
 static void
 amd64_cygwin_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
 {
-  cygwin_sigwrapper_frame_unwind_set_sigbe_pattern (&amd64_sigbe);
-  cygwin_sigwrapper_frame_unwind_set_sigdelayed_pattern (&amd64_sigdelayed);
-  frame_unwind_append_unwinder (gdbarch, &cygwin_sigwrapper_frame_unwind);
+  frame_unwind_append_unwinder (gdbarch, &amd64_cygwin_sigwrapper_frame_unwind);
 
   amd64_windows_init_abi_common (info, gdbarch);
   cygwin_init_abi (info, gdbarch);

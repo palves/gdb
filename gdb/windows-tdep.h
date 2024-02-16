@@ -18,6 +18,8 @@
 #ifndef WINDOWS_TDEP_H
 #define WINDOWS_TDEP_H
 
+#include "frame-unwind.h"
+
 struct obstack;
 struct gdbarch;
 
@@ -56,24 +58,22 @@ extern void cygwin_init_abi (struct gdbarch_info info,
 
 extern bool is_linked_with_cygwin_dll (bfd *abfd);
 
-extern const struct frame_unwind cygwin_sigwrapper_frame_unwind;
+/* Cygwin sigwapper unwinder.  Unwinds signal frames over
+   sigbe/sigdelayed.  */
 
-/* An instruction to match.  */
-struct insn_pattern
+struct cygwin_sigwrapper_frame_unwind : public frame_unwind
 {
-  gdb_byte data;            /* See if it matches this....  */
-  gdb_byte mask;            /* ... with this mask.  */
-};
+  explicit cygwin_sigwrapper_frame_unwind
+    (gdb::array_view<const gdb::array_view<const gdb_byte>> patterns_list);
 
-struct insn_pattern_sequence
-{
-  const struct insn_pattern *pattern;
-  int length;
+  /* Architecture-specific list of instruction patterns to match.
+     It's a list of patterns instead of single pattern because some
+     architectures want to match more than one function
+     (sigbe/sigdelayed & friends).  Each potential instruction
+     sequence is assumed to be followed by 4 bytes for tls::stackptr.
+     If any pattern in the list matches, then the frame is assumed to
+     be a sigwrapper frame.  */
+  gdb::array_view<const gdb::array_view<const gdb_byte>> patterns_list;
 };
-
-extern void cygwin_sigwrapper_frame_unwind_set_sigbe_pattern(
-			const struct insn_pattern_sequence *pattern);
-extern void cygwin_sigwrapper_frame_unwind_set_sigdelayed_pattern(
-			 const struct insn_pattern_sequence *pattern);
 
 #endif
