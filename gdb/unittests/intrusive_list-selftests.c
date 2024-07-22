@@ -21,6 +21,8 @@
 #include "gdbsupport/selftest.h"
 #include <unordered_set>
 
+#include "gdbsupport/owning_intrusive_list.h"
+
 /* An item type using intrusive_list_node by inheriting from it and its
    corresponding list type.  Put another base before intrusive_list_node
    so that a pointer to the node != a pointer to the item.  */
@@ -774,6 +776,800 @@ test_intrusive_list_1 ()
   tests.test_begin_end ();
 }
 
+
+/* To run all tests using both the base and member methods, all tests are
+   declared in this templated class, which is instantiated once for each
+   list type.  */
+
+template <typename ListType>
+struct owning_intrusive_list_test
+{
+  using item_type = typename ListType::value_type;
+
+  /* Verify that LIST contains exactly the items in EXPECTED.
+
+     Traverse the list forward and backwards to exercise all links.  */
+
+  static void
+  verify_items (const ListType &list,
+		gdb::array_view<const typename ListType::value_type *> expected)
+  {
+    int i = 0;
+
+    for (typename ListType::iterator it = list.begin ();
+	 it != list.end ();
+	 ++it)
+      {
+	const item_type &item = *it;
+
+	SELF_CHECK (i < expected.size ());
+	if (&item != expected[i])
+	  abort ();
+	SELF_CHECK (&item == expected[i]);
+
+	++i;
+      }
+
+    SELF_CHECK (i == expected.size ());
+
+    for (typename ListType::reverse_iterator it = list.rbegin ();
+	 it != list.rend ();
+	 ++it)
+      {
+	const item_type &item = *it;
+
+	--i;
+
+	SELF_CHECK (i >= 0);
+	SELF_CHECK (&item == expected[i]);
+      }
+
+    SELF_CHECK (i == 0);
+  }
+
+  static void
+  test_move_constructor ()
+  {
+    {
+      /* Other list is not empty.  */
+      auto a = std::make_unique<item_type> ("a");
+      auto b = std::make_unique<item_type> ("b");
+      auto c = std::make_unique<item_type> ("c");
+      auto ap = a.get ();
+      auto bp = b.get ();
+      auto cp = c.get ();
+      ListType list1;
+      std::vector<const item_type *> expected;
+
+      list1.push_back (std::move (a));
+      list1.push_back (std::move (b));
+      list1.push_back (std::move (c));
+
+      ListType list2 (std::move (list1));
+
+      expected = {};
+      verify_items (list1, expected);
+
+      expected = {ap, bp, cp};
+      verify_items (list2, expected);
+    }
+
+    {
+      /* Other list contains 1 element.  */
+      auto a = std::make_unique<item_type> ("a");
+      auto ap = a.get ();
+      ListType list1;
+      std::vector<const item_type *> expected;
+
+      list1.push_back (std::move (a));
+
+      ListType list2 (std::move (list1));
+
+      expected = {};
+      verify_items (list1, expected);
+
+      expected = {ap};
+      verify_items (list2, expected);
+    }
+
+    {
+      /* Other list is empty.  */
+      ListType list1;
+      std::vector<const item_type *> expected;
+
+      ListType list2 (std::move (list1));
+
+      expected = {};
+      verify_items (list1, expected);
+
+      expected = {};
+      verify_items (list2, expected);
+    }
+  }
+
+  static void
+  test_move_assignment ()
+  {
+    {
+      /* Both lists are not empty.  */
+      auto a = std::make_unique<item_type> ("a");
+      auto b = std::make_unique<item_type> ("b");
+      auto c = std::make_unique<item_type> ("c");
+      auto d = std::make_unique<item_type> ("d");
+      auto e = std::make_unique<item_type> ("e");
+      auto ap = a.get ();
+      auto bp = b.get ();
+      auto cp = c.get ();
+      ListType list1;
+      ListType list2;
+      std::vector<const item_type *> expected;
+
+      list1.push_back (std::move (a));
+      list1.push_back (std::move (b));
+      list1.push_back (std::move (c));
+
+      list2.push_back (std::move (d));
+      list2.push_back (std::move (e));
+
+      list2 = std::move (list1);
+
+      expected = {};
+      verify_items (list1, expected);
+
+      expected = {ap, bp, cp};
+      verify_items (list2, expected);
+    }
+
+    {
+      /* rhs list is empty.  */
+      auto a = std::make_unique<item_type> ("a");
+      auto b = std::make_unique<item_type> ("b");
+      auto c = std::make_unique<item_type> ("c");
+
+      ListType list1;
+      ListType list2;
+      std::vector<const item_type *> expected;
+
+      list2.push_back (std::move (a));
+      list2.push_back (std::move (b));
+      list2.push_back (std::move (c));
+
+      list2 = std::move (list1);
+
+      expected = {};
+      verify_items (list1, expected);
+
+      expected = {};
+      verify_items (list2, expected);
+    }
+
+    {
+      /* lhs list is empty.  */
+      auto a = std::make_unique<item_type> ("a");
+      auto b = std::make_unique<item_type> ("b");
+      auto c = std::make_unique<item_type> ("c");
+      auto ap = a.get ();
+      auto bp = b.get ();
+      auto cp = c.get ();
+      ListType list1;
+      ListType list2;
+      std::vector<const item_type *> expected;
+
+      list1.push_back (std::move (a));
+      list1.push_back (std::move (b));
+      list1.push_back (std::move (c));
+
+      list2 = std::move (list1);
+
+      expected = {};
+      verify_items (list1, expected);
+
+      expected = {ap, bp, cp};
+      verify_items (list2, expected);
+    }
+
+    {
+      /* Both lists contain 1 item.  */
+      auto a = std::make_unique<item_type> ("a");
+      auto b = std::make_unique<item_type> ("b");
+      auto ap = a.get ();
+      ListType list1;
+      ListType list2;
+      std::vector<const item_type *> expected;
+
+      list1.push_back (std::move (a));
+      list2.push_back (std::move (b));
+
+      list2 = std::move (list1);
+
+      expected = {};
+      verify_items (list1, expected);
+
+      expected = {ap};
+      verify_items (list2, expected);
+    }
+
+    {
+      /* Both lists are empty.  */
+      ListType list1;
+      ListType list2;
+      std::vector<const item_type *> expected;
+
+      list2 = std::move (list1);
+
+      expected = {};
+      verify_items (list1, expected);
+
+      expected = {};
+      verify_items (list2, expected);
+    }
+  }
+
+  static void
+  test_swap ()
+  {
+    {
+      /* Two non-empty lists.  */
+      auto a = std::make_unique<item_type> ("a");
+      auto b = std::make_unique<item_type> ("b");
+      auto c = std::make_unique<item_type> ("c");
+      auto d = std::make_unique<item_type> ("d");
+      auto e = std::make_unique<item_type> ("e");
+      auto ap = a.get ();
+      auto bp = b.get ();
+      auto cp = c.get ();
+      auto dp = d.get ();
+      auto ep = e.get ();
+      ListType list1;
+      ListType list2;
+      std::vector<const item_type *> expected;
+
+      list1.push_back (std::move (a));
+      list1.push_back (std::move (b));
+      list1.push_back (std::move (c));
+
+      list2.push_back (std::move (d));
+      list2.push_back (std::move (e));
+
+      std::swap (list1, list2);
+
+      expected = {dp, ep};
+      verify_items (list1, expected);
+
+      expected = {ap, bp, cp};
+      verify_items (list2, expected);
+    }
+
+    {
+      /* Other is empty.  */
+      auto a = std::make_unique<item_type> ("a");
+      auto b = std::make_unique<item_type> ("b");
+      auto c = std::make_unique<item_type> ("c");
+      auto ap = a.get ();
+      auto bp = b.get ();
+      auto cp = c.get ();
+      ListType list1;
+      ListType list2;
+      std::vector<const item_type *> expected;
+
+      list1.push_back (std::move (a));
+      list1.push_back (std::move (b));
+      list1.push_back (std::move (c));
+
+      std::swap (list1, list2);
+
+      expected = {};
+      verify_items (list1, expected);
+
+      expected = {ap, bp, cp};
+      verify_items (list2, expected);
+    }
+
+    {
+      /* *this is empty.  */
+      auto a = std::make_unique<item_type> ("a");
+      auto b = std::make_unique<item_type> ("b");
+      auto c = std::make_unique<item_type> ("c");
+      auto ap = a.get ();
+      auto bp = b.get ();
+      auto cp = c.get ();
+      ListType list1;
+      ListType list2;
+      std::vector<const item_type *> expected;
+
+      list2.push_back (std::move (a));
+      list2.push_back (std::move (b));
+      list2.push_back (std::move (c));
+
+      std::swap (list1, list2);
+
+      expected = {ap, bp, cp};
+      verify_items (list1, expected);
+
+      expected = {};
+      verify_items (list2, expected);
+    }
+
+    {
+      /* Both lists empty.  */
+      ListType list1;
+      ListType list2;
+      std::vector<const item_type *> expected;
+
+      std::swap (list1, list2);
+
+      expected = {};
+      verify_items (list1, expected);
+
+      expected = {};
+      verify_items (list2, expected);
+    }
+
+    {
+      /* Swap one element twice.  */
+      auto a = std::make_unique<item_type> ("a");
+      auto ap = a.get ();
+      ListType list1;
+      ListType list2;
+      std::vector<const item_type *> expected;
+
+      list1.push_back (std::move (a));
+
+      std::swap (list1, list2);
+
+      expected = {};
+      verify_items (list1, expected);
+
+      expected = {ap};
+      verify_items (list2, expected);
+
+      std::swap (list1, list2);
+
+      expected = {ap};
+      verify_items (list1, expected);
+
+      expected = {};
+      verify_items (list2, expected);
+    }
+  }
+
+  static void
+  test_front_back ()
+  {
+    auto a = std::make_unique<item_type> ("a");
+    auto b = std::make_unique<item_type> ("b");
+    auto c = std::make_unique<item_type> ("c");
+    auto ap = a.get ();
+    auto cp = c.get ();
+    ListType list;
+    const ListType &clist = list;
+
+    list.push_back (std::move (a));
+    list.push_back (std::move (b));
+    list.push_back (std::move (c));
+
+    SELF_CHECK (&list.front () == ap);
+    SELF_CHECK (&clist.front () == ap);
+    SELF_CHECK (&list.back () == cp);
+    SELF_CHECK (&clist.back () == cp);
+  }
+
+  static void
+  test_push_front ()
+  {
+    auto a = std::make_unique<item_type> ("a");
+    auto b = std::make_unique<item_type> ("b");
+    auto c = std::make_unique<item_type> ("c");
+    auto ap = a.get ();
+    auto bp = b.get ();
+    auto cp = c.get ();
+    ListType list;
+    std::vector<const item_type *> expected;
+
+    expected = {};
+    verify_items (list, expected);
+
+    list.push_front (std::move (a));
+    expected = {ap};
+    verify_items (list, expected);
+
+    list.push_front (std::move (b));
+    expected = {bp, ap};
+    verify_items (list, expected);
+
+    list.push_front (std::move (c));
+    expected = {cp, bp, ap};
+    verify_items (list, expected);
+  }
+
+  static void
+  test_push_back ()
+  {
+    auto a = std::make_unique<item_type> ("a");
+    auto b = std::make_unique<item_type> ("b");
+    auto c = std::make_unique<item_type> ("c");
+    auto ap = a.get ();
+    auto bp = b.get ();
+    auto cp = c.get ();
+    ListType list;
+    std::vector<const item_type *> expected;
+
+    expected = {};
+    verify_items (list, expected);
+
+    list.push_back (std::move (a));
+    expected = {ap};
+    verify_items (list, expected);
+
+    list.push_back (std::move (b));
+    expected = {ap, bp};
+    verify_items (list, expected);
+
+    list.push_back (std::move (c));
+    expected = {ap, bp, cp};
+    verify_items (list, expected);
+  }
+
+  static void
+  test_insert ()
+  {
+    std::vector<const item_type *> expected;
+
+    {
+      /* Insert at beginning.  */
+      auto a = std::make_unique<item_type> ("a");
+      auto b = std::make_unique<item_type> ("b");
+      auto c = std::make_unique<item_type> ("c");
+      auto ap = a.get ();
+      auto bp = b.get ();
+      auto cp = c.get ();
+      ListType list;
+
+
+      list.insert (list.begin (), std::move (a));
+      expected = {ap};
+      verify_items (list, expected);
+
+      list.insert (list.begin (), std::move (b));
+      expected = {bp, ap};
+      verify_items (list, expected);
+
+      list.insert (list.begin (), std::move (c));
+      expected = {cp, bp, ap};
+      verify_items (list, expected);
+    }
+
+    {
+      /* Insert at end.  */
+      auto a = std::make_unique<item_type> ("a");
+      auto b = std::make_unique<item_type> ("b");
+      auto c = std::make_unique<item_type> ("c");
+      auto ap = a.get ();
+      auto bp = b.get ();
+      auto cp = c.get ();
+      ListType list;
+
+
+      list.insert (list.end (), std::move (a));
+      expected = {ap};
+      verify_items (list, expected);
+
+      list.insert (list.end (), std::move (b));
+      expected = {ap, bp};
+      verify_items (list, expected);
+
+      list.insert (list.end (), std::move (c));
+      expected = {ap, bp, cp};
+      verify_items (list, expected);
+    }
+
+    {
+      /* Insert in the middle.  */
+      auto a = std::make_unique<item_type> ("a");
+      auto b = std::make_unique<item_type> ("b");
+      auto c = std::make_unique<item_type> ("c");
+      auto ap = a.get ();
+      auto bp = b.get ();
+      auto cp = c.get ();
+      ListType list;
+
+      list.push_back (std::move (a));
+      list.push_back (std::move (b));
+
+      list.insert (list.iterator_to (*bp), std::move (c));
+      expected = {ap, cp, bp};
+      verify_items (list, expected);
+    }
+
+    {
+      /* Insert in empty list. */
+      auto a = std::make_unique<item_type> ("a");
+      auto ap = a.get ();
+      ListType list;
+
+      list.insert (list.end (), std::move (a));
+      expected = {ap};
+      verify_items (list, expected);
+    }
+  }
+
+  static void
+  test_splice ()
+  {
+    {
+      /* Two non-empty lists.  */
+      auto a = std::make_unique<item_type> ("a");
+      auto b = std::make_unique<item_type> ("b");
+      auto c = std::make_unique<item_type> ("c");
+      auto d = std::make_unique<item_type> ("d");
+      auto e = std::make_unique<item_type> ("e");
+      auto ap = a.get ();
+      auto bp = b.get ();
+      auto cp = c.get ();
+      auto dp = d.get ();
+      auto ep = e.get ();
+      ListType list1;
+      ListType list2;
+      std::vector<const item_type *> expected;
+
+      list1.push_back (std::move (a));
+      list1.push_back (std::move (b));
+      list1.push_back (std::move (c));
+
+      list2.push_back (std::move (d));
+      list2.push_back (std::move (e));
+
+      list1.splice (std::move (list2));
+
+      expected = {ap, bp, cp, dp, ep};
+      verify_items (list1, expected);
+
+      expected = {};
+      verify_items (list2, expected);
+    }
+
+    {
+      /* Receiving list empty.  */
+      auto a = std::make_unique<item_type> ("a");
+      auto b = std::make_unique<item_type> ("b");
+      auto c = std::make_unique<item_type> ("c");
+      auto ap = a.get ();
+      auto bp = b.get ();
+      auto cp = c.get ();
+      ListType list1;
+      ListType list2;
+      std::vector<const item_type *> expected;
+
+      list2.push_back (std::move (a));
+      list2.push_back (std::move (b));
+      list2.push_back (std::move (c));
+
+      list1.splice (std::move (list2));
+
+      expected = {ap, bp, cp};
+      verify_items (list1, expected);
+
+      expected = {};
+      verify_items (list2, expected);
+    }
+
+    {
+      /* Giving list empty.  */
+      auto a = std::make_unique<item_type> ("a");
+      auto b = std::make_unique<item_type> ("b");
+      auto c = std::make_unique<item_type> ("c");
+      auto ap = a.get ();
+      auto bp = b.get ();
+      auto cp = c.get ();
+      ListType list1;
+      ListType list2;
+      std::vector<const item_type *> expected;
+
+      list1.push_back (std::move (a));
+      list1.push_back (std::move (b));
+      list1.push_back (std::move (c));
+
+      list1.splice (std::move (list2));
+
+      expected = {ap, bp, cp};
+      verify_items (list1, expected);
+
+      expected = {};
+      verify_items (list2, expected);
+    }
+
+    {
+      /* Both lists empty.  */
+      ListType list1;
+      ListType list2;
+      std::vector<const item_type *> expected;
+
+      list1.splice (std::move (list2));
+
+      expected = {};
+      verify_items (list1, expected);
+
+      expected = {};
+      verify_items (list2, expected);
+    }
+  }
+
+  static void
+  test_pop_front ()
+  {
+    auto a = std::make_unique<item_type> ("a");
+    auto b = std::make_unique<item_type> ("b");
+    auto c = std::make_unique<item_type> ("c");
+    auto bp = b.get ();
+    auto cp = c.get ();
+    ListType list;
+    std::vector<const item_type *> expected;
+
+    list.push_back (std::move (a));
+    list.push_back (std::move (b));
+    list.push_back (std::move (c));
+
+    list.pop_front ();
+    expected = {bp, cp};
+    verify_items (list, expected);
+
+    list.pop_front ();
+    expected = {cp};
+    verify_items (list, expected);
+
+    list.pop_front ();
+    expected = {};
+    verify_items (list, expected);
+  }
+
+  static void
+  test_pop_back ()
+  {
+    auto a = std::make_unique<item_type> ("a");
+    auto b = std::make_unique<item_type> ("b");
+    auto c = std::make_unique<item_type> ("c");
+    auto ap = a.get ();
+    auto bp = b.get ();
+    ListType list;
+    std::vector<const item_type *> expected;
+
+    list.push_back (std::move (a));
+    list.push_back (std::move (b));
+    list.push_back (std::move (c));
+
+    list.pop_back();
+    expected = {ap, bp};
+    verify_items (list, expected);
+
+    list.pop_back ();
+    expected = {ap};
+    verify_items (list, expected);
+
+    list.pop_back ();
+    expected = {};
+    verify_items (list, expected);
+  }
+
+  static void
+  test_erase ()
+  {
+    auto a = std::make_unique<item_type> ("a");
+    auto b = std::make_unique<item_type> ("b");
+    auto c = std::make_unique<item_type> ("c");
+    auto ap = a.get ();
+    auto bp = b.get ();
+    auto cp = c.get ();
+    ListType list;
+    std::vector<const item_type *> expected;
+
+    list.push_back (std::move (a));
+    list.push_back (std::move (b));
+    list.push_back (std::move (c));
+
+    list.erase (list.iterator_to (*bp));
+    expected = {ap, cp};
+    verify_items (list, expected);
+
+    list.erase (list.iterator_to (*cp));
+    expected = {ap};
+    verify_items (list, expected);
+
+    list.erase (list.iterator_to (*ap));
+    expected = {};
+    verify_items (list, expected);
+  }
+
+  static void
+  test_clear ()
+  {
+    auto a = std::make_unique<item_type> ("a");
+    auto b = std::make_unique<item_type> ("b");
+    auto c = std::make_unique<item_type> ("c");
+    ListType list;
+    std::vector<const item_type *> expected;
+
+    list.push_back (std::move (a));
+    list.push_back (std::move (b));
+    list.push_back (std::move (c));
+
+    list.clear ();
+    expected = {};
+    verify_items (list, expected);
+
+    /* Verify idempotency.  */
+    list.clear ();
+    expected = {};
+    verify_items (list, expected);
+  }
+
+  static void
+  test_empty ()
+  {
+    auto a = std::make_unique<item_type> ("a");
+    auto ap = a.get ();
+    ListType list;
+
+    SELF_CHECK (list.empty ());
+    list.push_back (std::move (a));
+    SELF_CHECK (!list.empty ());
+    list.erase (list.iterator_to (*ap));
+    SELF_CHECK (list.empty ());
+  }
+
+  static void
+  test_begin_end ()
+  {
+    auto a = std::make_unique<item_type> ("a");
+    auto b = std::make_unique<item_type> ("b");
+    auto c = std::make_unique<item_type> ("c");
+    auto ap = a.get ();
+    auto cp = c.get ();
+    ListType list;
+    const ListType &clist = list;
+
+    list.push_back (std::move (a));
+    list.push_back (std::move (b));
+    list.push_back (std::move (c));
+
+    SELF_CHECK (&*list.begin () == ap);
+    SELF_CHECK (&*list.cbegin () == ap);
+    SELF_CHECK (&*clist.begin () == ap);
+    SELF_CHECK (&*list.rbegin () == cp);
+    SELF_CHECK (&*list.crbegin () == cp);
+    SELF_CHECK (&*clist.rbegin () == cp);
+
+    /* At least check that they compile.  */
+    list.end ();
+    list.cend ();
+    clist.end ();
+    list.rend ();
+    list.crend ();
+    clist.end ();
+  }
+};
+
+template <typename ListType>
+static void
+test_owning_intrusive_list_1 ()
+{
+  owning_intrusive_list_test<ListType> tests;
+
+  tests.test_move_constructor ();
+  tests.test_move_assignment ();
+  tests.test_swap ();
+  tests.test_front_back ();
+  tests.test_push_front ();
+  tests.test_push_back ();
+  tests.test_insert ();
+  tests.test_splice ();
+  tests.test_pop_front ();
+  tests.test_pop_back ();
+  tests.test_erase ();
+  tests.test_clear ();
+  tests.test_empty ();
+  tests.test_begin_end ();
+}
+
 static void
 test_node_is_linked ()
 {
@@ -806,6 +1602,10 @@ test_intrusive_list ()
   test_intrusive_list_1<item_with_base_list> ();
   test_intrusive_list_1<item_with_member_list> ();
   test_node_is_linked ();
+
+  test_owning_intrusive_list_1<owning_intrusive_list<item_with_base>> ();
+  test_owning_intrusive_list_1<owning_intrusive_list<item_with_member,
+						     item_with_member_node>> ();
 }
 
 void _initialize_intrusive_list_selftests ();
